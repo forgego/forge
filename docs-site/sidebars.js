@@ -104,6 +104,7 @@ const sidebars = {
       items: [
         'examples/blog',
         'examples/ecommerce',
+        'examples/ecommerce-website',
         'examples/library',
       ],
     },

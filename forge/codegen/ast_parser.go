@@ -101,7 +101,7 @@ func (p *ASTParser) ParseFile(filename string) ([]*ModelDefinition, error) {
 	return definitions, nil
 }
 
-// embedsSchema checks if a struct embeds schema.Schema
+// embedsSchema checks if a struct embeds schema.Schema or a generated model base.
 func (p *ASTParser) embedsSchema(st *ast.StructType) bool {
 	for _, field := range st.Fields.List {
 		if len(field.Names) == 0 {
@@ -111,6 +111,11 @@ func (p *ASTParser) embedsSchema(st *ast.StructType) bool {
 					if sel.Sel.Name == "Schema" || sel.Sel.Name == "BaseSchema" {
 						return true
 					}
+				}
+			}
+			if ident, ok := field.Type.(*ast.Ident); ok {
+				if strings.HasSuffix(ident.Name, "Generated") {
+					return true
 				}
 			}
 		}
