@@ -235,8 +235,8 @@ export default function AdminLayout({
         </header>
 
         {/* Content Area */}
-        <div className="flex-1 p-8 overflow-auto">
-          <div className="mx-auto max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="flex-1 p-6 lg:p-8 overflow-auto">
+          <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
             {children}
           </div>
         </div>

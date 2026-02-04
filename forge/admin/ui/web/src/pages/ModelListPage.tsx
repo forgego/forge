@@ -173,17 +173,17 @@ export default function ModelListPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6 animate-in fade-in duration-500">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <ListTitle className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground/90">
+      <div className="space-y-6">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <ListTitle className="space-y-1.5">
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
               {metadata.verbose_name_plural}
             </h1>
-            <p className="text-muted-foreground text-sm max-w-2xl">
+            <p className="text-sm text-muted-foreground max-w-2xl">
               {metadata.description}
             </p>
           </ListTitle>
-          <ActionHeader className="flex items-center gap-2">
+          <ActionHeader className="flex items-center gap-2 md:pt-1">
             {metadata.permissions.add && (
               <Button
                 data-testid="create-button"
@@ -193,7 +193,7 @@ export default function ModelListPage() {
                     params: { model: modelName },
                   })
                 }
-                className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+                className="bg-primary hover:bg-primary/90"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add {metadata.verbose_name}

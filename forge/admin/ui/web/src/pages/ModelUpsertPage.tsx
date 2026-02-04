@@ -362,9 +362,20 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <FormHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <FormHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-1.5">
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+              {mode === "create" ? "Add" : "Edit"} {metadata.verbose_name}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {mode === "create"
+                ? `Create a new instance of ${metadata.verbose_name}`
+                : `Updating ${metadata.verbose_name} #${objectId}`}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 md:pt-1">
             <Button
+              type="button"
               variant="ghost"
               size="icon"
               className="rounded-full hover:bg-muted/50 transition-colors"
@@ -372,31 +383,11 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground/90">
-                {mode === "create" ? "Add" : "Edit"} {metadata.verbose_name}
-              </h1>
-              <p className="text-muted-foreground text-sm">
-                {mode === "create"
-                  ? `Create a new instance of ${metadata.verbose_name}`
-                  : `Updating ${metadata.verbose_name} #${objectId}`}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleCancel}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              Cancel
-            </Button>
             <Button
               data-testid="submit-button"
               onClick={handleSubmit}
               disabled={createMutation.isPending || updateMutation.isPending}
-              className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 min-w-[120px]"
+              className="bg-primary hover:bg-primary/90 min-w-[120px]"
             >
               {createMutation.isPending || updateMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
