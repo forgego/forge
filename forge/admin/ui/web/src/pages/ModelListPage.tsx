@@ -27,6 +27,7 @@ import {
   Filter,
   CheckCircle,
   XCircle,
+  Download,
 } from "lucide-react";
 import { useState } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
@@ -49,6 +50,7 @@ export default function ModelListPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [bulkAction, setBulkAction] = useState<any | null>(null);
+  const [exportFormat, setExportFormat] = useState("");
 
   const modelName = model as string;
 
@@ -129,6 +131,31 @@ export default function ModelListPage() {
     }
   };
 
+  const handleExportChange = (format: string) => {
+    if (!format) return;
+    const filteredParams = Object.entries(activeFilters).reduce(
+      (acc, [key, value]) => {
+        if (value === "" || value === null || value === undefined) {
+          return acc;
+        }
+        acc[key] = value;
+        return acc;
+      },
+      {} as Record<string, any>
+    );
+
+    const exportUrl = adminAPI.getExportURL(
+      modelName,
+      format as "csv" | "json",
+      {
+        search: searchQuery || undefined,
+        ...filteredParams,
+      }
+    );
+    window.open(exportUrl, "_blank", "noopener,noreferrer");
+    setExportFormat("");
+  };
+
   if (metaLoading || (listLoading && !listData)) {
     return (
       <AdminLayout>
@@ -184,6 +211,23 @@ export default function ModelListPage() {
             </p>
           </ListTitle>
           <ActionHeader className="flex items-center gap-2">
+            <div className="relative">
+              <select
+                data-testid="export-select"
+                className="h-11 pl-3 pr-8 text-xs font-semibold uppercase tracking-wider bg-background/50 border border-border/50 rounded-md text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                value={exportFormat}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setExportFormat(value);
+                  handleExportChange(value);
+                }}
+              >
+                <option value="">Export</option>
+                <option value="csv">Export CSV</option>
+                <option value="json">Export JSON</option>
+              </select>
+              <Download className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            </div>
             {metadata.permissions.add && (
               <Button
                 data-testid="create-button"
