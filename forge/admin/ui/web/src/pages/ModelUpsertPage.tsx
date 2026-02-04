@@ -15,6 +15,7 @@ import { SearchableSelect } from "../components/ui/searchable-select";
 import { Card, CardContent } from "../components/ui/card";
 import { Loader2, ArrowLeft, Save, X, Plus } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { Loader2, Save, X } from "lucide-react";
 import AdminLayout from "../components/layout/AdminLayout";
 import { useUIComponent } from "../hooks/useUIComponent";
 import { cn } from "../lib/utils";
@@ -728,25 +729,15 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
     <AdminLayout>
       <div className="space-y-6">
         <FormHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full hover:bg-muted/50 transition-colors"
-              onClick={handleCancel}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground/90">
-                {mode === "create" ? "Add" : "Edit"} {metadata.verbose_name}
-              </h1>
-              <p className="text-muted-foreground text-sm">
-                {mode === "create"
-                  ? `Create a new instance of ${metadata.verbose_name}`
-                  : `Updating ${metadata.verbose_name} #${objectId}`}
-              </p>
-            </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground/90">
+              {mode === "create" ? "Add" : "Edit"} {metadata.verbose_name}
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              {mode === "create"
+                ? `Create a new instance of ${metadata.verbose_name}`
+                : `Updating ${metadata.verbose_name} #${objectId}`}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Button
