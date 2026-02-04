@@ -58,6 +58,7 @@ type Config[T any] struct {
 	AutocompleteFields    []any
 	RadioFields           map[string]RadioLayout
 	Fieldsets             []Fieldset[T]
+	InlineRelations       map[string]InlineRelationConfig
 	GetFields             func(ctx context.Context, instance *T, isNew bool) []string
 	GetFieldsets          func(ctx context.Context, instance *T, isNew bool) []Fieldset[T]
 	GetReadOnlyFields     func(ctx context.Context, instance *T, isNew bool) []string
@@ -102,6 +103,15 @@ type Fieldset[T any] struct {
 	Fields      []string
 	Collapsed   bool
 	Description string
+}
+
+// InlineRelationConfig configures inline relation behavior in forms.
+type InlineRelationConfig struct {
+	Type         string   `json:"type,omitempty"` // one_to_many, one_to_one, many_to_many
+	Label        string   `json:"label,omitempty"`
+	Fields       []string `json:"fields,omitempty"`
+	RelatedModel string   `json:"related_model,omitempty"`
+	RelatedField string   `json:"related_field,omitempty"`
 }
 
 // NewFieldset creates a new fieldset
