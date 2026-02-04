@@ -5,24 +5,24 @@ import (
 	"time"
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
-	"github.com/forgego/forge/validate"
+	validate "github.com/forgego/forge/validate"
 )
 
 
 // CategoryGenerated struct definition
 type CategoryGenerated struct {
 	schema.BaseSchema
-	id int64 `json:"id" db:"id" validate:""`
-	name string `json:"name" db:"name" validate:""`
-	slug string `json:"slug" db:"slug" validate:""`
-	description string `json:"description" db:"description" validate:""`
-	parent_id int64 `json:"parent_id" db:"parent_id" validate:""`
-	image_url string `json:"image_url" db:"image_url" validate:""`
-	sort_order int32 `json:"sort_order" db:"sort_order" validate:""`
-	is_active bool `json:"is_active" db:"is_active" validate:""`
-	level int32 `json:"level" db:"level" validate:""`
-	created_at time.Time `json:"created_at" db:"created_at" validate:""`
-	updated_at time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	Name string `json:"name" db:"name" validate:""`
+	Slug string `json:"slug" db:"slug" validate:""`
+	Description string `json:"description" db:"description" validate:""`
+	ParentId int64 `json:"parent_id" db:"parent_id" validate:""`
+	ImageUrl string `json:"image_url" db:"image_url" validate:""`
+	SortOrder int32 `json:"sort_order" db:"sort_order" validate:""`
+	IsActive bool `json:"is_active" db:"is_active" validate:""`
+	Level int32 `json:"level" db:"level" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the Category model
@@ -37,31 +37,31 @@ var CategoryObjects, _ = orm.NewManager[Category]("categories")
 
 // CategoryFields provides type-safe field access for Category
 type CategoryFields struct {
-	id orm.Field[int64]
-	name orm.Field[string]
-	slug orm.Field[string]
-	description orm.Field[string]
-	parent_id orm.Field[int64]
-	image_url orm.Field[string]
-	sort_order orm.Field[int32]
-	is_active orm.Field[bool]
-	level orm.Field[int32]
-	created_at orm.Field[time.Time]
-	updated_at orm.Field[time.Time]
+	Id orm.Field[int64]
+	Name orm.Field[string]
+	Slug orm.Field[string]
+	Description orm.Field[string]
+	ParentId orm.Field[int64]
+	ImageUrl orm.Field[string]
+	SortOrder orm.Field[int32]
+	IsActive orm.Field[bool]
+	Level orm.Field[int32]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
 }
 
-var CategoryFields = CategoryFields{
-	id: orm.NewField[int64]("id", "categories"),
-	name: orm.NewField[string]("name", "categories"),
-	slug: orm.NewField[string]("slug", "categories"),
-	description: orm.NewField[string]("description", "categories"),
-	parent_id: orm.NewField[int64]("parent_id", "categories"),
-	image_url: orm.NewField[string]("image_url", "categories"),
-	sort_order: orm.NewField[int32]("sort_order", "categories"),
-	is_active: orm.NewField[bool]("is_active", "categories"),
-	level: orm.NewField[int32]("level", "categories"),
-	created_at: orm.NewField[time.Time]("created_at", "categories"),
-	updated_at: orm.NewField[time.Time]("updated_at", "categories"),
+var CategoryFieldsInstance = CategoryFields{
+	Id: orm.NewField[int64]("id", "categories"),
+	Name: orm.NewField[string]("name", "categories"),
+	Slug: orm.NewField[string]("slug", "categories"),
+	Description: orm.NewField[string]("description", "categories"),
+	ParentId: orm.NewField[int64]("parent_id", "categories"),
+	ImageUrl: orm.NewField[string]("image_url", "categories"),
+	SortOrder: orm.NewField[int32]("sort_order", "categories"),
+	IsActive: orm.NewField[bool]("is_active", "categories"),
+	Level: orm.NewField[int32]("level", "categories"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "categories"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "categories"),
 }
 
 
@@ -70,15 +70,15 @@ var CategoryFields = CategoryFields{
 // BrandGenerated struct definition
 type BrandGenerated struct {
 	schema.BaseSchema
-	id int64 `json:"id" db:"id" validate:""`
-	name string `json:"name" db:"name" validate:""`
-	slug string `json:"slug" db:"slug" validate:""`
-	description string `json:"description" db:"description" validate:""`
-	logo_url string `json:"logo_url" db:"logo_url" validate:""`
-	website_url string `json:"website_url" db:"website_url" validate:""`
-	is_active bool `json:"is_active" db:"is_active" validate:""`
-	created_at time.Time `json:"created_at" db:"created_at" validate:""`
-	updated_at time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	Name string `json:"name" db:"name" validate:""`
+	Slug string `json:"slug" db:"slug" validate:""`
+	Description string `json:"description" db:"description" validate:""`
+	LogoUrl string `json:"logo_url" db:"logo_url" validate:""`
+	WebsiteUrl string `json:"website_url" db:"website_url" validate:""`
+	IsActive bool `json:"is_active" db:"is_active" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the Brand model
@@ -93,27 +93,27 @@ var BrandObjects, _ = orm.NewManager[Brand]("brands")
 
 // BrandFields provides type-safe field access for Brand
 type BrandFields struct {
-	id orm.Field[int64]
-	name orm.Field[string]
-	slug orm.Field[string]
-	description orm.Field[string]
-	logo_url orm.Field[string]
-	website_url orm.Field[string]
-	is_active orm.Field[bool]
-	created_at orm.Field[time.Time]
-	updated_at orm.Field[time.Time]
+	Id orm.Field[int64]
+	Name orm.Field[string]
+	Slug orm.Field[string]
+	Description orm.Field[string]
+	LogoUrl orm.Field[string]
+	WebsiteUrl orm.Field[string]
+	IsActive orm.Field[bool]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
 }
 
-var BrandFields = BrandFields{
-	id: orm.NewField[int64]("id", "brands"),
-	name: orm.NewField[string]("name", "brands"),
-	slug: orm.NewField[string]("slug", "brands"),
-	description: orm.NewField[string]("description", "brands"),
-	logo_url: orm.NewField[string]("logo_url", "brands"),
-	website_url: orm.NewField[string]("website_url", "brands"),
-	is_active: orm.NewField[bool]("is_active", "brands"),
-	created_at: orm.NewField[time.Time]("created_at", "brands"),
-	updated_at: orm.NewField[time.Time]("updated_at", "brands"),
+var BrandFieldsInstance = BrandFields{
+	Id: orm.NewField[int64]("id", "brands"),
+	Name: orm.NewField[string]("name", "brands"),
+	Slug: orm.NewField[string]("slug", "brands"),
+	Description: orm.NewField[string]("description", "brands"),
+	LogoUrl: orm.NewField[string]("logo_url", "brands"),
+	WebsiteUrl: orm.NewField[string]("website_url", "brands"),
+	IsActive: orm.NewField[bool]("is_active", "brands"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "brands"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "brands"),
 }
 
 
@@ -122,37 +122,37 @@ var BrandFields = BrandFields{
 // ProductGenerated struct definition
 type ProductGenerated struct {
 	schema.BaseSchema
-	id int64 `json:"id" db:"id" validate:""`
-	name string `json:"name" db:"name" validate:""`
-	slug string `json:"slug" db:"slug" validate:""`
-	sku string `json:"sku" db:"sku" validate:""`
-	description string `json:"description" db:"description" validate:""`
-	short_description string `json:"short_description" db:"short_description" validate:""`
-	category_id int64 `json:"category_id" db:"category_id" validate:""`
-	brand_id int64 `json:"brand_id" db:"brand_id" validate:""`
-	price float64 `json:"price" db:"price" validate:""`
-	cost_price float64 `json:"cost_price" db:"cost_price" validate:""`
-	compare_at_price float64 `json:"compare_at_price" db:"compare_at_price" validate:""`
-	stock_quantity int32 `json:"stock_quantity" db:"stock_quantity" validate:""`
-	track_inventory bool `json:"track_inventory" db:"track_inventory" validate:""`
-	allow_backorder bool `json:"allow_backorder" db:"allow_backorder" validate:""`
-	weight float64 `json:"weight" db:"weight" validate:""`
-	length float64 `json:"length" db:"length" validate:""`
-	width float64 `json:"width" db:"width" validate:""`
-	height float64 `json:"height" db:"height" validate:""`
-	is_active bool `json:"is_active" db:"is_active" validate:""`
-	is_featured bool `json:"is_featured" db:"is_featured" validate:""`
-	is_digital bool `json:"is_digital" db:"is_digital" validate:""`
-	meta_title string `json:"meta_title" db:"meta_title" validate:""`
-	meta_description string `json:"meta_description" db:"meta_description" validate:""`
-	meta_keywords string `json:"meta_keywords" db:"meta_keywords" validate:""`
-	view_count int32 `json:"view_count" db:"view_count" validate:""`
-	order_count int32 `json:"order_count" db:"order_count" validate:""`
-	rating_average float64 `json:"rating_average" db:"rating_average" validate:""`
-	rating_count int32 `json:"rating_count" db:"rating_count" validate:""`
-	created_at time.Time `json:"created_at" db:"created_at" validate:""`
-	updated_at time.Time `json:"updated_at" db:"updated_at" validate:""`
-	published_at time.Time `json:"published_at" db:"published_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	Name string `json:"name" db:"name" validate:""`
+	Slug string `json:"slug" db:"slug" validate:""`
+	Sku string `json:"sku" db:"sku" validate:""`
+	Description string `json:"description" db:"description" validate:""`
+	ShortDescription string `json:"short_description" db:"short_description" validate:""`
+	CategoryId int64 `json:"category_id" db:"category_id" validate:""`
+	BrandId int64 `json:"brand_id" db:"brand_id" validate:""`
+	Price float64 `json:"price" db:"price" validate:""`
+	CostPrice float64 `json:"cost_price" db:"cost_price" validate:""`
+	CompareAtPrice float64 `json:"compare_at_price" db:"compare_at_price" validate:""`
+	StockQuantity int32 `json:"stock_quantity" db:"stock_quantity" validate:""`
+	TrackInventory bool `json:"track_inventory" db:"track_inventory" validate:""`
+	AllowBackorder bool `json:"allow_backorder" db:"allow_backorder" validate:""`
+	Weight float64 `json:"weight" db:"weight" validate:""`
+	Length float64 `json:"length" db:"length" validate:""`
+	Width float64 `json:"width" db:"width" validate:""`
+	Height float64 `json:"height" db:"height" validate:""`
+	IsActive bool `json:"is_active" db:"is_active" validate:""`
+	IsFeatured bool `json:"is_featured" db:"is_featured" validate:""`
+	IsDigital bool `json:"is_digital" db:"is_digital" validate:""`
+	MetaTitle string `json:"meta_title" db:"meta_title" validate:""`
+	MetaDescription string `json:"meta_description" db:"meta_description" validate:""`
+	MetaKeywords string `json:"meta_keywords" db:"meta_keywords" validate:""`
+	ViewCount int32 `json:"view_count" db:"view_count" validate:""`
+	OrderCount int32 `json:"order_count" db:"order_count" validate:""`
+	RatingAverage float64 `json:"rating_average" db:"rating_average" validate:""`
+	RatingCount int32 `json:"rating_count" db:"rating_count" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	PublishedAt time.Time `json:"published_at" db:"published_at" validate:""`
 }
 
 // Validate validates the Product model
@@ -167,71 +167,71 @@ var ProductObjects, _ = orm.NewManager[Product]("products")
 
 // ProductFields provides type-safe field access for Product
 type ProductFields struct {
-	id orm.Field[int64]
-	name orm.Field[string]
-	slug orm.Field[string]
-	sku orm.Field[string]
-	description orm.Field[string]
-	short_description orm.Field[string]
-	category_id orm.Field[int64]
-	brand_id orm.Field[int64]
-	price orm.Field[float64]
-	cost_price orm.Field[float64]
-	compare_at_price orm.Field[float64]
-	stock_quantity orm.Field[int32]
-	track_inventory orm.Field[bool]
-	allow_backorder orm.Field[bool]
-	weight orm.Field[float64]
-	length orm.Field[float64]
-	width orm.Field[float64]
-	height orm.Field[float64]
-	is_active orm.Field[bool]
-	is_featured orm.Field[bool]
-	is_digital orm.Field[bool]
-	meta_title orm.Field[string]
-	meta_description orm.Field[string]
-	meta_keywords orm.Field[string]
-	view_count orm.Field[int32]
-	order_count orm.Field[int32]
-	rating_average orm.Field[float64]
-	rating_count orm.Field[int32]
-	created_at orm.Field[time.Time]
-	updated_at orm.Field[time.Time]
-	published_at orm.Field[time.Time]
+	Id orm.Field[int64]
+	Name orm.Field[string]
+	Slug orm.Field[string]
+	Sku orm.Field[string]
+	Description orm.Field[string]
+	ShortDescription orm.Field[string]
+	CategoryId orm.Field[int64]
+	BrandId orm.Field[int64]
+	Price orm.Field[float64]
+	CostPrice orm.Field[float64]
+	CompareAtPrice orm.Field[float64]
+	StockQuantity orm.Field[int32]
+	TrackInventory orm.Field[bool]
+	AllowBackorder orm.Field[bool]
+	Weight orm.Field[float64]
+	Length orm.Field[float64]
+	Width orm.Field[float64]
+	Height orm.Field[float64]
+	IsActive orm.Field[bool]
+	IsFeatured orm.Field[bool]
+	IsDigital orm.Field[bool]
+	MetaTitle orm.Field[string]
+	MetaDescription orm.Field[string]
+	MetaKeywords orm.Field[string]
+	ViewCount orm.Field[int32]
+	OrderCount orm.Field[int32]
+	RatingAverage orm.Field[float64]
+	RatingCount orm.Field[int32]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
+	PublishedAt orm.Field[time.Time]
 }
 
-var ProductFields = ProductFields{
-	id: orm.NewField[int64]("id", "products"),
-	name: orm.NewField[string]("name", "products"),
-	slug: orm.NewField[string]("slug", "products"),
-	sku: orm.NewField[string]("sku", "products"),
-	description: orm.NewField[string]("description", "products"),
-	short_description: orm.NewField[string]("short_description", "products"),
-	category_id: orm.NewField[int64]("category_id", "products"),
-	brand_id: orm.NewField[int64]("brand_id", "products"),
-	price: orm.NewField[float64]("price", "products"),
-	cost_price: orm.NewField[float64]("cost_price", "products"),
-	compare_at_price: orm.NewField[float64]("compare_at_price", "products"),
-	stock_quantity: orm.NewField[int32]("stock_quantity", "products"),
-	track_inventory: orm.NewField[bool]("track_inventory", "products"),
-	allow_backorder: orm.NewField[bool]("allow_backorder", "products"),
-	weight: orm.NewField[float64]("weight", "products"),
-	length: orm.NewField[float64]("length", "products"),
-	width: orm.NewField[float64]("width", "products"),
-	height: orm.NewField[float64]("height", "products"),
-	is_active: orm.NewField[bool]("is_active", "products"),
-	is_featured: orm.NewField[bool]("is_featured", "products"),
-	is_digital: orm.NewField[bool]("is_digital", "products"),
-	meta_title: orm.NewField[string]("meta_title", "products"),
-	meta_description: orm.NewField[string]("meta_description", "products"),
-	meta_keywords: orm.NewField[string]("meta_keywords", "products"),
-	view_count: orm.NewField[int32]("view_count", "products"),
-	order_count: orm.NewField[int32]("order_count", "products"),
-	rating_average: orm.NewField[float64]("rating_average", "products"),
-	rating_count: orm.NewField[int32]("rating_count", "products"),
-	created_at: orm.NewField[time.Time]("created_at", "products"),
-	updated_at: orm.NewField[time.Time]("updated_at", "products"),
-	published_at: orm.NewField[time.Time]("published_at", "products"),
+var ProductFieldsInstance = ProductFields{
+	Id: orm.NewField[int64]("id", "products"),
+	Name: orm.NewField[string]("name", "products"),
+	Slug: orm.NewField[string]("slug", "products"),
+	Sku: orm.NewField[string]("sku", "products"),
+	Description: orm.NewField[string]("description", "products"),
+	ShortDescription: orm.NewField[string]("short_description", "products"),
+	CategoryId: orm.NewField[int64]("category_id", "products"),
+	BrandId: orm.NewField[int64]("brand_id", "products"),
+	Price: orm.NewField[float64]("price", "products"),
+	CostPrice: orm.NewField[float64]("cost_price", "products"),
+	CompareAtPrice: orm.NewField[float64]("compare_at_price", "products"),
+	StockQuantity: orm.NewField[int32]("stock_quantity", "products"),
+	TrackInventory: orm.NewField[bool]("track_inventory", "products"),
+	AllowBackorder: orm.NewField[bool]("allow_backorder", "products"),
+	Weight: orm.NewField[float64]("weight", "products"),
+	Length: orm.NewField[float64]("length", "products"),
+	Width: orm.NewField[float64]("width", "products"),
+	Height: orm.NewField[float64]("height", "products"),
+	IsActive: orm.NewField[bool]("is_active", "products"),
+	IsFeatured: orm.NewField[bool]("is_featured", "products"),
+	IsDigital: orm.NewField[bool]("is_digital", "products"),
+	MetaTitle: orm.NewField[string]("meta_title", "products"),
+	MetaDescription: orm.NewField[string]("meta_description", "products"),
+	MetaKeywords: orm.NewField[string]("meta_keywords", "products"),
+	ViewCount: orm.NewField[int32]("view_count", "products"),
+	OrderCount: orm.NewField[int32]("order_count", "products"),
+	RatingAverage: orm.NewField[float64]("rating_average", "products"),
+	RatingCount: orm.NewField[int32]("rating_count", "products"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "products"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "products"),
+	PublishedAt: orm.NewField[time.Time]("published_at", "products"),
 }
 
 
@@ -240,32 +240,32 @@ var ProductFields = ProductFields{
 // ProductVariantGenerated struct definition
 type ProductVariantGenerated struct {
 	schema.BaseSchema
-	id int64 `json:"id" db:"id" validate:""`
-	product_id int64 `json:"product_id" db:"product_id" validate:""`
-	sku string `json:"sku" db:"sku" validate:""`
-	name string `json:"name" db:"name" validate:""`
-	option1_name string `json:"option1_name" db:"option1_name" validate:""`
-	option1_value string `json:"option1_value" db:"option1_value" validate:""`
-	option2_name string `json:"option2_name" db:"option2_name" validate:""`
-	option2_value string `json:"option2_value" db:"option2_value" validate:""`
-	option3_name string `json:"option3_name" db:"option3_name" validate:""`
-	option3_value string `json:"option3_value" db:"option3_value" validate:""`
-	price float64 `json:"price" db:"price" validate:""`
-	compare_at_price float64 `json:"compare_at_price" db:"compare_at_price" validate:""`
-	cost_price float64 `json:"cost_price" db:"cost_price" validate:""`
-	stock_quantity int32 `json:"stock_quantity" db:"stock_quantity" validate:""`
-	reserved_quantity int32 `json:"reserved_quantity" db:"reserved_quantity" validate:""`
-	track_inventory bool `json:"track_inventory" db:"track_inventory" validate:""`
-	weight float64 `json:"weight" db:"weight" validate:""`
-	length float64 `json:"length" db:"length" validate:""`
-	width float64 `json:"width" db:"width" validate:""`
-	height float64 `json:"height" db:"height" validate:""`
-	is_active bool `json:"is_active" db:"is_active" validate:""`
-	is_default bool `json:"is_default" db:"is_default" validate:""`
-	image_url string `json:"image_url" db:"image_url" validate:""`
-	sort_order int32 `json:"sort_order" db:"sort_order" validate:""`
-	created_at time.Time `json:"created_at" db:"created_at" validate:""`
-	updated_at time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	ProductId int64 `json:"product_id" db:"product_id" validate:""`
+	Sku string `json:"sku" db:"sku" validate:""`
+	Name string `json:"name" db:"name" validate:""`
+	Option1Name string `json:"option1_name" db:"option1_name" validate:""`
+	Option1Value string `json:"option1_value" db:"option1_value" validate:""`
+	Option2Name string `json:"option2_name" db:"option2_name" validate:""`
+	Option2Value string `json:"option2_value" db:"option2_value" validate:""`
+	Option3Name string `json:"option3_name" db:"option3_name" validate:""`
+	Option3Value string `json:"option3_value" db:"option3_value" validate:""`
+	Price float64 `json:"price" db:"price" validate:""`
+	CompareAtPrice float64 `json:"compare_at_price" db:"compare_at_price" validate:""`
+	CostPrice float64 `json:"cost_price" db:"cost_price" validate:""`
+	StockQuantity int32 `json:"stock_quantity" db:"stock_quantity" validate:""`
+	ReservedQuantity int32 `json:"reserved_quantity" db:"reserved_quantity" validate:""`
+	TrackInventory bool `json:"track_inventory" db:"track_inventory" validate:""`
+	Weight float64 `json:"weight" db:"weight" validate:""`
+	Length float64 `json:"length" db:"length" validate:""`
+	Width float64 `json:"width" db:"width" validate:""`
+	Height float64 `json:"height" db:"height" validate:""`
+	IsActive bool `json:"is_active" db:"is_active" validate:""`
+	IsDefault bool `json:"is_default" db:"is_default" validate:""`
+	ImageUrl string `json:"image_url" db:"image_url" validate:""`
+	SortOrder int32 `json:"sort_order" db:"sort_order" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the ProductVariant model
@@ -280,61 +280,61 @@ var ProductVariantObjects, _ = orm.NewManager[ProductVariant]("product_variants"
 
 // ProductVariantFields provides type-safe field access for ProductVariant
 type ProductVariantFields struct {
-	id orm.Field[int64]
-	product_id orm.Field[int64]
-	sku orm.Field[string]
-	name orm.Field[string]
-	option1_name orm.Field[string]
-	option1_value orm.Field[string]
-	option2_name orm.Field[string]
-	option2_value orm.Field[string]
-	option3_name orm.Field[string]
-	option3_value orm.Field[string]
-	price orm.Field[float64]
-	compare_at_price orm.Field[float64]
-	cost_price orm.Field[float64]
-	stock_quantity orm.Field[int32]
-	reserved_quantity orm.Field[int32]
-	track_inventory orm.Field[bool]
-	weight orm.Field[float64]
-	length orm.Field[float64]
-	width orm.Field[float64]
-	height orm.Field[float64]
-	is_active orm.Field[bool]
-	is_default orm.Field[bool]
-	image_url orm.Field[string]
-	sort_order orm.Field[int32]
-	created_at orm.Field[time.Time]
-	updated_at orm.Field[time.Time]
+	Id orm.Field[int64]
+	ProductId orm.Field[int64]
+	Sku orm.Field[string]
+	Name orm.Field[string]
+	Option1Name orm.Field[string]
+	Option1Value orm.Field[string]
+	Option2Name orm.Field[string]
+	Option2Value orm.Field[string]
+	Option3Name orm.Field[string]
+	Option3Value orm.Field[string]
+	Price orm.Field[float64]
+	CompareAtPrice orm.Field[float64]
+	CostPrice orm.Field[float64]
+	StockQuantity orm.Field[int32]
+	ReservedQuantity orm.Field[int32]
+	TrackInventory orm.Field[bool]
+	Weight orm.Field[float64]
+	Length orm.Field[float64]
+	Width orm.Field[float64]
+	Height orm.Field[float64]
+	IsActive orm.Field[bool]
+	IsDefault orm.Field[bool]
+	ImageUrl orm.Field[string]
+	SortOrder orm.Field[int32]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
 }
 
-var ProductVariantFields = ProductVariantFields{
-	id: orm.NewField[int64]("id", "product_variants"),
-	product_id: orm.NewField[int64]("product_id", "product_variants"),
-	sku: orm.NewField[string]("sku", "product_variants"),
-	name: orm.NewField[string]("name", "product_variants"),
-	option1_name: orm.NewField[string]("option1_name", "product_variants"),
-	option1_value: orm.NewField[string]("option1_value", "product_variants"),
-	option2_name: orm.NewField[string]("option2_name", "product_variants"),
-	option2_value: orm.NewField[string]("option2_value", "product_variants"),
-	option3_name: orm.NewField[string]("option3_name", "product_variants"),
-	option3_value: orm.NewField[string]("option3_value", "product_variants"),
-	price: orm.NewField[float64]("price", "product_variants"),
-	compare_at_price: orm.NewField[float64]("compare_at_price", "product_variants"),
-	cost_price: orm.NewField[float64]("cost_price", "product_variants"),
-	stock_quantity: orm.NewField[int32]("stock_quantity", "product_variants"),
-	reserved_quantity: orm.NewField[int32]("reserved_quantity", "product_variants"),
-	track_inventory: orm.NewField[bool]("track_inventory", "product_variants"),
-	weight: orm.NewField[float64]("weight", "product_variants"),
-	length: orm.NewField[float64]("length", "product_variants"),
-	width: orm.NewField[float64]("width", "product_variants"),
-	height: orm.NewField[float64]("height", "product_variants"),
-	is_active: orm.NewField[bool]("is_active", "product_variants"),
-	is_default: orm.NewField[bool]("is_default", "product_variants"),
-	image_url: orm.NewField[string]("image_url", "product_variants"),
-	sort_order: orm.NewField[int32]("sort_order", "product_variants"),
-	created_at: orm.NewField[time.Time]("created_at", "product_variants"),
-	updated_at: orm.NewField[time.Time]("updated_at", "product_variants"),
+var ProductVariantFieldsInstance = ProductVariantFields{
+	Id: orm.NewField[int64]("id", "product_variants"),
+	ProductId: orm.NewField[int64]("product_id", "product_variants"),
+	Sku: orm.NewField[string]("sku", "product_variants"),
+	Name: orm.NewField[string]("name", "product_variants"),
+	Option1Name: orm.NewField[string]("option1_name", "product_variants"),
+	Option1Value: orm.NewField[string]("option1_value", "product_variants"),
+	Option2Name: orm.NewField[string]("option2_name", "product_variants"),
+	Option2Value: orm.NewField[string]("option2_value", "product_variants"),
+	Option3Name: orm.NewField[string]("option3_name", "product_variants"),
+	Option3Value: orm.NewField[string]("option3_value", "product_variants"),
+	Price: orm.NewField[float64]("price", "product_variants"),
+	CompareAtPrice: orm.NewField[float64]("compare_at_price", "product_variants"),
+	CostPrice: orm.NewField[float64]("cost_price", "product_variants"),
+	StockQuantity: orm.NewField[int32]("stock_quantity", "product_variants"),
+	ReservedQuantity: orm.NewField[int32]("reserved_quantity", "product_variants"),
+	TrackInventory: orm.NewField[bool]("track_inventory", "product_variants"),
+	Weight: orm.NewField[float64]("weight", "product_variants"),
+	Length: orm.NewField[float64]("length", "product_variants"),
+	Width: orm.NewField[float64]("width", "product_variants"),
+	Height: orm.NewField[float64]("height", "product_variants"),
+	IsActive: orm.NewField[bool]("is_active", "product_variants"),
+	IsDefault: orm.NewField[bool]("is_default", "product_variants"),
+	ImageUrl: orm.NewField[string]("image_url", "product_variants"),
+	SortOrder: orm.NewField[int32]("sort_order", "product_variants"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "product_variants"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "product_variants"),
 }
 
 
@@ -343,16 +343,16 @@ var ProductVariantFields = ProductVariantFields{
 // ProductImageGenerated struct definition
 type ProductImageGenerated struct {
 	schema.BaseSchema
-	id int64 `json:"id" db:"id" validate:""`
-	product_id int64 `json:"product_id" db:"product_id" validate:""`
-	variant_id int64 `json:"variant_id" db:"variant_id" validate:""`
-	image_url string `json:"image_url" db:"image_url" validate:""`
-	thumbnail_url string `json:"thumbnail_url" db:"thumbnail_url" validate:""`
-	alt_text string `json:"alt_text" db:"alt_text" validate:""`
-	sort_order int32 `json:"sort_order" db:"sort_order" validate:""`
-	is_primary bool `json:"is_primary" db:"is_primary" validate:""`
-	created_at time.Time `json:"created_at" db:"created_at" validate:""`
-	updated_at time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	ProductId int64 `json:"product_id" db:"product_id" validate:""`
+	VariantId int64 `json:"variant_id" db:"variant_id" validate:""`
+	ImageUrl string `json:"image_url" db:"image_url" validate:""`
+	ThumbnailUrl string `json:"thumbnail_url" db:"thumbnail_url" validate:""`
+	AltText string `json:"alt_text" db:"alt_text" validate:""`
+	SortOrder int32 `json:"sort_order" db:"sort_order" validate:""`
+	IsPrimary bool `json:"is_primary" db:"is_primary" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the ProductImage model
@@ -367,29 +367,29 @@ var ProductImageObjects, _ = orm.NewManager[ProductImage]("product_images")
 
 // ProductImageFields provides type-safe field access for ProductImage
 type ProductImageFields struct {
-	id orm.Field[int64]
-	product_id orm.Field[int64]
-	variant_id orm.Field[int64]
-	image_url orm.Field[string]
-	thumbnail_url orm.Field[string]
-	alt_text orm.Field[string]
-	sort_order orm.Field[int32]
-	is_primary orm.Field[bool]
-	created_at orm.Field[time.Time]
-	updated_at orm.Field[time.Time]
+	Id orm.Field[int64]
+	ProductId orm.Field[int64]
+	VariantId orm.Field[int64]
+	ImageUrl orm.Field[string]
+	ThumbnailUrl orm.Field[string]
+	AltText orm.Field[string]
+	SortOrder orm.Field[int32]
+	IsPrimary orm.Field[bool]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
 }
 
-var ProductImageFields = ProductImageFields{
-	id: orm.NewField[int64]("id", "product_images"),
-	product_id: orm.NewField[int64]("product_id", "product_images"),
-	variant_id: orm.NewField[int64]("variant_id", "product_images"),
-	image_url: orm.NewField[string]("image_url", "product_images"),
-	thumbnail_url: orm.NewField[string]("thumbnail_url", "product_images"),
-	alt_text: orm.NewField[string]("alt_text", "product_images"),
-	sort_order: orm.NewField[int32]("sort_order", "product_images"),
-	is_primary: orm.NewField[bool]("is_primary", "product_images"),
-	created_at: orm.NewField[time.Time]("created_at", "product_images"),
-	updated_at: orm.NewField[time.Time]("updated_at", "product_images"),
+var ProductImageFieldsInstance = ProductImageFields{
+	Id: orm.NewField[int64]("id", "product_images"),
+	ProductId: orm.NewField[int64]("product_id", "product_images"),
+	VariantId: orm.NewField[int64]("variant_id", "product_images"),
+	ImageUrl: orm.NewField[string]("image_url", "product_images"),
+	ThumbnailUrl: orm.NewField[string]("thumbnail_url", "product_images"),
+	AltText: orm.NewField[string]("alt_text", "product_images"),
+	SortOrder: orm.NewField[int32]("sort_order", "product_images"),
+	IsPrimary: orm.NewField[bool]("is_primary", "product_images"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "product_images"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "product_images"),
 }
 
 
@@ -398,14 +398,14 @@ var ProductImageFields = ProductImageFields{
 // ProductAttributeGenerated struct definition
 type ProductAttributeGenerated struct {
 	schema.BaseSchema
-	id int64 `json:"id" db:"id" validate:""`
-	name string `json:"name" db:"name" validate:""`
-	code string `json:"code" db:"code" validate:""`
-	type string `json:"type" db:"type" validate:""`
-	is_filterable bool `json:"is_filterable" db:"is_filterable" validate:""`
-	is_visible bool `json:"is_visible" db:"is_visible" validate:""`
-	sort_order int32 `json:"sort_order" db:"sort_order" validate:""`
-	created_at time.Time `json:"created_at" db:"created_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	Name string `json:"name" db:"name" validate:""`
+	Code string `json:"code" db:"code" validate:""`
+	Type string `json:"type" db:"type" validate:""`
+	IsFilterable bool `json:"is_filterable" db:"is_filterable" validate:""`
+	IsVisible bool `json:"is_visible" db:"is_visible" validate:""`
+	SortOrder int32 `json:"sort_order" db:"sort_order" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
 }
 
 // Validate validates the ProductAttribute model
@@ -420,25 +420,25 @@ var ProductAttributeObjects, _ = orm.NewManager[ProductAttribute]("product_attri
 
 // ProductAttributeFields provides type-safe field access for ProductAttribute
 type ProductAttributeFields struct {
-	id orm.Field[int64]
-	name orm.Field[string]
-	code orm.Field[string]
-	type orm.Field[string]
-	is_filterable orm.Field[bool]
-	is_visible orm.Field[bool]
-	sort_order orm.Field[int32]
-	created_at orm.Field[time.Time]
+	Id orm.Field[int64]
+	Name orm.Field[string]
+	Code orm.Field[string]
+	Type orm.Field[string]
+	IsFilterable orm.Field[bool]
+	IsVisible orm.Field[bool]
+	SortOrder orm.Field[int32]
+	CreatedAt orm.Field[time.Time]
 }
 
-var ProductAttributeFields = ProductAttributeFields{
-	id: orm.NewField[int64]("id", "product_attributes"),
-	name: orm.NewField[string]("name", "product_attributes"),
-	code: orm.NewField[string]("code", "product_attributes"),
-	type: orm.NewField[string]("type", "product_attributes"),
-	is_filterable: orm.NewField[bool]("is_filterable", "product_attributes"),
-	is_visible: orm.NewField[bool]("is_visible", "product_attributes"),
-	sort_order: orm.NewField[int32]("sort_order", "product_attributes"),
-	created_at: orm.NewField[time.Time]("created_at", "product_attributes"),
+var ProductAttributeFieldsInstance = ProductAttributeFields{
+	Id: orm.NewField[int64]("id", "product_attributes"),
+	Name: orm.NewField[string]("name", "product_attributes"),
+	Code: orm.NewField[string]("code", "product_attributes"),
+	Type: orm.NewField[string]("type", "product_attributes"),
+	IsFilterable: orm.NewField[bool]("is_filterable", "product_attributes"),
+	IsVisible: orm.NewField[bool]("is_visible", "product_attributes"),
+	SortOrder: orm.NewField[int32]("sort_order", "product_attributes"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "product_attributes"),
 }
 
 
@@ -447,11 +447,11 @@ var ProductAttributeFields = ProductAttributeFields{
 // ProductAttributeValueGenerated struct definition
 type ProductAttributeValueGenerated struct {
 	schema.BaseSchema
-	id int64 `json:"id" db:"id" validate:""`
-	product_id int64 `json:"product_id" db:"product_id" validate:""`
-	attribute_id int64 `json:"attribute_id" db:"attribute_id" validate:""`
-	value string `json:"value" db:"value" validate:""`
-	created_at time.Time `json:"created_at" db:"created_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	ProductId int64 `json:"product_id" db:"product_id" validate:""`
+	AttributeId int64 `json:"attribute_id" db:"attribute_id" validate:""`
+	Value string `json:"value" db:"value" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
 }
 
 // Validate validates the ProductAttributeValue model
@@ -466,19 +466,19 @@ var ProductAttributeValueObjects, _ = orm.NewManager[ProductAttributeValue]("pro
 
 // ProductAttributeValueFields provides type-safe field access for ProductAttributeValue
 type ProductAttributeValueFields struct {
-	id orm.Field[int64]
-	product_id orm.Field[int64]
-	attribute_id orm.Field[int64]
-	value orm.Field[string]
-	created_at orm.Field[time.Time]
+	Id orm.Field[int64]
+	ProductId orm.Field[int64]
+	AttributeId orm.Field[int64]
+	Value orm.Field[string]
+	CreatedAt orm.Field[time.Time]
 }
 
-var ProductAttributeValueFields = ProductAttributeValueFields{
-	id: orm.NewField[int64]("id", "product_attribute_values"),
-	product_id: orm.NewField[int64]("product_id", "product_attribute_values"),
-	attribute_id: orm.NewField[int64]("attribute_id", "product_attribute_values"),
-	value: orm.NewField[string]("value", "product_attribute_values"),
-	created_at: orm.NewField[time.Time]("created_at", "product_attribute_values"),
+var ProductAttributeValueFieldsInstance = ProductAttributeValueFields{
+	Id: orm.NewField[int64]("id", "product_attribute_values"),
+	ProductId: orm.NewField[int64]("product_id", "product_attribute_values"),
+	AttributeId: orm.NewField[int64]("attribute_id", "product_attribute_values"),
+	Value: orm.NewField[string]("value", "product_attribute_values"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "product_attribute_values"),
 }
 
 
