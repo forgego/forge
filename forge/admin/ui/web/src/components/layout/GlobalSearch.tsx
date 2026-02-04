@@ -34,6 +34,16 @@ export function GlobalSearch({
         setOpen(true);
         setTimeout(() => inputRef.current?.focus(), 0);
       }
+      if (
+        e.key === "/" &&
+        !(e.target instanceof HTMLInputElement) &&
+        !(e.target instanceof HTMLTextAreaElement) &&
+        !(e.target as HTMLElement)?.isContentEditable
+      ) {
+        e.preventDefault();
+        setOpen(true);
+        setTimeout(() => inputRef.current?.focus(), 0);
+      }
       if (e.key === "Escape") {
         setOpen(false);
       }
@@ -84,7 +94,7 @@ export function GlobalSearch({
 
   const handleResultSelect = (item: any) => {
     if (item.url) {
-      navigate({ to: item.url });
+      navigate({ to: item.url.replace("/admin", "") });
     }
     setOpen(false);
     setQuery("");
