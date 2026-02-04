@@ -117,3 +117,26 @@ jobs:
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
         working-directory: forge
+
+  e2e-cli:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          check-latest: true
+
+      - name: Build forge CLI
+        working-directory: forge
+        run: go build -o /tmp/forge ./cli/cmd
+
+      - name: Add forge CLI to PATH
+        run: echo "/tmp" >> $GITHUB_PATH
+
+      - name: Run CLI e2e tests
+        working-directory: tests
+        run: go test -v -timeout 15m ./e2e/cli
