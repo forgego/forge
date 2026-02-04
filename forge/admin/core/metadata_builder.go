@@ -355,7 +355,7 @@ func inferListDisplay(fields []FieldMetadata) []string {
 			continue
 		}
 
-		result = append(result, field.Name)
+		result = append(result, listDisplayFieldName(field))
 	}
 
 	// Always show at least ID if nothing else
@@ -364,6 +364,13 @@ func inferListDisplay(fields []FieldMetadata) []string {
 	}
 
 	return result
+}
+
+func listDisplayFieldName(field FieldMetadata) string {
+	if field.Name != "" {
+		return field.Name
+	}
+	return field.Label
 }
 
 // inferSearchFields infers which fields to use for search

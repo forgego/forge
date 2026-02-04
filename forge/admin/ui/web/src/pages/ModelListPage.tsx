@@ -206,6 +206,9 @@ export default function ModelListPage() {
   if (!metadata || !listData) return null;
 
   const displayFields = metadata.list_display || [];
+  const fieldsByName = new Map(
+    metadata.fields.map((field) => [field.name, field])
+  );
   const objects = listData.results || [];
   const savedViews = savedViewsData?.views || [];
 
@@ -541,9 +544,7 @@ export default function ModelListPage() {
                     />
                   </TableHead>
                   {displayFields.map((fieldName) => {
-                    const field = metadata.fields.find(
-                      (f) => f.name === fieldName
-                    );
+                    const field = fieldsByName.get(fieldName);
                     return (
                       <TableHead
                         key={fieldName}
