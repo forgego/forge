@@ -14,9 +14,8 @@ import { Input } from "../components/ui/input";
 import { Checkbox } from "../components/ui/checkbox";
 import { SearchableSelect } from "../components/ui/searchable-select";
 import { Card, CardContent } from "../components/ui/card";
-import { Loader2, ArrowLeft, Save, X, Plus } from "lucide-react";
+import { Loader2, Save, X, Plus } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { Loader2, Save, X } from "lucide-react";
 import AdminLayout from "../components/layout/AdminLayout";
 import { useUIComponent } from "../hooks/useUIComponent";
 import { cn } from "../lib/utils";
@@ -783,12 +782,6 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <FormHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-1.5">
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-              {mode === "create" ? "Add" : "Edit"} {metadata.verbose_name}
-            </h1>
-            <p className="text-sm text-muted-foreground">
         <FormHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground/90">
@@ -800,15 +793,6 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
                 : `Updating ${metadata.verbose_name} #${objectId}`}
             </p>
           </div>
-          <div className="flex items-center gap-2 md:pt-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="rounded-full hover:bg-muted/50 transition-colors"
-              onClick={handleCancel}
-            >
-              <ArrowLeft className="h-4 w-4" />
           <div className="flex items-center gap-2">
             <Button
               type="button"
