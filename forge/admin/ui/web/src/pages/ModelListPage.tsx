@@ -180,6 +180,25 @@ export default function ModelListPage() {
     setExportFormat("");
   };
 
+  const handleCreateModel = () =>
+    navigate({
+      to: "/$model/create",
+      params: { model: modelName },
+    });
+
+  const handleSaveView = async () => {
+    const name = window.prompt("Name this view");
+    if (!name) {
+      return;
+    }
+    await saveView({
+      name,
+      filters: activeFilters,
+      ordering,
+      display: displayFields,
+    });
+  };
+
   if (metaLoading || (listLoading && !listData)) {
     return (
       <AdminLayout>
@@ -226,8 +245,26 @@ export default function ModelListPage() {
     "tr"
   );
 
+  const quickActions = [
+    {
+      label: "New",
+      onClick: handleCreateModel,
+      disabled: !metadata.permissions.add,
+    },
+    {
+      label: "Saved Views",
+      onClick: handleSaveView,
+      disabled: saveViewPending,
+    },
+    {
+      label: "Filters",
+      onClick: () => setIsFilterOpen(true),
+      disabled: metadata.filters.length === 0,
+    },
+  ];
+
   return (
-    <AdminLayout>
+    <AdminLayout quickActions={quickActions}>
       <div className="space-y-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <ListTitle className="space-y-1.5">
@@ -259,12 +296,7 @@ export default function ModelListPage() {
             {metadata.permissions.add && (
               <Button
                 data-testid="create-button"
-                onClick={() =>
-                  navigate({
-                    to: "/$model/create",
-                    params: { model: modelName },
-                  })
-                }
+                onClick={handleCreateModel}
                 className="bg-primary hover:bg-primary/90"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -320,18 +352,7 @@ export default function ModelListPage() {
                     variant="outline"
                     size="sm"
                     className="h-11 px-4 text-[10px] font-bold uppercase tracking-widest"
-                    onClick={async () => {
-                      const name = window.prompt("Name this view");
-                      if (!name) {
-                        return;
-                      }
-                      await saveView({
-                        name,
-                        filters: activeFilters,
-                        ordering,
-                        display: displayFields,
-                      });
-                    }}
+                    onClick={handleSaveView}
                     disabled={saveViewPending}
                   >
                     {saveViewPending ? (

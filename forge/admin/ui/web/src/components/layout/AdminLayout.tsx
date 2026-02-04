@@ -21,10 +21,21 @@ import { cn } from "../../lib/utils";
 import { GlobalSearch } from "./GlobalSearch";
 import { ThemeCustomizer } from "../../features/theme/ThemeCustomizer";
 
+type QuickAction = {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  hidden?: boolean;
+  icon?: React.ReactNode;
+  ariaLabel?: string;
+};
+
 export default function AdminLayout({
   children,
+  quickActions = [],
 }: {
   children: React.ReactNode;
+  quickActions?: QuickAction[];
 }) {
   const { data: modelsData } = useModels();
   const { data: configData } = useConfig();
@@ -321,6 +332,11 @@ export default function AdminLayout({
       ...(activePluginSectionId ? { [activePluginSectionId]: true } : {}),
     }));
   }, [activeModelSectionId, activePluginSectionId]);
+
+  const visibleQuickActions = useMemo(
+    () => quickActions.filter((action) => !action.hidden),
+    [quickActions]
+  );
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -699,6 +715,33 @@ export default function AdminLayout({
           </Button>
 
           <GlobalSearch models={models} />
+          {visibleQuickActions.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Quick Actions
+              </span>
+              <div className="flex items-center gap-2">
+                {visibleQuickActions.map((action) => (
+                  <Button
+                    key={action.label}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest"
+                    onClick={action.onClick}
+                    disabled={action.disabled}
+                    aria-label={action.ariaLabel || action.label}
+                  >
+                    {action.icon && (
+                      <span className="mr-2 flex items-center">
+                        {action.icon}
+                      </span>
+                    )}
+                    {action.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="ml-auto flex items-center gap-2">
             <ThemeCustomizer />
