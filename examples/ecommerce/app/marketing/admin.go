@@ -23,6 +23,18 @@ func RegisterAdmin(ctx context.Context) {
 			CouponFieldsInstance.DiscountType,
 			CouponFieldsInstance.IsActive,
 		},
+		Actions: []admin.Action[Coupon]{
+			{
+				Name:  "activate",
+				Label: "Activate Coupons",
+				Handler: func(ctx context.Context, instances []*Coupon) error {
+					for _, coupon := range instances {
+						coupon.IsActive = true
+					}
+					return nil
+				},
+			},
+		},
 	})
 
 	// CouponUsage admin
@@ -34,6 +46,23 @@ func RegisterAdmin(ctx context.Context) {
 			CouponUsageFieldsInstance.CustomerId,
 			CouponUsageFieldsInstance.DiscountAmount,
 			CouponUsageFieldsInstance.CreatedAt,
+		},
+		ListFilter: []admin.Field{
+			CouponUsageFieldsInstance.CouponId,
+			CouponUsageFieldsInstance.OrderId,
+			CouponUsageFieldsInstance.CustomerId,
+		},
+		Actions: []admin.Action[CouponUsage]{
+			{
+				Name:  "zero_discount",
+				Label: "Zero Discount Amount",
+				Handler: func(ctx context.Context, instances []*CouponUsage) error {
+					for _, usage := range instances {
+						usage.DiscountAmount = 0
+					}
+					return nil
+				},
+			},
 		},
 	})
 
@@ -53,6 +82,18 @@ func RegisterAdmin(ctx context.Context) {
 			ReviewFieldsInstance.Rating,
 			ReviewFieldsInstance.IsFeatured,
 		},
+		Actions: []admin.Action[Review]{
+			{
+				Name:  "approve",
+				Label: "Approve Reviews",
+				Handler: func(ctx context.Context, instances []*Review) error {
+					for _, review := range instances {
+						review.Status = "approved"
+					}
+					return nil
+				},
+			},
+		},
 	})
 
 	// ReviewImage admin
@@ -63,6 +104,21 @@ func RegisterAdmin(ctx context.Context) {
 			ReviewImageFieldsInstance.AltText,
 			ReviewImageFieldsInstance.SortOrder,
 		},
+		ListFilter: []admin.Field{
+			ReviewImageFieldsInstance.ReviewId,
+		},
+		Actions: []admin.Action[ReviewImage]{
+			{
+				Name:  "reset_sort",
+				Label: "Reset Sort Order",
+				Handler: func(ctx context.Context, instances []*ReviewImage) error {
+					for _, image := range instances {
+						image.SortOrder = 0
+					}
+					return nil
+				},
+			},
+		},
 	})
 
 	// ReviewHelpfulness admin
@@ -72,6 +128,21 @@ func RegisterAdmin(ctx context.Context) {
 			ReviewHelpfulnessFieldsInstance.ReviewId,
 			ReviewHelpfulnessFieldsInstance.CustomerId,
 			ReviewHelpfulnessFieldsInstance.IsHelpful,
+		},
+		ListFilter: []admin.Field{
+			ReviewHelpfulnessFieldsInstance.IsHelpful,
+		},
+		Actions: []admin.Action[ReviewHelpfulness]{
+			{
+				Name:  "mark_helpful",
+				Label: "Mark Helpful",
+				Handler: func(ctx context.Context, instances []*ReviewHelpfulness) error {
+					for _, helpfulness := range instances {
+						helpfulness.IsHelpful = true
+					}
+					return nil
+				},
+			},
 		},
 	})
 
@@ -88,6 +159,18 @@ func RegisterAdmin(ctx context.Context) {
 		ListFilter: []admin.Field{
 			ProductQuestionFieldsInstance.Status,
 			ProductQuestionFieldsInstance.IsPublic,
+		},
+		Actions: []admin.Action[ProductQuestion]{
+			{
+				Name:  "mark_answered",
+				Label: "Mark Answered",
+				Handler: func(ctx context.Context, instances []*ProductQuestion) error {
+					for _, question := range instances {
+						question.Status = "answered"
+					}
+					return nil
+				},
+			},
 		},
 	})
 }
