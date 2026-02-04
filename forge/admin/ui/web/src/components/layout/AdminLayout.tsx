@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import {
+  Bell,
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
@@ -13,6 +14,7 @@ import { useConfig, useModels } from "../../api/hooks/adminHooks";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { GlobalSearch } from "./GlobalSearch";
+import { ThemeCustomizer } from "../../features/theme/ThemeCustomizer";
 
 const storageKey = "forge.admin.pinnedModels";
 
@@ -77,12 +79,40 @@ export default function AdminLayout({
         .replace(/[_-]+/g, " ")
         .replace(/\b\w/g, (char) => char.toUpperCase());
 
+    const configGroups =
+      configData?.model_groups ??
+      configData?.modelGroups ??
+      configData?.model_groups_by_app ??
+      null;
+    const modelGroupMap = new Map<string, string>();
+
+    if (Array.isArray(configGroups)) {
+      configGroups.forEach((group: any) => {
+        const label = group.label || group.name || group.app || "Other";
+        const groupModels: string[] =
+          group.models || group.model_names || group.modelNames || [];
+        groupModels.forEach((modelName: string) => {
+          modelGroupMap.set(modelName, label);
+        });
+      });
+    } else if (configGroups && typeof configGroups === "object") {
+      Object.entries(configGroups).forEach(([label, groupModels]) => {
+        if (Array.isArray(groupModels)) {
+          groupModels.forEach((modelName: string) => {
+            modelGroupMap.set(modelName, label);
+          });
+        }
+      });
+    }
+
     models.forEach((model: any) => {
-      let groupKey = "Other";
-      if (model.name.includes(".")) {
-        groupKey = model.name.split(".")[0];
-      } else if (model.name.includes("_")) {
-        groupKey = model.name.split("_")[0];
+      let groupKey = modelGroupMap.get(model.name) ?? "Other";
+      if (!modelGroupMap.has(model.name)) {
+        if (model.name.includes(".")) {
+          groupKey = model.name.split(".")[0];
+        } else if (model.name.includes("_")) {
+          groupKey = model.name.split("_")[0];
+        }
       }
 
       const id = `models-${groupKey.toLowerCase()}`;
@@ -104,7 +134,7 @@ export default function AdminLayout({
         ),
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [models]);
+  }, [configData, models]);
 
   const pinned = React.useMemo(
     () =>
@@ -326,7 +356,7 @@ export default function AdminLayout({
       </aside>
 
       <div className="flex-1 flex flex-col min-h-screen">
-        <header className="h-16 border-b border-border flex items-center justify-between px-4">
+        <header className="h-16 border-b border-border flex items-center justify-between px-4 gap-4 bg-card/80 backdrop-blur-md sticky top-0 z-40">
           <Button
             variant="ghost"
             size="icon"
@@ -336,7 +366,33 @@ export default function AdminLayout({
           >
             <Menu className="h-4 w-4" />
           </Button>
+          <div className="flex-1 max-w-xl hidden md:block">
+            <GlobalSearch models={models} />
+          </div>
           <div className="flex items-center gap-2">
+            <ThemeCustomizer />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full relative text-muted-foreground hover:text-foreground"
+              aria-label="Notifications"
+            >
+              <Bell className="h-4 w-4" />
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-destructive rounded-full border-2 border-card" />
+            </Button>
+            <div className="hidden sm:flex items-center gap-3 pl-2">
+              <div className="text-right">
+                <p className="text-sm font-semibold leading-none text-foreground">
+                  Admin User
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-1 uppercase font-bold tracking-wider">
+                  Super Admin
+                </p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary text-xs font-bold ring-2 ring-background">
+                AU
+              </div>
+            </div>
             <Button
               variant="ghost"
               size="sm"
