@@ -15,6 +15,7 @@ import type {
   SearchResponse,
   AutocompleteResponse,
   MetadataResponse,
+  HistoryResponse,
 } from "../types";
 
 // Query keys factory
@@ -28,6 +29,8 @@ export const adminKeys = {
     [...adminKeys.model(model), "list", params] as const,
   modelDetail: (model: string, id: string | number) =>
     [...adminKeys.model(model), "detail", id] as const,
+  modelHistory: (model: string, id: string | number) =>
+    [...adminKeys.model(model), "history", id] as const,
 };
 
 // Config hook
@@ -97,6 +100,20 @@ export function useModelDetail<T = any>(
   return useQuery({
     queryKey: adminKeys.modelDetail(model, id),
     queryFn: () => adminAPI.getObject<T>(model, id),
+    enabled: !!model && !!id,
+    ...options,
+  });
+}
+
+// Model history hook
+export function useModelHistory(
+  model: string,
+  id: string | number,
+  options?: Omit<UseQueryOptions<HistoryResponse>, "queryKey" | "queryFn">
+) {
+  return useQuery({
+    queryKey: adminKeys.modelHistory(model, id),
+    queryFn: () => adminAPI.getHistory(model, id),
     enabled: !!model && !!id,
     ...options,
   });

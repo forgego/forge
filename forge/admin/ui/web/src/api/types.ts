@@ -179,6 +179,22 @@ export interface UploadResponse {
   uploaded_at: string;
 }
 
+export interface HistoryEntry {
+  id: number;
+  timestamp: string;
+  user_id?: string;
+  user_name?: string;
+  model_name?: string;
+  object_id?: string;
+  object_repr?: string;
+  action?: string;
+  change_stats?: string;
+}
+
+export interface HistoryResponse {
+  entries: HistoryEntry[];
+}
+
 // Frontend-specific types
 
 export interface ListParams {

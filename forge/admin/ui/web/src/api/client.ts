@@ -14,6 +14,7 @@ import type {
   UploadResponse,
   ErrorResponse,
   MetadataResponse,
+  HistoryResponse,
 } from "./types";
 
 export class AdminAPIClient {
@@ -93,6 +94,14 @@ export class AdminAPIClient {
 
   async getObject<T = any>(model: string, id: string | number): Promise<T> {
     const response = await this.client.get(`/${model}/${id}`);
+    return response.data;
+  }
+
+  async getHistory(
+    model: string,
+    id: string | number
+  ): Promise<HistoryResponse> {
+    const response = await this.client.get(`/${model}/${id}/history`);
     return response.data;
   }
 
