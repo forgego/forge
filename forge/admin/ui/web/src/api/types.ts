@@ -179,6 +179,23 @@ export interface UploadResponse {
   uploaded_at: string;
 }
 
+export interface SavedView {
+  id: string;
+  name: string;
+  filters: Record<string, any>;
+  ordering: string[];
+  display: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SavedViewRequest {
+  name: string;
+  filters: Record<string, any>;
+  ordering: string[];
+  display: string[];
+}
+
 // Frontend-specific types
 
 export interface ListParams {

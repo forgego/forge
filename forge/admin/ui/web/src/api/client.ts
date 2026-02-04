@@ -14,6 +14,8 @@ import type {
   UploadResponse,
   ErrorResponse,
   MetadataResponse,
+  SavedView,
+  SavedViewRequest,
 } from "./types";
 
 export class AdminAPIClient {
@@ -197,6 +199,20 @@ export class AdminAPIClient {
         "Content-Type": "multipart/form-data",
       },
     });
+    return response.data;
+  }
+
+  // Saved views
+  async listSavedViews(model: string): Promise<{ views: SavedView[] }> {
+    const response = await this.client.get(`/saved-views/${model}`);
+    return response.data;
+  }
+
+  async saveSavedView(
+    model: string,
+    request: SavedViewRequest
+  ): Promise<SavedView> {
+    const response = await this.client.post(`/saved-views/${model}`, request);
     return response.data;
   }
 
