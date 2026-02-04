@@ -20,6 +20,7 @@ import AdminLayout from "../components/layout/AdminLayout";
 import { useUIComponent } from "../hooks/useUIComponent";
 import { cn } from "../lib/utils";
 import { useToast } from "../hooks/use-toast";
+import { Switch } from "../components/ui/switch";
 
 import { ConfirmationDialog } from "../components/ui/confirmation-dialog";
 
@@ -337,6 +338,17 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
     const value = formData[field.name] || "";
     const fieldOverride = metadata.ui_overrides?.[`field.${field.name}`];
     const CustomField = useUIComponent(fieldOverride || "", null as any);
+    const isReadOnly = field.read_only;
+    const isSwitchWidget =
+      field.widget === "switch" || field.widget === "toggle";
+    const resolvedTextType =
+      field.widget === "email" ||
+      field.widget === "url" ||
+      field.widget === "tel" ||
+      field.widget === "color" ||
+      field.widget === "time"
+        ? field.widget
+        : "text";
 
     if (CustomField) {
       return (
@@ -351,12 +363,27 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
 
     switch (field.type) {
       case "boolean":
+        if (isSwitchWidget) {
+          return (
+            <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-muted/20 hover:bg-muted/30 transition-colors">
+              <Switch
+                checked={!!value}
+                onCheckedChange={(checked) => handleChange(field.name, checked)}
+                disabled={isReadOnly}
+              />
+              <label className="text-sm font-semibold leading-none cursor-pointer select-none">
+                {field.label}
+              </label>
+            </div>
+          );
+        }
         return (
           <div className="flex items-center space-x-3 p-3 rounded-lg border border-border/50 bg-muted/20 hover:bg-muted/30 transition-colors">
             <Checkbox
               id={field.name}
               checked={!!value}
               onChange={(e) => handleChange(field.name, e.target.checked)}
+              disabled={isReadOnly}
             />
             <label
               htmlFor={field.name}
@@ -376,32 +403,45 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
               onChange={(e) => handleChange(field.name, e.target.value)}
               className="flex min-h-[120px] w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all"
               required={field.required}
+              disabled={isReadOnly}
             />
           );
         }
         return (
           <Input
+            type={resolvedTextType}
             id={field.name}
             value={value}
             onChange={(e) => handleChange(field.name, e.target.value)}
             className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
             required={field.required}
+            maxLength={field.max_length}
+            minLength={field.min_length}
+            disabled={isReadOnly}
           />
         );
 
       case "integer":
       case "float":
       case "decimal":
+        const step = field.type === "integer" ? 1 : "any";
         return (
           <Input
             type="number"
             id={field.name}
             value={value}
             onChange={(e) =>
-              handleChange(field.name, parseFloat(e.target.value))
+              handleChange(
+                field.name,
+                e.target.value === "" ? "" : Number(e.target.value)
+              )
             }
             className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
             required={field.required}
+            min={field.min_value}
+            max={field.max_value}
+            step={step}
+            disabled={isReadOnly}
           />
         );
 
@@ -414,6 +454,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             onChange={(e) => handleChange(field.name, e.target.value)}
             className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
             required={field.required}
+            disabled={isReadOnly}
           />
         );
 
@@ -426,6 +467,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             onChange={(e) => handleChange(field.name, e.target.value)}
             className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
             required={field.required}
+            disabled={isReadOnly}
           />
         );
 
@@ -437,6 +479,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             onChange={(e) => handleChange(field.name, e.target.value)}
             className="flex h-10 w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all appearance-none"
             required={field.required}
+            disabled={isReadOnly}
           >
             <option value="">Select {field.label}</option>
             {field.choices?.map((choice: any) => (
@@ -457,6 +500,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
             required={field.required}
             autoComplete="new-password"
+            disabled={isReadOnly}
           />
         );
 
@@ -475,6 +519,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             className="flex min-h-[150px] w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-xs font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all shadow-inner"
             placeholder="{}"
             required={field.required}
+            disabled={isReadOnly}
           />
         );
 
@@ -487,6 +532,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             onChange={(val) => handleChange(field.name, val)}
             placeholder={`Select ${field.label}...`}
             required={field.required}
+            disabled={isReadOnly}
           />
         );
 
@@ -515,6 +561,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
                       handleChange(field.name, newValue);
                     }}
                     className="hover:text-destructive transition-colors"
+                    disabled={isReadOnly}
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -536,6 +583,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
                 handleChange(field.name, [...m2mValue, val]);
               }}
               placeholder={`Add ${field.label}...`}
+              disabled={isReadOnly}
             />
           </div>
         );
@@ -548,6 +596,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             onChange={(e) => handleChange(field.name, e.target.value)}
             className="rounded-lg border-border/50 bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
             required={field.required}
+            disabled={isReadOnly}
           />
         );
     }
@@ -559,8 +608,32 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
     onChange: (val: any) => void
   ) => {
     const isReadOnly = field.read_only;
+    const isSwitchWidget =
+      field.widget === "switch" || field.widget === "toggle";
+    const resolvedTextType =
+      field.widget === "email" ||
+      field.widget === "url" ||
+      field.widget === "tel" ||
+      field.widget === "color" ||
+      field.widget === "time"
+        ? field.widget
+        : "text";
     switch (field.type) {
       case "boolean":
+        if (isSwitchWidget) {
+          return (
+            <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-muted/20">
+              <Switch
+                checked={!!value}
+                onCheckedChange={(checked) => onChange(checked)}
+                disabled={isReadOnly}
+              />
+              <label className="text-sm font-semibold leading-none cursor-pointer select-none">
+                {field.label}
+              </label>
+            </div>
+          );
+        }
         return (
           <div className="flex items-center space-x-3 p-3 rounded-lg border border-border/50 bg-muted/20">
             <Checkbox
@@ -592,17 +665,21 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
         }
         return (
           <Input
+            type={resolvedTextType}
             id={field.name}
             value={value || ""}
             onChange={(e) => onChange(e.target.value)}
             className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
             required={field.required}
+            maxLength={field.max_length}
+            minLength={field.min_length}
             disabled={isReadOnly}
           />
         );
       case "integer":
       case "float":
       case "decimal":
+        const step = field.type === "integer" ? 1 : "any";
         return (
           <Input
             type="number"
@@ -610,11 +687,14 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             value={value ?? ""}
             onChange={(e) =>
               onChange(
-                e.target.value === "" ? "" : parseFloat(e.target.value)
+                e.target.value === "" ? "" : Number(e.target.value)
               )
             }
             className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
             required={field.required}
+            min={field.min_value}
+            max={field.max_value}
+            step={step}
             disabled={isReadOnly}
           />
         );
@@ -696,6 +776,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             onChange={(val) => onChange(val)}
             placeholder={`Select ${field.label}...`}
             required={field.required}
+            disabled={isReadOnly}
           />
         );
       case "many_to_many": {
@@ -744,6 +825,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
                 onChange([...m2mValue, val]);
               }}
               placeholder={`Add ${field.label}...`}
+              disabled={isReadOnly}
             />
           </div>
         );
@@ -821,50 +903,73 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
         <Card className="glass-lite border-border/50 shadow-xl shadow-black/5 overflow-hidden max-w-4xl mx-auto">
           <CardContent className="p-8">
             <form onSubmit={handleSubmit} className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                {metadata.fields.map((field) => {
-                  if (field.read_only && mode === "create") return null;
-                  if (field.name === "id") return null;
+              {(() => {
+                const FormBody = useUIComponent(
+                  metadata?.ui_overrides?.["form.body"] || "",
+                  null as any
+                );
 
-                  const isFullWidth =
-                    field.type === "text" && field.widget === "textarea";
-
+                if (FormBody) {
                   return (
-                    <div
-                      key={field.name}
-                      className={cn(
-                        "space-y-2",
-                        isFullWidth && "md:col-span-2"
-                      )}
-                    >
-                      <div className="flex items-center justify-between px-1">
-                        <label
-                          htmlFor={field.name}
-                          className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80"
-                        >
-                          {field.label}{" "}
-                          {field.required && (
-                            <span className="text-destructive font-normal">
-                              *
-                            </span>
-                          )}
-                        </label>
-                      </div>
-                      {renderField(field)}
-                      {fieldErrors[field.name] && (
-                        <p className="text-xs text-destructive font-medium animate-in slide-in-from-top-1">
-                          {fieldErrors[field.name].join(", ")}
-                        </p>
-                      )}
-                      {field.help_text && (
-                        <p className="text-[11px] text-muted-foreground px-1 leading-relaxed">
-                          {field.help_text}
-                        </p>
-                      )}
-                    </div>
+                    <FormBody
+                      fields={metadata.fields}
+                      formData={formData}
+                      errors={fieldErrors}
+                      onChange={handleChange}
+                      renderField={renderField}
+                      metadata={metadata}
+                      mode={mode}
+                    />
                   );
-                })}
-              </div>
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    {metadata.fields.map((field) => {
+                      if (field.read_only && mode === "create") return null;
+                      if (field.name === "id") return null;
+
+                      const isFullWidth =
+                        field.type === "text" && field.widget === "textarea";
+
+                      return (
+                        <div
+                          key={field.name}
+                          className={cn(
+                            "space-y-2",
+                            isFullWidth && "md:col-span-2"
+                          )}
+                        >
+                          <div className="flex items-center justify-between px-1">
+                            <label
+                              htmlFor={field.name}
+                              className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80"
+                            >
+                              {field.label}{" "}
+                              {field.required && (
+                                <span className="text-destructive font-normal">
+                                  *
+                                </span>
+                              )}
+                            </label>
+                          </div>
+                          {renderField(field)}
+                          {fieldErrors[field.name] && (
+                            <p className="text-xs text-destructive font-medium animate-in slide-in-from-top-1">
+                              {fieldErrors[field.name].join(", ")}
+                            </p>
+                          )}
+                          {field.help_text && (
+                            <p className="text-[11px] text-muted-foreground px-1 leading-relaxed">
+                              {field.help_text}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
               <FormFooter className="pt-4 border-t border-border/50 flex justify-end">
                 <Button

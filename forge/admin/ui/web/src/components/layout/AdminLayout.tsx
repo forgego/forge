@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  SlidersHorizontal,
   Star,
 } from "lucide-react";
 
@@ -231,6 +232,17 @@ export default function AdminLayout({
             >
               <LayoutDashboard className="h-4 w-4" />
               {!sidebarCompact && "Dashboard"}
+            </Link>
+            <Link
+              to="/form-playground"
+              className={cn(
+                "flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted",
+                isActive("/form-playground") && "bg-muted font-medium",
+                sidebarCompact && "justify-center"
+              )}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              {!sidebarCompact && "Form Playground"}
             </Link>
           </div>
 

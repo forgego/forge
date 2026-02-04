@@ -9,6 +9,7 @@ interface SearchableSelectProps {
   onChange: (value: any) => void;
   placeholder?: string;
   required?: boolean;
+  disabled?: boolean;
 }
 
 export function SearchableSelect({
@@ -16,6 +17,7 @@ export function SearchableSelect({
   value,
   onChange,
   placeholder = "Select item...",
+  disabled = false,
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
@@ -40,7 +42,7 @@ export function SearchableSelect({
 
   // Search effect
   React.useEffect(() => {
-    if (!open) return;
+    if (!open || disabled) return;
 
     const timer = setTimeout(() => {
       setIsLoading(true);
@@ -59,10 +61,13 @@ export function SearchableSelect({
   // Click outside handler
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
+    if (
+      containerRef.current &&
+      !containerRef.current.contains(event.target as Node)
+    ) {
+      setOpen(false);
+    }
+  };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -73,17 +78,21 @@ export function SearchableSelect({
     <div className="relative w-full" ref={containerRef}>
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (disabled) return;
+          setOpen(!open);
+        }}
         className={cn(
           "flex h-10 w-full items-center justify-between rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all",
           !value && "text-muted-foreground"
         )}
+        disabled={disabled}
       >
         <span className="truncate">{selectedLabel || placeholder}</span>
         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </button>
 
-      {open && (
+      {open && !disabled && (
         <div className="absolute z-50 mt-1 max-h-60 w-full overflow-hidden rounded-lg border border-border/50 bg-popover text-popover-foreground shadow-xl animate-in fade-in zoom-in-95 duration-100">
           <div className="flex items-center border-b border-border/50 px-3">
             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
@@ -93,6 +102,7 @@ export function SearchableSelect({
               placeholder="Search..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              disabled={disabled}
             />
           </div>
           <div className="overflow-y-auto max-h-[200px] p-1">
