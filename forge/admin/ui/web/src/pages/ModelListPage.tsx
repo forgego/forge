@@ -151,6 +151,7 @@ export default function ModelListPage() {
       runAction({ action: action.name, ids: selectedIds });
     }
   };
+  const hasSelection = selectedIds.length > 0;
 
   if (metaLoading || (listLoading && !listData)) {
     return (
@@ -226,50 +227,6 @@ export default function ModelListPage() {
           </ActionHeader>
         </div>
 
-        {/* Bulk Action Toolbar */}
-        {selectedIds.length > 0 && (
-          <div
-            data-testid="bulk-toolbar"
-            className="sticky top-0 z-20 flex items-center justify-between p-4 bg-primary text-primary-foreground rounded-xl shadow-2xl shadow-primary/30 animate-in slide-in-from-top-4 duration-300"
-          >
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-bold bg-white/20 px-3 py-1 rounded-full">
-                {selectedIds.length} selected
-              </span>
-              <div className="h-4 w-px bg-white/20" />
-              <div className="flex items-center gap-2">
-                {metadata.actions.map((action) => (
-                  <Button
-                    key={action.name}
-                    data-testid={`bulk-action-${action.name}`}
-                    variant="ghost"
-                    size="sm"
-                    className="h-9 px-4 text-xs font-bold uppercase tracking-wider hover:bg-white/10"
-                    onClick={() => handleActionClick(action)}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? (
-                      <Loader2 className="h-3 w-3 animate-spin mr-2" />
-                    ) : (
-                      action.icon && <span className="mr-2">⚡</span>
-                    )}
-                    {action.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <Button
-              data-testid="bulk-cancel"
-              variant="ghost"
-              size="sm"
-              className="h-9 px-4 text-xs font-bold uppercase tracking-wider hover:bg-white/10"
-              onClick={() => setSelectedIds([])}
-            >
-              Cancel
-            </Button>
-          </div>
-        )}
-
         <Card className="glass-lite border-border/50 shadow-xl shadow-black/5 overflow-hidden">
           <CardHeader className="bg-muted/50 border-b border-border/50 py-4">
             <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -339,16 +296,17 @@ export default function ModelListPage() {
                 </div>
                 <Button
                   data-testid="filter-button"
-                  variant="outline"
-                  size="icon"
+                  variant="ghost"
+                  size="sm"
                   className={cn(
-                    "h-11 w-11 bg-background/50 border-border/50",
+                    "h-11 px-4 text-xs font-semibold uppercase tracking-widest bg-background/40 text-muted-foreground hover:text-foreground",
                     isFilterOpen &&
-                      "bg-primary/10 border-primary/30 text-primary"
+                      "bg-primary/10 text-primary"
                   )}
                   onClick={() => setIsFilterOpen(!isFilterOpen)}
                 >
-                  <Filter className="h-4 w-4" />
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filters
                 </Button>
                 <div className="h-11 px-4 flex items-center bg-background/50 border border-border/50 rounded-md">
                   <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
@@ -363,102 +321,164 @@ export default function ModelListPage() {
 
             {/* Expansible Filter Panel */}
             {isFilterOpen && metadata.filters.length > 0 && (
-              <div className="mt-4 p-4 bg-background/50 rounded-lg border border-border/50 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 animate-in slide-in-from-top-2 duration-300">
-                {metadata.filters.map((filter) => (
-                  <div key={filter.name} className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground/80">
-                      {filter.label}
-                    </label>
-                    {filter.type === "choice" ? (
-                      <select
-                        data-testid={`filter-${filter.name}`}
-                        className="w-full bg-background/80 border border-border/50 rounded-md px-3 py-1.5 text-xs focus:ring-1 focus:ring-primary/30 outline-none"
-                        value={activeFilters[filter.name] || ""}
-                        onChange={(e) =>
-                          setActiveFilters((prev) => ({
-                            ...prev,
-                            [filter.name]: e.target.value,
-                          }))
-                        }
-                      >
-                        <option value="">All</option>
-                        {filter.choices?.map((c) => (
-                          <option key={String(c.value)} value={String(c.value)}>
-                            {c.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : filter.type === "date" || filter.type === "datetime" ? (
-                      <div className="flex gap-2">
-                        <Input
-                          type="date"
-                          placeholder="Start"
-                          className="h-8 text-xs bg-background/80"
-                          value={activeFilters[`${filter.name}__gte`] || ""}
-                          onChange={(e) =>
-                            setActiveFilters((prev) => ({
-                              ...prev,
-                              [`${filter.name}__gte`]: e.target.value,
-                            }))
-                          }
-                        />
-                        <Input
-                          type="date"
-                          placeholder="End"
-                          className="h-8 text-xs bg-background/80"
-                          value={activeFilters[`${filter.name}__lte`] || ""}
-                          onChange={(e) =>
-                            setActiveFilters((prev) => ({
-                              ...prev,
-                              [`${filter.name}__lte`]: e.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                    ) : filter.type === "boolean" ? (
-                      <select
-                        data-testid={`filter-${filter.name}`}
-                        className="w-full bg-background/80 border border-border/50 rounded-md px-3 py-1.5 text-xs focus:ring-1 focus:ring-primary/30 outline-none"
-                        value={activeFilters[filter.name] || ""}
-                        onChange={(e) =>
-                          setActiveFilters((prev) => ({
-                            ...prev,
-                            [filter.name]: e.target.value,
-                          }))
-                        }
-                      >
-                        <option value="">All</option>
-                        <option value="true">Yes</option>
-                        <option value="false">No</option>
-                      </select>
-                    ) : (
-                      <Input
-                        data-testid={`filter-${filter.name}`}
-                        placeholder={filter.label}
-                        className="h-8 text-xs bg-background/80"
-                        value={activeFilters[filter.name] || ""}
-                        onChange={(e) =>
-                          setActiveFilters((prev) => ({
-                            ...prev,
-                            [filter.name]: e.target.value,
-                          }))
-                        }
-                      />
-                    )}
-                  </div>
-                ))}
-                <div className="md:col-span-full pt-2 flex justify-end gap-2">
+              <div className="mt-4 p-4 bg-background/60 rounded-lg border border-border/50 animate-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center justify-between gap-2 mb-4">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Filters
+                  </p>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-[10px] font-bold uppercase"
+                    className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground"
                     onClick={() => setActiveFilters({})}
                   >
-                    Reset Filters
+                    Reset filters
                   </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {metadata.filters.map((filter) => (
+                    <div key={filter.name} className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground/80">
+                        {filter.label}
+                      </label>
+                      {filter.type === "choice" ? (
+                        <select
+                          data-testid={`filter-${filter.name}`}
+                          className="w-full bg-background/80 border border-border/50 rounded-md px-3 py-1.5 text-xs focus:ring-1 focus:ring-primary/30 outline-none"
+                          value={activeFilters[filter.name] || ""}
+                          onChange={(e) =>
+                            setActiveFilters((prev) => ({
+                              ...prev,
+                              [filter.name]: e.target.value,
+                            }))
+                          }
+                        >
+                          <option value="">All</option>
+                          {filter.choices?.map((c) => (
+                            <option
+                              key={String(c.value)}
+                              value={String(c.value)}
+                            >
+                              {c.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : filter.type === "date" ||
+                        filter.type === "datetime" ? (
+                        <div className="flex gap-2">
+                          <Input
+                            type="date"
+                            placeholder="Start"
+                            className="h-8 text-xs bg-background/80"
+                            value={activeFilters[`${filter.name}__gte`] || ""}
+                            onChange={(e) =>
+                              setActiveFilters((prev) => ({
+                                ...prev,
+                                [`${filter.name}__gte`]: e.target.value,
+                              }))
+                            }
+                          />
+                          <Input
+                            type="date"
+                            placeholder="End"
+                            className="h-8 text-xs bg-background/80"
+                            value={activeFilters[`${filter.name}__lte`] || ""}
+                            onChange={(e) =>
+                              setActiveFilters((prev) => ({
+                                ...prev,
+                                [`${filter.name}__lte`]: e.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+                      ) : filter.type === "boolean" ? (
+                        <select
+                          data-testid={`filter-${filter.name}`}
+                          className="w-full bg-background/80 border border-border/50 rounded-md px-3 py-1.5 text-xs focus:ring-1 focus:ring-primary/30 outline-none"
+                          value={activeFilters[filter.name] || ""}
+                          onChange={(e) =>
+                            setActiveFilters((prev) => ({
+                              ...prev,
+                              [filter.name]: e.target.value,
+                            }))
+                          }
+                        >
+                          <option value="">All</option>
+                          <option value="true">Yes</option>
+                          <option value="false">No</option>
+                        </select>
+                      ) : (
+                        <Input
+                          data-testid={`filter-${filter.name}`}
+                          placeholder={filter.label}
+                          className="h-8 text-xs bg-background/80"
+                          value={activeFilters[filter.name] || ""}
+                          onChange={(e) =>
+                            setActiveFilters((prev) => ({
+                              ...prev,
+                              [filter.name]: e.target.value,
+                            }))
+                          }
+                        />
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
+
+            <div
+              data-testid="bulk-toolbar"
+              className={cn(
+                "mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-border/40 px-4 py-3 text-xs",
+                hasSelection
+                  ? "bg-primary/5 text-foreground"
+                  : "bg-background/40 text-muted-foreground"
+              )}
+            >
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="font-semibold uppercase tracking-widest">
+                  {hasSelection
+                    ? `${selectedIds.length} selected`
+                    : "Select rows to enable bulk actions"}
+                </span>
+                <div className="h-4 w-px bg-border/60 hidden sm:block" />
+                <div className="flex flex-wrap items-center gap-2">
+                  {metadata.actions.map((action) => (
+                    <Button
+                      key={action.name}
+                      data-testid={`bulk-action-${action.name}`}
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        "h-8 px-3 text-[10px] font-semibold uppercase tracking-widest",
+                        !hasSelection &&
+                          "text-muted-foreground/60 hover:text-muted-foreground"
+                      )}
+                      onClick={() => handleActionClick(action)}
+                      disabled={!hasSelection || actionLoading}
+                    >
+                      {actionLoading ? (
+                        <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                      ) : (
+                        action.icon && <span className="mr-2">⚡</span>
+                      )}
+                      {action.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <Button
+                data-testid="bulk-cancel"
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground"
+                onClick={() => setSelectedIds([])}
+                disabled={!hasSelection}
+              >
+                Clear selection
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="p-0 overflow-x-auto">
             <Table>
