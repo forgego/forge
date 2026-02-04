@@ -174,7 +174,7 @@ func buildFiltersMetadata[T any](s schema.Schema, config *Config[T]) []FilterMet
 	result := make([]FilterMetadata, 0, len(config.ListFilter))
 	for _, filterField := range config.ListFilter {
 		filterName := filterField.Path()
-		
+
 		field, ok := fieldMap[filterName]
 		if !ok {
 			continue
@@ -198,8 +198,8 @@ func buildFiltersMetadata[T any](s schema.Schema, config *Config[T]) []FilterMet
 		}
 
 		// Add related model for relations
-		// Note: Field struct doesn't have RelatedModel directly? Need to check. 
-		// Assuming Relation handling is separate or Field has it. 
+		// Note: Field struct doesn't have RelatedModel directly? Need to check.
+		// Assuming Relation handling is separate or Field has it.
 		// For now simplifying to avoid error if RelatedModel field absent
 		if field.Type == schema.TypeForeignKey || field.Type == schema.TypeManyToMany {
 			// filterMeta.RelatedModel = field.RelatedModel // FIXME: Check field struct
@@ -256,7 +256,7 @@ func inferWidget(field schema.Field) string {
 	case schema.TypeEmail:
 		return "email"
 	case schema.TypeBytes: // Password might be bytes or string? Assuming string for now
-		return "password" 
+		return "password"
 	case schema.TypeInt64, schema.TypeInt32:
 		return "number"
 	case schema.TypeFloat64:
@@ -319,7 +319,7 @@ func inferListDisplay(fields []FieldMetadata) []string {
 			continue
 		}
 
-		result = append(result, field.Name)
+		result = append(result, listDisplayFieldName(field))
 	}
 
 	// Always show at least ID if nothing else
@@ -328,6 +328,13 @@ func inferListDisplay(fields []FieldMetadata) []string {
 	}
 
 	return result
+}
+
+func listDisplayFieldName(field FieldMetadata) string {
+	if field.Name != "" {
+		return field.Name
+	}
+	return field.Label
 }
 
 // inferSearchFields infers which fields to use for search
