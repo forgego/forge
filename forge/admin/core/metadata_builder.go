@@ -18,7 +18,7 @@ func buildMetadata[T any](s schema.Schema, config *Config[T], name string) (*Met
 	}
 
 	// Build relations metadata
-	relationsMetadata := buildRelationsMetadata(s)
+	relationsMetadata := buildRelationsMetadata(s, config)
 
 	// Build actions metadata
 	actionsMetadata := buildActionsMetadata(config)
@@ -119,9 +119,14 @@ func buildFieldsMetadata(s schema.Schema) ([]FieldMetadata, error) {
 }
 
 // buildRelationsMetadata builds relation metadata from schema relations
-func buildRelationsMetadata(s schema.Schema) []RelationMetadata {
+func buildRelationsMetadata[T any](s schema.Schema, config *Config[T]) []RelationMetadata {
 	relations := s.Relations()
 	result := make([]RelationMetadata, 0, len(relations))
+	inlineConfigs := map[string]InlineRelationConfig{}
+	if config != nil && config.InlineRelations != nil {
+		inlineConfigs = config.InlineRelations
+	}
+	usedInline := map[string]struct{}{}
 
 	for _, rel := range relations {
 		relMeta := RelationMetadata{
@@ -130,6 +135,37 @@ func buildRelationsMetadata(s schema.Schema) []RelationMetadata {
 			RelatedModel: rel.To,
 			RelatedField: rel.RelatedName,
 			Label:        getOrDefault("", "", rel.Name), // Relation struct has no VerboseName
+		}
+		if inlineConfig, ok := inlineConfigs[rel.Name]; ok {
+			relMeta.Inline = &inlineConfig
+			if inlineConfig.Type != "" {
+				relMeta.Type = inlineConfig.Type
+			}
+			if inlineConfig.Label != "" {
+				relMeta.Label = inlineConfig.Label
+			}
+			if inlineConfig.RelatedModel != "" {
+				relMeta.RelatedModel = inlineConfig.RelatedModel
+			}
+			if inlineConfig.RelatedField != "" {
+				relMeta.RelatedField = inlineConfig.RelatedField
+			}
+			usedInline[rel.Name] = struct{}{}
+		}
+		result = append(result, relMeta)
+	}
+
+	for name, inlineConfig := range inlineConfigs {
+		if _, ok := usedInline[name]; ok {
+			continue
+		}
+		relMeta := RelationMetadata{
+			Name:         name,
+			Type:         inlineConfig.Type,
+			RelatedModel: inlineConfig.RelatedModel,
+			RelatedField: inlineConfig.RelatedField,
+			Label:        getOrDefault(inlineConfig.Label, "", name),
+			Inline:       &inlineConfig,
 		}
 		result = append(result, relMeta)
 	}
@@ -174,7 +210,7 @@ func buildFiltersMetadata[T any](s schema.Schema, config *Config[T]) []FilterMet
 	result := make([]FilterMetadata, 0, len(config.ListFilter))
 	for _, filterField := range config.ListFilter {
 		filterName := filterField.Path()
-		
+
 		field, ok := fieldMap[filterName]
 		if !ok {
 			continue
@@ -198,8 +234,8 @@ func buildFiltersMetadata[T any](s schema.Schema, config *Config[T]) []FilterMet
 		}
 
 		// Add related model for relations
-		// Note: Field struct doesn't have RelatedModel directly? Need to check. 
-		// Assuming Relation handling is separate or Field has it. 
+		// Note: Field struct doesn't have RelatedModel directly? Need to check.
+		// Assuming Relation handling is separate or Field has it.
 		// For now simplifying to avoid error if RelatedModel field absent
 		if field.Type == schema.TypeForeignKey || field.Type == schema.TypeManyToMany {
 			// filterMeta.RelatedModel = field.RelatedModel // FIXME: Check field struct
@@ -256,7 +292,7 @@ func inferWidget(field schema.Field) string {
 	case schema.TypeEmail:
 		return "email"
 	case schema.TypeBytes: // Password might be bytes or string? Assuming string for now
-		return "password" 
+		return "password"
 	case schema.TypeInt64, schema.TypeInt32:
 		return "number"
 	case schema.TypeFloat64:

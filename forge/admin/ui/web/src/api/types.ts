@@ -38,6 +38,15 @@ export interface RelationMetadata {
   related_model: string;
   related_field?: string;
   label: string;
+  inline?: InlineRelationConfig;
+}
+
+export interface InlineRelationConfig {
+  type?: string;
+  label?: string;
+  fields?: string[];
+  related_model?: string;
+  related_field?: string;
 }
 
 export interface PermissionMetadata {
