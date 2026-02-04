@@ -91,6 +91,7 @@ func (r *Router) registerModelRoutes(router chi.Router) {
 			// Detail, update, delete
 			sub.Route("/{id}", func(subDetail chi.Router) {
 				subDetail.Get("/", r.handleDetail(admin))
+				subDetail.Get("/history", r.handleHistory(admin))
 				subDetail.Patch("/", r.handleUpdate(admin))
 				subDetail.Put("/", r.handleReplace(admin))
 				subDetail.Delete("/", r.handleDelete(admin))
@@ -106,6 +107,35 @@ func (r *Router) registerModelRoutes(router chi.Router) {
 
 			// Autocomplete
 			sub.Get("/autocomplete", r.handleAutocomplete(admin))
+		})
+	}
+}
+
+// handleHistory returns change history for an object
+func (r *Router) handleHistory(admin core.AdminInterface) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		ctx := req.Context()
+		user, _ := apicore.UserFromContext(ctx)
+		idStr := chi.URLParam(req, "id")
+
+		if idStr == "" {
+			respondError(w, http.StatusBadRequest, "invalid_id", "Missing ID", nil)
+			return
+		}
+
+		if !admin.HasViewPermission(ctx, user, nil) {
+			respondError(w, http.StatusForbidden, "permission_denied", "You don't have permission to view this object", nil)
+			return
+		}
+
+		history, err := admin.GetHistory(ctx, idStr)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "history_failed", err.Error(), nil)
+			return
+		}
+
+		respondJSON(w, http.StatusOK, map[string]interface{}{
+			"entries": history,
 		})
 	}
 }
