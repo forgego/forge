@@ -3,7 +3,17 @@ import { Search, Loader2, FileText, ArrowRight } from "lucide-react";
 import { adminAPI } from "../../api/client";
 import { useNavigate } from "@tanstack/react-router";
 
-export function GlobalSearch() {
+type GlobalSearchProps = {
+  compact?: boolean;
+  triggerLabel?: string;
+  className?: string;
+};
+
+export function GlobalSearch({
+  compact = false,
+  triggerLabel = "Search...",
+  className,
+}: GlobalSearchProps) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [results, setResults] = React.useState<any[]>([]);
@@ -71,13 +81,23 @@ export function GlobalSearch() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted transition-all group w-48 lg:w-64"
+        aria-label="Open command palette"
+        aria-keyshortcuts="Control+K Meta+K"
+        className={
+          compact
+            ? `flex items-center justify-center h-9 w-9 rounded-md bg-muted/50 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted transition-all ${className ?? ""}`
+            : `flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted transition-all group w-48 lg:w-64 ${className ?? ""}`
+        }
       >
         <Search className="h-4 w-4" />
-        <span className="text-sm font-medium">Search...</span>
-        <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-          <span className="text-xs">⌘</span>K
-        </kbd>
+        {!compact && (
+          <>
+            <span className="text-sm font-medium">{triggerLabel}</span>
+            <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </>
+        )}
       </button>
 
       {open && (
