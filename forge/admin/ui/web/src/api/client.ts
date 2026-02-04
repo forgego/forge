@@ -15,6 +15,8 @@ import type {
   ErrorResponse,
   MetadataResponse,
   HistoryResponse,
+  SavedView,
+  SavedViewRequest,
 } from "./types";
 
 export class AdminAPIClient {
@@ -206,6 +208,53 @@ export class AdminAPIClient {
         "Content-Type": "multipart/form-data",
       },
     });
+    return response.data;
+  }
+
+  // Export list results
+  getExportURL(model: string, format: "csv" | "json", params?: ListParams) {
+    const searchParams = new URLSearchParams();
+
+    if (format) {
+      searchParams.set("format", format);
+    }
+    if (params?.search) {
+      searchParams.set("search", params.search);
+    }
+    if (params?.ordering) {
+      searchParams.set("ordering", params.ordering);
+    }
+
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (
+          value === undefined ||
+          value === null ||
+          value === "" ||
+          key === "search" ||
+          key === "ordering" ||
+          key === "page" ||
+          key === "page_size"
+        ) {
+          return;
+        }
+        searchParams.set(key, String(value));
+      });
+    }
+
+    const query = searchParams.toString();
+    return `${this.baseURL}/${model}/export${query ? `?${query}` : ""}`;
+  // Saved views
+  async listSavedViews(model: string): Promise<{ views: SavedView[] }> {
+    const response = await this.client.get(`/saved-views/${model}`);
+    return response.data;
+  }
+
+  async saveSavedView(
+    model: string,
+    request: SavedViewRequest
+  ): Promise<SavedView> {
+    const response = await this.client.post(`/saved-views/${model}`, request);
     return response.data;
   }
 

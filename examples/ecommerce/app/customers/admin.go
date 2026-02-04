@@ -21,6 +21,18 @@ func RegisterAdmin(ctx context.Context) {
 		ListFilter: []admin.Field{
 			CustomerGroupFieldsInstance.IsActive,
 		},
+		Actions: []admin.Action[CustomerGroup]{
+			{
+				Name:  "activate",
+				Label: "Activate Groups",
+				Handler: func(ctx context.Context, instances []*CustomerGroup) error {
+					for _, group := range instances {
+						group.IsActive = true
+					}
+					return nil
+				},
+			},
+		},
 	})
 
 	// Customer admin
@@ -43,6 +55,18 @@ func RegisterAdmin(ctx context.Context) {
 			CustomerFieldsInstance.FirstName,
 			CustomerFieldsInstance.LastName,
 		},
+		Actions: []admin.Action[Customer]{
+			{
+				Name:  "activate",
+				Label: "Activate Customers",
+				Handler: func(ctx context.Context, instances []*Customer) error {
+					for _, customer := range instances {
+						customer.IsActive = true
+					}
+					return nil
+				},
+			},
+		},
 	})
 
 	// Address admin
@@ -59,6 +83,18 @@ func RegisterAdmin(ctx context.Context) {
 			AddressFieldsInstance.AddressType,
 			AddressFieldsInstance.CountryCode,
 		},
+		Actions: []admin.Action[Address]{
+			{
+				Name:  "set_default_shipping",
+				Label: "Set as Default Shipping",
+				Handler: func(ctx context.Context, instances []*Address) error {
+					for _, address := range instances {
+						address.IsDefaultShipping = true
+					}
+					return nil
+				},
+			},
+		},
 	})
 
 	// WishList admin
@@ -70,6 +106,22 @@ func RegisterAdmin(ctx context.Context) {
 			WishListFieldsInstance.IsPublic,
 			WishListFieldsInstance.IsDefault,
 			WishListFieldsInstance.CreatedAt,
+		},
+		ListFilter: []admin.Field{
+			WishListFieldsInstance.IsPublic,
+			WishListFieldsInstance.IsDefault,
+		},
+		Actions: []admin.Action[WishList]{
+			{
+				Name:  "make_public",
+				Label: "Make Public",
+				Handler: func(ctx context.Context, instances []*WishList) error {
+					for _, wishList := range instances {
+						wishList.IsPublic = true
+					}
+					return nil
+				},
+			},
 		},
 	})
 }

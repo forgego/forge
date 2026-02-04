@@ -16,6 +16,8 @@ import type {
   AutocompleteResponse,
   MetadataResponse,
   HistoryResponse,
+  SavedView,
+  SavedViewRequest,
 } from "../types";
 
 // Query keys factory
@@ -31,6 +33,8 @@ export const adminKeys = {
     [...adminKeys.model(model), "detail", id] as const,
   modelHistory: (model: string, id: string | number) =>
     [...adminKeys.model(model), "history", id] as const,
+  savedViews: (model: string) =>
+    [...adminKeys.model(model), "saved-views"] as const,
 };
 
 // Config hook
@@ -87,6 +91,39 @@ export function useModelList<T = any>(
     queryKey: adminKeys.modelList(model, params),
     queryFn: () => adminAPI.listObjects<T>(model, params),
     enabled: !!model,
+    ...options,
+  });
+}
+
+export function useSavedViews(
+  model: string,
+  options?: Omit<
+    UseQueryOptions<{ views: SavedView[] }>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery({
+    queryKey: adminKeys.savedViews(model),
+    queryFn: () => adminAPI.listSavedViews(model),
+    enabled: !!model,
+    ...options,
+  });
+}
+
+export function useSaveSavedView(
+  model: string,
+  options?: UseMutationOptions<SavedView, Error, SavedViewRequest>
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: SavedViewRequest) =>
+      adminAPI.saveSavedView(model, request),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: adminKeys.savedViews(model),
+      });
+    },
     ...options,
   });
 }
