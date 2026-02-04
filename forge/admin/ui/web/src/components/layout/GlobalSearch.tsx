@@ -1,9 +1,15 @@
 import * as React from "react";
-import { Search, Loader2, FileText, ArrowRight } from "lucide-react";
+import { Search, Loader2, FileText, ArrowRight, Database } from "lucide-react";
 import { adminAPI } from "../../api/client";
 import { useNavigate } from "@tanstack/react-router";
+import type { ModelListMetadata } from "../../api/types";
+import { cn } from "../../lib/utils";
 
 type GlobalSearchProps = {
+  models?: ModelListMetadata[];
+};
+
+export function GlobalSearch({ models = [] }: GlobalSearchProps) {
   compact?: boolean;
   triggerLabel?: string;
   className?: string;
@@ -20,12 +26,25 @@ export function GlobalSearch({
   const [isLoading, setIsLoading] = React.useState(false);
   const navigate = useNavigate();
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setOpen((prev) => !prev);
+        setTimeout(() => inputRef.current?.focus(), 0);
+        return;
+      }
+      if (
+        e.key === "/" &&
+        !(e.target instanceof HTMLInputElement) &&
+        !(e.target instanceof HTMLTextAreaElement) &&
+        !(e.target as HTMLElement)?.isContentEditable
+      ) {
+        e.preventDefault();
+        setOpen(true);
+        setTimeout(() => inputRef.current?.focus(), 0);
       }
       if (e.key === "Escape") {
         setOpen(false);
@@ -77,9 +96,43 @@ export function GlobalSearch({
     setQuery("");
   };
 
+  const handleModelSelect = (model: ModelListMetadata) => {
+    navigate({ to: "/$model", params: { model: model.name } });
+    setOpen(false);
+    setQuery("");
+  };
+
+  const filteredModels = React.useMemo(() => {
+    if (!query) {
+      return models;
+    }
+    const lowerQuery = query.toLowerCase();
+    return models.filter(
+      (model) =>
+        model.verbose_name_plural.toLowerCase().includes(lowerQuery) ||
+        model.name.toLowerCase().includes(lowerQuery)
+    );
+  }, [models, query]);
+
   return (
     <>
       <button
+        onClick={() => {
+          setOpen(true);
+          setTimeout(() => inputRef.current?.focus(), 0);
+        }}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted transition-all group w-48 lg:w-64"
+      >
+        <Search className="h-4 w-4" />
+        <span className="text-sm font-medium">Search models...</span>
+        <div className="ml-auto flex items-center gap-1">
+          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+            /
+          </kbd>
+        </div>
         onClick={() => setOpen(true)}
         aria-label="Open command palette"
         aria-keyshortcuts="Control+K Meta+K"
@@ -110,8 +163,9 @@ export function GlobalSearch({
               <div className="flex items-center p-4 border-b border-border/50">
                 <Search className="h-5 w-5 text-muted-foreground mr-3" />
                 <input
+                  ref={inputRef}
                   autoFocus
-                  placeholder="Type to search across models..."
+                  placeholder="Search models and records..."
                   className="flex-1 bg-transparent border-none outline-none text-lg font-medium placeholder:text-muted-foreground"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -131,14 +185,47 @@ export function GlobalSearch({
                       Search Forge Models
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Start typing to see instantly correlated records
+                      Start typing to see models and records
                     </p>
                   </div>
                 )}
 
-                {query && results.length === 0 && !isLoading && (
+                {query && results.length === 0 && filteredModels.length === 0 && !isLoading && (
                   <div className="p-8 text-center text-muted-foreground">
                     No results found for "{query}"
+                  </div>
+                )}
+
+                {filteredModels.length > 0 && (
+                  <div className="p-2">
+                    <div className="px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
+                      Models
+                    </div>
+                    {filteredModels.map((model) => (
+                      <button
+                        key={model.name}
+                        onClick={() => handleModelSelect(model)}
+                        className={cn(
+                          "w-full flex items-center justify-between p-3 rounded-xl hover:bg-accent hover:text-accent-foreground transition-all text-left group/item",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-background border border-border/50 flex items-center justify-center">
+                            <Database className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium">
+                              {model.verbose_name_plural}
+                            </span>
+                            <p className="text-xs text-muted-foreground">
+                              {model.name}
+                            </p>
+                          </div>
+                        </div>
+                        <ArrowRight className="h-4 w-4 opacity-0 group-hover/item:opacity-100 -translate-x-2 group-hover/item:translate-x-0 transition-all text-primary" />
+                      </button>
+                    ))}
                   </div>
                 )}
 
