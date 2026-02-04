@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/forgego/forge/admin/core"
@@ -22,6 +23,7 @@ import (
 type Router struct {
 	registry *core.Registry
 	prefix   string
+	views    *savedViewStore
 }
 
 // NewRouter creates a new admin API router
@@ -29,6 +31,7 @@ func NewRouter(registry *core.Registry) *Router {
 	return &Router{
 		registry: registry,
 		prefix:   "/api",
+		views:    newSavedViewStore(),
 	}
 }
 
@@ -62,6 +65,12 @@ func (r *Router) RegisterRoutes(router chi.Router) {
 
 		// Plugin page endpoint
 		sub.Get("/plugins/{plugin}/pages/{page}", r.handlePluginPage)
+
+		// Saved views
+		sub.Route("/saved-views/{model}", func(viewRouter chi.Router) {
+			viewRouter.Get("/", r.handleSavedViewsList)
+			viewRouter.Post("/", r.handleSavedViewSave)
+		})
 
 		// Model routes (registered dynamically)
 		r.registerModelRoutes(sub)
@@ -662,6 +671,153 @@ func (r *Router) handlePluginPage(w http.ResponseWriter, req *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, page)
+}
+
+type savedView struct {
+	ID        string                 `json:"id"`
+	Name      string                 `json:"name"`
+	Filters   map[string]interface{} `json:"filters"`
+	Ordering  []string               `json:"ordering"`
+	Display   []string               `json:"display"`
+	CreatedAt time.Time              `json:"created_at"`
+	UpdatedAt time.Time              `json:"updated_at"`
+}
+
+type savedViewRequest struct {
+	Name     string                 `json:"name"`
+	Filters  map[string]interface{} `json:"filters"`
+	Ordering []string               `json:"ordering"`
+	Display  []string               `json:"display"`
+}
+
+type savedViewStore struct {
+	mu    sync.RWMutex
+	views map[string]map[string][]savedView
+}
+
+func newSavedViewStore() *savedViewStore {
+	return &savedViewStore{views: make(map[string]map[string][]savedView)}
+}
+
+func (s *savedViewStore) list(userID, model string) []savedView {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	userViews, ok := s.views[userID]
+	if !ok {
+		return []savedView{}
+	}
+	modelViews := userViews[model]
+	if modelViews == nil {
+		return []savedView{}
+	}
+	return append([]savedView{}, modelViews...)
+}
+
+func (s *savedViewStore) upsert(userID, model string, request savedViewRequest) savedView {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.views[userID] == nil {
+		s.views[userID] = make(map[string][]savedView)
+	}
+
+	views := s.views[userID][model]
+	for i, view := range views {
+		if strings.EqualFold(view.Name, request.Name) {
+			updated := view
+			updated.Filters = request.Filters
+			updated.Ordering = request.Ordering
+			updated.Display = request.Display
+			updated.UpdatedAt = time.Now()
+			views[i] = updated
+			s.views[userID][model] = views
+			return updated
+		}
+	}
+
+	newView := savedView{
+		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+		Name:      request.Name,
+		Filters:   request.Filters,
+		Ordering:  request.Ordering,
+		Display:   request.Display,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	s.views[userID][model] = append(views, newView)
+	return newView
+}
+
+func userKey(user interface{}) string {
+	if user == nil {
+		return "anonymous"
+	}
+
+	val := reflect.ValueOf(user)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
+	if val.IsValid() && val.Kind() == reflect.Struct {
+		for _, name := range []string{"ID", "Id", "id", "UserID", "Username", "Email"} {
+			field := val.FieldByName(name)
+			if field.IsValid() {
+				return fmt.Sprintf("%v", field.Interface())
+			}
+		}
+	}
+
+	return fmt.Sprintf("%v", user)
+}
+
+func (r *Router) handleSavedViewsList(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	modelName := chi.URLParam(req, "model")
+	user, _ := apicore.UserFromContext(ctx)
+
+	admin, err := r.registry.Get(modelName)
+	if err != nil {
+		respondError(w, http.StatusNotFound, "model_not_found", err.Error(), nil)
+		return
+	}
+	if !admin.HasViewPermission(ctx, user, nil) {
+		respondError(w, http.StatusForbidden, "permission_denied", "You don't have permission to view this model", nil)
+		return
+	}
+
+	views := r.views.list(userKey(user), modelName)
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"views": views,
+	})
+}
+
+func (r *Router) handleSavedViewSave(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	modelName := chi.URLParam(req, "model")
+	user, _ := apicore.UserFromContext(ctx)
+
+	admin, err := r.registry.Get(modelName)
+	if err != nil {
+		respondError(w, http.StatusNotFound, "model_not_found", err.Error(), nil)
+		return
+	}
+	if !admin.HasViewPermission(ctx, user, nil) {
+		respondError(w, http.StatusForbidden, "permission_denied", "You don't have permission to view this model", nil)
+		return
+	}
+
+	var request savedViewRequest
+	if err := json.NewDecoder(req.Body).Decode(&request); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_body", err.Error(), nil)
+		return
+	}
+	request.Name = strings.TrimSpace(request.Name)
+	if request.Name == "" {
+		respondError(w, http.StatusBadRequest, "missing_name", "View name is required", nil)
+		return
+	}
+
+	view := r.views.upsert(userKey(user), modelName, request)
+	respondJSON(w, http.StatusOK, view)
 }
 
 // Helper types and functions

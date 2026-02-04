@@ -5,6 +5,8 @@ import {
   useModelList,
   useDeleteObject,
   adminKeys,
+  useSavedViews,
+  useSaveSavedView,
 } from "../api/hooks/adminHooks";
 import { adminAPI } from "../api/client";
 import {
@@ -47,6 +49,8 @@ export default function ModelListPage() {
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [activeFilters, setActiveFilters] = useState<Record<string, any>>({});
+  const [ordering, setOrdering] = useState<string[]>([]);
+  const [selectedSavedView, setSelectedSavedView] = useState<string>("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [bulkAction, setBulkAction] = useState<any | null>(null);
@@ -63,10 +67,29 @@ export default function ModelListPage() {
   } = useModelList(modelName, {
     page,
     search: searchQuery || undefined,
+    ordering: ordering.length ? ordering.join(",") : undefined,
     ...activeFilters,
   });
 
   const deleteMutation = useDeleteObject(modelName);
+  const { data: savedViewsData } = useSavedViews(modelName);
+  const { mutateAsync: saveView, isPending: saveViewPending } =
+    useSaveSavedView(modelName, {
+      onSuccess: (view) => {
+        setSelectedSavedView(view.id);
+        toast({
+          title: "Saved view updated",
+          description: `Saved view \"${view.name}\" is ready to use.`,
+        });
+      },
+      onError: (err: any) => {
+        toast({
+          title: "Error",
+          description: err.message || "Failed to save view",
+          variant: "destructive",
+        });
+      },
+    });
 
   // Bulk action mutation
   const { mutateAsync: runAction, isPending: actionLoading } = useMutation({
@@ -183,6 +206,7 @@ export default function ModelListPage() {
 
   const displayFields = metadata.list_display || [];
   const objects = listData.results || [];
+  const savedViews = savedViewsData?.views || [];
 
   // Resolve Overrides
   const ListTitle = useUIComponent(
@@ -304,6 +328,59 @@ export default function ModelListPage() {
                 />
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="h-11 px-3 flex items-center bg-background/50 border border-border/50 rounded-md">
+                    <select
+                      className="bg-transparent text-xs font-medium uppercase tracking-wide text-muted-foreground focus:outline-none"
+                      value={selectedSavedView}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSelectedSavedView(value);
+                        const view = savedViews.find((item) => item.id === value);
+                        if (!view) {
+                          setActiveFilters({});
+                          setOrdering([]);
+                          setPage(1);
+                          return;
+                        }
+                        setActiveFilters(view.filters || {});
+                        setOrdering(view.ordering || []);
+                        setPage(1);
+                      }}
+                    >
+                      <option value="">Saved Views</option>
+                      {savedViews.map((view) => (
+                        <option key={view.id} value={view.id}>
+                          {view.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-11 px-4 text-[10px] font-bold uppercase tracking-widest"
+                    onClick={async () => {
+                      const name = window.prompt("Name this view");
+                      if (!name) {
+                        return;
+                      }
+                      await saveView({
+                        name,
+                        filters: activeFilters,
+                        ordering,
+                        display: displayFields,
+                      });
+                    }}
+                    disabled={saveViewPending}
+                  >
+                    {saveViewPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Save current view"
+                    )}
+                  </Button>
+                </div>
                 <Button
                   data-testid="filter-button"
                   variant="outline"

@@ -14,6 +14,8 @@ import type {
   UploadResponse,
   ErrorResponse,
   MetadataResponse,
+  SavedView,
+  SavedViewRequest,
 } from "./types";
 
 export class AdminAPIClient {
@@ -233,6 +235,18 @@ export class AdminAPIClient {
 
     const query = searchParams.toString();
     return `${this.baseURL}/${model}/export${query ? `?${query}` : ""}`;
+  // Saved views
+  async listSavedViews(model: string): Promise<{ views: SavedView[] }> {
+    const response = await this.client.get(`/saved-views/${model}`);
+    return response.data;
+  }
+
+  async saveSavedView(
+    model: string,
+    request: SavedViewRequest
+  ): Promise<SavedView> {
+    const response = await this.client.post(`/saved-views/${model}`, request);
+    return response.data;
   }
 
   // Helper to construct URLs

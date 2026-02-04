@@ -5,7 +5,7 @@ import (
 	"time"
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
-	"github.com/forgego/forge/validate"
+	validate "github.com/forgego/forge/validate"
 )
 
 {{range .Models}}
@@ -36,13 +36,13 @@ var {{ .Name }}Objects, _ = orm.NewManager[{{ .Name }}]("{{ if .Meta.TableName }
 // {{.Name}}Fields provides type-safe field access for {{.Name}}
 type {{.Name}}Fields struct {
 {{- range .Fields }}
-	{{ .Name }} orm.Field[{{ .GoType }}]
+	{{ .Name | ToPascal }} orm.Field[{{ .GoType }}]
 {{- end }}
 }
 
-var {{.Name}}Fields = {{.Name}}Fields{
+var {{.Name}}FieldsInstance = {{.Name}}Fields{
 {{- range .Fields }}
-	{{ .Name }}: orm.NewField[{{ .GoType }}]("{{ .Name }}", "{{ $tableName }}"),
+	{{ .Name | ToPascal }}: orm.NewField[{{ .GoType }}]("{{ .Name }}", "{{ $tableName }}"),
 {{- end }}
 }
 
