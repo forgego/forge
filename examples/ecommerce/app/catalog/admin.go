@@ -32,6 +32,18 @@ func RegisterAdmin(ctx context.Context) {
 			CategoryFieldsInstance.SortOrder,
 			CategoryFieldsInstance.Name,
 		},
+		Actions: []admin.Action[Category]{
+			{
+				Name:  "activate",
+				Label: "Activate Categories",
+				Handler: func(ctx context.Context, instances []*Category) error {
+					for _, category := range instances {
+						category.IsActive = true
+					}
+					return nil
+				},
+			},
+		},
 	})
 
 	// Brand admin
@@ -54,6 +66,18 @@ func RegisterAdmin(ctx context.Context) {
 		},
 		Ordering: []admin.Field{
 			BrandFieldsInstance.Name,
+		},
+		Actions: []admin.Action[Brand]{
+			{
+				Name:  "activate",
+				Label: "Activate Brands",
+				Handler: func(ctx context.Context, instances []*Brand) error {
+					for _, brand := range instances {
+						brand.IsActive = true
+					}
+					return nil
+				},
+			},
 		},
 	})
 
@@ -125,6 +149,18 @@ func RegisterAdmin(ctx context.Context) {
 			ProductVariantFieldsInstance.Name,
 			ProductVariantFieldsInstance.Sku,
 		},
+		Actions: []admin.Action[ProductVariant]{
+			{
+				Name:  "activate",
+				Label: "Activate Variants",
+				Handler: func(ctx context.Context, instances []*ProductVariant) error {
+					for _, variant := range instances {
+						variant.IsActive = true
+					}
+					return nil
+				},
+			},
+		},
 	})
 
 	// ProductImage admin
@@ -139,6 +175,18 @@ func RegisterAdmin(ctx context.Context) {
 		ListFilter: []admin.Field{
 			ProductImageFieldsInstance.IsPrimary,
 			ProductImageFieldsInstance.ProductId,
+		},
+		Actions: []admin.Action[ProductImage]{
+			{
+				Name:  "mark_primary",
+				Label: "Mark as Primary",
+				Handler: func(ctx context.Context, instances []*ProductImage) error {
+					for _, image := range instances {
+						image.IsPrimary = true
+					}
+					return nil
+				},
+			},
 		},
 	})
 }

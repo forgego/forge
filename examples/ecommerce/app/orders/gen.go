@@ -5,30 +5,30 @@ import (
 	"time"
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
-	"github.com/forgego/forge/validate"
+	validate "github.com/forgego/forge/validate"
 )
 
 
 // CartGenerated struct definition
 type CartGenerated struct {
 	schema.BaseSchema
-	id int64 `json:"id" db:"id" validate:""`
-	customer_id int64 `json:"customer_id" db:"customer_id" validate:""`
-	session_id string `json:"session_id" db:"session_id" validate:""`
-	guest_email string `json:"guest_email" db:"guest_email" validate:""`
-	subtotal float64 `json:"subtotal" db:"subtotal" validate:""`
-	discount_amount float64 `json:"discount_amount" db:"discount_amount" validate:""`
-	tax_amount float64 `json:"tax_amount" db:"tax_amount" validate:""`
-	shipping_amount float64 `json:"shipping_amount" db:"shipping_amount" validate:""`
-	total float64 `json:"total" db:"total" validate:""`
-	coupon_id int64 `json:"coupon_id" db:"coupon_id" validate:""`
-	coupon_code string `json:"coupon_code" db:"coupon_code" validate:""`
-	status string `json:"status" db:"status" validate:""`
-	is_abandoned bool `json:"is_abandoned" db:"is_abandoned" validate:""`
-	created_at time.Time `json:"created_at" db:"created_at" validate:""`
-	updated_at time.Time `json:"updated_at" db:"updated_at" validate:""`
-	last_activity_at time.Time `json:"last_activity_at" db:"last_activity_at" validate:""`
-	converted_at time.Time `json:"converted_at" db:"converted_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	CustomerId int64 `json:"customer_id" db:"customer_id" validate:""`
+	SessionId string `json:"session_id" db:"session_id" validate:""`
+	GuestEmail string `json:"guest_email" db:"guest_email" validate:""`
+	Subtotal float64 `json:"subtotal" db:"subtotal" validate:""`
+	DiscountAmount float64 `json:"discount_amount" db:"discount_amount" validate:""`
+	TaxAmount float64 `json:"tax_amount" db:"tax_amount" validate:""`
+	ShippingAmount float64 `json:"shipping_amount" db:"shipping_amount" validate:""`
+	Total float64 `json:"total" db:"total" validate:""`
+	CouponId int64 `json:"coupon_id" db:"coupon_id" validate:""`
+	CouponCode string `json:"coupon_code" db:"coupon_code" validate:""`
+	Status string `json:"status" db:"status" validate:""`
+	IsAbandoned bool `json:"is_abandoned" db:"is_abandoned" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	LastActivityAt time.Time `json:"last_activity_at" db:"last_activity_at" validate:""`
+	ConvertedAt time.Time `json:"converted_at" db:"converted_at" validate:""`
 }
 
 // Validate validates the Cart model
@@ -43,43 +43,43 @@ var CartObjects, _ = orm.NewManager[Cart]("carts")
 
 // CartFields provides type-safe field access for Cart
 type CartFields struct {
-	id orm.Field[int64]
-	customer_id orm.Field[int64]
-	session_id orm.Field[string]
-	guest_email orm.Field[string]
-	subtotal orm.Field[float64]
-	discount_amount orm.Field[float64]
-	tax_amount orm.Field[float64]
-	shipping_amount orm.Field[float64]
-	total orm.Field[float64]
-	coupon_id orm.Field[int64]
-	coupon_code orm.Field[string]
-	status orm.Field[string]
-	is_abandoned orm.Field[bool]
-	created_at orm.Field[time.Time]
-	updated_at orm.Field[time.Time]
-	last_activity_at orm.Field[time.Time]
-	converted_at orm.Field[time.Time]
+	Id orm.Field[int64]
+	CustomerId orm.Field[int64]
+	SessionId orm.Field[string]
+	GuestEmail orm.Field[string]
+	Subtotal orm.Field[float64]
+	DiscountAmount orm.Field[float64]
+	TaxAmount orm.Field[float64]
+	ShippingAmount orm.Field[float64]
+	Total orm.Field[float64]
+	CouponId orm.Field[int64]
+	CouponCode orm.Field[string]
+	Status orm.Field[string]
+	IsAbandoned orm.Field[bool]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
+	LastActivityAt orm.Field[time.Time]
+	ConvertedAt orm.Field[time.Time]
 }
 
-var CartFields = CartFields{
-	id: orm.NewField[int64]("id", "carts"),
-	customer_id: orm.NewField[int64]("customer_id", "carts"),
-	session_id: orm.NewField[string]("session_id", "carts"),
-	guest_email: orm.NewField[string]("guest_email", "carts"),
-	subtotal: orm.NewField[float64]("subtotal", "carts"),
-	discount_amount: orm.NewField[float64]("discount_amount", "carts"),
-	tax_amount: orm.NewField[float64]("tax_amount", "carts"),
-	shipping_amount: orm.NewField[float64]("shipping_amount", "carts"),
-	total: orm.NewField[float64]("total", "carts"),
-	coupon_id: orm.NewField[int64]("coupon_id", "carts"),
-	coupon_code: orm.NewField[string]("coupon_code", "carts"),
-	status: orm.NewField[string]("status", "carts"),
-	is_abandoned: orm.NewField[bool]("is_abandoned", "carts"),
-	created_at: orm.NewField[time.Time]("created_at", "carts"),
-	updated_at: orm.NewField[time.Time]("updated_at", "carts"),
-	last_activity_at: orm.NewField[time.Time]("last_activity_at", "carts"),
-	converted_at: orm.NewField[time.Time]("converted_at", "carts"),
+var CartFieldsInstance = CartFields{
+	Id: orm.NewField[int64]("id", "carts"),
+	CustomerId: orm.NewField[int64]("customer_id", "carts"),
+	SessionId: orm.NewField[string]("session_id", "carts"),
+	GuestEmail: orm.NewField[string]("guest_email", "carts"),
+	Subtotal: orm.NewField[float64]("subtotal", "carts"),
+	DiscountAmount: orm.NewField[float64]("discount_amount", "carts"),
+	TaxAmount: orm.NewField[float64]("tax_amount", "carts"),
+	ShippingAmount: orm.NewField[float64]("shipping_amount", "carts"),
+	Total: orm.NewField[float64]("total", "carts"),
+	CouponId: orm.NewField[int64]("coupon_id", "carts"),
+	CouponCode: orm.NewField[string]("coupon_code", "carts"),
+	Status: orm.NewField[string]("status", "carts"),
+	IsAbandoned: orm.NewField[bool]("is_abandoned", "carts"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "carts"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "carts"),
+	LastActivityAt: orm.NewField[time.Time]("last_activity_at", "carts"),
+	ConvertedAt: orm.NewField[time.Time]("converted_at", "carts"),
 }
 
 
@@ -88,20 +88,20 @@ var CartFields = CartFields{
 // CartItemGenerated struct definition
 type CartItemGenerated struct {
 	schema.BaseSchema
-	id int64 `json:"id" db:"id" validate:""`
-	cart_id int64 `json:"cart_id" db:"cart_id" validate:""`
-	product_id int64 `json:"product_id" db:"product_id" validate:""`
-	variant_id int64 `json:"variant_id" db:"variant_id" validate:""`
-	quantity int32 `json:"quantity" db:"quantity" validate:""`
-	unit_price float64 `json:"unit_price" db:"unit_price" validate:""`
-	discount_amount float64 `json:"discount_amount" db:"discount_amount" validate:""`
-	tax_amount float64 `json:"tax_amount" db:"tax_amount" validate:""`
-	total float64 `json:"total" db:"total" validate:""`
-	product_name string `json:"product_name" db:"product_name" validate:""`
-	variant_name string `json:"variant_name" db:"variant_name" validate:""`
-	image_url string `json:"image_url" db:"image_url" validate:""`
-	created_at time.Time `json:"created_at" db:"created_at" validate:""`
-	updated_at time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	CartId int64 `json:"cart_id" db:"cart_id" validate:""`
+	ProductId int64 `json:"product_id" db:"product_id" validate:""`
+	VariantId int64 `json:"variant_id" db:"variant_id" validate:""`
+	Quantity int32 `json:"quantity" db:"quantity" validate:""`
+	UnitPrice float64 `json:"unit_price" db:"unit_price" validate:""`
+	DiscountAmount float64 `json:"discount_amount" db:"discount_amount" validate:""`
+	TaxAmount float64 `json:"tax_amount" db:"tax_amount" validate:""`
+	Total float64 `json:"total" db:"total" validate:""`
+	ProductName string `json:"product_name" db:"product_name" validate:""`
+	VariantName string `json:"variant_name" db:"variant_name" validate:""`
+	ImageUrl string `json:"image_url" db:"image_url" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the CartItem model
@@ -116,37 +116,37 @@ var CartItemObjects, _ = orm.NewManager[CartItem]("cart_items")
 
 // CartItemFields provides type-safe field access for CartItem
 type CartItemFields struct {
-	id orm.Field[int64]
-	cart_id orm.Field[int64]
-	product_id orm.Field[int64]
-	variant_id orm.Field[int64]
-	quantity orm.Field[int32]
-	unit_price orm.Field[float64]
-	discount_amount orm.Field[float64]
-	tax_amount orm.Field[float64]
-	total orm.Field[float64]
-	product_name orm.Field[string]
-	variant_name orm.Field[string]
-	image_url orm.Field[string]
-	created_at orm.Field[time.Time]
-	updated_at orm.Field[time.Time]
+	Id orm.Field[int64]
+	CartId orm.Field[int64]
+	ProductId orm.Field[int64]
+	VariantId orm.Field[int64]
+	Quantity orm.Field[int32]
+	UnitPrice orm.Field[float64]
+	DiscountAmount orm.Field[float64]
+	TaxAmount orm.Field[float64]
+	Total orm.Field[float64]
+	ProductName orm.Field[string]
+	VariantName orm.Field[string]
+	ImageUrl orm.Field[string]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
 }
 
-var CartItemFields = CartItemFields{
-	id: orm.NewField[int64]("id", "cart_items"),
-	cart_id: orm.NewField[int64]("cart_id", "cart_items"),
-	product_id: orm.NewField[int64]("product_id", "cart_items"),
-	variant_id: orm.NewField[int64]("variant_id", "cart_items"),
-	quantity: orm.NewField[int32]("quantity", "cart_items"),
-	unit_price: orm.NewField[float64]("unit_price", "cart_items"),
-	discount_amount: orm.NewField[float64]("discount_amount", "cart_items"),
-	tax_amount: orm.NewField[float64]("tax_amount", "cart_items"),
-	total: orm.NewField[float64]("total", "cart_items"),
-	product_name: orm.NewField[string]("product_name", "cart_items"),
-	variant_name: orm.NewField[string]("variant_name", "cart_items"),
-	image_url: orm.NewField[string]("image_url", "cart_items"),
-	created_at: orm.NewField[time.Time]("created_at", "cart_items"),
-	updated_at: orm.NewField[time.Time]("updated_at", "cart_items"),
+var CartItemFieldsInstance = CartItemFields{
+	Id: orm.NewField[int64]("id", "cart_items"),
+	CartId: orm.NewField[int64]("cart_id", "cart_items"),
+	ProductId: orm.NewField[int64]("product_id", "cart_items"),
+	VariantId: orm.NewField[int64]("variant_id", "cart_items"),
+	Quantity: orm.NewField[int32]("quantity", "cart_items"),
+	UnitPrice: orm.NewField[float64]("unit_price", "cart_items"),
+	DiscountAmount: orm.NewField[float64]("discount_amount", "cart_items"),
+	TaxAmount: orm.NewField[float64]("tax_amount", "cart_items"),
+	Total: orm.NewField[float64]("total", "cart_items"),
+	ProductName: orm.NewField[string]("product_name", "cart_items"),
+	VariantName: orm.NewField[string]("variant_name", "cart_items"),
+	ImageUrl: orm.NewField[string]("image_url", "cart_items"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "cart_items"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "cart_items"),
 }
 
 
@@ -155,63 +155,63 @@ var CartItemFields = CartItemFields{
 // OrderGenerated struct definition
 type OrderGenerated struct {
 	schema.BaseSchema
-	id int64 `json:"id" db:"id" validate:""`
-	order_number string `json:"order_number" db:"order_number" validate:""`
-	customer_id int64 `json:"customer_id" db:"customer_id" validate:""`
-	customer_email string `json:"customer_email" db:"customer_email" validate:""`
-	customer_first_name string `json:"customer_first_name" db:"customer_first_name" validate:""`
-	customer_last_name string `json:"customer_last_name" db:"customer_last_name" validate:""`
-	customer_phone string `json:"customer_phone" db:"customer_phone" validate:""`
-	subtotal float64 `json:"subtotal" db:"subtotal" validate:""`
-	discount_amount float64 `json:"discount_amount" db:"discount_amount" validate:""`
-	tax_amount float64 `json:"tax_amount" db:"tax_amount" validate:""`
-	shipping_amount float64 `json:"shipping_amount" db:"shipping_amount" validate:""`
-	total float64 `json:"total" db:"total" validate:""`
-	coupon_id int64 `json:"coupon_id" db:"coupon_id" validate:""`
-	coupon_code string `json:"coupon_code" db:"coupon_code" validate:""`
-	coupon_discount float64 `json:"coupon_discount" db:"coupon_discount" validate:""`
-	status string `json:"status" db:"status" validate:""`
-	payment_status string `json:"payment_status" db:"payment_status" validate:""`
-	fulfillment_status string `json:"fulfillment_status" db:"fulfillment_status" validate:""`
-	shipping_address_id int64 `json:"shipping_address_id" db:"shipping_address_id" validate:""`
-	billing_address_id int64 `json:"billing_address_id" db:"billing_address_id" validate:""`
-	shipping_first_name string `json:"shipping_first_name" db:"shipping_first_name" validate:""`
-	shipping_last_name string `json:"shipping_last_name" db:"shipping_last_name" validate:""`
-	shipping_company string `json:"shipping_company" db:"shipping_company" validate:""`
-	shipping_address_line1 string `json:"shipping_address_line1" db:"shipping_address_line1" validate:""`
-	shipping_address_line2 string `json:"shipping_address_line2" db:"shipping_address_line2" validate:""`
-	shipping_city string `json:"shipping_city" db:"shipping_city" validate:""`
-	shipping_state string `json:"shipping_state" db:"shipping_state" validate:""`
-	shipping_postal_code string `json:"shipping_postal_code" db:"shipping_postal_code" validate:""`
-	shipping_country_code string `json:"shipping_country_code" db:"shipping_country_code" validate:""`
-	shipping_country_name string `json:"shipping_country_name" db:"shipping_country_name" validate:""`
-	shipping_phone string `json:"shipping_phone" db:"shipping_phone" validate:""`
-	billing_first_name string `json:"billing_first_name" db:"billing_first_name" validate:""`
-	billing_last_name string `json:"billing_last_name" db:"billing_last_name" validate:""`
-	billing_company string `json:"billing_company" db:"billing_company" validate:""`
-	billing_address_line1 string `json:"billing_address_line1" db:"billing_address_line1" validate:""`
-	billing_address_line2 string `json:"billing_address_line2" db:"billing_address_line2" validate:""`
-	billing_city string `json:"billing_city" db:"billing_city" validate:""`
-	billing_state string `json:"billing_state" db:"billing_state" validate:""`
-	billing_postal_code string `json:"billing_postal_code" db:"billing_postal_code" validate:""`
-	billing_country_code string `json:"billing_country_code" db:"billing_country_code" validate:""`
-	billing_country_name string `json:"billing_country_name" db:"billing_country_name" validate:""`
-	payment_method string `json:"payment_method" db:"payment_method" validate:""`
-	payment_transaction_id string `json:"payment_transaction_id" db:"payment_transaction_id" validate:""`
-	shipping_method string `json:"shipping_method" db:"shipping_method" validate:""`
-	tracking_number string `json:"tracking_number" db:"tracking_number" validate:""`
-	carrier string `json:"carrier" db:"carrier" validate:""`
-	customer_notes string `json:"customer_notes" db:"customer_notes" validate:""`
-	admin_notes string `json:"admin_notes" db:"admin_notes" validate:""`
-	ip_address string `json:"ip_address" db:"ip_address" validate:""`
-	user_agent string `json:"user_agent" db:"user_agent" validate:""`
-	created_at time.Time `json:"created_at" db:"created_at" validate:""`
-	updated_at time.Time `json:"updated_at" db:"updated_at" validate:""`
-	paid_at time.Time `json:"paid_at" db:"paid_at" validate:""`
-	shipped_at time.Time `json:"shipped_at" db:"shipped_at" validate:""`
-	delivered_at time.Time `json:"delivered_at" db:"delivered_at" validate:""`
-	cancelled_at time.Time `json:"cancelled_at" db:"cancelled_at" validate:""`
-	expires_at time.Time `json:"expires_at" db:"expires_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	OrderNumber string `json:"order_number" db:"order_number" validate:""`
+	CustomerId int64 `json:"customer_id" db:"customer_id" validate:""`
+	CustomerEmail string `json:"customer_email" db:"customer_email" validate:""`
+	CustomerFirstName string `json:"customer_first_name" db:"customer_first_name" validate:""`
+	CustomerLastName string `json:"customer_last_name" db:"customer_last_name" validate:""`
+	CustomerPhone string `json:"customer_phone" db:"customer_phone" validate:""`
+	Subtotal float64 `json:"subtotal" db:"subtotal" validate:""`
+	DiscountAmount float64 `json:"discount_amount" db:"discount_amount" validate:""`
+	TaxAmount float64 `json:"tax_amount" db:"tax_amount" validate:""`
+	ShippingAmount float64 `json:"shipping_amount" db:"shipping_amount" validate:""`
+	Total float64 `json:"total" db:"total" validate:""`
+	CouponId int64 `json:"coupon_id" db:"coupon_id" validate:""`
+	CouponCode string `json:"coupon_code" db:"coupon_code" validate:""`
+	CouponDiscount float64 `json:"coupon_discount" db:"coupon_discount" validate:""`
+	Status string `json:"status" db:"status" validate:""`
+	PaymentStatus string `json:"payment_status" db:"payment_status" validate:""`
+	FulfillmentStatus string `json:"fulfillment_status" db:"fulfillment_status" validate:""`
+	ShippingAddressId int64 `json:"shipping_address_id" db:"shipping_address_id" validate:""`
+	BillingAddressId int64 `json:"billing_address_id" db:"billing_address_id" validate:""`
+	ShippingFirstName string `json:"shipping_first_name" db:"shipping_first_name" validate:""`
+	ShippingLastName string `json:"shipping_last_name" db:"shipping_last_name" validate:""`
+	ShippingCompany string `json:"shipping_company" db:"shipping_company" validate:""`
+	ShippingAddressLine1 string `json:"shipping_address_line1" db:"shipping_address_line1" validate:""`
+	ShippingAddressLine2 string `json:"shipping_address_line2" db:"shipping_address_line2" validate:""`
+	ShippingCity string `json:"shipping_city" db:"shipping_city" validate:""`
+	ShippingState string `json:"shipping_state" db:"shipping_state" validate:""`
+	ShippingPostalCode string `json:"shipping_postal_code" db:"shipping_postal_code" validate:""`
+	ShippingCountryCode string `json:"shipping_country_code" db:"shipping_country_code" validate:""`
+	ShippingCountryName string `json:"shipping_country_name" db:"shipping_country_name" validate:""`
+	ShippingPhone string `json:"shipping_phone" db:"shipping_phone" validate:""`
+	BillingFirstName string `json:"billing_first_name" db:"billing_first_name" validate:""`
+	BillingLastName string `json:"billing_last_name" db:"billing_last_name" validate:""`
+	BillingCompany string `json:"billing_company" db:"billing_company" validate:""`
+	BillingAddressLine1 string `json:"billing_address_line1" db:"billing_address_line1" validate:""`
+	BillingAddressLine2 string `json:"billing_address_line2" db:"billing_address_line2" validate:""`
+	BillingCity string `json:"billing_city" db:"billing_city" validate:""`
+	BillingState string `json:"billing_state" db:"billing_state" validate:""`
+	BillingPostalCode string `json:"billing_postal_code" db:"billing_postal_code" validate:""`
+	BillingCountryCode string `json:"billing_country_code" db:"billing_country_code" validate:""`
+	BillingCountryName string `json:"billing_country_name" db:"billing_country_name" validate:""`
+	PaymentMethod string `json:"payment_method" db:"payment_method" validate:""`
+	PaymentTransactionId string `json:"payment_transaction_id" db:"payment_transaction_id" validate:""`
+	ShippingMethod string `json:"shipping_method" db:"shipping_method" validate:""`
+	TrackingNumber string `json:"tracking_number" db:"tracking_number" validate:""`
+	Carrier string `json:"carrier" db:"carrier" validate:""`
+	CustomerNotes string `json:"customer_notes" db:"customer_notes" validate:""`
+	AdminNotes string `json:"admin_notes" db:"admin_notes" validate:""`
+	IpAddress string `json:"ip_address" db:"ip_address" validate:""`
+	UserAgent string `json:"user_agent" db:"user_agent" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	PaidAt time.Time `json:"paid_at" db:"paid_at" validate:""`
+	ShippedAt time.Time `json:"shipped_at" db:"shipped_at" validate:""`
+	DeliveredAt time.Time `json:"delivered_at" db:"delivered_at" validate:""`
+	CancelledAt time.Time `json:"cancelled_at" db:"cancelled_at" validate:""`
+	ExpiresAt time.Time `json:"expires_at" db:"expires_at" validate:""`
 }
 
 // Validate validates the Order model
@@ -226,123 +226,123 @@ var OrderObjects, _ = orm.NewManager[Order]("orders")
 
 // OrderFields provides type-safe field access for Order
 type OrderFields struct {
-	id orm.Field[int64]
-	order_number orm.Field[string]
-	customer_id orm.Field[int64]
-	customer_email orm.Field[string]
-	customer_first_name orm.Field[string]
-	customer_last_name orm.Field[string]
-	customer_phone orm.Field[string]
-	subtotal orm.Field[float64]
-	discount_amount orm.Field[float64]
-	tax_amount orm.Field[float64]
-	shipping_amount orm.Field[float64]
-	total orm.Field[float64]
-	coupon_id orm.Field[int64]
-	coupon_code orm.Field[string]
-	coupon_discount orm.Field[float64]
-	status orm.Field[string]
-	payment_status orm.Field[string]
-	fulfillment_status orm.Field[string]
-	shipping_address_id orm.Field[int64]
-	billing_address_id orm.Field[int64]
-	shipping_first_name orm.Field[string]
-	shipping_last_name orm.Field[string]
-	shipping_company orm.Field[string]
-	shipping_address_line1 orm.Field[string]
-	shipping_address_line2 orm.Field[string]
-	shipping_city orm.Field[string]
-	shipping_state orm.Field[string]
-	shipping_postal_code orm.Field[string]
-	shipping_country_code orm.Field[string]
-	shipping_country_name orm.Field[string]
-	shipping_phone orm.Field[string]
-	billing_first_name orm.Field[string]
-	billing_last_name orm.Field[string]
-	billing_company orm.Field[string]
-	billing_address_line1 orm.Field[string]
-	billing_address_line2 orm.Field[string]
-	billing_city orm.Field[string]
-	billing_state orm.Field[string]
-	billing_postal_code orm.Field[string]
-	billing_country_code orm.Field[string]
-	billing_country_name orm.Field[string]
-	payment_method orm.Field[string]
-	payment_transaction_id orm.Field[string]
-	shipping_method orm.Field[string]
-	tracking_number orm.Field[string]
-	carrier orm.Field[string]
-	customer_notes orm.Field[string]
-	admin_notes orm.Field[string]
-	ip_address orm.Field[string]
-	user_agent orm.Field[string]
-	created_at orm.Field[time.Time]
-	updated_at orm.Field[time.Time]
-	paid_at orm.Field[time.Time]
-	shipped_at orm.Field[time.Time]
-	delivered_at orm.Field[time.Time]
-	cancelled_at orm.Field[time.Time]
-	expires_at orm.Field[time.Time]
+	Id orm.Field[int64]
+	OrderNumber orm.Field[string]
+	CustomerId orm.Field[int64]
+	CustomerEmail orm.Field[string]
+	CustomerFirstName orm.Field[string]
+	CustomerLastName orm.Field[string]
+	CustomerPhone orm.Field[string]
+	Subtotal orm.Field[float64]
+	DiscountAmount orm.Field[float64]
+	TaxAmount orm.Field[float64]
+	ShippingAmount orm.Field[float64]
+	Total orm.Field[float64]
+	CouponId orm.Field[int64]
+	CouponCode orm.Field[string]
+	CouponDiscount orm.Field[float64]
+	Status orm.Field[string]
+	PaymentStatus orm.Field[string]
+	FulfillmentStatus orm.Field[string]
+	ShippingAddressId orm.Field[int64]
+	BillingAddressId orm.Field[int64]
+	ShippingFirstName orm.Field[string]
+	ShippingLastName orm.Field[string]
+	ShippingCompany orm.Field[string]
+	ShippingAddressLine1 orm.Field[string]
+	ShippingAddressLine2 orm.Field[string]
+	ShippingCity orm.Field[string]
+	ShippingState orm.Field[string]
+	ShippingPostalCode orm.Field[string]
+	ShippingCountryCode orm.Field[string]
+	ShippingCountryName orm.Field[string]
+	ShippingPhone orm.Field[string]
+	BillingFirstName orm.Field[string]
+	BillingLastName orm.Field[string]
+	BillingCompany orm.Field[string]
+	BillingAddressLine1 orm.Field[string]
+	BillingAddressLine2 orm.Field[string]
+	BillingCity orm.Field[string]
+	BillingState orm.Field[string]
+	BillingPostalCode orm.Field[string]
+	BillingCountryCode orm.Field[string]
+	BillingCountryName orm.Field[string]
+	PaymentMethod orm.Field[string]
+	PaymentTransactionId orm.Field[string]
+	ShippingMethod orm.Field[string]
+	TrackingNumber orm.Field[string]
+	Carrier orm.Field[string]
+	CustomerNotes orm.Field[string]
+	AdminNotes orm.Field[string]
+	IpAddress orm.Field[string]
+	UserAgent orm.Field[string]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
+	PaidAt orm.Field[time.Time]
+	ShippedAt orm.Field[time.Time]
+	DeliveredAt orm.Field[time.Time]
+	CancelledAt orm.Field[time.Time]
+	ExpiresAt orm.Field[time.Time]
 }
 
-var OrderFields = OrderFields{
-	id: orm.NewField[int64]("id", "orders"),
-	order_number: orm.NewField[string]("order_number", "orders"),
-	customer_id: orm.NewField[int64]("customer_id", "orders"),
-	customer_email: orm.NewField[string]("customer_email", "orders"),
-	customer_first_name: orm.NewField[string]("customer_first_name", "orders"),
-	customer_last_name: orm.NewField[string]("customer_last_name", "orders"),
-	customer_phone: orm.NewField[string]("customer_phone", "orders"),
-	subtotal: orm.NewField[float64]("subtotal", "orders"),
-	discount_amount: orm.NewField[float64]("discount_amount", "orders"),
-	tax_amount: orm.NewField[float64]("tax_amount", "orders"),
-	shipping_amount: orm.NewField[float64]("shipping_amount", "orders"),
-	total: orm.NewField[float64]("total", "orders"),
-	coupon_id: orm.NewField[int64]("coupon_id", "orders"),
-	coupon_code: orm.NewField[string]("coupon_code", "orders"),
-	coupon_discount: orm.NewField[float64]("coupon_discount", "orders"),
-	status: orm.NewField[string]("status", "orders"),
-	payment_status: orm.NewField[string]("payment_status", "orders"),
-	fulfillment_status: orm.NewField[string]("fulfillment_status", "orders"),
-	shipping_address_id: orm.NewField[int64]("shipping_address_id", "orders"),
-	billing_address_id: orm.NewField[int64]("billing_address_id", "orders"),
-	shipping_first_name: orm.NewField[string]("shipping_first_name", "orders"),
-	shipping_last_name: orm.NewField[string]("shipping_last_name", "orders"),
-	shipping_company: orm.NewField[string]("shipping_company", "orders"),
-	shipping_address_line1: orm.NewField[string]("shipping_address_line1", "orders"),
-	shipping_address_line2: orm.NewField[string]("shipping_address_line2", "orders"),
-	shipping_city: orm.NewField[string]("shipping_city", "orders"),
-	shipping_state: orm.NewField[string]("shipping_state", "orders"),
-	shipping_postal_code: orm.NewField[string]("shipping_postal_code", "orders"),
-	shipping_country_code: orm.NewField[string]("shipping_country_code", "orders"),
-	shipping_country_name: orm.NewField[string]("shipping_country_name", "orders"),
-	shipping_phone: orm.NewField[string]("shipping_phone", "orders"),
-	billing_first_name: orm.NewField[string]("billing_first_name", "orders"),
-	billing_last_name: orm.NewField[string]("billing_last_name", "orders"),
-	billing_company: orm.NewField[string]("billing_company", "orders"),
-	billing_address_line1: orm.NewField[string]("billing_address_line1", "orders"),
-	billing_address_line2: orm.NewField[string]("billing_address_line2", "orders"),
-	billing_city: orm.NewField[string]("billing_city", "orders"),
-	billing_state: orm.NewField[string]("billing_state", "orders"),
-	billing_postal_code: orm.NewField[string]("billing_postal_code", "orders"),
-	billing_country_code: orm.NewField[string]("billing_country_code", "orders"),
-	billing_country_name: orm.NewField[string]("billing_country_name", "orders"),
-	payment_method: orm.NewField[string]("payment_method", "orders"),
-	payment_transaction_id: orm.NewField[string]("payment_transaction_id", "orders"),
-	shipping_method: orm.NewField[string]("shipping_method", "orders"),
-	tracking_number: orm.NewField[string]("tracking_number", "orders"),
-	carrier: orm.NewField[string]("carrier", "orders"),
-	customer_notes: orm.NewField[string]("customer_notes", "orders"),
-	admin_notes: orm.NewField[string]("admin_notes", "orders"),
-	ip_address: orm.NewField[string]("ip_address", "orders"),
-	user_agent: orm.NewField[string]("user_agent", "orders"),
-	created_at: orm.NewField[time.Time]("created_at", "orders"),
-	updated_at: orm.NewField[time.Time]("updated_at", "orders"),
-	paid_at: orm.NewField[time.Time]("paid_at", "orders"),
-	shipped_at: orm.NewField[time.Time]("shipped_at", "orders"),
-	delivered_at: orm.NewField[time.Time]("delivered_at", "orders"),
-	cancelled_at: orm.NewField[time.Time]("cancelled_at", "orders"),
-	expires_at: orm.NewField[time.Time]("expires_at", "orders"),
+var OrderFieldsInstance = OrderFields{
+	Id: orm.NewField[int64]("id", "orders"),
+	OrderNumber: orm.NewField[string]("order_number", "orders"),
+	CustomerId: orm.NewField[int64]("customer_id", "orders"),
+	CustomerEmail: orm.NewField[string]("customer_email", "orders"),
+	CustomerFirstName: orm.NewField[string]("customer_first_name", "orders"),
+	CustomerLastName: orm.NewField[string]("customer_last_name", "orders"),
+	CustomerPhone: orm.NewField[string]("customer_phone", "orders"),
+	Subtotal: orm.NewField[float64]("subtotal", "orders"),
+	DiscountAmount: orm.NewField[float64]("discount_amount", "orders"),
+	TaxAmount: orm.NewField[float64]("tax_amount", "orders"),
+	ShippingAmount: orm.NewField[float64]("shipping_amount", "orders"),
+	Total: orm.NewField[float64]("total", "orders"),
+	CouponId: orm.NewField[int64]("coupon_id", "orders"),
+	CouponCode: orm.NewField[string]("coupon_code", "orders"),
+	CouponDiscount: orm.NewField[float64]("coupon_discount", "orders"),
+	Status: orm.NewField[string]("status", "orders"),
+	PaymentStatus: orm.NewField[string]("payment_status", "orders"),
+	FulfillmentStatus: orm.NewField[string]("fulfillment_status", "orders"),
+	ShippingAddressId: orm.NewField[int64]("shipping_address_id", "orders"),
+	BillingAddressId: orm.NewField[int64]("billing_address_id", "orders"),
+	ShippingFirstName: orm.NewField[string]("shipping_first_name", "orders"),
+	ShippingLastName: orm.NewField[string]("shipping_last_name", "orders"),
+	ShippingCompany: orm.NewField[string]("shipping_company", "orders"),
+	ShippingAddressLine1: orm.NewField[string]("shipping_address_line1", "orders"),
+	ShippingAddressLine2: orm.NewField[string]("shipping_address_line2", "orders"),
+	ShippingCity: orm.NewField[string]("shipping_city", "orders"),
+	ShippingState: orm.NewField[string]("shipping_state", "orders"),
+	ShippingPostalCode: orm.NewField[string]("shipping_postal_code", "orders"),
+	ShippingCountryCode: orm.NewField[string]("shipping_country_code", "orders"),
+	ShippingCountryName: orm.NewField[string]("shipping_country_name", "orders"),
+	ShippingPhone: orm.NewField[string]("shipping_phone", "orders"),
+	BillingFirstName: orm.NewField[string]("billing_first_name", "orders"),
+	BillingLastName: orm.NewField[string]("billing_last_name", "orders"),
+	BillingCompany: orm.NewField[string]("billing_company", "orders"),
+	BillingAddressLine1: orm.NewField[string]("billing_address_line1", "orders"),
+	BillingAddressLine2: orm.NewField[string]("billing_address_line2", "orders"),
+	BillingCity: orm.NewField[string]("billing_city", "orders"),
+	BillingState: orm.NewField[string]("billing_state", "orders"),
+	BillingPostalCode: orm.NewField[string]("billing_postal_code", "orders"),
+	BillingCountryCode: orm.NewField[string]("billing_country_code", "orders"),
+	BillingCountryName: orm.NewField[string]("billing_country_name", "orders"),
+	PaymentMethod: orm.NewField[string]("payment_method", "orders"),
+	PaymentTransactionId: orm.NewField[string]("payment_transaction_id", "orders"),
+	ShippingMethod: orm.NewField[string]("shipping_method", "orders"),
+	TrackingNumber: orm.NewField[string]("tracking_number", "orders"),
+	Carrier: orm.NewField[string]("carrier", "orders"),
+	CustomerNotes: orm.NewField[string]("customer_notes", "orders"),
+	AdminNotes: orm.NewField[string]("admin_notes", "orders"),
+	IpAddress: orm.NewField[string]("ip_address", "orders"),
+	UserAgent: orm.NewField[string]("user_agent", "orders"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "orders"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "orders"),
+	PaidAt: orm.NewField[time.Time]("paid_at", "orders"),
+	ShippedAt: orm.NewField[time.Time]("shipped_at", "orders"),
+	DeliveredAt: orm.NewField[time.Time]("delivered_at", "orders"),
+	CancelledAt: orm.NewField[time.Time]("cancelled_at", "orders"),
+	ExpiresAt: orm.NewField[time.Time]("expires_at", "orders"),
 }
 
 
@@ -351,26 +351,26 @@ var OrderFields = OrderFields{
 // OrderItemGenerated struct definition
 type OrderItemGenerated struct {
 	schema.BaseSchema
-	id int64 `json:"id" db:"id" validate:""`
-	order_id int64 `json:"order_id" db:"order_id" validate:""`
-	product_id int64 `json:"product_id" db:"product_id" validate:""`
-	variant_id int64 `json:"variant_id" db:"variant_id" validate:""`
-	product_name string `json:"product_name" db:"product_name" validate:""`
-	product_sku string `json:"product_sku" db:"product_sku" validate:""`
-	variant_name string `json:"variant_name" db:"variant_name" validate:""`
-	variant_sku string `json:"variant_sku" db:"variant_sku" validate:""`
-	image_url string `json:"image_url" db:"image_url" validate:""`
-	quantity int32 `json:"quantity" db:"quantity" validate:""`
-	unit_price float64 `json:"unit_price" db:"unit_price" validate:""`
-	discount_amount float64 `json:"discount_amount" db:"discount_amount" validate:""`
-	tax_amount float64 `json:"tax_amount" db:"tax_amount" validate:""`
-	total float64 `json:"total" db:"total" validate:""`
-	quantity_fulfilled int32 `json:"quantity_fulfilled" db:"quantity_fulfilled" validate:""`
-	quantity_refunded int32 `json:"quantity_refunded" db:"quantity_refunded" validate:""`
-	fulfillment_status string `json:"fulfillment_status" db:"fulfillment_status" validate:""`
-	weight float64 `json:"weight" db:"weight" validate:""`
-	created_at time.Time `json:"created_at" db:"created_at" validate:""`
-	updated_at time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	OrderId int64 `json:"order_id" db:"order_id" validate:""`
+	ProductId int64 `json:"product_id" db:"product_id" validate:""`
+	VariantId int64 `json:"variant_id" db:"variant_id" validate:""`
+	ProductName string `json:"product_name" db:"product_name" validate:""`
+	ProductSku string `json:"product_sku" db:"product_sku" validate:""`
+	VariantName string `json:"variant_name" db:"variant_name" validate:""`
+	VariantSku string `json:"variant_sku" db:"variant_sku" validate:""`
+	ImageUrl string `json:"image_url" db:"image_url" validate:""`
+	Quantity int32 `json:"quantity" db:"quantity" validate:""`
+	UnitPrice float64 `json:"unit_price" db:"unit_price" validate:""`
+	DiscountAmount float64 `json:"discount_amount" db:"discount_amount" validate:""`
+	TaxAmount float64 `json:"tax_amount" db:"tax_amount" validate:""`
+	Total float64 `json:"total" db:"total" validate:""`
+	QuantityFulfilled int32 `json:"quantity_fulfilled" db:"quantity_fulfilled" validate:""`
+	QuantityRefunded int32 `json:"quantity_refunded" db:"quantity_refunded" validate:""`
+	FulfillmentStatus string `json:"fulfillment_status" db:"fulfillment_status" validate:""`
+	Weight float64 `json:"weight" db:"weight" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the OrderItem model
@@ -385,49 +385,49 @@ var OrderItemObjects, _ = orm.NewManager[OrderItem]("order_items")
 
 // OrderItemFields provides type-safe field access for OrderItem
 type OrderItemFields struct {
-	id orm.Field[int64]
-	order_id orm.Field[int64]
-	product_id orm.Field[int64]
-	variant_id orm.Field[int64]
-	product_name orm.Field[string]
-	product_sku orm.Field[string]
-	variant_name orm.Field[string]
-	variant_sku orm.Field[string]
-	image_url orm.Field[string]
-	quantity orm.Field[int32]
-	unit_price orm.Field[float64]
-	discount_amount orm.Field[float64]
-	tax_amount orm.Field[float64]
-	total orm.Field[float64]
-	quantity_fulfilled orm.Field[int32]
-	quantity_refunded orm.Field[int32]
-	fulfillment_status orm.Field[string]
-	weight orm.Field[float64]
-	created_at orm.Field[time.Time]
-	updated_at orm.Field[time.Time]
+	Id orm.Field[int64]
+	OrderId orm.Field[int64]
+	ProductId orm.Field[int64]
+	VariantId orm.Field[int64]
+	ProductName orm.Field[string]
+	ProductSku orm.Field[string]
+	VariantName orm.Field[string]
+	VariantSku orm.Field[string]
+	ImageUrl orm.Field[string]
+	Quantity orm.Field[int32]
+	UnitPrice orm.Field[float64]
+	DiscountAmount orm.Field[float64]
+	TaxAmount orm.Field[float64]
+	Total orm.Field[float64]
+	QuantityFulfilled orm.Field[int32]
+	QuantityRefunded orm.Field[int32]
+	FulfillmentStatus orm.Field[string]
+	Weight orm.Field[float64]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
 }
 
-var OrderItemFields = OrderItemFields{
-	id: orm.NewField[int64]("id", "order_items"),
-	order_id: orm.NewField[int64]("order_id", "order_items"),
-	product_id: orm.NewField[int64]("product_id", "order_items"),
-	variant_id: orm.NewField[int64]("variant_id", "order_items"),
-	product_name: orm.NewField[string]("product_name", "order_items"),
-	product_sku: orm.NewField[string]("product_sku", "order_items"),
-	variant_name: orm.NewField[string]("variant_name", "order_items"),
-	variant_sku: orm.NewField[string]("variant_sku", "order_items"),
-	image_url: orm.NewField[string]("image_url", "order_items"),
-	quantity: orm.NewField[int32]("quantity", "order_items"),
-	unit_price: orm.NewField[float64]("unit_price", "order_items"),
-	discount_amount: orm.NewField[float64]("discount_amount", "order_items"),
-	tax_amount: orm.NewField[float64]("tax_amount", "order_items"),
-	total: orm.NewField[float64]("total", "order_items"),
-	quantity_fulfilled: orm.NewField[int32]("quantity_fulfilled", "order_items"),
-	quantity_refunded: orm.NewField[int32]("quantity_refunded", "order_items"),
-	fulfillment_status: orm.NewField[string]("fulfillment_status", "order_items"),
-	weight: orm.NewField[float64]("weight", "order_items"),
-	created_at: orm.NewField[time.Time]("created_at", "order_items"),
-	updated_at: orm.NewField[time.Time]("updated_at", "order_items"),
+var OrderItemFieldsInstance = OrderItemFields{
+	Id: orm.NewField[int64]("id", "order_items"),
+	OrderId: orm.NewField[int64]("order_id", "order_items"),
+	ProductId: orm.NewField[int64]("product_id", "order_items"),
+	VariantId: orm.NewField[int64]("variant_id", "order_items"),
+	ProductName: orm.NewField[string]("product_name", "order_items"),
+	ProductSku: orm.NewField[string]("product_sku", "order_items"),
+	VariantName: orm.NewField[string]("variant_name", "order_items"),
+	VariantSku: orm.NewField[string]("variant_sku", "order_items"),
+	ImageUrl: orm.NewField[string]("image_url", "order_items"),
+	Quantity: orm.NewField[int32]("quantity", "order_items"),
+	UnitPrice: orm.NewField[float64]("unit_price", "order_items"),
+	DiscountAmount: orm.NewField[float64]("discount_amount", "order_items"),
+	TaxAmount: orm.NewField[float64]("tax_amount", "order_items"),
+	Total: orm.NewField[float64]("total", "order_items"),
+	QuantityFulfilled: orm.NewField[int32]("quantity_fulfilled", "order_items"),
+	QuantityRefunded: orm.NewField[int32]("quantity_refunded", "order_items"),
+	FulfillmentStatus: orm.NewField[string]("fulfillment_status", "order_items"),
+	Weight: orm.NewField[float64]("weight", "order_items"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "order_items"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "order_items"),
 }
 
 
@@ -436,23 +436,23 @@ var OrderItemFields = OrderItemFields{
 // PaymentGenerated struct definition
 type PaymentGenerated struct {
 	schema.BaseSchema
-	id int64 `json:"id" db:"id" validate:""`
-	order_id int64 `json:"order_id" db:"order_id" validate:""`
-	transaction_id string `json:"transaction_id" db:"transaction_id" validate:""`
-	amount float64 `json:"amount" db:"amount" validate:""`
-	currency string `json:"currency" db:"currency" validate:""`
-	payment_method string `json:"payment_method" db:"payment_method" validate:""`
-	payment_gateway string `json:"payment_gateway" db:"payment_gateway" validate:""`
-	card_last4 string `json:"card_last4" db:"card_last4" validate:""`
-	card_brand string `json:"card_brand" db:"card_brand" validate:""`
-	status string `json:"status" db:"status" validate:""`
-	gateway_response string `json:"gateway_response" db:"gateway_response" validate:""`
-	failure_reason string `json:"failure_reason" db:"failure_reason" validate:""`
-	created_at time.Time `json:"created_at" db:"created_at" validate:""`
-	updated_at time.Time `json:"updated_at" db:"updated_at" validate:""`
-	completed_at time.Time `json:"completed_at" db:"completed_at" validate:""`
-	failed_at time.Time `json:"failed_at" db:"failed_at" validate:""`
-	refunded_at time.Time `json:"refunded_at" db:"refunded_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	OrderId int64 `json:"order_id" db:"order_id" validate:""`
+	TransactionId string `json:"transaction_id" db:"transaction_id" validate:""`
+	Amount float64 `json:"amount" db:"amount" validate:""`
+	Currency string `json:"currency" db:"currency" validate:""`
+	PaymentMethod string `json:"payment_method" db:"payment_method" validate:""`
+	PaymentGateway string `json:"payment_gateway" db:"payment_gateway" validate:""`
+	CardLast4 string `json:"card_last4" db:"card_last4" validate:""`
+	CardBrand string `json:"card_brand" db:"card_brand" validate:""`
+	Status string `json:"status" db:"status" validate:""`
+	GatewayResponse string `json:"gateway_response" db:"gateway_response" validate:""`
+	FailureReason string `json:"failure_reason" db:"failure_reason" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	CompletedAt time.Time `json:"completed_at" db:"completed_at" validate:""`
+	FailedAt time.Time `json:"failed_at" db:"failed_at" validate:""`
+	RefundedAt time.Time `json:"refunded_at" db:"refunded_at" validate:""`
 }
 
 // Validate validates the Payment model
@@ -467,43 +467,43 @@ var PaymentObjects, _ = orm.NewManager[Payment]("payments")
 
 // PaymentFields provides type-safe field access for Payment
 type PaymentFields struct {
-	id orm.Field[int64]
-	order_id orm.Field[int64]
-	transaction_id orm.Field[string]
-	amount orm.Field[float64]
-	currency orm.Field[string]
-	payment_method orm.Field[string]
-	payment_gateway orm.Field[string]
-	card_last4 orm.Field[string]
-	card_brand orm.Field[string]
-	status orm.Field[string]
-	gateway_response orm.Field[string]
-	failure_reason orm.Field[string]
-	created_at orm.Field[time.Time]
-	updated_at orm.Field[time.Time]
-	completed_at orm.Field[time.Time]
-	failed_at orm.Field[time.Time]
-	refunded_at orm.Field[time.Time]
+	Id orm.Field[int64]
+	OrderId orm.Field[int64]
+	TransactionId orm.Field[string]
+	Amount orm.Field[float64]
+	Currency orm.Field[string]
+	PaymentMethod orm.Field[string]
+	PaymentGateway orm.Field[string]
+	CardLast4 orm.Field[string]
+	CardBrand orm.Field[string]
+	Status orm.Field[string]
+	GatewayResponse orm.Field[string]
+	FailureReason orm.Field[string]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
+	CompletedAt orm.Field[time.Time]
+	FailedAt orm.Field[time.Time]
+	RefundedAt orm.Field[time.Time]
 }
 
-var PaymentFields = PaymentFields{
-	id: orm.NewField[int64]("id", "payments"),
-	order_id: orm.NewField[int64]("order_id", "payments"),
-	transaction_id: orm.NewField[string]("transaction_id", "payments"),
-	amount: orm.NewField[float64]("amount", "payments"),
-	currency: orm.NewField[string]("currency", "payments"),
-	payment_method: orm.NewField[string]("payment_method", "payments"),
-	payment_gateway: orm.NewField[string]("payment_gateway", "payments"),
-	card_last4: orm.NewField[string]("card_last4", "payments"),
-	card_brand: orm.NewField[string]("card_brand", "payments"),
-	status: orm.NewField[string]("status", "payments"),
-	gateway_response: orm.NewField[string]("gateway_response", "payments"),
-	failure_reason: orm.NewField[string]("failure_reason", "payments"),
-	created_at: orm.NewField[time.Time]("created_at", "payments"),
-	updated_at: orm.NewField[time.Time]("updated_at", "payments"),
-	completed_at: orm.NewField[time.Time]("completed_at", "payments"),
-	failed_at: orm.NewField[time.Time]("failed_at", "payments"),
-	refunded_at: orm.NewField[time.Time]("refunded_at", "payments"),
+var PaymentFieldsInstance = PaymentFields{
+	Id: orm.NewField[int64]("id", "payments"),
+	OrderId: orm.NewField[int64]("order_id", "payments"),
+	TransactionId: orm.NewField[string]("transaction_id", "payments"),
+	Amount: orm.NewField[float64]("amount", "payments"),
+	Currency: orm.NewField[string]("currency", "payments"),
+	PaymentMethod: orm.NewField[string]("payment_method", "payments"),
+	PaymentGateway: orm.NewField[string]("payment_gateway", "payments"),
+	CardLast4: orm.NewField[string]("card_last4", "payments"),
+	CardBrand: orm.NewField[string]("card_brand", "payments"),
+	Status: orm.NewField[string]("status", "payments"),
+	GatewayResponse: orm.NewField[string]("gateway_response", "payments"),
+	FailureReason: orm.NewField[string]("failure_reason", "payments"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "payments"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "payments"),
+	CompletedAt: orm.NewField[time.Time]("completed_at", "payments"),
+	FailedAt: orm.NewField[time.Time]("failed_at", "payments"),
+	RefundedAt: orm.NewField[time.Time]("refunded_at", "payments"),
 }
 
 
@@ -512,30 +512,30 @@ var PaymentFields = PaymentFields{
 // ShipmentGenerated struct definition
 type ShipmentGenerated struct {
 	schema.BaseSchema
-	id int64 `json:"id" db:"id" validate:""`
-	order_id int64 `json:"order_id" db:"order_id" validate:""`
-	tracking_number string `json:"tracking_number" db:"tracking_number" validate:""`
-	carrier string `json:"carrier" db:"carrier" validate:""`
-	service_level string `json:"service_level" db:"service_level" validate:""`
-	recipient_name string `json:"recipient_name" db:"recipient_name" validate:""`
-	address_line1 string `json:"address_line1" db:"address_line1" validate:""`
-	address_line2 string `json:"address_line2" db:"address_line2" validate:""`
-	city string `json:"city" db:"city" validate:""`
-	state string `json:"state" db:"state" validate:""`
-	postal_code string `json:"postal_code" db:"postal_code" validate:""`
-	country_code string `json:"country_code" db:"country_code" validate:""`
-	country_name string `json:"country_name" db:"country_name" validate:""`
-	phone string `json:"phone" db:"phone" validate:""`
-	weight float64 `json:"weight" db:"weight" validate:""`
-	shipping_cost float64 `json:"shipping_cost" db:"shipping_cost" validate:""`
-	status string `json:"status" db:"status" validate:""`
-	tracking_events string `json:"tracking_events" db:"tracking_events" validate:""`
-	notes string `json:"notes" db:"notes" validate:""`
-	created_at time.Time `json:"created_at" db:"created_at" validate:""`
-	updated_at time.Time `json:"updated_at" db:"updated_at" validate:""`
-	shipped_at time.Time `json:"shipped_at" db:"shipped_at" validate:""`
-	estimated_delivery_at time.Time `json:"estimated_delivery_at" db:"estimated_delivery_at" validate:""`
-	delivered_at time.Time `json:"delivered_at" db:"delivered_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	OrderId int64 `json:"order_id" db:"order_id" validate:""`
+	TrackingNumber string `json:"tracking_number" db:"tracking_number" validate:""`
+	Carrier string `json:"carrier" db:"carrier" validate:""`
+	ServiceLevel string `json:"service_level" db:"service_level" validate:""`
+	RecipientName string `json:"recipient_name" db:"recipient_name" validate:""`
+	AddressLine1 string `json:"address_line1" db:"address_line1" validate:""`
+	AddressLine2 string `json:"address_line2" db:"address_line2" validate:""`
+	City string `json:"city" db:"city" validate:""`
+	State string `json:"state" db:"state" validate:""`
+	PostalCode string `json:"postal_code" db:"postal_code" validate:""`
+	CountryCode string `json:"country_code" db:"country_code" validate:""`
+	CountryName string `json:"country_name" db:"country_name" validate:""`
+	Phone string `json:"phone" db:"phone" validate:""`
+	Weight float64 `json:"weight" db:"weight" validate:""`
+	ShippingCost float64 `json:"shipping_cost" db:"shipping_cost" validate:""`
+	Status string `json:"status" db:"status" validate:""`
+	TrackingEvents string `json:"tracking_events" db:"tracking_events" validate:""`
+	Notes string `json:"notes" db:"notes" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	ShippedAt time.Time `json:"shipped_at" db:"shipped_at" validate:""`
+	EstimatedDeliveryAt time.Time `json:"estimated_delivery_at" db:"estimated_delivery_at" validate:""`
+	DeliveredAt time.Time `json:"delivered_at" db:"delivered_at" validate:""`
 }
 
 // Validate validates the Shipment model
@@ -550,57 +550,57 @@ var ShipmentObjects, _ = orm.NewManager[Shipment]("shipments")
 
 // ShipmentFields provides type-safe field access for Shipment
 type ShipmentFields struct {
-	id orm.Field[int64]
-	order_id orm.Field[int64]
-	tracking_number orm.Field[string]
-	carrier orm.Field[string]
-	service_level orm.Field[string]
-	recipient_name orm.Field[string]
-	address_line1 orm.Field[string]
-	address_line2 orm.Field[string]
-	city orm.Field[string]
-	state orm.Field[string]
-	postal_code orm.Field[string]
-	country_code orm.Field[string]
-	country_name orm.Field[string]
-	phone orm.Field[string]
-	weight orm.Field[float64]
-	shipping_cost orm.Field[float64]
-	status orm.Field[string]
-	tracking_events orm.Field[string]
-	notes orm.Field[string]
-	created_at orm.Field[time.Time]
-	updated_at orm.Field[time.Time]
-	shipped_at orm.Field[time.Time]
-	estimated_delivery_at orm.Field[time.Time]
-	delivered_at orm.Field[time.Time]
+	Id orm.Field[int64]
+	OrderId orm.Field[int64]
+	TrackingNumber orm.Field[string]
+	Carrier orm.Field[string]
+	ServiceLevel orm.Field[string]
+	RecipientName orm.Field[string]
+	AddressLine1 orm.Field[string]
+	AddressLine2 orm.Field[string]
+	City orm.Field[string]
+	State orm.Field[string]
+	PostalCode orm.Field[string]
+	CountryCode orm.Field[string]
+	CountryName orm.Field[string]
+	Phone orm.Field[string]
+	Weight orm.Field[float64]
+	ShippingCost orm.Field[float64]
+	Status orm.Field[string]
+	TrackingEvents orm.Field[string]
+	Notes orm.Field[string]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
+	ShippedAt orm.Field[time.Time]
+	EstimatedDeliveryAt orm.Field[time.Time]
+	DeliveredAt orm.Field[time.Time]
 }
 
-var ShipmentFields = ShipmentFields{
-	id: orm.NewField[int64]("id", "shipments"),
-	order_id: orm.NewField[int64]("order_id", "shipments"),
-	tracking_number: orm.NewField[string]("tracking_number", "shipments"),
-	carrier: orm.NewField[string]("carrier", "shipments"),
-	service_level: orm.NewField[string]("service_level", "shipments"),
-	recipient_name: orm.NewField[string]("recipient_name", "shipments"),
-	address_line1: orm.NewField[string]("address_line1", "shipments"),
-	address_line2: orm.NewField[string]("address_line2", "shipments"),
-	city: orm.NewField[string]("city", "shipments"),
-	state: orm.NewField[string]("state", "shipments"),
-	postal_code: orm.NewField[string]("postal_code", "shipments"),
-	country_code: orm.NewField[string]("country_code", "shipments"),
-	country_name: orm.NewField[string]("country_name", "shipments"),
-	phone: orm.NewField[string]("phone", "shipments"),
-	weight: orm.NewField[float64]("weight", "shipments"),
-	shipping_cost: orm.NewField[float64]("shipping_cost", "shipments"),
-	status: orm.NewField[string]("status", "shipments"),
-	tracking_events: orm.NewField[string]("tracking_events", "shipments"),
-	notes: orm.NewField[string]("notes", "shipments"),
-	created_at: orm.NewField[time.Time]("created_at", "shipments"),
-	updated_at: orm.NewField[time.Time]("updated_at", "shipments"),
-	shipped_at: orm.NewField[time.Time]("shipped_at", "shipments"),
-	estimated_delivery_at: orm.NewField[time.Time]("estimated_delivery_at", "shipments"),
-	delivered_at: orm.NewField[time.Time]("delivered_at", "shipments"),
+var ShipmentFieldsInstance = ShipmentFields{
+	Id: orm.NewField[int64]("id", "shipments"),
+	OrderId: orm.NewField[int64]("order_id", "shipments"),
+	TrackingNumber: orm.NewField[string]("tracking_number", "shipments"),
+	Carrier: orm.NewField[string]("carrier", "shipments"),
+	ServiceLevel: orm.NewField[string]("service_level", "shipments"),
+	RecipientName: orm.NewField[string]("recipient_name", "shipments"),
+	AddressLine1: orm.NewField[string]("address_line1", "shipments"),
+	AddressLine2: orm.NewField[string]("address_line2", "shipments"),
+	City: orm.NewField[string]("city", "shipments"),
+	State: orm.NewField[string]("state", "shipments"),
+	PostalCode: orm.NewField[string]("postal_code", "shipments"),
+	CountryCode: orm.NewField[string]("country_code", "shipments"),
+	CountryName: orm.NewField[string]("country_name", "shipments"),
+	Phone: orm.NewField[string]("phone", "shipments"),
+	Weight: orm.NewField[float64]("weight", "shipments"),
+	ShippingCost: orm.NewField[float64]("shipping_cost", "shipments"),
+	Status: orm.NewField[string]("status", "shipments"),
+	TrackingEvents: orm.NewField[string]("tracking_events", "shipments"),
+	Notes: orm.NewField[string]("notes", "shipments"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "shipments"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "shipments"),
+	ShippedAt: orm.NewField[time.Time]("shipped_at", "shipments"),
+	EstimatedDeliveryAt: orm.NewField[time.Time]("estimated_delivery_at", "shipments"),
+	DeliveredAt: orm.NewField[time.Time]("delivered_at", "shipments"),
 }
 
 
