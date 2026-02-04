@@ -1,11 +1,16 @@
 package rest
 
 import (
+	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/forgego/forge/admin/core"
 	apicore "github.com/forgego/forge/api/core"
@@ -18,6 +23,7 @@ import (
 type Router struct {
 	registry *core.Registry
 	prefix   string
+	views    *savedViewStore
 }
 
 // NewRouter creates a new admin API router
@@ -25,6 +31,7 @@ func NewRouter(registry *core.Registry) *Router {
 	return &Router{
 		registry: registry,
 		prefix:   "/api",
+		views:    newSavedViewStore(),
 	}
 }
 
@@ -59,6 +66,12 @@ func (r *Router) RegisterRoutes(router chi.Router) {
 		// Plugin page endpoint
 		sub.Get("/plugins/{plugin}/pages/{page}", r.handlePluginPage)
 
+		// Saved views
+		sub.Route("/saved-views/{model}", func(viewRouter chi.Router) {
+			viewRouter.Get("/", r.handleSavedViewsList)
+			viewRouter.Post("/", r.handleSavedViewSave)
+		})
+
 		// Model routes (registered dynamically)
 		r.registerModelRoutes(sub)
 	})
@@ -72,6 +85,7 @@ func (r *Router) registerModelRoutes(router chi.Router) {
 		router.Route(basePath, func(sub chi.Router) {
 			// List and create
 			sub.Get("/", r.handleList(admin))
+			sub.Get("/export", r.handleExport(admin))
 			sub.Post("/", r.handleCreate(admin))
 
 			// Detail, update, delete
@@ -231,6 +245,83 @@ func (r *Router) handleList(admin core.AdminInterface) http.HandlerFunc {
 		}
 
 		respondJSON(w, http.StatusOK, response)
+	}
+}
+
+// handleExport returns list results as CSV or JSON using current filters/search.
+func (r *Router) handleExport(admin core.AdminInterface) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		ctx := req.Context()
+		user, _ := apicore.UserFromContext(ctx)
+
+		if !admin.HasViewPermission(ctx, user, nil) {
+			respondError(w, http.StatusForbidden, "permission_denied", "You don't have permission to export this model", nil)
+			return
+		}
+
+		meta, err := admin.GetMetadata(ctx, user)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "internal_error", err.Error(), nil)
+			return
+		}
+
+		listFields, labelMap := exportListFields(meta)
+		if len(listFields) == 0 {
+			respondError(w, http.StatusBadRequest, "export_failed", "No fields available for export", nil)
+			return
+		}
+
+		params := parseListParams(req)
+		maxPageSize := meta.Pagination.MaxPageSize
+		if maxPageSize <= 0 {
+			maxPageSize = 100
+		}
+		params.PageSize = maxPageSize
+		params.Page = 1
+
+		results := make([]map[string]interface{}, 0)
+		for {
+			response, err := admin.ListObjects(ctx, params)
+			if err != nil {
+				respondError(w, http.StatusInternalServerError, "export_failed", err.Error(), nil)
+				return
+			}
+
+			items := interfaceSlice(response.Results)
+			if len(items) == 0 {
+				break
+			}
+
+			for _, item := range items {
+				rowMap := make(map[string]interface{}, len(listFields))
+				itemMap := objectToMap(item)
+				for _, field := range listFields {
+					rowMap[field] = getMapValue(itemMap, field)
+				}
+				results = append(results, rowMap)
+			}
+
+			if int64(len(results)) >= response.Count || len(items) < params.PageSize {
+				break
+			}
+			params.Page++
+		}
+
+		format := strings.ToLower(req.URL.Query().Get("format"))
+		if format == "" {
+			format = "json"
+		}
+
+		switch format {
+		case "csv":
+			if err := writeCSVExport(w, admin.ModelName(), listFields, labelMap, results); err != nil {
+				respondError(w, http.StatusInternalServerError, "export_failed", err.Error(), nil)
+			}
+		case "json":
+			respondJSON(w, http.StatusOK, results)
+		default:
+			respondError(w, http.StatusBadRequest, "invalid_format", "Unsupported export format", nil)
+		}
 	}
 }
 
@@ -582,6 +673,153 @@ func (r *Router) handlePluginPage(w http.ResponseWriter, req *http.Request) {
 	respondJSON(w, http.StatusOK, page)
 }
 
+type savedView struct {
+	ID        string                 `json:"id"`
+	Name      string                 `json:"name"`
+	Filters   map[string]interface{} `json:"filters"`
+	Ordering  []string               `json:"ordering"`
+	Display   []string               `json:"display"`
+	CreatedAt time.Time              `json:"created_at"`
+	UpdatedAt time.Time              `json:"updated_at"`
+}
+
+type savedViewRequest struct {
+	Name     string                 `json:"name"`
+	Filters  map[string]interface{} `json:"filters"`
+	Ordering []string               `json:"ordering"`
+	Display  []string               `json:"display"`
+}
+
+type savedViewStore struct {
+	mu    sync.RWMutex
+	views map[string]map[string][]savedView
+}
+
+func newSavedViewStore() *savedViewStore {
+	return &savedViewStore{views: make(map[string]map[string][]savedView)}
+}
+
+func (s *savedViewStore) list(userID, model string) []savedView {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	userViews, ok := s.views[userID]
+	if !ok {
+		return []savedView{}
+	}
+	modelViews := userViews[model]
+	if modelViews == nil {
+		return []savedView{}
+	}
+	return append([]savedView{}, modelViews...)
+}
+
+func (s *savedViewStore) upsert(userID, model string, request savedViewRequest) savedView {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.views[userID] == nil {
+		s.views[userID] = make(map[string][]savedView)
+	}
+
+	views := s.views[userID][model]
+	for i, view := range views {
+		if strings.EqualFold(view.Name, request.Name) {
+			updated := view
+			updated.Filters = request.Filters
+			updated.Ordering = request.Ordering
+			updated.Display = request.Display
+			updated.UpdatedAt = time.Now()
+			views[i] = updated
+			s.views[userID][model] = views
+			return updated
+		}
+	}
+
+	newView := savedView{
+		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+		Name:      request.Name,
+		Filters:   request.Filters,
+		Ordering:  request.Ordering,
+		Display:   request.Display,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	s.views[userID][model] = append(views, newView)
+	return newView
+}
+
+func userKey(user interface{}) string {
+	if user == nil {
+		return "anonymous"
+	}
+
+	val := reflect.ValueOf(user)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
+	if val.IsValid() && val.Kind() == reflect.Struct {
+		for _, name := range []string{"ID", "Id", "id", "UserID", "Username", "Email"} {
+			field := val.FieldByName(name)
+			if field.IsValid() {
+				return fmt.Sprintf("%v", field.Interface())
+			}
+		}
+	}
+
+	return fmt.Sprintf("%v", user)
+}
+
+func (r *Router) handleSavedViewsList(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	modelName := chi.URLParam(req, "model")
+	user, _ := apicore.UserFromContext(ctx)
+
+	admin, err := r.registry.Get(modelName)
+	if err != nil {
+		respondError(w, http.StatusNotFound, "model_not_found", err.Error(), nil)
+		return
+	}
+	if !admin.HasViewPermission(ctx, user, nil) {
+		respondError(w, http.StatusForbidden, "permission_denied", "You don't have permission to view this model", nil)
+		return
+	}
+
+	views := r.views.list(userKey(user), modelName)
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"views": views,
+	})
+}
+
+func (r *Router) handleSavedViewSave(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	modelName := chi.URLParam(req, "model")
+	user, _ := apicore.UserFromContext(ctx)
+
+	admin, err := r.registry.Get(modelName)
+	if err != nil {
+		respondError(w, http.StatusNotFound, "model_not_found", err.Error(), nil)
+		return
+	}
+	if !admin.HasViewPermission(ctx, user, nil) {
+		respondError(w, http.StatusForbidden, "permission_denied", "You don't have permission to view this model", nil)
+		return
+	}
+
+	var request savedViewRequest
+	if err := json.NewDecoder(req.Body).Decode(&request); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_body", err.Error(), nil)
+		return
+	}
+	request.Name = strings.TrimSpace(request.Name)
+	if request.Name == "" {
+		respondError(w, http.StatusBadRequest, "missing_name", "View name is required", nil)
+		return
+	}
+
+	view := r.views.upsert(userKey(user), modelName, request)
+	respondJSON(w, http.StatusOK, view)
+}
+
 // Helper types and functions
 
 func parseListParams(req *http.Request) core.ListParams {
@@ -638,4 +876,133 @@ func respondError(w http.ResponseWriter, status int, code string, message string
 			Details: details,
 		},
 	})
+}
+
+func exportListFields(meta *core.Metadata) ([]string, map[string]string) {
+	listFields := meta.ListDisplay
+	if len(listFields) == 0 {
+		listFields = make([]string, 0, len(meta.Fields))
+		for _, field := range meta.Fields {
+			listFields = append(listFields, field.Name)
+		}
+	}
+
+	labelMap := make(map[string]string, len(meta.Fields))
+	for _, field := range meta.Fields {
+		labelMap[field.Name] = field.Label
+	}
+
+	return listFields, labelMap
+}
+
+func interfaceSlice(results interface{}) []interface{} {
+	if results == nil {
+		return nil
+	}
+	val := reflect.ValueOf(results)
+	if val.Kind() != reflect.Slice {
+		return nil
+	}
+	items := make([]interface{}, val.Len())
+	for i := 0; i < val.Len(); i++ {
+		items[i] = val.Index(i).Interface()
+	}
+	return items
+}
+
+func objectToMap(obj interface{}) map[string]interface{} {
+	if obj == nil {
+		return map[string]interface{}{}
+	}
+	if mapObj, ok := obj.(map[string]interface{}); ok {
+		return mapObj
+	}
+	data, err := json.Marshal(obj)
+	if err != nil {
+		return map[string]interface{}{}
+	}
+	var result map[string]interface{}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return map[string]interface{}{}
+	}
+	return result
+}
+
+func getMapValue(data map[string]interface{}, field string) interface{} {
+	if data == nil {
+		return nil
+	}
+	parts := strings.Split(field, ".")
+	var current interface{} = data
+	for _, part := range parts {
+		next, ok := current.(map[string]interface{})
+		if !ok {
+			return nil
+		}
+		current, ok = next[part]
+		if !ok {
+			return nil
+		}
+	}
+	return current
+}
+
+func writeCSVExport(
+	w http.ResponseWriter,
+	modelName string,
+	fields []string,
+	labelMap map[string]string,
+	rows []map[string]interface{},
+) error {
+	buf := &bytes.Buffer{}
+	writer := csv.NewWriter(buf)
+
+	headers := make([]string, len(fields))
+	for i, field := range fields {
+		if label, ok := labelMap[field]; ok && label != "" {
+			headers[i] = label
+		} else {
+			headers[i] = field
+		}
+	}
+
+	if err := writer.Write(headers); err != nil {
+		return err
+	}
+
+	for _, row := range rows {
+		record := make([]string, len(fields))
+		for i, field := range fields {
+			record[i] = formatExportValue(row[field])
+		}
+		if err := writer.Write(record); err != nil {
+			return err
+		}
+	}
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return err
+	}
+
+	filename := fmt.Sprintf("%s-export.csv", modelName)
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	w.WriteHeader(http.StatusOK)
+	_, err := w.Write(buf.Bytes())
+	return err
+}
+
+func formatExportValue(value interface{}) string {
+	if value == nil {
+		return ""
+	}
+	switch typed := value.(type) {
+	case time.Time:
+		return typed.Format(time.RFC3339)
+	case fmt.Stringer:
+		return typed.String()
+	default:
+		return fmt.Sprint(value)
+	}
 }
