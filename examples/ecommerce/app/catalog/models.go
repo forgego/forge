@@ -10,17 +10,17 @@ import (
 // Category represents a product category with hierarchical support
 type Category struct {
 	schema.BaseSchema
-	Id          int64   `json:"id" db:"id"`
-	Name        string  `json:"name" db:"name"`
-	Slug        string  `json:"slug" db:"slug"`
-	Description string  `json:"description" db:"description"`
-	ParentID    int64   `json:"parent_id" db:"parent_id"`
-	ImageURL    string  `json:"image_url" db:"image_url"`
-	SortOrder   int32   `json:"sort_order" db:"sort_order"`
-	IsActive    bool    `json:"is_active" db:"is_active"`
-	Level       int32   `json:"level" db:"level"`
-	CreatedAt   string  `json:"created_at" db:"created_at"`
-	UpdatedAt   string  `json:"updated_at" db:"updated_at"`
+	Id          int64  `json:"id" db:"id"`
+	Name        string `json:"name" db:"name"`
+	Slug        string `json:"slug" db:"slug"`
+	Description string `json:"description" db:"description"`
+	ParentID    int64  `json:"parent_id" db:"parent_id"`
+	ImageURL    string `json:"image_url" db:"image_url"`
+	SortOrder   int32  `json:"sort_order" db:"sort_order"`
+	IsActive    bool   `json:"is_active" db:"is_active"`
+	Level       int32  `json:"level" db:"level"`
+	CreatedAt   string `json:"created_at" db:"created_at"`
+	UpdatedAt   string `json:"updated_at" db:"updated_at"`
 }
 
 func (Category) Fields() []schema.Field {
@@ -33,16 +33,21 @@ func (Category) Fields() []schema.Field {
 		schema.TextField("description", schema.Optional(),
 			schema.HelpText("Category description")),
 		schema.Int64Field("parent_id", schema.Optional(),
+			schema.VerboseName("Parent Category"),
 			schema.HelpText("Parent category for hierarchy")),
 		schema.StringField("image_url", schema.MaxLength(500), schema.Optional(),
 			schema.HelpText("Category image")),
 		schema.Int32Field("sort_order", schema.Default(0),
+			schema.VerboseName("Sort Order"),
 			schema.HelpText("Display order")),
 		schema.BoolField("is_active", schema.Default(true),
+			schema.VerboseName("Active"),
 			schema.HelpText("Is category active")),
 		schema.Int32Field("level", schema.Default(0),
+			schema.VerboseName("Level"),
 			schema.HelpText("Hierarchy level (0=root)")),
-		schema.TimeField("created_at", schema.AutoNowAdd()),
+		schema.TimeField("created_at", schema.AutoNowAdd(),
+			schema.VerboseName("Created At")),
 		schema.TimeField("updated_at", schema.AutoNow()),
 	}
 }
@@ -91,9 +96,12 @@ func (Brand) Fields() []schema.Field {
 		schema.StringField("slug", schema.Required(), schema.MaxLength(200), schema.Unique()),
 		schema.TextField("description", schema.Optional()),
 		schema.StringField("logo_url", schema.MaxLength(500), schema.Optional()),
-		schema.StringField("website_url", schema.MaxLength(500), schema.Optional()),
-		schema.BoolField("is_active", schema.Default(true)),
-		schema.TimeField("created_at", schema.AutoNowAdd()),
+		schema.StringField("website_url", schema.MaxLength(500), schema.Optional(),
+			schema.VerboseName("Website URL")),
+		schema.BoolField("is_active", schema.Default(true),
+			schema.VerboseName("Active")),
+		schema.TimeField("created_at", schema.AutoNowAdd(),
+			schema.VerboseName("Created At")),
 		schema.TimeField("updated_at", schema.AutoNow()),
 	}
 }
@@ -131,6 +139,7 @@ func (Product) Fields() []schema.Field {
 		schema.StringField("slug", schema.Required(), schema.MaxLength(255), schema.Unique(),
 			schema.HelpText("URL-friendly identifier")),
 		schema.StringField("sku", schema.Required(), schema.MaxLength(100), schema.Unique(),
+			schema.VerboseName("SKU"),
 			schema.HelpText("Stock Keeping Unit")),
 		schema.TextField("description", schema.Required(),
 			schema.HelpText("Full product description")),
@@ -139,8 +148,10 @@ func (Product) Fields() []schema.Field {
 
 		// Relationships
 		schema.Int64Field("category_id", schema.Required(),
+			schema.VerboseName("Category"),
 			schema.HelpText("Product category")),
 		schema.Int64Field("brand_id", schema.Optional(),
+			schema.VerboseName("Brand"),
 			schema.HelpText("Product brand")),
 
 		// Pricing
@@ -153,6 +164,7 @@ func (Product) Fields() []schema.Field {
 
 		// Inventory (base level)
 		schema.Int32Field("stock_quantity", schema.Default(0),
+			schema.VerboseName("Stock Quantity"),
 			schema.HelpText("Total stock across all warehouses")),
 		schema.BoolField("track_inventory", schema.Default(true),
 			schema.HelpText("Whether to track inventory")),
@@ -170,8 +182,10 @@ func (Product) Fields() []schema.Field {
 			schema.HelpText("Height in cm")),
 
 		// Status
-		schema.BoolField("is_active", schema.Default(true)),
-		schema.BoolField("is_featured", schema.Default(false)),
+		schema.BoolField("is_active", schema.Default(true),
+			schema.VerboseName("Active")),
+		schema.BoolField("is_featured", schema.Default(false),
+			schema.VerboseName("Featured")),
 		schema.BoolField("is_digital", schema.Default(false),
 			schema.HelpText("Digital product (no shipping)")),
 
@@ -187,7 +201,8 @@ func (Product) Fields() []schema.Field {
 		schema.Int32Field("rating_count", schema.Default(0)),
 
 		// Timestamps
-		schema.TimeField("created_at", schema.AutoNowAdd()),
+		schema.TimeField("created_at", schema.AutoNowAdd(),
+			schema.VerboseName("Created At")),
 		schema.TimeField("updated_at", schema.AutoNow()),
 		schema.TimeField("published_at", schema.Optional()),
 	}
@@ -246,10 +261,12 @@ type ProductVariant struct {
 func (ProductVariant) Fields() []schema.Field {
 	return []schema.Field{
 		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
-		schema.Int64Field("product_id", schema.Required()),
+		schema.Int64Field("product_id", schema.Required(),
+			schema.VerboseName("Product")),
 
 		// Variant identification
 		schema.StringField("sku", schema.Required(), schema.MaxLength(100), schema.Unique(),
+			schema.VerboseName("SKU"),
 			schema.HelpText("Unique SKU for this variant")),
 		schema.StringField("name", schema.Required(), schema.MaxLength(255),
 			schema.HelpText("Variant name (e.g., 'Large Red')")),
@@ -275,7 +292,8 @@ func (ProductVariant) Fields() []schema.Field {
 		schema.Float64Field("cost_price", schema.Optional()),
 
 		// Inventory
-		schema.Int32Field("stock_quantity", schema.Default(0)),
+		schema.Int32Field("stock_quantity", schema.Default(0),
+			schema.VerboseName("Stock Quantity")),
 		schema.Int32Field("reserved_quantity", schema.Default(0),
 			schema.HelpText("Quantity in pending orders")),
 		schema.BoolField("track_inventory", schema.Default(true)),
@@ -287,7 +305,8 @@ func (ProductVariant) Fields() []schema.Field {
 		schema.Float64Field("height", schema.Optional()),
 
 		// Status
-		schema.BoolField("is_active", schema.Default(true)),
+		schema.BoolField("is_active", schema.Default(true),
+			schema.VerboseName("Active")),
 		schema.BoolField("is_default", schema.Default(false),
 			schema.HelpText("Default variant for product")),
 
@@ -348,17 +367,21 @@ type ProductImage struct {
 func (ProductImage) Fields() []schema.Field {
 	return []schema.Field{
 		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
-		schema.Int64Field("product_id", schema.Required()),
+		schema.Int64Field("product_id", schema.Required(),
+			schema.VerboseName("Product")),
 		schema.Int64Field("variant_id", schema.Optional(),
 			schema.HelpText("Optional: Associate image with specific variant")),
 
 		schema.StringField("image_url", schema.Required(), schema.MaxLength(500)),
 		schema.StringField("thumbnail_url", schema.MaxLength(500), schema.Optional()),
 		schema.StringField("alt_text", schema.MaxLength(255), schema.Optional(),
+			schema.VerboseName("Alt Text"),
 			schema.HelpText("Alternative text for accessibility")),
 
-		schema.Int32Field("sort_order", schema.Default(0)),
+		schema.Int32Field("sort_order", schema.Default(0),
+			schema.VerboseName("Sort Order")),
 		schema.BoolField("is_primary", schema.Default(false),
+			schema.VerboseName("Primary"),
 			schema.HelpText("Primary product image")),
 
 		schema.TimeField("created_at", schema.AutoNowAdd()),

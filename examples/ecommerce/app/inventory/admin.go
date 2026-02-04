@@ -24,6 +24,18 @@ func RegisterAdmin(ctx context.Context) {
 			WarehouseFieldsInstance.IsPrimary,
 			WarehouseFieldsInstance.CountryCode,
 		},
+		Actions: []admin.Action[Warehouse]{
+			{
+				Name:  "activate",
+				Label: "Activate Warehouses",
+				Handler: func(ctx context.Context, instances []*Warehouse) error {
+					for _, warehouse := range instances {
+						warehouse.IsActive = true
+					}
+					return nil
+				},
+			},
+		},
 	})
 
 	// Stock admin
@@ -39,6 +51,18 @@ func RegisterAdmin(ctx context.Context) {
 		ListFilter: []admin.Field{
 			StockFieldsInstance.WarehouseId,
 			StockFieldsInstance.IsActive,
+		},
+		Actions: []admin.Action[Stock]{
+			{
+				Name:  "activate",
+				Label: "Activate Stock Records",
+				Handler: func(ctx context.Context, instances []*Stock) error {
+					for _, stock := range instances {
+						stock.IsActive = true
+					}
+					return nil
+				},
+			},
 		},
 	})
 
@@ -57,6 +81,18 @@ func RegisterAdmin(ctx context.Context) {
 			StockMovementFieldsInstance.WarehouseId,
 			StockMovementFieldsInstance.MovementDate,
 		},
+		Actions: []admin.Action[StockMovement]{
+			{
+				Name:  "mark_adjustment",
+				Label: "Mark as Adjustment",
+				Handler: func(ctx context.Context, instances []*StockMovement) error {
+					for _, movement := range instances {
+						movement.Type = "adjustment"
+					}
+					return nil
+				},
+			},
+		},
 	})
 
 	// StockAlert admin
@@ -74,6 +110,18 @@ func RegisterAdmin(ctx context.Context) {
 			StockAlertFieldsInstance.Status,
 			StockAlertFieldsInstance.WarehouseId,
 		},
+		Actions: []admin.Action[StockAlert]{
+			{
+				Name:  "resolve",
+				Label: "Mark Resolved",
+				Handler: func(ctx context.Context, instances []*StockAlert) error {
+					for _, alert := range instances {
+						alert.Status = "resolved"
+					}
+					return nil
+				},
+			},
+		},
 	})
 
 	// StockTransfer admin
@@ -90,6 +138,18 @@ func RegisterAdmin(ctx context.Context) {
 			StockTransferFieldsInstance.Status,
 			StockTransferFieldsInstance.FromWarehouseId,
 			StockTransferFieldsInstance.ToWarehouseId,
+		},
+		Actions: []admin.Action[StockTransfer]{
+			{
+				Name:  "complete",
+				Label: "Mark Completed",
+				Handler: func(ctx context.Context, instances []*StockTransfer) error {
+					for _, transfer := range instances {
+						transfer.Status = "completed"
+					}
+					return nil
+				},
+			},
 		},
 	})
 }

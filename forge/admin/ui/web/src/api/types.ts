@@ -38,6 +38,15 @@ export interface RelationMetadata {
   related_model: string;
   related_field?: string;
   label: string;
+  inline?: InlineRelationConfig;
+}
+
+export interface InlineRelationConfig {
+  type?: string;
+  label?: string;
+  fields?: string[];
+  related_model?: string;
+  related_field?: string;
 }
 
 export interface PermissionMetadata {
@@ -177,6 +186,37 @@ export interface UploadResponse {
   width?: number;
   height?: number;
   uploaded_at: string;
+}
+
+export interface HistoryEntry {
+  id: number;
+  timestamp: string;
+  user_id?: string;
+  user_name?: string;
+  model_name?: string;
+  object_id?: string;
+  object_repr?: string;
+  action?: string;
+  change_stats?: string;
+}
+
+export interface HistoryResponse {
+  entries: HistoryEntry[];
+export interface SavedView {
+  id: string;
+  name: string;
+  filters: Record<string, any>;
+  ordering: string[];
+  display: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SavedViewRequest {
+  name: string;
+  filters: Record<string, any>;
+  ordering: string[];
+  display: string[];
 }
 
 // Frontend-specific types

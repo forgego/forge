@@ -14,15 +14,17 @@ type Cart struct {
 
 func (Cart) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement(),
+			schema.VerboseName("ID")),
 		schema.Int64Field("customer_id", schema.Optional(),
 			schema.HelpText("Customer (null for guest carts)")),
-		
+
 		// Guest cart identification
 		schema.StringField("session_id", schema.MaxLength(255), schema.Optional(),
 			schema.HelpText("Session ID for guest carts")),
-		schema.StringField("guest_email", schema.MaxLength(255), schema.Optional()),
-		
+		schema.StringField("guest_email", schema.MaxLength(255), schema.Optional(),
+			schema.VerboseName("Guest Email")),
+
 		// Pricing
 		schema.Float64Field("subtotal", schema.Default(0.0),
 			schema.HelpText("Cart subtotal before discounts")),
@@ -30,21 +32,26 @@ func (Cart) Fields() []schema.Field {
 		schema.Float64Field("tax_amount", schema.Default(0.0)),
 		schema.Float64Field("shipping_amount", schema.Default(0.0)),
 		schema.Float64Field("total", schema.Default(0.0),
+			schema.VerboseName("Total"),
 			schema.HelpText("Cart total")),
-		
+
 		// Coupon
 		schema.Int64Field("coupon_id", schema.Optional()),
 		schema.StringField("coupon_code", schema.MaxLength(50), schema.Optional()),
-		
+
 		// Status
 		schema.StringField("status", schema.Required(), schema.MaxLength(20), schema.Default("active"),
+			schema.VerboseName("Status"),
 			schema.HelpText("Status: active, abandoned, converted")),
-		schema.BoolField("is_abandoned", schema.Default(false)),
-		
+		schema.BoolField("is_abandoned", schema.Default(false),
+			schema.VerboseName("Abandoned")),
+
 		// Timestamps
-		schema.TimeField("created_at", schema.AutoNowAdd()),
+		schema.TimeField("created_at", schema.AutoNowAdd(),
+			schema.VerboseName("Created At")),
 		schema.TimeField("updated_at", schema.AutoNow()),
-		schema.TimeField("last_activity_at", schema.Optional()),
+		schema.TimeField("last_activity_at", schema.Optional(),
+			schema.VerboseName("Last Activity At")),
 		schema.TimeField("converted_at", schema.Optional(),
 			schema.HelpText("When cart was converted to order")),
 	}
@@ -52,10 +59,10 @@ func (Cart) Fields() []schema.Field {
 
 func (Cart) Meta() schema.Meta {
 	return schema.Meta{
-		TableName:        "carts",
-		VerboseName:      "Shopping Cart",
+		TableName:         "carts",
+		VerboseName:       "Shopping Cart",
 		VerboseNamePlural: "Shopping Carts",
-		OrderBy:          []string{"-updated_at"},
+		OrderBy:           []string{"-updated_at"},
 		Indexes: []schema.Index{
 			schema.IndexOn("idx_cart_customer", "customer_id"),
 			schema.IndexOn("idx_cart_session", "session_id"),
@@ -94,24 +101,29 @@ type CartItem struct {
 func (CartItem) Fields() []schema.Field {
 	return []schema.Field{
 		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
-		schema.Int64Field("cart_id", schema.Required()),
+		schema.Int64Field("cart_id", schema.Required(),
+			schema.VerboseName("Cart")),
 		schema.Int64Field("product_id", schema.Required()),
 		schema.Int64Field("variant_id", schema.Optional()),
-		
+
 		// Quantity and pricing
 		schema.Int32Field("quantity", schema.Required(), schema.Default(1)),
 		schema.Float64Field("unit_price", schema.Required(),
+			schema.VerboseName("Unit Price"),
 			schema.HelpText("Price per unit at time of adding")),
 		schema.Float64Field("discount_amount", schema.Default(0.0)),
 		schema.Float64Field("tax_amount", schema.Default(0.0)),
 		schema.Float64Field("total", schema.Required(),
+			schema.VerboseName("Total"),
 			schema.HelpText("Line total (quantity * unit_price - discount + tax)")),
-		
+
 		// Product snapshot (for price changes)
-		schema.StringField("product_name", schema.MaxLength(255), schema.Optional()),
-		schema.StringField("variant_name", schema.MaxLength(255), schema.Optional()),
+		schema.StringField("product_name", schema.MaxLength(255), schema.Optional(),
+			schema.VerboseName("Product")),
+		schema.StringField("variant_name", schema.MaxLength(255), schema.Optional(),
+			schema.VerboseName("Variant")),
 		schema.StringField("image_url", schema.MaxLength(500), schema.Optional()),
-		
+
 		// Timestamps
 		schema.TimeField("created_at", schema.AutoNowAdd()),
 		schema.TimeField("updated_at", schema.AutoNow()),
@@ -120,10 +132,10 @@ func (CartItem) Fields() []schema.Field {
 
 func (CartItem) Meta() schema.Meta {
 	return schema.Meta{
-		TableName:        "cart_items",
-		VerboseName:      "Cart Item",
+		TableName:         "cart_items",
+		VerboseName:       "Cart Item",
 		VerboseNamePlural: "Cart Items",
-		OrderBy:          []string{"created_at"},
+		OrderBy:           []string{"created_at"},
 		Indexes: []schema.Index{
 			schema.IndexOn("idx_cart_item_cart", "cart_id"),
 			schema.IndexOn("idx_cart_item_product", "product_id"),
@@ -171,18 +183,20 @@ type Order struct {
 func (Order) Fields() []schema.Field {
 	return []schema.Field{
 		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
-		
+
 		// Order identification
 		schema.StringField("order_number", schema.Required(), schema.MaxLength(50), schema.Unique(),
+			schema.VerboseName("Order Number"),
 			schema.HelpText("Human-readable order number")),
-		
+
 		// Customer
 		schema.Int64Field("customer_id", schema.Required()),
-		schema.StringField("customer_email", schema.Required(), schema.MaxLength(255)),
+		schema.StringField("customer_email", schema.Required(), schema.MaxLength(255),
+			schema.VerboseName("Customer Email")),
 		schema.StringField("customer_first_name", schema.Required(), schema.MaxLength(100)),
 		schema.StringField("customer_last_name", schema.Required(), schema.MaxLength(100)),
 		schema.StringField("customer_phone", schema.MaxLength(20), schema.Optional()),
-		
+
 		// Pricing
 		schema.Float64Field("subtotal", schema.Required(),
 			schema.HelpText("Order subtotal before discounts")),
@@ -191,24 +205,27 @@ func (Order) Fields() []schema.Field {
 		schema.Float64Field("shipping_amount", schema.Required()),
 		schema.Float64Field("total", schema.Required(),
 			schema.HelpText("Order total")),
-		
+
 		// Coupon
 		schema.Int64Field("coupon_id", schema.Optional()),
 		schema.StringField("coupon_code", schema.MaxLength(50), schema.Optional()),
 		schema.Float64Field("coupon_discount", schema.Default(0.0)),
-		
+
 		// Status
 		schema.StringField("status", schema.Required(), schema.MaxLength(20), schema.Default("pending"),
+			schema.VerboseName("Status"),
 			schema.HelpText("Status: pending, processing, shipped, delivered, cancelled, refunded")),
 		schema.StringField("payment_status", schema.Required(), schema.MaxLength(20), schema.Default("pending"),
+			schema.VerboseName("Payment Status"),
 			schema.HelpText("Payment status: pending, paid, failed, refunded")),
 		schema.StringField("fulfillment_status", schema.Required(), schema.MaxLength(20), schema.Default("unfulfilled"),
+			schema.VerboseName("Fulfillment Status"),
 			schema.HelpText("Fulfillment: unfulfilled, partial, fulfilled")),
-		
+
 		// Addresses
 		schema.Int64Field("shipping_address_id", schema.Optional()),
 		schema.Int64Field("billing_address_id", schema.Optional()),
-		
+
 		// Shipping address snapshot
 		schema.StringField("shipping_first_name", schema.MaxLength(100), schema.Optional()),
 		schema.StringField("shipping_last_name", schema.MaxLength(100), schema.Optional()),
@@ -221,7 +238,7 @@ func (Order) Fields() []schema.Field {
 		schema.StringField("shipping_country_code", schema.MaxLength(2), schema.Optional()),
 		schema.StringField("shipping_country_name", schema.MaxLength(100), schema.Optional()),
 		schema.StringField("shipping_phone", schema.MaxLength(20), schema.Optional()),
-		
+
 		// Billing address snapshot
 		schema.StringField("billing_first_name", schema.MaxLength(100), schema.Optional()),
 		schema.StringField("billing_last_name", schema.MaxLength(100), schema.Optional()),
@@ -233,29 +250,30 @@ func (Order) Fields() []schema.Field {
 		schema.StringField("billing_postal_code", schema.MaxLength(20), schema.Optional()),
 		schema.StringField("billing_country_code", schema.MaxLength(2), schema.Optional()),
 		schema.StringField("billing_country_name", schema.MaxLength(100), schema.Optional()),
-		
+
 		// Payment
 		schema.StringField("payment_method", schema.MaxLength(50), schema.Optional(),
 			schema.HelpText("Payment method: credit_card, paypal, stripe, etc.")),
 		schema.StringField("payment_transaction_id", schema.MaxLength(255), schema.Optional()),
-		
+
 		// Shipping
 		schema.StringField("shipping_method", schema.MaxLength(100), schema.Optional()),
 		schema.StringField("tracking_number", schema.MaxLength(255), schema.Optional()),
 		schema.StringField("carrier", schema.MaxLength(100), schema.Optional()),
-		
+
 		// Additional information
 		schema.TextField("customer_notes", schema.Optional(),
 			schema.HelpText("Notes from customer")),
 		schema.TextField("admin_notes", schema.Optional(),
 			schema.HelpText("Internal notes")),
-		
+
 		// IP and user agent (for fraud detection)
 		schema.StringField("ip_address", schema.MaxLength(45), schema.Optional()),
 		schema.StringField("user_agent", schema.MaxLength(500), schema.Optional()),
-		
+
 		// Timestamps
-		schema.TimeField("created_at", schema.AutoNowAdd()),
+		schema.TimeField("created_at", schema.AutoNowAdd(),
+			schema.VerboseName("Created At")),
 		schema.TimeField("updated_at", schema.AutoNow()),
 		schema.TimeField("paid_at", schema.Optional()),
 		schema.TimeField("shipped_at", schema.Optional()),
@@ -268,10 +286,10 @@ func (Order) Fields() []schema.Field {
 
 func (Order) Meta() schema.Meta {
 	return schema.Meta{
-		TableName:        "orders",
-		VerboseName:      "Order",
+		TableName:         "orders",
+		VerboseName:       "Order",
 		VerboseNamePlural: "Orders",
-		OrderBy:          []string{"-created_at"},
+		OrderBy:           []string{"-created_at"},
 		Indexes: []schema.Index{
 			schema.UniqueIndexOn("idx_order_number", "order_number"),
 			schema.IndexOn("idx_order_customer", "customer_id"),
@@ -332,35 +350,39 @@ type OrderItem struct {
 func (OrderItem) Fields() []schema.Field {
 	return []schema.Field{
 		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
-		schema.Int64Field("order_id", schema.Required()),
+		schema.Int64Field("order_id", schema.Required(),
+			schema.VerboseName("Order")),
 		schema.Int64Field("product_id", schema.Required()),
 		schema.Int64Field("variant_id", schema.Optional()),
-		
+
 		// Product snapshot (prices can change)
 		schema.StringField("product_name", schema.Required(), schema.MaxLength(255)),
 		schema.StringField("product_sku", schema.Required(), schema.MaxLength(100)),
 		schema.StringField("variant_name", schema.MaxLength(255), schema.Optional()),
 		schema.StringField("variant_sku", schema.MaxLength(100), schema.Optional()),
 		schema.StringField("image_url", schema.MaxLength(500), schema.Optional()),
-		
+
 		// Quantity and pricing
 		schema.Int32Field("quantity", schema.Required(), schema.Default(1)),
 		schema.Float64Field("unit_price", schema.Required(),
+			schema.VerboseName("Unit Price"),
 			schema.HelpText("Price per unit at time of order")),
 		schema.Float64Field("discount_amount", schema.Default(0.0)),
 		schema.Float64Field("tax_amount", schema.Default(0.0)),
 		schema.Float64Field("total", schema.Required(),
+			schema.VerboseName("Total"),
 			schema.HelpText("Line total")),
-		
+
 		// Fulfillment
 		schema.Int32Field("quantity_fulfilled", schema.Default(0)),
 		schema.Int32Field("quantity_refunded", schema.Default(0)),
 		schema.StringField("fulfillment_status", schema.Required(), schema.MaxLength(20), schema.Default("unfulfilled"),
+			schema.VerboseName("Fulfillment Status"),
 			schema.HelpText("Status: unfulfilled, fulfilled, refunded")),
-		
+
 		// Physical attributes (for shipping calculations)
 		schema.Float64Field("weight", schema.Optional()),
-		
+
 		// Timestamps
 		schema.TimeField("created_at", schema.AutoNowAdd()),
 		schema.TimeField("updated_at", schema.AutoNow()),
@@ -369,10 +391,10 @@ func (OrderItem) Fields() []schema.Field {
 
 func (OrderItem) Meta() schema.Meta {
 	return schema.Meta{
-		TableName:        "order_items",
-		VerboseName:      "Order Item",
+		TableName:         "order_items",
+		VerboseName:       "Order Item",
 		VerboseNamePlural: "Order Items",
-		OrderBy:          []string{"created_at"},
+		OrderBy:           []string{"created_at"},
 		Indexes: []schema.Index{
 			schema.IndexOn("idx_order_item_order", "order_id"),
 			schema.IndexOn("idx_order_item_product", "product_id"),
@@ -418,36 +440,41 @@ type Payment struct {
 func (Payment) Fields() []schema.Field {
 	return []schema.Field{
 		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
-		schema.Int64Field("order_id", schema.Required()),
-		
+		schema.Int64Field("order_id", schema.Required(),
+			schema.VerboseName("Order")),
+
 		// Payment identification
 		schema.StringField("transaction_id", schema.MaxLength(255), schema.Optional(),
+			schema.VerboseName("Transaction ID"),
 			schema.HelpText("External payment gateway transaction ID")),
-		
+
 		// Amount
 		schema.Float64Field("amount", schema.Required(),
 			schema.HelpText("Payment amount")),
-		schema.StringField("currency", schema.Required(), schema.MaxLength(3), schema.Default("USD")),
-		
+		schema.StringField("currency", schema.Required(), schema.MaxLength(3), schema.Default("USD"),
+			schema.VerboseName("Currency")),
+
 		// Payment method
 		schema.StringField("payment_method", schema.Required(), schema.MaxLength(50),
+			schema.VerboseName("Payment Method"),
 			schema.HelpText("Method: credit_card, paypal, stripe, bank_transfer, etc.")),
 		schema.StringField("payment_gateway", schema.MaxLength(50), schema.Optional(),
 			schema.HelpText("Gateway used: stripe, paypal, square, etc.")),
-		
+
 		// Card details (last 4 digits only for security)
 		schema.StringField("card_last4", schema.MaxLength(4), schema.Optional()),
 		schema.StringField("card_brand", schema.MaxLength(50), schema.Optional()),
-		
+
 		// Status
 		schema.StringField("status", schema.Required(), schema.MaxLength(20), schema.Default("pending"),
+			schema.VerboseName("Status"),
 			schema.HelpText("Status: pending, completed, failed, refunded, cancelled")),
-		
+
 		// Additional information
 		schema.TextField("gateway_response", schema.Optional(),
 			schema.HelpText("Full gateway response (JSON)")),
 		schema.StringField("failure_reason", schema.MaxLength(500), schema.Optional()),
-		
+
 		// Timestamps
 		schema.TimeField("created_at", schema.AutoNowAdd()),
 		schema.TimeField("updated_at", schema.AutoNow()),
@@ -459,10 +486,10 @@ func (Payment) Fields() []schema.Field {
 
 func (Payment) Meta() schema.Meta {
 	return schema.Meta{
-		TableName:        "payments",
-		VerboseName:      "Payment",
+		TableName:         "payments",
+		VerboseName:       "Payment",
 		VerboseNamePlural: "Payments",
-		OrderBy:          []string{"-created_at"},
+		OrderBy:           []string{"-created_at"},
 		Indexes: []schema.Index{
 			schema.IndexOn("idx_payment_order", "order_id"),
 			schema.IndexOn("idx_payment_transaction", "transaction_id"),
@@ -497,15 +524,17 @@ type Shipment struct {
 func (Shipment) Fields() []schema.Field {
 	return []schema.Field{
 		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
-		schema.Int64Field("order_id", schema.Required()),
-		
+		schema.Int64Field("order_id", schema.Required(),
+			schema.VerboseName("Order")),
+
 		// Tracking
-		schema.StringField("tracking_number", schema.Required(), schema.MaxLength(255)),
+		schema.StringField("tracking_number", schema.Required(), schema.MaxLength(255),
+			schema.VerboseName("Tracking Number")),
 		schema.StringField("carrier", schema.Required(), schema.MaxLength(100),
 			schema.HelpText("Carrier: USPS, UPS, FedEx, DHL, etc.")),
 		schema.StringField("service_level", schema.MaxLength(100), schema.Optional(),
 			schema.HelpText("Service: Standard, Express, Overnight, etc.")),
-		
+
 		// Shipping address (snapshot)
 		schema.StringField("recipient_name", schema.Required(), schema.MaxLength(200)),
 		schema.StringField("address_line1", schema.Required(), schema.MaxLength(255)),
@@ -516,27 +545,29 @@ func (Shipment) Fields() []schema.Field {
 		schema.StringField("country_code", schema.Required(), schema.MaxLength(2)),
 		schema.StringField("country_name", schema.Required(), schema.MaxLength(100)),
 		schema.StringField("phone", schema.MaxLength(20), schema.Optional()),
-		
+
 		// Shipping details
 		schema.Float64Field("weight", schema.Optional(),
 			schema.HelpText("Total weight in kg")),
 		schema.Float64Field("shipping_cost", schema.Required()),
-		
+
 		// Status
 		schema.StringField("status", schema.Required(), schema.MaxLength(20), schema.Default("pending"),
+			schema.VerboseName("Status"),
 			schema.HelpText("Status: pending, in_transit, delivered, failed, returned")),
-		
+
 		// Tracking events
 		schema.TextField("tracking_events", schema.Optional(),
 			schema.HelpText("JSON array of tracking events")),
-		
+
 		// Notes
 		schema.TextField("notes", schema.Optional()),
-		
+
 		// Timestamps
 		schema.TimeField("created_at", schema.AutoNowAdd()),
 		schema.TimeField("updated_at", schema.AutoNow()),
-		schema.TimeField("shipped_at", schema.Optional()),
+		schema.TimeField("shipped_at", schema.Optional(),
+			schema.VerboseName("Shipped At")),
 		schema.TimeField("estimated_delivery_at", schema.Optional()),
 		schema.TimeField("delivered_at", schema.Optional()),
 	}
@@ -544,10 +575,10 @@ func (Shipment) Fields() []schema.Field {
 
 func (Shipment) Meta() schema.Meta {
 	return schema.Meta{
-		TableName:        "shipments",
-		VerboseName:      "Shipment",
+		TableName:         "shipments",
+		VerboseName:       "Shipment",
 		VerboseNamePlural: "Shipments",
-		OrderBy:          []string{"-created_at"},
+		OrderBy:           []string{"-created_at"},
 		Indexes: []schema.Index{
 			schema.IndexOn("idx_shipment_order", "order_id"),
 			schema.IndexOn("idx_shipment_tracking", "tracking_number"),
