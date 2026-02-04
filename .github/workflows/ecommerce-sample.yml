@@ -1,6 +1,20 @@
 name: Ecommerce Sample
 
 on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      run_smoke_test:
+        description: "Run optional health check smoke test"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
   push:
     branches: [ main, master ]
   pull_request:
@@ -9,12 +23,31 @@ on:
 jobs:
   build-ecommerce:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: "123"
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres" \
+          --health-interval=10s \
+          --health-timeout=5s \
+          --health-retries=5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
+          go-version-file: examples/ecommerce/go.mod
+          cache: true
           go-version: '1.23'
 
       - name: Cache Go modules
@@ -29,6 +62,31 @@ jobs:
         working-directory: examples/ecommerce
         run: go mod download
 
+      - name: Build ecommerce sample
+        working-directory: examples/ecommerce
+        run: make build
+
+      - name: Smoke test health endpoint
+        if: ${{ github.event.inputs.run_smoke_test == 'true' }}
+        working-directory: examples/ecommerce
+        run: |
+          ./ecommerce &
+          server_pid=$!
+          for i in {1..30}; do
+            if curl -fsS http://localhost:8000/health; then
+              break
+            fi
+            sleep 1
+          done
+          curl -fsS http://localhost:8000/health
+          kill "$server_pid"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecommerce-sample-binary
+          path: examples/ecommerce/ecommerce
+          if-no-files-found: error
       - name: Smoke build
         working-directory: examples/ecommerce
         run: go build ./...
