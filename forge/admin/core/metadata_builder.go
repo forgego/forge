@@ -73,7 +73,7 @@ func buildFieldsMetadata(s schema.Schema) ([]FieldMetadata, error) {
 		fieldMeta := FieldMetadata{
 			Name:         field.Name,
 			Type:         field.Type.String(),
-			Label:        getOrDefault(field.VerboseName, "", field.Name),
+			Label:        getOrDefault(field.VerboseName, humanizeFieldName(field.Name)),
 			HelpText:     field.HelpText,
 			Required:     field.Required,
 			ReadOnly:     !field.Editable, // ReadOnly is inverse of Editable usually, or need to check field definition
@@ -183,7 +183,7 @@ func buildFiltersMetadata[T any](s schema.Schema, config *Config[T]) []FilterMet
 		filterMeta := FilterMetadata{
 			Name:  filterName,
 			Type:  inferFilterType(field),
-			Label: getOrDefault(field.VerboseName, "", field.Name),
+			Label: getOrDefault(field.VerboseName, humanizeFieldName(field.Name)),
 		}
 
 		// Add choices for choice fields
@@ -352,6 +352,28 @@ func getOrDefault(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func humanizeFieldName(name string) string {
+	normalized := strings.ReplaceAll(name, "_", " ")
+	words := strings.Fields(normalized)
+	if len(words) == 0 {
+		return ""
+	}
+
+	humanized := make([]string, 0, len(words))
+	for _, word := range words {
+		lower := strings.ToLower(word)
+		if lower == "id" {
+			humanized = append(humanized, "ID")
+			continue
+		}
+		runes := []rune(lower)
+		runes[0] = []rune(strings.ToUpper(string(runes[0])))[0]
+		humanized = append(humanized, string(runes))
+	}
+
+	return strings.Join(humanized, " ")
 }
 
 // toStringSlice converts a slice of Field to a slice of strings
