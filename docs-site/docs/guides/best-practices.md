@@ -4,7 +4,7 @@ sidebar_position: 9
 
 # Best Practices
 
-This guide covers best practices for building production-ready applications with forge.
+This guide covers best practices for building maintainable applications with forge.
 
 ## Code Organization
 

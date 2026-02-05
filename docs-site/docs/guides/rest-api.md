@@ -13,7 +13,9 @@ image: /forge-social-card.svg
 
 # REST API
 
-forge's REST API framework is like Django REST Framework for Go. Instead of writing HTTP handlers for every endpoint, you use ViewSets and get CRUD operations, pagination, and filtering for free.
+forge's REST API framework is inspired by Django REST Framework. Instead of
+writing HTTP handlers for every endpoint, you use ViewSets and get CRUD
+operations, pagination, and filtering with consistent defaults.
 
 ## Why use it?
 
@@ -426,4 +428,3 @@ func main() {
 - [Queries Guide](/docs/guides/queries) - Learn about QuerySet filtering
 - [Security Guide](/docs/guides/security) - Secure your API
 - [Advanced Topics](/docs/advanced/plugins) - Extend the API system
-

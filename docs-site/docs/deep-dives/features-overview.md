@@ -146,7 +146,8 @@ Command-line interface for project creation, code generation, migrations, and se
 
 ### 📋 Planned Features
 
-See the [Roadmap](/docs/status/roadmap/) for detailed planned features.
+See the [implementation status](/docs/status/implementation/) for current
+coverage.
 
 ## Feature Dependencies
 

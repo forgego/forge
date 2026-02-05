@@ -8,8 +8,8 @@ image: /forge-social-card.svg
 
 # Documentation
 
-Welcome to the forge documentation. Use the links below to jump into the most
-important areas.
+Welcome to the forge docs. Whether you're here to build your first app or to
+learn how the internals fit together, this page points to the fastest paths.
 
 ## Start here
 

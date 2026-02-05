@@ -397,7 +397,8 @@ This document provides detailed implementation information for all features in t
 
 ### 📋 Planned Features
 
-See the [roadmap](/docs/contributing/roadmap/) for detailed planned features.
+Planned work is tracked in GitHub issues and discussions so it stays current
+with real-world priorities.
 
 ## Implementation Patterns
 

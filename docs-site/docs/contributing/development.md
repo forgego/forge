@@ -319,5 +319,6 @@ go http.ListenAndServe(":6060", nil)
 ## See Also
 
 - [Architecture](/docs/contributing/architecture) - Framework architecture
-- [Roadmap](/docs/contributing/roadmap) - Development roadmap
-
+- [Implementation status](/docs/status/implementation) - Current build status
+- Planning updates live in GitHub issues and discussions; legacy docs like
+  `PRODUCTION_READY.md` and the admin UI plan have been removed.
