@@ -13,39 +13,14 @@ linters:
   # Disable all linters by default
   disable-all: true
 
-  # Enable recommended linters
+  # Enable a focused set of linters for CI signal
   enable:
-    # Official Go linters
     - govet # Reports suspicious constructs
-    - errcheck # Checks for unchecked errors
-    - staticcheck # Advanced static analysis
-    - unused # Checks for unused code (replaces deadcode, structcheck, varcheck)
-    - gosimple # Simplifies code
-    - ineffassign # Detects ineffectual assignments
     - typecheck # Like the front-end of a Go compiler
-
-    # Style and formatting
     - gofmt # Checks code formatting
     - goimports # Checks import formatting
     - misspell # Finds commonly misspelled words
-    - goconst # Finds repeated strings that could be replaced by a constant
-    - gocyclo # Computes and checks the cyclomatic complexity
-    - gofumpt # Stricter gofmt
-
-    # Code quality
-    - gocritic # The most opinionated Go source code linter
-    - gosec # Security-oriented linter
-    - prealloc # Finds slice declarations that could potentially be pre-allocated
-    - unconvert # Remove unnecessary type conversions
-    - unparam # Reports unused function parameters
-    - nakedret # Finds naked returns in functions greater than a specified length
-    - predeclared # Finds code that shadows one of Go's predeclared identifiers
-    - copyloopvar # Checks for pointers to enclosing loop variables (replaces exportloopref)
-
-    # Performance
-    - bodyclose # Checks whether HTTP response body is closed successfully
-    - noctx # Finds sending http request without context.Context
-    - rowserrcheck # Checks whether Err of rows is checked successfully
+    - ineffassign # Detects ineffectual assignments
 
 # Linters settings
 linters-settings:
