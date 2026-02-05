@@ -47,7 +47,7 @@ Edit `models/example.go` or create new model files:
 ```go
 package models
 
-import "github.com/forgego/forge/internal/schema"
+import "github.com/forgego/forge/schema"
 
 type Post struct {
 	schema.BaseSchema
@@ -55,9 +55,9 @@ type Post struct {
 
 func (Post) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").Primary().AutoIncrement().Build(),
-		schema.String("title").Required().MaxLength(200).Build(),
-		schema.String("content").Required().Build(),
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.StringField("title", schema.Required(), schema.MaxLength(200)),
+		schema.TextField("content", schema.Required()),
 	}
 }
 
@@ -86,7 +86,8 @@ forge generate
 ### 5. Run Migrations
 
 ```bash
-forge migrate
+forge makemigrations
+forge migrate up
 ```
 
 ### 6. Start Server
@@ -97,29 +98,28 @@ forge runserver
 
 Visit `http://localhost:8000/admin/` for the auto-generated admin interface!
 
-For detailed instructions, see the [Getting Started Guide](docs/GETTING_STARTED.md).
+For detailed instructions, see the [Getting Started Guide](docs-site/docs/getting-started/quickstart.md).
 
 ## Documentation
 
-- **[Getting Started](docs/GETTING_STARTED.md)** - 10-minute quick start guide ⭐
-- **[REST API Guide](docs/REST_API.md)** - Build APIs for React/Vue frontends
-- **[HTMX Patterns](docs/HTMX_PATTERNS.md)** - Admin interface patterns and best practices
-- **[UI Strategy](docs/UI_STRATEGY.md)** - UI technology choices and approach
-- **[Architecture](docs/ARCHITECTURE.md)** - Framework architecture
-- **[Schema Reference](docs/SCHEMA_REFERENCE.md)** - Schema definition guide
-- **[API Reference](docs/API_REFERENCE.md)** - API documentation
-- **[Usage Guide](docs/USAGE_GUIDE.md)** - Step-by-step tutorials
-- **[Features](docs/FEATURES.md)** - Current and planned features
-- **[Roadmap](docs/ROADMAP.md)** - Development roadmap
-- **[Development](docs/DEVELOPMENT.md)** - Contributing guide
+- **[Getting Started](docs-site/docs/getting-started/quickstart.md)** - 10-minute quick start guide ⭐
+- **[REST API Guide](docs-site/docs/guides/rest-api.md)** - Build APIs for React/Vue frontends
+- **[Admin Guide](docs-site/docs/guides/admin.md)** - Admin interface patterns and best practices
+- **[Architecture](docs-site/docs/deep-dives/architecture.md)** - Framework architecture
+- **[Schema Reference](docs-site/docs/api-reference/schema.md)** - Schema definition guide
+- **[API Reference](docs-site/docs/api-reference/fields.md)** - API documentation
+- **[Usage Guide](docs-site/docs/guides/models.md)** - Step-by-step tutorials
+- **[Features](docs-site/docs/features/overview.md)** - Current and planned features
+- **[Roadmap](docs-site/docs/status/roadmap.md)** - Development roadmap
+- **[Development](docs-site/docs/contributing/development.md)** - Contributing guide
 
 ## Example
 
-See `examples/blog/` for a complete example application.
+See `examples/ecommerce/` for a complete example application.
 
 ## Technology Stack
 
-- **Go 1.24+**
+- **Go 1.25+**
 - **chi/v5** - HTTP router
 - **database/sql** - Standard SQL interface
 - **golang-migrate** - Migrations

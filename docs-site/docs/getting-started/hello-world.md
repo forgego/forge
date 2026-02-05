@@ -37,12 +37,17 @@ database:
   port: 5432
   user: postgres
   password: your_password
-  dbname: hello_world_db
+  name: hello_world_db
   sslmode: disable
 
 server:
   host: localhost
   port: "8000"
+
+security:
+  secret_key: "your-secret-key-here"
+  csrf_secret_key: "your-csrf-secret-here"
+  session_secret: "your-session-secret-here"
 ```
 
 Then create the database:
@@ -62,44 +67,44 @@ package main
 
 import (
     "encoding/json"
-    "log"
     "net/http"
+    stdlog "log"
 
-    "github.com/forgego/forge/pkg/config"
-    "github.com/forgego/forge/pkg/db"
-    "github.com/forgego/forge/pkg/logging"
-    httplib "github.com/forgego/forge/pkg/http"
+    "github.com/forgego/forge/config"
+    "github.com/forgego/forge/db"
+    forgelog "github.com/forgego/forge/log"
+    "github.com/forgego/forge/server"
 )
 
 func main() {
     cfg := config.NewConfig()
     settings := config.LoadSettings(cfg)
 
-    logger, err := logging.NewLogger(cfg.IsDevelopment())
+    logger, err := forgelog.NewLogger(settings.App.Debug)
     if err != nil {
-        log.Fatal(err)
+        stdlog.Fatal(err)
     }
     defer logger.Sync()
 
     database, err := db.NewDBFromConfig(cfg)
     if err != nil {
-        log.Fatal(err)
+        stdlog.Fatal(err)
     }
     defer database.Close()
 
-    server, err := httplib.NewServer(cfg, settings, logger)
+    srv, err := server.NewServer(cfg, settings, logger)
     if err != nil {
-        log.Fatal(err)
+        stdlog.Fatal(err)
     }
 
-    server.RegisterRoutes(func(router *httplib.Router) {
+    srv.RegisterRoutes(func(router *server.Router) {
         router.Get("/", helloHandler)
         router.Get("/api/hello", helloAPIHandler)
     })
 
-    logger.Info("Starting server", "host", settings.Server.Host, "port", settings.Server.Port)
-    if err := server.Start(); err != nil {
-        log.Fatal(err)
+    stdlog.Printf("Starting server on %s:%s", settings.Server.Host, settings.Server.Port)
+    if err := srv.Start(); err != nil {
+        stdlog.Fatal(err)
     }
 }
 

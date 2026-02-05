@@ -74,6 +74,12 @@ type Filter[T any] = core.Filter[T]
 type Plugin = core.Plugin
 type Field = core.Field
 type Method = core.Method
+type Fieldset[T any] = core.Fieldset[T]
+
+// NewFieldset creates a new fieldset for admin forms.
+func NewFieldset[T any](name string, fields ...string) core.Fieldset[T] {
+	return core.NewFieldset[T](name, fields...)
+}
 
 // Computed creates a safe reference to a method or computed field
 var Computed = core.Computed

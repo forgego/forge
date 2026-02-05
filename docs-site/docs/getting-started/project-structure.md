@@ -50,8 +50,8 @@ Contains your application entry point:
 package main
 
 import (
-    "github.com/forgego/forge/pkg/config"
-    "github.com/forgego/forge/pkg/db"
+    "github.com/forgego/forge/config"
+    "github.com/forgego/forge/db"
     // ...
 )
 
@@ -164,11 +164,11 @@ Use `init()` functions for automatic discovery:
 // app/blog/admin.go
 package blog
 
-import "github.com/forgego/forge/pkg/admin"
+import "github.com/forgego/forge/admin"
 
 func init() {
-    admin.RegisterModel(&Post{})
-    admin.RegisterModel(&Comment{})
+    admin.Register(&admin.Config[Post]{})
+    admin.Register(&admin.Config[Comment]{})
 }
 ```
 
@@ -219,9 +219,9 @@ Register all models in one file:
 package blog
 
 func init() {
-    admin.RegisterModel(&Post{})
-    admin.RegisterModel(&Comment{})
-    admin.RegisterModel(&Tag{})
+    admin.Register(&admin.Config[Post]{})
+    admin.Register(&admin.Config[Comment]{})
+    admin.Register(&admin.Config[Tag]{})
 }
 ```
 

@@ -46,7 +46,7 @@ Create `models/author.go`:
 package models
 
 import (
-    "github.com/forgego/forge/pkg/schema"
+    "github.com/forgego/forge/schema"
 )
 
 type Author struct {
@@ -55,11 +55,11 @@ type Author struct {
 
 func (Author) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64("id").Primary().AutoIncrement().Build(),
-        schema.String("name").Required().MaxLength(100).Build(),
-        schema.String("email").Unique().Required().MaxLength(255).Build(),
-        schema.Text("bio").Build(),
-        schema.Time("created_at").AutoNowAdd().Build(),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+        schema.StringField("name", schema.Required(), schema.MaxLength(100)),
+        schema.StringField("email", schema.Required(), schema.Unique(), schema.MaxLength(255)),
+        schema.TextField("bio"),
+        schema.TimeField("created_at", schema.AutoNowAdd()),
     }
 }
 
@@ -86,7 +86,7 @@ Create `models/category.go`:
 package models
 
 import (
-    "github.com/forgego/forge/pkg/schema"
+    "github.com/forgego/forge/schema"
 )
 
 type Category struct {
@@ -95,10 +95,10 @@ type Category struct {
 
 func (Category) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64("id").Primary().AutoIncrement().Build(),
-        schema.String("name").Required().Unique().MaxLength(100).Build(),
-        schema.String("slug").Required().Unique().MaxLength(100).Build(),
-        schema.Text("description").Build(),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+        schema.StringField("name", schema.Required(), schema.Unique(), schema.MaxLength(100)),
+        schema.StringField("slug", schema.Required(), schema.Unique(), schema.MaxLength(100)),
+        schema.TextField("description"),
     }
 }
 
@@ -125,8 +125,7 @@ Create `models/post.go`:
 package models
 
 import (
-    "github.com/forgego/forge/pkg/schema"
-    "github.com/forgego/forge/pkg/schema/relations"
+    "github.com/forgego/forge/schema"
 )
 
 type Post struct {
@@ -135,15 +134,15 @@ type Post struct {
 
 func (Post) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64("id").Primary().AutoIncrement().Build(),
-        schema.String("title").Required().MaxLength(200).Build(),
-        schema.String("slug").Unique().MaxLength(200).Build(),
-        schema.Text("content").Required().Build(),
-        schema.Text("excerpt").MaxLength(500).Build(),
-        schema.Bool("published").Default(false).Build(),
-        schema.Time("created_at").AutoNowAdd().Build(),
-        schema.Time("updated_at").AutoNow().Build(),
-        schema.Time("published_at").Build(),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+        schema.StringField("title", schema.Required(), schema.MaxLength(200)),
+        schema.StringField("slug", schema.Unique(), schema.MaxLength(200)),
+        schema.TextField("content", schema.Required()),
+        schema.TextField("excerpt", schema.MaxLength(500)),
+        schema.BoolField("published", schema.Default(false)),
+        schema.TimeField("created_at", schema.AutoNowAdd()),
+        schema.TimeField("updated_at", schema.AutoNow()),
+        schema.TimeField("published_at"),
     }
 }
 
@@ -158,12 +157,13 @@ func (Post) Meta() schema.Meta {
 
 func (Post) Relations() []schema.Relation {
     return []schema.Relation{
-        relations.ForeignKey("author", "Author").
-            Required().
-            OnDelete(schema.Cascade).
-            RelatedName("posts"),
-        relations.ManyToMany("categories", "Category").
-            RelatedName("posts"),
+        schema.ForeignKeyField("author", "Author",
+            schema.OnDelete(schema.CascadeCASCADE),
+            schema.RelatedName("posts"),
+        ),
+        schema.ManyToManyField("categories", "Category",
+            schema.RelatedName("posts"),
+        ),
     }
 }
 
@@ -189,15 +189,14 @@ package main
 
 import (
     "fmt"
-    "log"
+    stdlog "log"
     "net/http"
 
-    "github.com/forgego/forge/pkg/admin"
-    "github.com/forgego/forge/pkg/config"
-    "github.com/forgego/forge/pkg/db"
-    "github.com/forgego/forge/pkg/logging"
-    httplib "github.com/forgego/forge/pkg/http"
-    "github.com/forgego/forge/pkg/registry"
+    "github.com/forgego/forge/admin"
+    "github.com/forgego/forge/config"
+    "github.com/forgego/forge/db"
+    forgelog "github.com/forgego/forge/log"
+    "github.com/forgego/forge/server"
     "myblog/models"
 )
 
@@ -205,46 +204,57 @@ func main() {
     cfg := config.NewConfig()
     settings := config.LoadSettings(cfg)
 
-    logger, err := logging.NewLogger(cfg.IsDevelopment())
+    logger, err := forgelog.NewLogger(settings.App.Debug)
     if err != nil {
-        log.Fatal(err)
+        stdlog.Fatal(err)
     }
     defer logger.Sync()
 
     database, err := db.NewDBFromConfig(cfg)
     if err != nil {
-        log.Fatal(err)
+        stdlog.Fatal(err)
     }
     defer database.Close()
 
-    // Register all models
-    registry.RegisterModel(&models.Author{})
-    registry.RegisterModel(&models.Category{})
-    registry.RegisterModel(&models.Post{})
+    // Wire ORM managers
+    models.AuthorObjects.SetDB(database)
+    models.CategoryObjects.SetDB(database)
+    models.PostObjects.SetDB(database)
 
-    // Register admin models
-    admin.RegisterModel(&models.Author{})
-    admin.RegisterModel(&models.Category{})
-    admin.RegisterModel(&models.Post{})
+    adminSite := admin.DefaultSite
+    uiConfig := adminSite.GetUIConfig()
+    uiConfig.Prefix = settings.Admin.Path
+    adminSite.WithUIConfig(uiConfig)
+    adminSite.SetDB(database)
 
-    server, err := httplib.NewServer(cfg, settings, logger)
-    if err != nil {
-        log.Fatal(err)
+    if _, err := admin.Register(&admin.Config[models.Author]{}); err != nil {
+        stdlog.Fatal(err)
+    }
+    if _, err := admin.Register(&admin.Config[models.Category]{}); err != nil {
+        stdlog.Fatal(err)
+    }
+    if _, err := admin.Register(&admin.Config[models.Post]{}); err != nil {
+        stdlog.Fatal(err)
     }
 
-    server.RegisterRoutes(func(router *httplib.Router) {
+    srv, err := server.NewServer(cfg, settings, logger)
+    if err != nil {
+        stdlog.Fatal(err)
+    }
+
+    srv.RegisterRoutes(func(router *server.Router) {
         router.Get("/", func(w http.ResponseWriter, r *http.Request) {
             fmt.Fprintf(w, "Welcome to MyBlog!")
         })
 
         if settings.Admin.Enabled {
-            admin.RegisterAdminRoutes(router, settings.Admin.Path)
+            router.Mount(settings.Admin.Path, adminSite.Handler())
         }
     })
 
     fmt.Printf("Starting server on %s:%s\n", settings.Server.Host, settings.Server.Port)
-    if err := server.Start(); err != nil {
-        log.Fatal(err)
+    if err := srv.Start(); err != nil {
+        stdlog.Fatal(err)
     }
 }
 ```
@@ -253,7 +263,7 @@ func main() {
 
 ```bash
 forge makemigrations
-forge migrate
+forge migrate up
 ```
 
 ## Step 6: Start the Server
@@ -283,8 +293,8 @@ import (
 func ListPosts(w http.ResponseWriter, r *http.Request) {
     ctx := context.Background()
     
-    posts, err := models.Post.Objects.
-        Filter(models.Post.Fields.Published.Equals(true)).
+    posts, err := models.PostObjects.
+        Filter(models.PostFieldsInstance.Published.Equals(true)).
         OrderBy("-created_at").
         All(ctx)
     
@@ -309,9 +319,9 @@ func GetPost(w http.ResponseWriter, r *http.Request) {
         return
     }
     
-    post, err := models.Post.Objects.
-        Filter(models.Post.Fields.ID.Equals(id)).
-        Filter(models.Post.Fields.Published.Equals(true)).
+    post, err := models.PostObjects.
+        Filter(models.PostFieldsInstance.ID.Equals(id)).
+        Filter(models.PostFieldsInstance.Published.Equals(true)).
         SelectRelated("author").
         PrefetchRelated("categories").
         Get(ctx)
@@ -349,24 +359,24 @@ Here are some common patterns:
 
 ```go
 // Get all published posts
-posts, err := models.Post.Objects.
-    Filter(models.Post.Fields.Published.Equals(true)).
+posts, err := models.PostObjects.
+    Filter(models.PostFieldsInstance.Published.Equals(true)).
     OrderBy("-created_at").
     All(ctx)
 
 // Get posts by author
-posts, err := models.Post.Objects.
-    Filter(models.Post.Fields.Author.Equals(authorID)).
+posts, err := models.PostObjects.
+    Filter(models.PostFieldsInstance.Author.Equals(authorID)).
     All(ctx)
 
 // Get posts in category
-posts, err := models.Post.Objects.
-    Filter(models.Post.Fields.Categories.Contains(categoryID)).
+posts, err := models.PostObjects.
+    Filter(models.PostFieldsInstance.Categories.Contains(categoryID)).
     All(ctx)
 
 // Search posts
-posts, err := models.Post.Objects.
-    Filter(models.Post.Fields.Title.Contains("django")).
+posts, err := models.PostObjects.
+    Filter(models.PostFieldsInstance.Title.Contains("django")).
     All(ctx)
 
 // Create a post
@@ -377,7 +387,7 @@ post := &models.Post{
     Author:    author,
     Published: true,
 }
-err := models.Post.Objects.Create(ctx, post)
+err := models.PostObjects.Create(ctx, post)
 ```
 
 ## Next Steps

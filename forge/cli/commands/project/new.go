@@ -29,7 +29,7 @@ func (c *NewCommand) Definition() *cobra.Command {
 	}
 	cmd.Flags().String("path", "", "Path where project will be created (default: project-name)")
 	cmd.Flags().String("template", "", "Project template: simple or advanced (default: simple)")
-	cmd.Flags().String("database", "", "Database type: postgres, mysql, or sqlite (default: postgres)")
+	cmd.Flags().String("database", "", "Database type: postgres or sqlite (default: postgres)")
 	cmd.Flags().Bool("docker", false, "Include Docker setup (Dockerfile and compose.yaml)")
 	return cmd
 }
@@ -74,7 +74,7 @@ func (c *NewCommand) Execute(ctx *core.Context, args []string) error {
 	if dbFlag == "" {
 		prompt := &survey.Select{
 			Message: "Choose database type:",
-			Options: []string{"postgres", "mysql", "sqlite"},
+			Options: []string{"postgres", "sqlite"},
 			Default: "postgres",
 		}
 		if err := survey.AskOne(prompt, &databaseType); err != nil {
@@ -118,7 +118,8 @@ func (c *NewCommand) Execute(ctx *core.Context, args []string) error {
 	fmt.Printf("\nNext steps:\n")
 	fmt.Printf("  cd %s\n", projectPath)
 	fmt.Printf("  forge generate\n")
-	fmt.Printf("  forge migrate\n")
+	fmt.Printf("  forge makemigrations\n")
+	fmt.Printf("  forge migrate up\n")
 	fmt.Printf("  forge runserver\n")
 
 	return nil
@@ -193,30 +194,23 @@ default_template: %s
 func createConfigFile(projectPath, databaseType string) error {
 	var dbConfig string
 	switch databaseType {
-	case "mysql":
-		dbConfig = `database:
-  driver: mysql
-  host: localhost
-  port: 3306
-  user: root
-  password: root
-  dbname: forge_db
-`
-	case "sqlite":
+	case "sqlite", "sqlite3":
 		dbConfig = `database:
   driver: sqlite3
-  dsn: ./forge.db
+  name: ./forge.db
 `
-	default: // postgres
+	case "postgres", "postgresql", "":
 		dbConfig = `database:
   driver: postgres
   host: localhost
   port: 5432
   user: postgres
   password: postgres
-  dbname: forge_db
+  name: forge_db
   sslmode: disable
 `
+	default:
+		return fmt.Errorf("unsupported database type: %s", databaseType)
 	}
 
 	configContent := dbConfig + `
@@ -228,7 +222,7 @@ server:
 
 admin:
   enabled: true
-  path: /admin/
+  path: /admin
 
 security:
   session_secret: change-me-in-production

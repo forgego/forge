@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # Relations
 
-Relations define how models are connected to each other. forge supports ForeignKey, OneToOne, OneToMany, and ManyToMany relationships.
+Relations define how models are connected to each other. forge supports ForeignKey, OneToOne, and ManyToMany relationships (one-to-many is represented by a ForeignKey with a `RelatedName`).
 
 Complete reference for model relationships.
 
@@ -15,14 +15,14 @@ Complete reference for model relationships.
 A many-to-one relationship:
 
 ```go
-import "github.com/forgego/forge/pkg/schema/relations"
+import "github.com/forgego/forge/schema"
 
 func (Post) Relations() []schema.Relation {
     return []schema.Relation{
-        relations.ForeignKey("author", "User").
-            Required().
-            OnDelete(schema.Cascade).
-            RelatedName("posts"),
+        schema.ForeignKeyField("author", "User",
+            schema.OnDelete(schema.CascadeCASCADE),
+            schema.RelatedName("posts"),
+        ),
     }
 }
 ```
@@ -40,8 +40,9 @@ A one-to-one relationship:
 ```go
 func (User) Relations() []schema.Relation {
     return []schema.Relation{
-        relations.OneToOne("profile", "UserProfile").
-            OnDelete(schema.Cascade),
+        schema.OneToOneField("profile", "UserProfile",
+            schema.OnDelete(schema.CascadeCASCADE),
+        ),
     }
 }
 ```
@@ -59,9 +60,10 @@ A many-to-many relationship:
 ```go
 func (Post) Relations() []schema.Relation {
     return []schema.Relation{
-        relations.ManyToMany("tags", "Tag").
-            Through("post_tags").
-            RelatedName("posts"),
+        schema.ManyToManyField("tags", "Tag",
+            schema.Through("post_tags"),
+            schema.RelatedName("posts"),
+        ),
     }
 }
 ```
@@ -74,25 +76,18 @@ tag.Posts  // []*Post (reverse)
 
 ## Relation Options
 
-### Required
-
-Make relation required:
-
-```go
-relations.ForeignKey("author", "User").Required()
-```
-
 ### OnDelete
 
 Cascade behavior on delete:
 
 ```go
-relations.ForeignKey("author", "User").
-    OnDelete(schema.Cascade)
-    // OnDelete(schema.SetNull)
-    // OnDelete(schema.SetDefault)
-    // OnDelete(schema.Restrict)  // Prevent deletion
-    // OnDelete(schema.DoNothing) // No action
+schema.ForeignKeyField("author", "User",
+    schema.OnDelete(schema.CascadeCASCADE),
+    // schema.OnDelete(schema.CascadeSET_NULL),
+    // schema.OnDelete(schema.CascadeSET_DEFAULT),
+    // schema.OnDelete(schema.CascadePROTECT),   // Prevent deletion
+    // schema.OnDelete(schema.CascadeDO_NOTHING), // No action
+)
 ```
 
 ### OnUpdate
@@ -100,8 +95,9 @@ relations.ForeignKey("author", "User").
 Cascade behavior on update:
 
 ```go
-relations.ForeignKey("author", "User").
-    OnUpdate(schema.Cascade)
+schema.ForeignKeyField("author", "User",
+    schema.OnUpdate(schema.CascadeCASCADE),
+)
 ```
 
 ### RelatedName
@@ -109,8 +105,9 @@ relations.ForeignKey("author", "User").
 Reverse relation name:
 
 ```go
-relations.ForeignKey("author", "User").
-    RelatedName("posts")
+schema.ForeignKeyField("author", "User",
+    schema.RelatedName("posts"),
+)
 ```
 
 ### Through
@@ -118,30 +115,30 @@ relations.ForeignKey("author", "User").
 Through table for ManyToMany:
 
 ```go
-relations.ManyToMany("tags", "Tag").
-    Through("post_tags")
+schema.ManyToManyField("tags", "Tag",
+    schema.Through("post_tags"),
+)
 ```
 
-### FromField / ToField
+### DBConstraint
 
-Custom field names:
+Control FK constraint creation:
 
 ```go
-relations.ManyToMany("tags", "Tag").
-    Through("post_tags").
-    FromField("post_id").
-    ToField("tag_id")
+schema.ForeignKeyField("author", "User",
+    schema.DBConstraint(true),
+)
 ```
 
 ## Cascade Options
 
 | Option | SQL | Description |
 |--------|-----|-------------|
-| `Cascade` | `ON DELETE CASCADE` | Delete related objects |
-| `SetNull` | `ON DELETE SET NULL` | Set foreign key to NULL |
-| `SetDefault` | `ON DELETE SET DEFAULT` | Set foreign key to default |
-| `Restrict` | `ON DELETE RESTRICT` | Prevent deletion if related objects exist |
-| `DoNothing` | `ON DELETE NO ACTION` | No action (database default) |
+| `CascadeCASCADE` | `ON DELETE CASCADE` | Delete related objects |
+| `CascadeSET_NULL` | `ON DELETE SET NULL` | Set foreign key to NULL |
+| `CascadeSET_DEFAULT` | `ON DELETE SET DEFAULT` | Set foreign key to default |
+| `CascadePROTECT` | `ON DELETE RESTRICT` | Prevent deletion if related objects exist |
+| `CascadeDO_NOTHING` | `ON DELETE NO ACTION` | No action (database default) |
 
 ## Examples
 
@@ -154,10 +151,10 @@ type Post struct {
 
 func (Post) Relations() []schema.Relation {
     return []schema.Relation{
-        relations.ForeignKey("author", "User").
-            Required().
-            OnDelete(schema.Cascade).
-            RelatedName("posts"),
+        schema.ForeignKeyField("author", "User",
+            schema.OnDelete(schema.CascadeCASCADE),
+            schema.RelatedName("posts"),
+        ),
     }
 }
 ```
@@ -171,8 +168,9 @@ type User struct {
 
 func (User) Relations() []schema.Relation {
     return []schema.Relation{
-        relations.OneToOne("profile", "UserProfile").
-            OnDelete(schema.Cascade),
+        schema.OneToOneField("profile", "UserProfile",
+            schema.OnDelete(schema.CascadeCASCADE),
+        ),
     }
 }
 ```
@@ -186,9 +184,10 @@ type Post struct {
 
 func (Post) Relations() []schema.Relation {
     return []schema.Relation{
-        relations.ManyToMany("tags", "Tag").
-            Through("post_tags").
-            RelatedName("posts"),
+        schema.ManyToManyField("tags", "Tag",
+            schema.Through("post_tags"),
+            schema.RelatedName("posts"),
+        ),
     }
 }
 ```

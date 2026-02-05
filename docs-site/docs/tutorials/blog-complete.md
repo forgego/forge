@@ -28,7 +28,7 @@ A blog with:
 
 - Go 1.25+ installed
 - PostgreSQL running
-- forge CLI installed (`go install github.com/forgego/forge/newforge/cli/cmd@latest`)
+- forge CLI installed (`go install github.com/forgego/forge/cli/cmd@latest`)
 
 ## Step 1: Create the Project
 
@@ -65,8 +65,11 @@ database:
 server:
   host: localhost
   port: 8000
-  
-secret_key: "your-secret-key-here"
+
+security:
+  secret_key: "your-secret-key-here"
+  csrf_secret_key: "your-csrf-secret-here"
+  session_secret: "your-session-secret-here"
 ```
 
 ## Step 3: Define the Models
@@ -77,7 +80,7 @@ Create `models/user.go`:
 package models
 
 import (
-    "github.com/forgego/forge/internal/schema"
+    "github.com/forgego/forge/schema"
     "time"
 )
 
@@ -87,16 +90,16 @@ type User struct {
 
 func (User) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64("id").Primary().AutoIncrement().Build(),
-        schema.String("username").Required().Unique().MaxLength(150).Build(),
-        schema.String("email").Required().Unique().MaxLength(254).Build(),
-        schema.String("first_name").MaxLength(30).Build(),
-        schema.String("last_name").MaxLength(30).Build(),
-        schema.Text("bio").Blank().Build(),
-        schema.String("avatar").Blank().Build(),
-        schema.Bool("is_active").Default(true).Build(),
-        schema.Bool("is_staff").Default(false).Build(),
-        schema.Time("date_joined").AutoNowAdd().Build(),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+        schema.StringField("username", schema.Required(), schema.Unique(), schema.MaxLength(150)),
+        schema.StringField("email", schema.Required(), schema.Unique(), schema.MaxLength(254)),
+        schema.StringField("first_name", schema.MaxLength(30)),
+        schema.StringField("last_name", schema.MaxLength(30)),
+        schema.TextField("bio", schema.Blank()),
+        schema.StringField("avatar", schema.Blank()),
+        schema.BoolField("is_active", schema.Default(true)),
+        schema.BoolField("is_staff", schema.Default(false)),
+        schema.TimeField("date_joined", schema.AutoNowAdd()),
     }
 }
 
@@ -110,10 +113,7 @@ func (User) Meta() schema.Meta {
 }
 
 func (User) Relations() []schema.Relation {
-    return []schema.Relation{
-        schema.HasMany("posts", "Post", "author_id"),
-        schema.HasMany("comments", "Comment", "user_id"),
-    }
+    return []schema.Relation{}
 }
 ```
 
@@ -123,7 +123,7 @@ Create `models/category.go`:
 package models
 
 import (
-    "github.com/forgego/forge/internal/schema"
+    "github.com/forgego/forge/schema"
     "time"
 )
 
@@ -133,12 +133,12 @@ type Category struct {
 
 func (Category) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64("id").Primary().AutoIncrement().Build(),
-        schema.String("name").Required().Unique().MaxLength(100).Build(),
-        schema.String("slug").Required().Unique().MaxLength(100).Build(),
-        schema.Text("description").Blank().Build(),
-        schema.String("color").MaxLength(7).Default("#007bff").Build(),
-        schema.Time("created_at").AutoNowAdd().Build(),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+        schema.StringField("name", schema.Required(), schema.Unique(), schema.MaxLength(100)),
+        schema.StringField("slug", schema.Required(), schema.Unique(), schema.MaxLength(100)),
+        schema.TextField("description", schema.Blank()),
+        schema.StringField("color", schema.MaxLength(7), schema.Default("#007bff")),
+        schema.TimeField("created_at", schema.AutoNowAdd()),
     }
 }
 
@@ -152,9 +152,7 @@ func (Category) Meta() schema.Meta {
 }
 
 func (Category) Relations() []schema.Relation {
-    return []schema.Relation{
-        schema.HasMany("posts", "Post", "category_id"),
-    }
+    return []schema.Relation{}
 }
 ```
 
@@ -164,7 +162,7 @@ Create `models/post.go`:
 package models
 
 import (
-    "github.com/forgego/forge/internal/schema"
+    "github.com/forgego/forge/schema"
     "time"
 )
 
@@ -174,20 +172,20 @@ type Post struct {
 
 func (Post) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64("id").Primary().AutoIncrement().Build(),
-        schema.String("title").Required().MaxLength(200).Build(),
-        schema.String("slug").Required().Unique().MaxLength(200).Build(),
-        schema.Text("content").Required().Build(),
-        schema.Text("excerpt").Blank().Build(),
-        schema.String("featured_image").Blank().Build(),
-        schema.Bool("published").Default(false).Build(),
-        schema.Bool("featured").Default(false).Build(),
-        schema.Int("view_count").Default(0).Build(),
-        schema.Time("published_at").Blank().Build(),
-        schema.Time("created_at").AutoNowAdd().Build(),
-        schema.Time("updated_at").AutoNow().Build(),
-        schema.Int64("author_id").Required().Build(),
-        schema.Int64("category_id").Required().Build(),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+        schema.StringField("title", schema.Required(), schema.MaxLength(200)),
+        schema.StringField("slug", schema.Required(), schema.Unique(), schema.MaxLength(200)),
+        schema.TextField("content", schema.Required()),
+        schema.TextField("excerpt", schema.Blank()),
+        schema.StringField("featured_image", schema.Blank()),
+        schema.BoolField("published", schema.Default(false)),
+        schema.BoolField("featured", schema.Default(false)),
+        schema.Int64Field("view_count", schema.Default(0)),
+        schema.TimeField("published_at", schema.Blank()),
+        schema.TimeField("created_at", schema.AutoNowAdd()),
+        schema.TimeField("updated_at", schema.AutoNow()),
+        schema.Int64Field("author_id", schema.Required()),
+        schema.Int64Field("category_id", schema.Required()),
     }
 }
 
@@ -207,9 +205,14 @@ func (Post) Meta() schema.Meta {
 
 func (Post) Relations() []schema.Relation {
     return []schema.Relation{
-        schema.ForeignKey("author_id", "User", "id"),
-        schema.ForeignKey("category_id", "Category", "id"),
-        schema.HasMany("comments", "Comment", "post_id"),
+        schema.ForeignKeyField("author_id", "User",
+            schema.RelatedName("posts"),
+            schema.OnDelete(schema.CascadeCASCADE),
+        ),
+        schema.ForeignKeyField("category_id", "Category",
+            schema.RelatedName("posts"),
+            schema.OnDelete(schema.CascadeCASCADE),
+        ),
     }
 }
 
@@ -255,7 +258,7 @@ Create `models/comment.go`:
 package models
 
 import (
-    "github.com/forgego/forge/internal/schema"
+    "github.com/forgego/forge/schema"
     "time"
 )
 
@@ -265,13 +268,13 @@ type Comment struct {
 
 func (Comment) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64("id").Primary().AutoIncrement().Build(),
-        schema.Text("content").Required().Build(),
-        schema.Bool("approved").Default(false).Build(),
-        schema.Time("created_at").AutoNowAdd().Build(),
-        schema.Time("updated_at").AutoNow().Build(),
-        schema.Int64("post_id").Required().Build(),
-        schema.Int64("user_id").Required().Build(),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+        schema.TextField("content", schema.Required()),
+        schema.BoolField("approved", schema.Default(false)),
+        schema.TimeField("created_at", schema.AutoNowAdd()),
+        schema.TimeField("updated_at", schema.AutoNow()),
+        schema.Int64Field("post_id", schema.Required()),
+        schema.Int64Field("user_id", schema.Required()),
     }
 }
 
@@ -286,8 +289,14 @@ func (Comment) Meta() schema.Meta {
 
 func (Comment) Relations() []schema.Relation {
     return []schema.Relation{
-        schema.ForeignKey("post_id", "Post", "id"),
-        schema.ForeignKey("user_id", "User", "id"),
+        schema.ForeignKeyField("post_id", "Post",
+            schema.RelatedName("comments"),
+            schema.OnDelete(schema.CascadeCASCADE),
+        ),
+        schema.ForeignKeyField("user_id", "User",
+            schema.RelatedName("comments"),
+            schema.OnDelete(schema.CascadeCASCADE),
+        ),
     }
 }
 ```
@@ -307,7 +316,8 @@ This creates:
 ## Step 5: Create Migrations
 
 ```bash
-forge migrate
+forge makemigrations
+forge migrate up
 ```
 
 This creates the database tables based on your model definitions.
@@ -320,108 +330,168 @@ Create `admin/admin.go`:
 package admin
 
 import (
+    "context"
+    "time"
+
     "github.com/forgego/forge/admin"
     "blog/models"
 )
 
 func RegisterModels() {
     // Register User model
-    admin.RegisterModel(&models.User{}, admin.Config{
-        ListDisplay: []string{"username", "email", "first_name", "last_name", "is_active", "date_joined"},
-        ListFilter: []string{"is_active", "is_staff", "date_joined"},
-        SearchFields: []string{"username", "email", "first_name", "last_name"},
+    admin.Register(&admin.Config[models.User]{
+        ListDisplay: []admin.Field{
+            models.UserFieldsInstance.Username,
+            models.UserFieldsInstance.Email,
+            models.UserFieldsInstance.FirstName,
+            models.UserFieldsInstance.LastName,
+            models.UserFieldsInstance.IsActive,
+            models.UserFieldsInstance.DateJoined,
+        },
+        ListFilter: []admin.Field{
+            models.UserFieldsInstance.IsActive,
+            models.UserFieldsInstance.IsStaff,
+            models.UserFieldsInstance.DateJoined,
+        },
+        SearchFields: []admin.Field{
+            models.UserFieldsInstance.Username,
+            models.UserFieldsInstance.Email,
+            models.UserFieldsInstance.FirstName,
+            models.UserFieldsInstance.LastName,
+        },
         ListPerPage: 25,
-        Ordering: []string{"-date_joined"},
-        Fieldsets: []admin.Fieldset{
-            {
-                Title: "User Information",
-                Fields: []string{"username", "email", "first_name", "last_name"},
-            },
-            {
-                Title: "Profile",
-                Fields: []string{"bio", "avatar"},
-                Classes: []string{"collapse"},
-            },
-            {
-                Title: "Permissions",
-                Fields: []string{"is_active", "is_staff"},
-            },
+        Ordering: []admin.Field{
+            admin.Computed("-date_joined"),
+        },
+        Fieldsets: []admin.Fieldset[models.User]{
+            admin.NewFieldset[models.User]("User Information", "username", "email", "first_name", "last_name"),
+            admin.NewFieldset[models.User]("Profile", "bio", "avatar").WithCollapsed(true),
+            admin.NewFieldset[models.User]("Permissions", "is_active", "is_staff"),
         },
     })
 
     // Register Category model
-    admin.RegisterModel(&models.Category{}, admin.Config{
-        ListDisplay: []string{"name", "slug", "post_count", "created_at"},
-        ListFilter: []string{"created_at"},
-        SearchFields: []string{"name", "description"},
-        Ordering: []string{"name"},
+    admin.Register(&admin.Config[models.Category]{
+        ListDisplay: []admin.Field{
+            models.CategoryFieldsInstance.Name,
+            models.CategoryFieldsInstance.Slug,
+            admin.Computed("post_count"),
+            models.CategoryFieldsInstance.CreatedAt,
+        },
+        ListFilter: []admin.Field{
+            models.CategoryFieldsInstance.CreatedAt,
+        },
+        SearchFields: []admin.Field{
+            models.CategoryFieldsInstance.Name,
+            models.CategoryFieldsInstance.Description,
+        },
+        Ordering: []admin.Field{
+            models.CategoryFieldsInstance.Name,
+        },
         PrepopulatedFields: map[string][]string{
             "slug": {"name"},
         },
     })
 
     // Register Post model
-    admin.RegisterModel(&models.Post{}, admin.Config{
-        ListDisplay: []string{"title", "author", "category", "published", "featured", "view_count", "published_at"},
-        ListFilter: []string{"published", "featured", "author", "category", "published_at"},
-        SearchFields: []string{"title", "content"},
+    admin.Register(&admin.Config[models.Post]{
+        ListDisplay: []admin.Field{
+            models.PostFieldsInstance.Title,
+            models.PostFieldsInstance.AuthorId,
+            models.PostFieldsInstance.CategoryId,
+            models.PostFieldsInstance.Published,
+            models.PostFieldsInstance.Featured,
+            models.PostFieldsInstance.ViewCount,
+            models.PostFieldsInstance.PublishedAt,
+        },
+        ListFilter: []admin.Field{
+            models.PostFieldsInstance.Published,
+            models.PostFieldsInstance.Featured,
+            models.PostFieldsInstance.AuthorId,
+            models.PostFieldsInstance.CategoryId,
+            models.PostFieldsInstance.PublishedAt,
+        },
+        SearchFields: []admin.Field{
+            models.PostFieldsInstance.Title,
+            models.PostFieldsInstance.Content,
+        },
         ListPerPage: 20,
-        Ordering: []string{"-created_at"},
+        Ordering: []admin.Field{
+            admin.Computed("-created_at"),
+        },
         PrepopulatedFields: map[string][]string{
             "slug": {"title"},
         },
-        Fieldsets: []admin.Fieldset{
-            {
-                Title: "Content",
-                Fields: []string{"title", "slug", "content", "excerpt"},
-            },
-            {
-                Title: "Metadata",
-                Fields: []string{"author", "category", "published", "featured"},
-            },
-            {
-                Title: "Media",
-                Fields: []string{"featured_image"},
-                Classes: []string{"collapse"},
-            },
+        Fieldsets: []admin.Fieldset[models.Post]{
+            admin.NewFieldset[models.Post]("Content", "title", "slug", "content", "excerpt"),
+            admin.NewFieldset[models.Post]("Metadata", "author_id", "category_id", "published", "featured"),
+            admin.NewFieldset[models.Post]("Media", "featured_image").WithCollapsed(true),
         },
-        Actions: []admin.Action{
+        Actions: []admin.Action[models.Post]{
             {
-                Name: "publish_posts",
+                Name:        "publish_posts",
+                Label:       "Publish selected posts",
                 Description: "Publish selected posts",
-                Handler: func(queryset admin.QuerySet, form admin.FormData) error {
-                    return queryset.Update(map[string]interface{}{
-                        "published": true,
-                        "published_at": time.Now(),
-                    })
+                Handler: func(ctx context.Context, instances []*models.Post) error {
+                    for _, post := range instances {
+                        post.Published = true
+                        post.PublishedAt = time.Now()
+                        if err := models.PostObjects.Update(ctx, post); err != nil {
+                            return err
+                        }
+                    }
+                    return nil
                 },
             },
             {
-                Name: "unpublish_posts",
+                Name:        "unpublish_posts",
+                Label:       "Unpublish selected posts",
                 Description: "Unpublish selected posts",
-                Handler: func(queryset admin.QuerySet, form admin.FormData) error {
-                    return queryset.Update(map[string]interface{}{
-                        "published": false,
-                    })
+                Handler: func(ctx context.Context, instances []*models.Post) error {
+                    for _, post := range instances {
+                        post.Published = false
+                        if err := models.PostObjects.Update(ctx, post); err != nil {
+                            return err
+                        }
+                    }
+                    return nil
                 },
             },
         },
     })
 
     // Register Comment model
-    admin.RegisterModel(&models.Comment{}, admin.Config{
-        ListDisplay: []string{"post", "user", "content_preview", "approved", "created_at"},
-        ListFilter: []string{"approved", "created_at"},
-        SearchFields: []string{"content"},
-        Ordering: []string{"-created_at"},
-        Actions: []admin.Action{
+    admin.Register(&admin.Config[models.Comment]{
+        ListDisplay: []admin.Field{
+            models.CommentFieldsInstance.PostId,
+            models.CommentFieldsInstance.UserId,
+            admin.Computed("content_preview"),
+            models.CommentFieldsInstance.Approved,
+            models.CommentFieldsInstance.CreatedAt,
+        },
+        ListFilter: []admin.Field{
+            models.CommentFieldsInstance.Approved,
+            models.CommentFieldsInstance.CreatedAt,
+        },
+        SearchFields: []admin.Field{
+            models.CommentFieldsInstance.Content,
+        },
+        Ordering: []admin.Field{
+            admin.Computed("-created_at"),
+        },
+        Actions: []admin.Action[models.Comment]{
             {
-                Name: "approve_comments",
+                Name:        "approve_comments",
+                Label:       "Approve selected comments",
                 Description: "Approve selected comments",
-                Handler: func(queryset admin.QuerySet, form admin.FormData) error {
-                    return queryset.Update(map[string]interface{}{
-                        "approved": true,
-                    })
+                Handler: func(ctx context.Context, instances []*models.Comment) error {
+                    for _, comment := range instances {
+                        comment.Approved = true
+                        if err := models.CommentObjects.Update(ctx, comment); err != nil {
+                            return err
+                        }
+                    }
+                    return nil
                 },
             },
         },
@@ -463,8 +533,8 @@ func (s *UserSerializer) Fields() []serializers.Field {
 
 func (s *UserSerializer) getPostCount(obj interface{}) (interface{}, error) {
     user := obj.(*models.User)
-    count, _ := models.Post.Objects.Filter(
-        models.Post.Fields.AuthorID.Equals(user.ID),
+    count, _ := models.PostObjects.Filter(
+        models.PostFieldsInstance.AuthorID.Equals(user.ID),
     ).Count(context.Background())
     return count, nil
 }
@@ -487,8 +557,8 @@ func (s *CategorySerializer) Fields() []serializers.Field {
 
 func (s *CategorySerializer) getPostCount(obj interface{}) (interface{}, error) {
     category := obj.(*models.Category)
-    count, _ := models.Post.Objects.Filter(
-        models.Post.Fields.CategoryID.Equals(category.ID),
+    count, _ := models.PostObjects.Filter(
+        models.PostFieldsInstance.CategoryID.Equals(category.ID),
     ).Count(context.Background())
     return count, nil
 }
@@ -519,9 +589,9 @@ func (s *PostSerializer) Fields() []serializers.Field {
 
 func (s *PostSerializer) getCommentCount(obj interface{}) (interface{}, error) {
     post := obj.(*models.Post)
-    count, _ := models.Comment.Objects.Filter(
-        models.Comment.Fields.PostID.Equals(post.ID),
-        models.Comment.Fields.Approved.Equals(true),
+    count, _ := models.CommentObjects.Filter(
+        models.CommentFieldsInstance.PostID.Equals(post.ID),
+        models.CommentFieldsInstance.Approved.Equals(true),
     ).Count(context.Background())
     return count, nil
 }
@@ -558,7 +628,7 @@ import (
 func PostViewSet() *api.BaseViewSet {
     return api.NewBaseViewSet(
         &PostSerializer{},
-        models.Post.Objects.All(),
+        models.PostObjects.All(),
         &models.Post{},
     )
 }
@@ -566,7 +636,7 @@ func PostViewSet() *api.BaseViewSet {
 func CategoryViewSet() *api.BaseViewSet {
     return api.NewBaseViewSet(
         &CategorySerializer{},
-        models.Category.Objects.All(),
+        models.CategoryObjects.All(),
         &models.Category{},
     )
 }
@@ -574,15 +644,15 @@ func CategoryViewSet() *api.BaseViewSet {
 func CommentViewSet() *api.BaseViewSet {
     return api.NewBaseViewSet(
         &CommentSerializer{},
-        models.Comment.Objects.All(),
+        models.CommentObjects.All(),
         &models.Comment{},
     )
 }
 
 func PublicPostViewSet() *api.BaseViewSet {
     // Only show published posts
-    queryset := models.Post.Objects.Filter(
-        models.Post.Fields.Published.Equals(true),
+    queryset := models.PostObjects.Filter(
+        models.PostFieldsInstance.Published.Equals(true),
     )
     
     return api.NewBaseViewSet(
@@ -595,8 +665,8 @@ func PublicPostViewSet() *api.BaseViewSet {
 // Custom actions
 func (v *PostViewSet) PublishPost(w http.ResponseWriter, r *http.Request) {
     id := chi.URLParam(r, "id")
-    post, err := models.Post.Objects.Get(context.Background(),
-        models.Post.Fields.ID.Equals(parseID(id)))
+    post, err := models.PostObjects.Get(context.Background(),
+        models.PostFieldsInstance.ID.Equals(parseID(id)))
     if err != nil {
         v.RenderError(w, err, http.StatusNotFound)
         return
@@ -604,7 +674,7 @@ func (v *PostViewSet) PublishPost(w http.ResponseWriter, r *http.Request) {
     
     post.Published = true
     post.PublishedAt = time.Now()
-    models.Post.Objects.Save(post)
+    models.PostObjects.Save(post)
     
     v.RenderResponse(w, post)
 }
@@ -613,10 +683,10 @@ func (v *PostViewSet) LikePost(w http.ResponseWriter, r *http.Request) {
     id := chi.URLParam(r, "id")
     
     // Increment view count
-    err := models.Post.Objects.Filter(
-        models.Post.Fields.ID.Equals(parseID(id)),
+    err := models.PostObjects.Filter(
+        models.PostFieldsInstance.ID.Equals(parseID(id)),
     ).Update(map[string]interface{}{
-        "view_count": models.Post.Fields.ViewCount + 1,
+        "view_count": models.PostFieldsInstance.ViewCount + 1,
     })
     
     if err != nil {
@@ -625,8 +695,8 @@ func (v *PostViewSet) LikePost(w http.ResponseWriter, r *http.Request) {
     }
     
     // Return updated post
-    post, _ := models.Post.Objects.Get(context.Background(),
-        models.Post.Fields.ID.Equals(parseID(id)))
+    post, _ := models.PostObjects.Get(context.Background(),
+        models.PostFieldsInstance.ID.Equals(parseID(id)))
     v.RenderResponse(w, post)
 }
 ```
@@ -796,7 +866,7 @@ func main() {
         IsActive:  true,
         IsStaff:   true,
     }
-    models.User.Objects.Create(admin)
+    models.UserObjects.Create(admin)
     
     author := &models.User{
         Username:  "author",
@@ -806,7 +876,7 @@ func main() {
         Bio:       "Tech writer and blogger",
         IsActive:  true,
     }
-    models.User.Objects.Create(author)
+    models.UserObjects.Create(author)
     
     // Create categories
     tech := &models.Category{
@@ -815,7 +885,7 @@ func main() {
         Description: "Posts about technology and programming",
         Color:       "#007bff",
     }
-    models.Category.Objects.Create(tech)
+    models.CategoryObjects.Create(tech)
     
     lifestyle := &models.Category{
         Name:        "Lifestyle",
@@ -823,7 +893,7 @@ func main() {
         Description: "Posts about lifestyle and personal development",
         Color:       "#28a745",
     }
-    models.Category.Objects.Create(lifestyle)
+    models.CategoryObjects.Create(lifestyle)
     
     // Create posts
     posts := []*models.Post{
@@ -861,7 +931,7 @@ func main() {
     }
     
     for _, post := range posts {
-        models.Post.Objects.Create(post)
+        models.PostObjects.Create(post)
     }
     
     log.Println("Sample data created successfully!")

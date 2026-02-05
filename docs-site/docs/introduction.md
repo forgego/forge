@@ -70,8 +70,8 @@ You get Django's developer experience—the admin interface, the ORM, the sensib
 No more `"SELECT * FROM users WHERE is_active = true"`. Write queries that your compiler checks:
 
 ```go
-users, err := User.Objects.
-    Filter(User.Fields.IsActive.Equals(true)).
+users, err := UserObjects.
+    Filter(UserFieldsInstance.IsActive.Equals(true)).
     OrderBy("-date_joined").
     Limit(10).
     All(ctx)
@@ -84,7 +84,7 @@ If you typo a field name, your code won't compile. That's the point.
 Remember Django's admin? Same thing here. Register your model and you're done:
 
 ```go
-admin.RegisterModel(&models.Post{})
+admin.Register(&admin.Config[models.Post]{})
 ```
 
 Visit `/admin/` and there's your full CRUD interface. Search, filters, pagination—all there.
@@ -106,7 +106,7 @@ Building an API? forge has you covered. It's like Django REST Framework but for 
 ```go
 viewset := api.NewBaseViewSet(
     NewPostSerializer(),
-    Post.Objects.Filter(),
+    PostObjects.Filter(),
     &Post{},
 )
 router.Register("posts", viewset)

@@ -21,7 +21,7 @@ Create `app/blog/models.go`:
 package blog
 
 import (
-    "github.com/forgego/forge/pkg/schema"
+    "github.com/forgego/forge/schema"
 )
 
 type Post struct {
@@ -30,12 +30,12 @@ type Post struct {
 
 func (Post) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64("id").Primary().AutoIncrement().Build(),
-        schema.String("title").Required().MaxLength(200).Build(),
-        schema.Text("content").Required().Build(),
-        schema.Bool("published").Default(false).Build(),
-        schema.Time("created_at").AutoNowAdd().Build(),
-        schema.Time("updated_at").AutoNow().Build(),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+        schema.StringField("title", schema.Required(), schema.MaxLength(200)),
+        schema.TextField("content", schema.Required()),
+        schema.BoolField("published", schema.Default(false)),
+        schema.TimeField("created_at", schema.AutoNowAdd()),
+        schema.TimeField("updated_at", schema.AutoNow()),
     }
 }
 
@@ -73,7 +73,7 @@ This creates:
 
 ```bash
 forge makemigrations
-forge migrate
+forge migrate up
 ```
 
 ## Step 4: Create API handlers
@@ -105,8 +105,8 @@ func RegisterPostRoutes(router chi.Router) {
 func listPosts(w http.ResponseWriter, r *http.Request) {
     ctx := r.Context()
 
-    posts, err := Post.Objects.
-        Filter(Post.Fields.Published.Equals(true)).
+    posts, err := PostObjects.
+        Filter(PostFieldsInstance.Published.Equals(true)).
         OrderBy("-created_at").
         All(ctx)
     if err != nil {
@@ -127,7 +127,7 @@ func createPost(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    if err := Post.Objects.Create(ctx, &post); err != nil {
+    if err := PostObjects.Create(ctx, &post); err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
@@ -146,7 +146,7 @@ func getPost(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    post, err := Post.Objects.Get(ctx, id)
+    post, err := PostObjects.Get(ctx, id)
     if err != nil {
         http.Error(w, "Post not found", http.StatusNotFound)
         return
@@ -165,7 +165,7 @@ func updatePost(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    post, err := Post.Objects.Get(ctx, id)
+    post, err := PostObjects.Get(ctx, id)
     if err != nil {
         http.Error(w, "Post not found", http.StatusNotFound)
         return
@@ -176,7 +176,7 @@ func updatePost(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    if err := Post.Objects.Update(ctx, post); err != nil {
+    if err := PostObjects.Update(ctx, post); err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
@@ -194,13 +194,13 @@ func deletePost(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    post, err := Post.Objects.Get(ctx, id)
+    post, err := PostObjects.Get(ctx, id)
     if err != nil {
         http.Error(w, "Post not found", http.StatusNotFound)
         return
     }
 
-    if err := Post.Objects.Delete(ctx, post); err != nil {
+    if err := PostObjects.Delete(ctx, post); err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
@@ -221,8 +221,8 @@ import (
 func main() {
     // ... your setup code ...
 
-    server.RegisterRoutes(func(router *httplib.Router) {
-        blog.RegisterPostRoutes(router.GetRouter())
+    server.RegisterRoutes(func(router *server.Router) {
+        blog.RegisterPostRoutes(router)
     })
 
     // ... start server ...

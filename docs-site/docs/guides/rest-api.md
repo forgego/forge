@@ -46,7 +46,7 @@ Create a serializer for your model:
 package models
 
 import (
-    "github.com/forgego/forge/pkg/api"
+    "github.com/forgego/forge/api"
 )
 
 // UserSerializer serializes User model
@@ -76,7 +76,7 @@ package api
 
 import (
     "myapp/models"
-    "github.com/forgego/forge/pkg/api"
+    "github.com/forgego/forge/api"
 )
 
 func RegisterUserViewSet(router *api.Router) {
@@ -84,7 +84,7 @@ func RegisterUserViewSet(router *api.Router) {
         func() api.Serializer {
             return models.NewUserSerializer()
         },
-        models.User.Objects.Filter(), // QuerySet
+        models.UserObjects.Filter(), // QuerySet
         &models.User{},                // Model instance
     )
 
@@ -98,8 +98,8 @@ In your `main.go`:
 
 ```go
 import (
-    "github.com/forgego/forge/pkg/api"
-    httplib "github.com/forgego/forge/pkg/http"
+    "github.com/forgego/forge/api"
+    "github.com/forgego/forge/server"
 )
 
 func main() {
@@ -113,7 +113,7 @@ func main() {
     api.RegisterPostViewSet(apiRouter)
 
     // Register on HTTP router
-    server.RegisterRoutes(func(router *httplib.Router) {
+    server.RegisterRoutes(func(router *server.Router) {
         apiRouter.RegisterRoutes(router)
     })
 }
@@ -335,7 +335,7 @@ func NewPostViewSet() *PostViewSet {
     return &PostViewSet{
         BaseViewSet: api.NewBaseViewSet(
             NewPostSerializer,
-            Post.Objects.Filter(),
+            PostObjects.Filter(),
             &Post{},
         ),
     }
@@ -402,8 +402,8 @@ API errors are returned in a consistent format:
 package main
 
 import (
-    "github.com/forgego/forge/pkg/api"
-    httplib "github.com/forgego/forge/pkg/http"
+    "github.com/forgego/forge/api"
+    "github.com/forgego/forge/server"
     "myapp/api"
 )
 
@@ -415,7 +415,7 @@ func main() {
     api.RegisterPostViewSet(apiRouter)
     api.RegisterCategoryViewSet(apiRouter)
 
-    server.RegisterRoutes(func(router *httplib.Router) {
+    server.RegisterRoutes(func(router *server.Router) {
         apiRouter.RegisterRoutes(router)
     })
 }

@@ -33,7 +33,7 @@ Here's a simple example:
 package models
 
 import (
-    "github.com/forgego/forge/pkg/schema"
+    "github.com/forgego/forge/schema"
 )
 
 type Post struct {
@@ -42,11 +42,11 @@ type Post struct {
 
 func (Post) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64("id").Primary().AutoIncrement().Build(),
-        schema.String("title").Required().MaxLength(200).Build(),
-        schema.Text("content").Required().Build(),
-        schema.Bool("published").Default(false).Build(),
-        schema.Time("created_at").AutoNowAdd().Build(),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+        schema.StringField("title", schema.Required(), schema.MaxLength(200)),
+        schema.TextField("content", schema.Required()),
+        schema.BoolField("published", schema.Default(false)),
+        schema.TimeField("created_at", schema.AutoNowAdd()),
     }
 }
 
@@ -74,44 +74,44 @@ forge supports many field types. Here are the most common:
 ### Numeric Fields
 
 ```go
-schema.Int64("id").Primary().AutoIncrement().Build()
-schema.Int32("age").Build()
-schema.Float64("price").Build()
-schema.Decimal("amount").MaxDigits(10).DecimalPlaces(2).Build()
+schema.Int64Field("id", schema.Primary(), schema.AutoIncrement())
+schema.Int32Field("age")
+schema.Float64Field("price")
+schema.DecimalField("amount", schema.MaxDigits(10), schema.DecimalPlaces(2))
 ```
 
 ### String Fields
 
 ```go
-schema.String("username").MaxLength(150).Required().Build()
-schema.Text("description").Build()
-schema.Email("email").Unique().Required().Build()
-schema.URL("website").Build()
-schema.Slug("slug").MaxLength(200).Build()
+schema.StringField("username", schema.MaxLength(150), schema.Required())
+schema.TextField("description")
+schema.EmailField("email", schema.Unique(), schema.Required())
+schema.URLField("website")
+schema.StringField("slug", schema.MaxLength(200))
 ```
 
 ### Boolean Fields
 
 ```go
-schema.Bool("is_active").Default(true).Build()
-schema.Bool("is_staff").Default(false).Build()
+schema.BoolField("is_active", schema.Default(true))
+schema.BoolField("is_staff", schema.Default(false))
 ```
 
 ### Date and Time Fields
 
 ```go
-schema.Time("created_at").AutoNowAdd().Build()
-schema.Time("updated_at").AutoNow().Build()
-schema.Date("birth_date").Build()
-schema.DateTime("last_login").Build()
+schema.TimeField("created_at", schema.AutoNowAdd())
+schema.TimeField("updated_at", schema.AutoNow())
+schema.DateField("birth_date")
+schema.DateTimeField("last_login")
 ```
 
 ### Special Fields
 
 ```go
-schema.UUID("id").Primary().Build()
-schema.JSON("metadata").Build()
-schema.Bytes("avatar").Build()
+schema.UUIDField("id", schema.Primary())
+schema.JSONField("metadata")
+schema.BytesField("avatar")
 ```
 
 ## Field Options
@@ -119,24 +119,22 @@ schema.Bytes("avatar").Build()
 All field types support chainable options:
 
 ```go
-schema.String("username")
-    .Required()
-    .Unique()
-    .Primary()
-    .Index()
-    .DBColumn("user_name")
-    .Default("guest")
-    .MaxLength(150)
-    .MinLength(3)
-    .HelpText("Username")
-    .VerboseName("Username")
-    .Choices(...)
-    .Null()
-    .Blank()
-    .Editable(false)
-    .AutoNow()
-    .AutoNowAdd()
-    .Build()
+schema.StringField(
+    "username",
+    schema.Required(),
+    schema.Unique(),
+    schema.Primary(),
+    schema.DBIndex(),
+    schema.DBColumn("user_name"),
+    schema.Default("guest"),
+    schema.MaxLength(150),
+    schema.MinLength(3),
+    schema.HelpText("Username"),
+    schema.VerboseName("Username"),
+    schema.ChoicesFromPairsOpts("admin", "Admin", "user", "User"),
+    schema.Blank(),
+    schema.Editable(false),
+)
 ```
 
 ## Relations
@@ -144,14 +142,14 @@ schema.String("username")
 ### ForeignKey (Many-to-One)
 
 ```go
-import "github.com/forgego/forge/pkg/schema/relations"
+import "github.com/forgego/forge/schema"
 
 func (Post) Relations() []schema.Relation {
     return []schema.Relation{
-        relations.ForeignKey("author", "User").
-            Required().
-            OnDelete(schema.Cascade).
-            RelatedName("posts"),
+        schema.ForeignKeyField("author", "User",
+            schema.OnDelete(schema.CascadeCASCADE),
+            schema.RelatedName("posts"),
+        ),
     }
 }
 ```
@@ -161,8 +159,9 @@ func (Post) Relations() []schema.Relation {
 ```go
 func (User) Relations() []schema.Relation {
     return []schema.Relation{
-        relations.OneToOne("profile", "UserProfile").
-            OnDelete(schema.Cascade),
+        schema.OneToOneField("profile", "UserProfile",
+            schema.OnDelete(schema.CascadeCASCADE),
+        ),
     }
 }
 ```
@@ -172,9 +171,10 @@ func (User) Relations() []schema.Relation {
 ```go
 func (Post) Relations() []schema.Relation {
     return []schema.Relation{
-        relations.ManyToMany("tags", "Tag").
-            Through("post_tags").
-            RelatedName("posts"),
+        schema.ManyToManyField("tags", "Tag",
+            schema.Through("post_tags"),
+            schema.RelatedName("posts"),
+        ),
     }
 }
 ```
@@ -249,8 +249,7 @@ package models
 
 import (
     "context"
-    "github.com/forgego/forge/pkg/schema"
-    "github.com/forgego/forge/pkg/schema/relations"
+    "github.com/forgego/forge/schema"
 )
 
 type User struct {
@@ -259,49 +258,55 @@ type User struct {
 
 func (User) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64("id").Primary().AutoIncrement().Build(),
-        schema.String("username").
-            Unique().
-            Required().
-            MaxLength(150).
-            HelpText("Required. 150 characters or fewer.").
-            Build(),
-        schema.String("email").
-            Unique().
-            Required().
-            MaxLength(255).
-            HelpText("Required. Must be a valid email address.").
-            Build(),
-        schema.String("password").
-            Required().
-            MaxLength(128).
-            HelpText("Required. Password for authentication.").
-            Build(),
-        schema.Bool("is_active").
-            Default(true).
-            HelpText("Designates whether this user should be treated as active.").
-            Build(),
-        schema.Bool("is_staff").
-            Default(false).
-            HelpText("Designates whether this user can access the admin site.").
-            Build(),
-        schema.Time("date_joined").
-            AutoNowAdd().
-            HelpText("Date when user was created.").
-            Build(),
-        schema.Time("last_login").
-            Null().
-            HelpText("Last login timestamp.").
-            Build(),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+        schema.StringField(
+            "username",
+            schema.Unique(),
+            schema.Required(),
+            schema.MaxLength(150),
+            schema.HelpText("Required. 150 characters or fewer."),
+        ),
+        schema.StringField(
+            "email",
+            schema.Unique(),
+            schema.Required(),
+            schema.MaxLength(255),
+            schema.HelpText("Required. Must be a valid email address."),
+        ),
+        schema.StringField(
+            "password",
+            schema.Required(),
+            schema.MaxLength(128),
+            schema.HelpText("Required. Password for authentication."),
+        ),
+        schema.BoolField(
+            "is_active",
+            schema.Default(true),
+            schema.HelpText("Designates whether this user should be treated as active."),
+        ),
+        schema.BoolField(
+            "is_staff",
+            schema.Default(false),
+            schema.HelpText("Designates whether this user can access the admin site."),
+        ),
+        schema.TimeField(
+            "date_joined",
+            schema.AutoNowAdd(),
+            schema.HelpText("Date when user was created."),
+        ),
+        schema.TimeField(
+            "last_login",
+            schema.Optional(),
+            schema.HelpText("Last login timestamp."),
+        ),
     }
 }
 
 func (User) Relations() []schema.Relation {
     return []schema.Relation{
-        relations.OneToMany("posts", "Post").
-            RelatedName("author"),
-        relations.OneToOne("profile", "UserProfile").
-            OnDelete(schema.Cascade),
+        schema.OneToOneField("profile", "UserProfile",
+            schema.OnDelete(schema.CascadeCASCADE),
+        ),
     }
 }
 

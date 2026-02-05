@@ -475,30 +475,52 @@ The admin uses Bootstrap 5 and can be customized with CSS:
 ### Blog Admin
 
 ```go
-admin.RegisterModelWithOptions(
-    &models.Post{},
-    admin.WithListDisplay("title", "author", "published", "created_at"),
-    admin.WithSearchFields("title", "content"),
-    admin.WithListFilter("published", "author", "created_at"),
-    admin.WithDateHierarchy("created_at"),
-    admin.WithOrdering("-created_at"),
-)
+admin.Register(&admin.Config[models.Post]{
+    ListDisplay: []admin.Field{
+        models.PostFieldsInstance.Title,
+        models.PostFieldsInstance.Author,
+        models.PostFieldsInstance.Published,
+        models.PostFieldsInstance.CreatedAt,
+    },
+    SearchFields: []admin.Field{
+        models.PostFieldsInstance.Title,
+        models.PostFieldsInstance.Content,
+    },
+    ListFilter: []admin.Field{
+        models.PostFieldsInstance.Published,
+        models.PostFieldsInstance.Author,
+        models.PostFieldsInstance.CreatedAt,
+    },
+    DateHierarchy: "created_at",
+})
 ```
 
 ### User Admin
 
 ```go
-admin.RegisterModelWithOptions(
-    &models.User{},
-    admin.WithListDisplay("username", "email", "is_active", "is_staff", "date_joined"),
-    admin.WithSearchFields("username", "email"),
-    admin.WithListFilter("is_active", "is_staff", "date_joined"),
-    admin.WithFieldsets(
-        admin.Fieldset("Personal Information", "username", "email"),
-        admin.Fieldset("Permissions", "is_active", "is_staff", "is_superuser"),
-    ),
-    admin.WithReadOnlyFields("date_joined", "last_login"),
-)
+admin.Register(&admin.Config[models.User]{
+    ListDisplay: []admin.Field{
+        models.UserFieldsInstance.Username,
+        models.UserFieldsInstance.Email,
+        models.UserFieldsInstance.IsActive,
+        models.UserFieldsInstance.IsStaff,
+        models.UserFieldsInstance.DateJoined,
+    },
+    SearchFields: []admin.Field{
+        models.UserFieldsInstance.Username,
+        models.UserFieldsInstance.Email,
+    },
+    ListFilter: []admin.Field{
+        models.UserFieldsInstance.IsActive,
+        models.UserFieldsInstance.IsStaff,
+        models.UserFieldsInstance.DateJoined,
+    },
+    Fieldsets: []admin.Fieldset[models.User]{
+        admin.NewFieldset[models.User]("Personal Information", "username", "email"),
+        admin.NewFieldset[models.User]("Permissions", "is_active", "is_staff", "is_superuser"),
+    },
+    ReadOnlyFields: []any{"date_joined", "last_login"},
+})
 ```
 
 ## Export Functionality
