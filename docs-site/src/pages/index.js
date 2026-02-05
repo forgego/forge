@@ -53,7 +53,7 @@ export default function Home() {
                 </Link>
                 <Link
                   className={styles.buttonTertiary}
-                  href="https://github.com/forgego/forge"
+                  href="https://github.com/hamidrabedi/foreit"
                   target="_blank">
                   View on GitHub
                 </Link>
@@ -437,7 +437,7 @@ func (Post) Fields() []schema.Field {
                 </Link>
                 <Link
                   className={styles.buttonSecondary}
-                  href="https://github.com/forgego/forge"
+                  href="https://github.com/hamidrabedi/foreit"
                   target="_blank">
                   View on GitHub
                 </Link>

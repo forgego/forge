@@ -11,15 +11,15 @@ const config = {
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here
-  url: 'https://forgego.github.io',
+  url: 'https://hamidrabedi.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployments, it is often '/<projectName>/'
-  baseUrl: '/forge/',
+  baseUrl: '/foreit/',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'forgego', // Usually your GitHub org/user name.
-  projectName: 'forge', // Usually your repo name.
+  organizationName: 'hamidrabedi', // Usually your GitHub org/user name.
+  projectName: 'foreit', // Usually your repo name.
 
   markdown: {
     hooks: {
@@ -46,7 +46,7 @@ const config = {
       ({
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
-          editUrl: 'https://github.com/forgego/forge/tree/main/docs-site/',
+          editUrl: 'https://github.com/hamidrabedi/foreit/tree/main/docs-site/',
           showLastUpdateAuthor: false, // Disable for faster builds
           showLastUpdateTime: false, // Disable for faster builds
         },
@@ -98,7 +98,7 @@ const config = {
             label: 'Full Guides',
           },
           {
-            href: 'https://github.com/forgego/forge',
+            href: 'https://github.com/hamidrabedi/foreit',
             label: 'GitHub',
             position: 'right',
           },
@@ -146,15 +146,15 @@ const config = {
             items: [
               {
                 label: 'GitHub',
-                href: 'https://github.com/forgego/forge',
+                href: 'https://github.com/hamidrabedi/foreit',
               },
               {
                 label: 'Issues',
-                href: 'https://github.com/forgego/forge/issues',
+                href: 'https://github.com/hamidrabedi/foreit/issues',
               },
               {
                 label: 'Discussions',
-                href: 'https://github.com/forgego/forge/discussions',
+                href: 'https://github.com/hamidrabedi/foreit/discussions',
               },
             ],
           },
