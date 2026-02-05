@@ -6,7 +6,7 @@ keywords:
   - queryset reference
   - database queries
   - type-safe queries
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # QuerySet

@@ -8,7 +8,7 @@ const darkCodeTheme = require('prism-react-renderer').themes.dracula;
 const config = {
   title: 'forge - Django-like Go Framework',
   tagline: 'Django-like Go framework with type safety. Build web applications in Go with Django\'s developer experience and Go\'s performance.',
-  favicon: 'img/favicon.ico',
+  favicon: 'favicon.svg',
 
   // Set the production url of your site here
   url: 'https://hamidrabedi.github.io',
@@ -29,7 +29,7 @@ const config = {
   onBrokenLinks: 'warn',
 
   // SEO configuration
-  trailingSlash: false,
+  trailingSlash: true,
   
   // Even if you don't use internalization, you can use this field to set useful
   // metadata like html lang. For example, if your site is in Chinese, you may
@@ -69,7 +69,7 @@ const config = {
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       // SEO: Replace with your project's social card
-      image: 'img/forge-social-card.jpg',
+      image: 'forge-social-card.svg',
       metadata: [
         {name: 'keywords', content: 'go, golang, framework, django, orm, type-safe, web framework, rest api, code generation, postgresql'},
         {name: 'author', content: 'forge Framework'},
@@ -82,7 +82,7 @@ const config = {
         title: 'forge',
         logo: {
           alt: 'forge Logo',
-          src: 'img/logo.svg',
+          src: 'logo.svg',
         },
         items: [
           {

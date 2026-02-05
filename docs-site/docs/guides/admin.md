@@ -7,7 +7,7 @@ keywords:
   - django admin go
   - auto-generated admin
   - forge admin panel
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Admin Interface

@@ -1,5 +1,5 @@
 ---
-sidebar_position: 0
+sidebar_position: 1
 description: Learn about forge, a Django-like Go framework that brings Django's developer experience to Go with full type safety and modern Go features.
 keywords:
   - go framework
@@ -8,7 +8,7 @@ keywords:
   - type-safe orm
   - go web framework
   - forge framework
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Introduction

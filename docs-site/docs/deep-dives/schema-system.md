@@ -7,7 +7,7 @@ keywords:
   - fields
   - relationships
   - hooks
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Schema System

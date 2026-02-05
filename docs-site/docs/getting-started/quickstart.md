@@ -7,7 +7,7 @@ keywords:
   - forge logic
   - forge tutorial
   - get started with forge
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Quick Start Guide

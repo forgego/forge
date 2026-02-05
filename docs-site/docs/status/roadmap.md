@@ -7,7 +7,7 @@ keywords:
   - forge future
   - django go roadmap
   - framework roadmap
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Roadmap

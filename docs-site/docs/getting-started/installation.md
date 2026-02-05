@@ -7,7 +7,7 @@ keywords:
   - setup forge
   - forge cli
   - forge setup
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Installation

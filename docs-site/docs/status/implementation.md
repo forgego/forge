@@ -7,7 +7,7 @@ keywords:
   - forge features
   - django go status
   - framework progress
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Implementation Status

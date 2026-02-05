@@ -8,7 +8,7 @@ keywords:
   - type-safe models
   - forge schema
   - database models
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Models

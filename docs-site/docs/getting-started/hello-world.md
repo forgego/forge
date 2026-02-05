@@ -7,7 +7,7 @@ keywords:
   - forge first app
   - forge quickstart
   - forge example
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Hello World

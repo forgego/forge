@@ -6,7 +6,7 @@ keywords:
   - feature list
   - framework features
   - complete features
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Features Overview

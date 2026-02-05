@@ -8,7 +8,7 @@ keywords:
   - orm features
   - admin interface
   - rest api
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Features Overview

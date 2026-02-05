@@ -6,7 +6,7 @@ keywords:
   - schema interface
   - model definition
   - forge api reference
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Schema

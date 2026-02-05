@@ -11,6 +11,11 @@ const sidebars = {
   gettingStarted: [
     {
       type: 'doc',
+      id: 'index',
+      label: 'Documentation',
+    },
+    {
+      type: 'doc',
       id: 'introduction',
       label: 'Introduction',
     },
