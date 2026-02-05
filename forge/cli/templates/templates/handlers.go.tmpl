@@ -3,19 +3,19 @@ package {{.AppName}}
 import (
 	"net/http"
 
-	httplib "github.com/forgego/forge/pkg/http"
+	"github.com/forgego/forge/server"
 )
 
 // {{.HandlerName}} handles {{.HandlerPath}} requests
 func {{.HandlerName}}(w http.ResponseWriter, r *http.Request) {
 	// Implement your handler logic here
-	httplib.SendJSON(w, http.StatusOK, map[string]string{
+	_ = server.SendJSON(w, http.StatusOK, map[string]string{
 		"message": "{{.HandlerName}} handler",
 	})
 }
 
 // Register{{.HandlerName}}Routes registers routes for {{.HandlerName}}
-func Register{{.HandlerName}}Routes(router *httplib.Router) {
+func Register{{.HandlerName}}Routes(router *server.Router) {
 	router.{{.Method}}("{{.Path}}", {{.HandlerName}})
 }
 

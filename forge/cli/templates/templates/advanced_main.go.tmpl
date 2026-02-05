@@ -3,18 +3,17 @@ package main
 import (
 	"embed"
 	"fmt"
-	"log"
+	stdlog "log"
 	"net/http"
 
-	"github.com/forgego/forge/pkg/config"
-	"github.com/forgego/forge/pkg/db"
-	"github.com/forgego/forge/pkg/logging"
-	httplib "github.com/forgego/forge/pkg/http"
-	// adminv2 "github.com/forgego/forge/pkg/admin"
-	// adminhttp "github.com/forgego/forge/pkg/admin/http"
+	"github.com/forgego/forge/admin"
+	"github.com/forgego/forge/config"
+	"github.com/forgego/forge/db"
+	forgelog "github.com/forgego/forge/log"
+	"github.com/forgego/forge/server"
 )
 
-//go:generate forge discover
+//go:generate forge generate
 
 //go:embed static templates
 var staticFiles embed.FS
@@ -25,47 +24,51 @@ func main() {
 	settings := config.LoadSettings(cfg)
 
 	// Create logger
-	logger, err := logging.NewLogger(cfg.IsDevelopment())
+	logger, err := forgelog.NewLogger(settings.App.Debug)
 	if err != nil {
-		log.Fatal(err)
+		stdlog.Fatal(err)
 	}
 	defer logger.Sync()
 
 	// Connect to database
 	database, err := db.NewDBFromConfig(cfg)
 	if err != nil {
-		log.Fatal(err)
+		stdlog.Fatal(err)
 	}
 	defer database.Close()
+
+	adminSite := admin.DefaultSite
+	uiConfig := adminSite.GetUIConfig()
+	uiConfig.Prefix = settings.Admin.Path
+	adminSite.WithUIConfig(uiConfig)
+	adminSite.SetDB(database)
 
 	// Initialize infrastructure (if using advanced template)
 	// infra.Initialize(cfg, logger)
 
 	// Create server
-	server, err := httplib.NewServer(cfg, settings, logger)
+	srv, err := server.NewServer(cfg, settings, logger)
 	if err != nil {
-		log.Fatal(err)
+		stdlog.Fatal(err)
 	}
 
 	// Register routes
-	server.RegisterRoutes(func(router *httplib.Router) {
+	srv.RegisterRoutes(func(router *server.Router) {
 		// Health check
 		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "Welcome to {{.ProjectName}}!")
 		})
 
 		// Register admin routes
-		// if settings.Admin.Enabled {
-		// 	adminRegistry := admin.GetGlobalRegistry()
-		// 	adminRouter := adminhttp.NewRouter(adminRegistry)
-		// 	adminRouter.RegisterRoutes(router, settings.Admin.Path)
-		// }
+		if settings.Admin.Enabled {
+			router.Mount(settings.Admin.Path, adminSite.Handler())
+		}
 	})
 
 	// Start server
 	fmt.Printf("Starting server on %s:%s\n", settings.Server.Host, settings.Server.Port)
-	if err := server.Start(); err != nil {
-		log.Fatal(err)
+	if err := srv.Start(); err != nil {
+		stdlog.Fatal(err)
 	}
 }
 

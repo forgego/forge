@@ -1,8 +1,8 @@
 package {{.AppName}}
 
 import (
-	"github.com/forgego/forge/pkg/api"
-	httplib "github.com/forgego/forge/pkg/http"
+	"github.com/forgego/forge/api"
+	"github.com/forgego/forge/server"
 )
 
 func init() {
@@ -12,7 +12,7 @@ func init() {
 }
 
 // Register{{.ResourceName}}API registers the {{.ResourceName}} API endpoints
-func Register{{.ResourceName}}API(router *httplib.Router) {
+func Register{{.ResourceName}}API(router *server.Router) {
 	// Create viewset
 	viewset := api.NewBaseViewSet(
 		func() api.Serializer {
