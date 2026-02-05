@@ -1,8 +1,0 @@
-import { createFileRoute } from "@tanstack/react-router";
-
-export const Route = createFileRoute("/$model/create")({
-  component: () => {
-      console.log("Rendering Model New Route");
-      return <div className="p-4 bg-blue-500 text-white">NEW ROUTE RENDERED</div>;
-  },
-});
