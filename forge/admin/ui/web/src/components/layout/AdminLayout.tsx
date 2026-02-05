@@ -1,51 +1,24 @@
-import React from "react";
-import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import React, { useMemo, useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "@tanstack/react-router";
+import { useModels, useConfig } from "../../api/hooks/adminHooks";
+import { Button } from "../ui/button";
 import {
-  Bell,
-  ChevronLeft,
-  ChevronRight,
   LayoutDashboard,
   LogOut,
   Menu,
-  SlidersHorizontal,
-  Star,
   Database,
   Bell,
   Package,
   ChevronDown,
-  PanelLeftOpen,
   Star,
   ChevronLeft,
   ChevronRight,
-  Plus,
 } from "lucide-react";
-
-import { useConfig, useModels } from "../../api/hooks/adminHooks";
 import { cn } from "../../lib/utils";
-import { Button } from "../ui/button";
+
 import { GlobalSearch } from "./GlobalSearch";
 import { ThemeCustomizer } from "../../features/theme/ThemeCustomizer";
 
-const storageKey = "forge.admin.pinnedModels";
-
-type ModelGroup = {
-  id: string;
-  label: string;
-  models: any[];
-};
-type QuickAction = {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  hidden?: boolean;
-  icon?: React.ReactNode;
-  ariaLabel?: string;
-};
-const buildSectionId = (label: string) =>
-  `models-${label
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")}`;
 const normalizeAdminPath = (path?: string) =>
   path?.startsWith("/admin/") ? path.substring(6) : path;
 
@@ -54,24 +27,18 @@ const isExternalIcon = (icon?: string) =>
 
 export default function AdminLayout({
   children,
-  quickActions = [],
 }: {
   children: React.ReactNode;
-  quickActions?: QuickAction[];
 }) {
   const { data: modelsData } = useModels();
   const { data: configData } = useConfig();
-  const location = useLocation();
   const navigate = useNavigate();
-
-  const [sidebarOpen, setSidebarOpen] = React.useState(true);
-  const [sidebarCompact, setSidebarCompact] = React.useState(false);
-  const [pinnedModels, setPinnedModels] = React.useState<string[]>(() => {
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarCompact, setSidebarCompact] = useState(true);
   const [pinnedModels, setPinnedModels] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
-    const stored = localStorage.getItem(storageKey);
+    const stored = localStorage.getItem("forge.admin.pinnedModels");
     if (!stored) return [];
     try {
       const parsed = JSON.parse(stored);
@@ -80,14 +47,6 @@ export default function AdminLayout({
       return [];
     }
   });
-
-  const models = modelsData?.models ?? [];
-  const plugins = configData?.plugins ?? [];
-  const currentPath = location.pathname.replace(/^\/admin/, "") || "/";
-
-  React.useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify(pinnedModels));
-  }, [pinnedModels]);
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({});
@@ -97,9 +56,6 @@ export default function AdminLayout({
     navigate({ to: "/login" });
   };
 
-  const isActive = (path: string) => currentPath === path;
-
-  const handleTogglePin = (modelName: string) => {
   const isEntryMatch = (entry: any): boolean => {
     const normalizedPath = normalizeAdminPath(entry.path);
     return Boolean(normalizedPath && normalizedPath === location.pathname);
@@ -158,10 +114,9 @@ export default function AdminLayout({
       }
     }, [location.pathname, item, hasChildren]);
 
-    const handleActivate = () => {
+    const handleClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
       if (hasChildren) {
-        setExpanded((prev) => !prev);
-        return;
         setExpanded(!expanded);
       } else {
         const path = normalizeAdminPath(item.path);
@@ -169,23 +124,13 @@ export default function AdminLayout({
           navigate({ to: path });
         }
       }
-      const path = item.path.startsWith("/admin/")
-        ? item.path.substring(6)
-        : item.path;
-      navigate({ to: path });
     };
 
     return (
       <div>
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            handleActivate();
-          }}
+        <div
+          onClick={handleClick}
           className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer text-sm group select-none mb-1 w-full text-left",
-            location.pathname === item.path &&
             "flex items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer text-sm group select-none mb-1",
             isMenuEntryActive(item) &&
               "bg-sidebar-accent text-sidebar-accent-foreground font-medium",
@@ -194,19 +139,16 @@ export default function AdminLayout({
           )}
           style={{
             paddingLeft:
-              depth === 0 || compact ? "0.75rem" : `${depth * 1 + 0.75}rem`,
               depth === 0 || compact
                 ? "0.75rem"
                 : `${depth * 1 + 0.75}rem`,
           }}
           title={compact ? item.label : undefined}
           aria-label={compact ? item.label : undefined}
-          aria-expanded={hasChildren ? expanded : undefined}
         >
           {depth === 0 && (
             <Package className="h-4 w-4 text-muted-foreground group-hover:text-foreground shrink-0" />
           )}
-          {compact && depth > 0 && (
           {compact && depth > 0 ? (
             <div className="h-6 w-6 rounded-md bg-muted/70 border border-border/60 flex items-center justify-center text-[10px] font-semibold text-muted-foreground group-hover:text-foreground">
               {item.label?.charAt(0).toUpperCase()}
@@ -214,7 +156,6 @@ export default function AdminLayout({
           ) : (
             <span className="flex-1 truncate">{item.label}</span>
           )}
-          {!compact && <span className="flex-1 truncate">{item.label}</span>}
           {hasChildren && !compact && (
             <ChevronDown
               className={cn(
@@ -223,7 +164,6 @@ export default function AdminLayout({
               )}
             />
           )}
-        </button>
         </div>
         {hasChildren && expanded && !compact && (
           <div className="space-y-1 pt-1">
@@ -263,15 +203,12 @@ export default function AdminLayout({
     );
   };
 
-  const groupedModels = React.useMemo<ModelGroup[]>(() => {
-    const groups = new Map<string, ModelGroup>();
+  const formatGroupLabel = (value: string) =>
+    value
+      .replace(/[_-]+/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
 
-    const formatLabel = (value: string) =>
-      value
-        .replace(/[_-]+/g, " ")
-        .replace(/\b\w/g, (char) => char.toUpperCase());
-
-  const modelGroups = useMemo(() => {
+  const groupByModel = useMemo(() => {
     const configGroups =
       configData?.model_groups ??
       configData?.modelGroups ??
@@ -298,84 +235,46 @@ export default function AdminLayout({
       });
     }
 
-    const grouped = new Map<
-      string,
-      { id: string; label: string; models: any[] }
-    >();
+    const grouped = new Map<string, any[]>();
     models.forEach((model: any) => {
-      let groupKey = modelGroupMap.get(model.name) ?? "Other";
-      if (!modelGroupMap.has(model.name)) {
+      const configLabel = modelGroupMap.get(model.name);
+      const derivedGroup = (() => {
         if (model.name.includes(".")) {
-          groupKey = model.name.split(".")[0];
-        } else if (model.name.includes("_")) {
-          groupKey = model.name.split("_")[0];
+          return model.name.split(".")[0];
         }
-      }
-
-      const id = `models-${groupKey.toLowerCase()}`;
-      if (!groups.has(id)) {
-        groups.set(id, {
-          id,
-          label: formatLabel(groupKey),
-          models: [],
-        });
-      }
-      groups.get(id)?.models.push(model);
-    });
-
-    return Array.from(groups.values())
+        if (model.name.includes("__")) {
+          return model.name.split("__")[0];
+        }
         if (model.name.includes("_")) {
           return model.name.split("_")[0];
         }
         return "Other";
       })();
       const label = formatGroupLabel(configLabel || derivedGroup);
-      if (!grouped.has(label)) {
-        grouped.set(label, {
-          id: buildSectionId(label),
-          label,
-          models: [],
-        });
-      }
-      grouped.get(label)?.models.push(model);
+      const existing = grouped.get(label) || [];
+      existing.push(model);
+      grouped.set(label, existing);
     });
 
-    return Array.from(grouped.values())
-      .map((group) => ({
-        ...group,
-        models: group.models.sort((a: any, b: any) =>
+    return Array.from(grouped.entries())
+      .map(([label, groupModels]) => ({
+        label,
+        models: groupModels.sort((a: any, b: any) =>
           a.verbose_name_plural.localeCompare(b.verbose_name_plural)
         ),
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [configData, models]);
 
-  const pinned = React.useMemo(
+  const pluginSections = useMemo(
     () =>
-      pinnedModels
-        .map((name) => models.find((model: any) => model.name === name))
-        .filter(Boolean),
-    [models, pinnedModels]
-  );
-  const modelGroupLookup = useMemo(() => {
-    const lookup = new Map<string, string>();
-    modelGroups.forEach((group) => {
-      group.models.forEach((model: any) => {
-        lookup.set(model.name, group.id);
-      });
-    });
-    return lookup;
-  }, [modelGroups]);
-
-  const normalizedPluginEntries = React.useMemo(
-    () =>
-      plugins.flatMap((plugin: any) =>
-        (plugin.menuEntries ?? []).map((entry: any) => ({
-          ...entry,
-          path: entry.path.replace("/admin", ""),
-          pluginId: plugin.id,
-        }))
-      ),
+      plugins
+        .filter((plugin: any) => plugin.menuEntries?.length)
+        .map((plugin: any) => ({
+          id: `plugin-${plugin.name}`,
+          label: plugin.label || plugin.name,
+          entries: plugin.menuEntries,
+        })),
     [plugins]
   );
 
@@ -384,8 +283,16 @@ export default function AdminLayout({
       location.pathname.startsWith(`/${model.name}`)
     );
     if (!activeModel) return null;
-    return modelGroupLookup.get(activeModel.name) ?? null;
-  }, [location.pathname, models, modelGroupLookup]);
+    let groupKey = "";
+    if (activeModel.name.includes(".")) {
+      groupKey = activeModel.name.split(".")[0];
+    } else if (activeModel.name.includes("_")) {
+      groupKey = activeModel.name.split("_")[0];
+    } else {
+      groupKey = activeModel.name.charAt(0).toUpperCase();
+    }
+    return `models-${groupKey.toLowerCase()}`;
+  }, [location.pathname, models]);
 
   const activePluginSectionId = useMemo(() => {
     const activePlugin = plugins.find((plugin: any) =>
@@ -413,22 +320,6 @@ export default function AdminLayout({
     }));
   }, [activeModelSectionId, activePluginSectionId]);
 
-  const visibleQuickActions = useMemo(
-    () => quickActions.filter((action) => !action.hidden),
-    [quickActions]
-  );
-  const handleModelRowKeyDown = (
-    event: React.KeyboardEvent<HTMLDivElement>,
-    modelName: string
-  ) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      navigate({
-        to: "/$model",
-        params: { model: modelName },
-      });
-    }
-  };
   const showPluginHeader = Boolean(activePluginInfo.plugin);
   const pluginLabel =
     activePluginInfo.plugin?.label || activePluginInfo.plugin?.name;
@@ -439,33 +330,11 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen bg-background flex">
-      {sidebarOpen && (
-        <button
-          type="button"
-          className="fixed inset-0 z-30 bg-background/60 backdrop-blur-sm lg:hidden"
-          aria-label="Close sidebar"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
+      {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 bg-card border-r border-border transition-all duration-200 lg:relative lg:translate-x-0",
-          sidebarCompact ? "w-20" : "w-64",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        <div
-          className={cn(
-            "h-16 flex items-center border-b border-border",
-            sidebarCompact ? "px-3" : "px-4"
-          )}
-        >
-          <div className="flex items-center gap-2 flex-1">
-            <div className="w-8 h-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold">
           "fixed inset-y-0 left-0 z-50 bg-card/95 backdrop-blur-sm border-r border-border transition-all duration-300 ease-in-out lg:relative lg:translate-x-0",
           sidebarCompact ? "lg:w-20" : "lg:w-64",
-          "w-64",
           !sidebarOpen && "-translate-x-full lg:hidden"
         )}
       >
@@ -475,22 +344,14 @@ export default function AdminLayout({
               F
             </div>
             {!sidebarCompact && (
-              <span className="text-lg font-semibold">Forge Admin</span>
+              <span className="text-lg font-bold tracking-tight text-foreground">
+                Forge Admin
+              </span>
             )}
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-            aria-label="Close sidebar"
-          >
-            <Menu className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="hidden lg:inline-flex"
             className="hidden lg:inline-flex text-muted-foreground"
             onClick={() => setSidebarCompact((prev) => !prev)}
             aria-label={sidebarCompact ? "Expand sidebar" : "Collapse sidebar"}
@@ -502,33 +363,25 @@ export default function AdminLayout({
             )}
           </Button>
         </div>
-
-        <div className="p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-64px)]">
-          <GlobalSearch
-            models={models}
-            compact={sidebarCompact}
-            triggerLabel="Search models"
-            className={sidebarCompact ? "w-full" : ""}
-          />
-
+        <div className="p-4 space-y-6 overflow-y-auto max-h-[calc(100vh-140px)] no-scrollbar">
+          <div className="flex items-center justify-between gap-2">
+            <GlobalSearch
+              compact={sidebarCompact}
+              triggerLabel="Command palette"
+              className={sidebarCompact ? "" : "w-full"}
+            />
+            {!sidebarCompact && (
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                Jump to model
+              </span>
+            )}
+          </div>
+          {/* Main Nav */}
           <div className="space-y-1">
             <Link
               to="/"
+              data-testid="nav-dashboard"
               className={cn(
-                "flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted",
-                isActive("/") && "bg-muted font-medium",
-                sidebarCompact && "justify-center"
-              )}
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              {!sidebarCompact && "Dashboard"}
-            </Link>
-            <Link
-              to="/form-playground"
-              className={cn(
-                "flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted",
-                isActive("/form-playground") && "bg-muted font-medium",
-                sidebarCompact && "justify-center"
                 "flex items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-accent hover:text-accent-foreground group mb-1",
                 location.pathname === "/" &&
                   "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
@@ -540,126 +393,30 @@ export default function AdminLayout({
               {!sidebarCompact && (
                 <span className="font-medium text-sm">Dashboard</span>
               )}
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              {!sidebarCompact && "Form Playground"}
             </Link>
           </div>
 
-          {pinned.length > 0 && (
-            <div>
-              {!sidebarCompact && (
-                <p className="px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {/* Pinned Models */}
           {pinnedModels.length > 0 && (
             <div className="space-y-1">
               {!sidebarCompact && (
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">
                   Pinned
-                </p>
+                </h4>
               )}
-              <div className="mt-2 space-y-1">
-                {pinned.map((model: any) => (
-                  <Link
+              {pinnedModels.map((modelName) => {
+                const model = modelByName.get(modelName);
+                if (!model) return null;
+                return (
+                  <div
                     key={model.name}
-                    to="/$model"
-                    params={{ model: model.name }}
-                    className={cn(
-                      "flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted",
-                      isActive(`/${model.name}`) && "bg-muted font-medium",
-                      sidebarCompact && "justify-center"
-                    )}
-                  >
-                    <Star className="h-4 w-4 text-yellow-500" />
-                    {!sidebarCompact && model.verbose_name_plural}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div>
-            {!sidebarCompact && (
-              <p className="px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Models
-              </p>
-            )}
-            <div className="mt-2 space-y-4">
-              {groupedModels.map((group) => (
-                <div key={group.id}>
-                  {!sidebarCompact && (
-                    <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      {group.label}
-                    </p>
-                  )}
-                  <div className="mt-1 space-y-1">
-                    {group.models.map((model: any) => {
-                      const active = isActive(`/${model.name}`);
-                      return (
-                        <div
-                          key={model.name}
-                          className={cn(
-                            "flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted",
-                            active && "bg-muted font-medium",
-                            sidebarCompact && "justify-center"
-                          )}
-                        >
-                          <Link
-                            to="/$model"
-                            params={{ model: model.name }}
-                            className={cn(
-                              "flex-1 truncate",
-                              sidebarCompact && "text-center"
-                            )}
-                          >
-                            {sidebarCompact
-                              ? model.verbose_name_plural
-                                  .charAt(0)
-                                  .toUpperCase()
-                              : model.verbose_name_plural}
-                          </Link>
-                          {!sidebarCompact && (
-                            <button
-                              type="button"
-                              onClick={() => handleTogglePin(model.name)}
-                              aria-label="Pin model"
-                              className="text-muted-foreground hover:text-foreground"
-                            >
-                              <Star
-                                className={cn(
-                                  "h-4 w-4",
-                                  pinnedModels.includes(model.name)
-                                    ? "text-yellow-500"
-                                    : "text-muted-foreground"
-                                )}
-                              />
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {normalizedPluginEntries.length > 0 && (
-            <div>
-              {!sidebarCompact && (
-                <p className="px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     data-testid={`nav-pinned-${model.name}`}
-                    role="button"
-                    tabIndex={0}
                     onClick={() => {
                       navigate({
                         to: "/$model",
                         params: { model: model.name },
                       });
                     }}
-                    onKeyDown={(event) =>
-                      handleModelRowKeyDown(event, model.name)
-                    }
                     className={cn(
                       "flex items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-accent hover:text-accent-foreground cursor-pointer group mb-1",
                       location.pathname.startsWith(`/${model.name}`) &&
@@ -667,28 +424,6 @@ export default function AdminLayout({
                       sidebarCompact && "justify-center px-2"
                     )}
                     title={sidebarCompact ? model.verbose_name_plural : undefined}
-                    aria-label={
-                      sidebarCompact ? model.verbose_name_plural : undefined
-                    }
-                  >
-                    <Star className="h-4 w-4 text-yellow-500" />
-                    {!sidebarCompact && (
-                      <span className="text-sm flex-1 truncate">
-                        {model.verbose_name_plural}
-                      </span>
-                    )}
-                    {!sidebarCompact && (
-                      <button
-                        type="button"
-                        aria-label={`Unpin ${model.verbose_name_plural}`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          togglePinnedModel(model.name);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-primary"
-                      >
-                        <Star className="h-4 w-4" />
-                      </button>
                   >
                     <Star className="h-4 w-4 text-yellow-500" />
                     {!sidebarCompact && (
@@ -709,30 +444,6 @@ export default function AdminLayout({
                 Content Models
               </h4>
             )}
-            {modelGroups.map((group) => {
-              const isExpanded = expandedSections[group.id] ?? false;
-              return (
-                <div key={group.id} className="space-y-1">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedSections((prev) => ({
-                        ...prev,
-                        [group.id]: !isExpanded,
-                      }))
-                    }
-                    className={cn(
-                      "flex items-center w-full gap-2 px-3 py-2 rounded-md text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-all",
-                      sidebarCompact && "justify-center px-2"
-                    )}
-                    title={sidebarCompact ? group.label : undefined}
-                    aria-expanded={isExpanded}
-                    aria-controls={`${group.id}-panel`}
-                  >
-                    <Database className="h-3.5 w-3.5" />
-                    {!sidebarCompact && <span>{group.label}</span>}
-                    {!sidebarCompact && (
-                      <ChevronDown
             {groupByModel.map((group) => (
               <div key={group.label} className="space-y-1">
                 {!sidebarCompact && (
@@ -790,124 +501,14 @@ export default function AdminLayout({
                           togglePinnedModel(model.name);
                         }}
                         className={cn(
-                          "ml-auto h-3 w-3 transition-transform",
-                          isExpanded && "rotate-180"
+                          "opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-primary",
+                          pinnedModels.includes(model.name) &&
+                            "opacity-100 text-yellow-500"
                         )}
-                      />
+                      >
+                        <Star className="h-4 w-4" />
+                      </button>
                     )}
-                  </button>
-                  {isExpanded && (
-                    <div
-                      id={`${group.id}-panel`}
-                      className="space-y-1"
-                      role="region"
-                      aria-label={group.label}
-                    >
-                      {group.models.map((model: any) => {
-                        const canAdd = model.permissions?.add;
-                        return (
-                          <div
-                            key={model.name}
-                            data-testid={`nav-${model.name}`}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => {
-                              navigate({
-                                to: "/$model",
-                                params: { model: model.name },
-                              });
-                            }}
-                            onKeyDown={(event) =>
-                              handleModelRowKeyDown(event, model.name)
-                            }
-                            className={cn(
-                              "flex items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-accent hover:text-accent-foreground cursor-pointer group mb-1 text-sm relative",
-                              location.pathname.startsWith(`/${model.name}`) &&
-                                "bg-accent text-accent-foreground font-medium",
-                              sidebarCompact && "justify-center px-2"
-                            )}
-                            title={
-                              sidebarCompact
-                                ? model.verbose_name_plural
-                                : undefined
-                            }
-                            aria-label={
-                              sidebarCompact
-                                ? model.verbose_name_plural
-                                : undefined
-                            }
-                          >
-                            {sidebarCompact ? (
-                              <div className="h-7 w-7 rounded-md bg-muted/70 border border-border/60 flex items-center justify-center text-xs font-semibold text-muted-foreground group-hover:text-foreground">
-                                {model.verbose_name_plural
-                                  .split(" ")
-                                  .map((part: string) => part[0])
-                                  .join("")
-                                  .slice(0, 2)
-                                  .toUpperCase()}
-                              </div>
-                            ) : (
-                              <>
-                                <Database className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                                <span className="text-sm flex-1 truncate">
-                                  {model.verbose_name_plural}
-                                </span>
-                              </>
-                            )}
-                            {(canAdd || !sidebarCompact) && (
-                              <div
-                                className={cn(
-                                  "flex items-center gap-2",
-                                  sidebarCompact && "absolute right-2"
-                                )}
-                              >
-                                {canAdd && (
-                                  <button
-                                    type="button"
-                                    aria-label={`Create ${model.verbose_name_plural}`}
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      navigate({
-                                        to: "/$model/create",
-                                        params: { model: model.name },
-                                      });
-                                    }}
-                                    className="opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-foreground h-6 w-6 rounded-md border border-border/60 flex items-center justify-center"
-                                  >
-                                    <Plus className="h-3 w-3" />
-                                  </button>
-                                )}
-                                {!sidebarCompact && (
-                                  <button
-                                    type="button"
-                                    aria-label={
-                                      pinnedModels.includes(model.name)
-                                        ? `Unpin ${model.verbose_name_plural}`
-                                        : `Pin ${model.verbose_name_plural}`
-                                    }
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      togglePinnedModel(model.name);
-                                    }}
-                                    className={cn(
-                                      "opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-primary",
-                                      pinnedModels.includes(model.name) &&
-                                        "opacity-100 text-yellow-500"
-                                    )}
-                                  >
-                                    <Star className="h-4 w-4" />
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
                   </div>
                 ))}
               </div>
@@ -920,27 +521,9 @@ export default function AdminLayout({
               {!sidebarCompact && (
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">
                   Plugins
-                </p>
+                </h4>
               )}
-              <div className="mt-2 space-y-1">
-                {normalizedPluginEntries.map((entry: any) => (
-                  <Link
-                    key={`${entry.pluginId}-${entry.path}`}
-                    to={entry.path}
-                    className={cn(
-                      "flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted",
-                      isActive(entry.path) && "bg-muted font-medium",
-                      sidebarCompact && "justify-center"
-                    )}
-                  >
-                    {!sidebarCompact && entry.label}
-                    {sidebarCompact && entry.label?.charAt(0).toUpperCase()}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-              {pluginSections.map((section) => {
+              {pluginSections.map((section: any) => {
                 const isExpanded = expandedSections[section.id] ?? false;
                 return (
                   <div key={section.id} className="space-y-1">
@@ -958,7 +541,6 @@ export default function AdminLayout({
                       )}
                       title={sidebarCompact ? section.label : undefined}
                       aria-expanded={isExpanded}
-                      aria-controls={`${section.id}-panel`}
                     >
                       <Package className="h-3.5 w-3.5" />
                       {!sidebarCompact && <span>{section.label}</span>}
@@ -972,12 +554,6 @@ export default function AdminLayout({
                       )}
                     </button>
                     {isExpanded && (
-                      <div
-                        id={`${section.id}-panel`}
-                        className="space-y-1"
-                        role="region"
-                        aria-label={section.label}
-                      >
                       <div className="space-y-1">
                         {section.entries.map((entry: any, idx: number) => (
                           <SidebarItem
@@ -1013,60 +589,19 @@ export default function AdminLayout({
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-h-screen">
-        <header className="h-16 border-b border-border flex items-center justify-between px-4 gap-4 bg-card/80 backdrop-blur-md sticky top-0 z-40">
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col min-h-screen overflow-hidden bg-muted/20">
+        <header className="h-16 border-b border-border/50 flex items-center px-6 bg-card/80 backdrop-blur-md sticky top-0 z-40 shrink-0 gap-4">
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden"
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Open sidebar"
-          >
-            <Menu className="h-4 w-4" />
-          </Button>
-          <div className="flex-1 max-w-xl hidden md:block">
-            <GlobalSearch models={models} />
-          </div>
-          <div className="flex items-center gap-2">
             className="lg:hidden text-muted-foreground"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            aria-label={sidebarOpen ? "Close menu" : "Open menu"}
           >
-            {sidebarOpen ? (
-              <PanelLeftOpen className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
+            <Menu className="h-5 w-5" />
           </Button>
 
           <GlobalSearch models={models} />
-          {visibleQuickActions.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Quick Actions
-              </span>
-              <div className="flex items-center gap-2">
-                {visibleQuickActions.map((action) => (
-                  <Button
-                    key={action.label}
-                    variant="outline"
-                    size="sm"
-                    className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest"
-                    onClick={action.onClick}
-                    disabled={action.disabled}
-                    aria-label={action.ariaLabel || action.label}
-                  >
-                    {action.icon && (
-                      <span className="mr-2 flex items-center">
-                        {action.icon}
-                      </span>
-                    )}
-                    {action.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {showPluginHeader && (
             <div className="hidden md:flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -1092,13 +627,13 @@ export default function AdminLayout({
               variant="ghost"
               size="icon"
               className="rounded-full relative text-muted-foreground hover:text-foreground"
-              aria-label="Notifications"
             >
               <Bell className="h-4 w-4" />
               <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-destructive rounded-full border-2 border-card" />
             </Button>
-            <div className="hidden sm:flex items-center gap-3 pl-2">
-              <div className="text-right">
+            <div className="h-6 w-[1px] bg-border mx-2" />
+            <div className="flex items-center gap-3 pl-2">
+              <div className="text-right hidden sm:block">
                 <p className="text-sm font-semibold leading-none text-foreground">
                   Admin User
                 </p>
@@ -1110,20 +645,9 @@ export default function AdminLayout({
                 AU
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="text-muted-foreground"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
           </div>
         </header>
 
-        <main className="flex-1 p-6">{children}</main>
-      </div>
         {/* Content Area */}
         <div className="flex-1 p-6 lg:p-8 overflow-auto">
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">

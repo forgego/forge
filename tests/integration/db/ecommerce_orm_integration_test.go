@@ -207,7 +207,9 @@ func TestORMCRUDWithRelations(t *testing.T) {
 
 	require.NoError(t, authorManager.Delete(ctx, author))
 
-	count, err := bookManager.Filter(priceField.Gt(0)).Count(ctx)
+	qs, err := bookManager.Filter(priceField.Gt(0))
+	require.NoError(t, err)
+	count, err := qs.Count(ctx)
 	require.NoError(t, err)
 	require.Equal(t, int64(0), count)
 }

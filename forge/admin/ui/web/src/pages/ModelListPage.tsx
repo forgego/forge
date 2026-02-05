@@ -245,26 +245,8 @@ export default function ModelListPage() {
     "tr"
   );
 
-  const quickActions = [
-    {
-      label: "New",
-      onClick: handleCreateModel,
-      disabled: !metadata.permissions.add,
-    },
-    {
-      label: "Saved Views",
-      onClick: handleSaveView,
-      disabled: saveViewPending,
-    },
-    {
-      label: "Filters",
-      onClick: () => setIsFilterOpen(true),
-      disabled: metadata.filters.length === 0,
-    },
-  ];
-
   return (
-    <AdminLayout quickActions={quickActions}>
+    <AdminLayout>
       <div className="space-y-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <ListTitle className="space-y-1.5">
