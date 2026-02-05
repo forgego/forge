@@ -332,6 +332,9 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 		return "", nil, err
 	}
 
+	// Track args added by this expression
+	startArgCount := len(builder.Args())
+
 	// Build SQL based on operator
 	var sql string
 	
@@ -422,7 +425,10 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 		}
 	}
 
-	return sql, nil, nil
+	// Return only the args added by this expression
+	allArgs := builder.Args()
+	newArgs := allArgs[startArgCount:]
+	return sql, newArgs, nil
 }
 
 // Resolve validates the comparison expression
