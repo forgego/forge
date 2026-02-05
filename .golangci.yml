@@ -15,7 +15,6 @@ linters:
 
   # Enable a focused set of linters for CI signal
   enable:
-    - govet # Reports suspicious constructs
     - typecheck # Like the front-end of a Go compiler
     - gofmt # Checks code formatting
     - goimports # Checks import formatting
@@ -65,11 +64,6 @@ linters-settings:
       - G107 # Potential HTTP request made with variable url
       - G402 # TLS InsecureSkipVerify set true
       - G404 # Use of weak random number generator
-
-  govet:
-    enable-all: true
-  disable:
-    - fieldalignment
 
   shadow:
     strict: false

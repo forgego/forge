@@ -6,9 +6,9 @@ type FieldTrait string
 
 const (
 	TraitNumeric  FieldTrait = "numeric"  // Supports MinValue, MaxValue, AutoIncrement
-	TraitString   FieldTrait = "string"    // Supports MinLength, MaxLength, Choices
-	TraitTemporal FieldTrait = "temporal"  // Supports AutoNow, AutoNowAdd
-	TraitDecimal  FieldTrait = "decimal"   // Supports MaxDigits, DecimalPlaces
+	TraitString   FieldTrait = "string"   // Supports MinLength, MaxLength, Choices
+	TraitTemporal FieldTrait = "temporal" // Supports AutoNow, AutoNowAdd
+	TraitDecimal  FieldTrait = "decimal"  // Supports MaxDigits, DecimalPlaces
 )
 
 // HasTrait checks if a field type has a specific trait

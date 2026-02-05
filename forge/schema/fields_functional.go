@@ -277,4 +277,3 @@ func AutoNowAdd() FieldOpt {
 func WriteOnly() FieldOpt {
 	return func(f *Field) { f.Serialize = false }
 }
-
