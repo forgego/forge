@@ -10,20 +10,20 @@ import (
 type FilterOp string
 
 const (
-	OpAnd    FilterOp = "and"
-	OpOr     FilterOp = "or"
-	OpNot    FilterOp = "not"
-	OpField  FilterOp = "field"
+	OpAnd   FilterOp = "and"
+	OpOr    FilterOp = "or"
+	OpNot   FilterOp = "not"
+	OpField FilterOp = "field"
 )
 
 // FilterNode represents a node in the filter AST
 type FilterNode struct {
-	Op       FilterOp           `json:"op"`
-	Field    string             `json:"field,omitempty"`
-	Lookup   string             `json:"lookup,omitempty"`
-	Value    interface{}        `json:"value,omitempty"`
-	Children []*FilterNode      `json:"children,omitempty"`
-	Metadata *FilterMetadata    `json:"metadata,omitempty"`
+	Op       FilterOp        `json:"op"`
+	Field    string          `json:"field,omitempty"`
+	Lookup   string          `json:"lookup,omitempty"`
+	Value    interface{}     `json:"value,omitempty"`
+	Children []*FilterNode   `json:"children,omitempty"`
+	Metadata *FilterMetadata `json:"metadata,omitempty"`
 }
 
 // FilterMetadata contains metadata about a filter

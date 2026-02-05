@@ -28,20 +28,20 @@ type Component struct {
 
 // LayoutConfig defines how the component should be positioned
 type LayoutConfig struct {
-	ColSpan  int    `json:"col_span,omitempty"`  // Grid column span (1-12)
-	RowSpan  int    `json:"row_span,omitempty"`  // Grid row span
-	Align    string `json:"align,omitempty"`     // start, center, end
-	Justify  string `json:"justify,omitempty"`   // start, center, end, between
-	Padding  string `json:"padding,omitempty"`   // p-4, px-2 etc (Tailwind classes)
-	Margin   string `json:"margin,omitempty"`    // m-4, my-2 etc
-	Class    string `json:"class_name,omitempty"` // Custom CSS classes
+	ColSpan int    `json:"col_span,omitempty"`   // Grid column span (1-12)
+	RowSpan int    `json:"row_span,omitempty"`   // Grid row span
+	Align   string `json:"align,omitempty"`      // start, center, end
+	Justify string `json:"justify,omitempty"`    // start, center, end, between
+	Padding string `json:"padding,omitempty"`    // p-4, px-2 etc (Tailwind classes)
+	Margin  string `json:"margin,omitempty"`     // m-4, my-2 etc
+	Class   string `json:"class_name,omitempty"` // Custom CSS classes
 }
 
 // VisibilityConfig defines when the component should be shown
 type VisibilityConfig struct {
 	Permissions []string `json:"permissions,omitempty"` // User must have these permissions
 	FeatureFlag string   `json:"feature_flag,omitempty"`
-	Condition   string   `json:"condition,omitempty"`   // Simple expression evaluation
+	Condition   string   `json:"condition,omitempty"` // Simple expression evaluation
 }
 
 // NewComponent creates a new base component

@@ -228,7 +228,7 @@ func (c *FakeCommand) fakeAllPending(ctx context.Context, db *db.DB, migrationsP
 		var response string
 		fmt.Scanln(&response)
 		if strings.ToLower(response) != "y" && strings.ToLower(response) != "yes" {
-			fmt.Println("Cancelled")
+			fmt.Println("Canceled")
 			return nil
 		}
 	}

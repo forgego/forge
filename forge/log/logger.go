@@ -236,7 +236,7 @@ func Error(err error) zap.Field {
 func (l *Logger) With(fields ...zapcore.Field) *Logger {
 	return &Logger{
 		Logger: l.Logger.With(fields...),
-		config:  l.config,
+		config: l.config,
 	}
 }
 

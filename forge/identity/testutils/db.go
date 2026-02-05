@@ -28,8 +28,13 @@ func SetupTestDB(t *testing.T) *db.DB {
 	defaultDSN := fmt.Sprintf("postgres://%s:%s@%s:%s/postgres?sslmode=disable",
 		user, password, host, port)
 	defaultDB, err := sql.Open("postgres", defaultDSN)
-	require.NoError(t, err)
+	if err != nil {
+		t.Skipf("PostgreSQL not available: %v. Skipping identity DB tests.", err)
+	}
 	defer defaultDB.Close()
+	if err := defaultDB.Ping(); err != nil {
+		t.Skipf("PostgreSQL not available: %v. Skipping identity DB tests.", err)
+	}
 
 	// Create database
 	_, err = defaultDB.ExecContext(context.Background(), fmt.Sprintf("CREATE DATABASE %s", dbName))
@@ -40,6 +45,10 @@ func SetupTestDB(t *testing.T) *db.DB {
 		user, password, host, port, dbName)
 	sqlDB, err := sql.Open("postgres", dsn)
 	require.NoError(t, err)
+	if err := sqlDB.Ping(); err != nil {
+		sqlDB.Close()
+		t.Skipf("PostgreSQL not available: %v. Skipping identity DB tests.", err)
+	}
 
 	testDB := &db.DB{DB: sqlDB, Driver: "postgres"}
 

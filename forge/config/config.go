@@ -17,7 +17,7 @@ func NewConfig() *Config {
 	v.AddConfigPath(".")
 	v.AddConfigPath("./config")
 	v.AddConfigPath("../config")
-	
+
 	// Set defaults
 	v.SetDefault("app.name", "forge")
 	v.SetDefault("app.env", "development")
@@ -46,10 +46,10 @@ func NewConfig() *Config {
 	v.SetDefault("admin.title", "forge Admin")
 	v.SetDefault("admin.header_title", "forge")
 	v.SetDefault("admin.site_name", "forge")
-	
+
 	// Read config file (ignore errors if file doesn't exist)
 	_ = v.ReadInConfig()
-	
+
 	return &Config{Viper: v}
 }
 

@@ -224,7 +224,7 @@ func (a *Admin[T]) ListObjects(ctx context.Context, params ListParams) (*Paginat
 		if !applied {
 			// Parse lookup (e.g. price__gt, name__contains)
 			field, lookup := parseLookup(key)
-			
+
 			// Create expression based on lookup
 			var expr orm.Expression
 			f := orm.F(field)
@@ -293,7 +293,7 @@ func (a *Admin[T]) ListObjects(ctx context.Context, params ListParams) (*Paginat
 			default:
 				expr = f.Eq(value)
 			}
-			
+
 			qs = qs.Filter(expr)
 		}
 	}
@@ -385,12 +385,12 @@ func (a *Admin[T]) GetObject(ctx context.Context, id interface{}) (interface{}, 
 func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}) (interface{}, error) {
 	// Create new instance
 	var instance T
-	
+
 	// Map data to instance fields
 	if err := a.decodeData(data, &instance); err != nil {
 		return nil, fmt.Errorf("failed to decode data: %w", err)
 	}
-	
+
 	err := a.SaveModel(ctx, &instance, true)
 	if err != nil {
 		return nil, err
@@ -414,7 +414,7 @@ func (a *Admin[T]) UpdateObject(ctx context.Context, id interface{}, data map[st
 	if err := a.decodeData(data, instance); err != nil {
 		return nil, fmt.Errorf("failed to decode data: %w", err)
 	}
-	
+
 	err = a.SaveModel(ctx, instance, false)
 	if err != nil {
 		return nil, err
@@ -427,7 +427,7 @@ func (a *Admin[T]) DeleteObject(ctx context.Context, id interface{}) error {
 	if err != nil {
 		return err
 	}
-	
+
 	instance, err := a.manager.Get(ctx, intID)
 	if err != nil {
 		return err
@@ -456,7 +456,7 @@ func (a *Admin[T]) ExecuteAction(ctx context.Context, actionName string, ids []i
 		if err != nil {
 			continue // Skip invalid IDs
 		}
-		
+
 		instance, err := a.manager.Get(ctx, intID)
 		if err == nil {
 			instances = append(instances, instance)
@@ -503,7 +503,7 @@ func (a *Admin[T]) LogAction(ctx context.Context, user interface{}, objectID str
 			ChangeStats: changes,
 			UserID:      fmt.Sprintf("%v", a.resolveUserID(user)),
 		}
-		
+
 		return a.config.HistoryManager.LogAction(ctx, entry)
 	}
 	return nil

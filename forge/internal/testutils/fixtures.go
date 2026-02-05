@@ -44,8 +44,8 @@ const (
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 		);
 	`
-    
-    TestModelSchema = `
+
+	TestModelSchema = `
         CREATE TABLE IF NOT EXISTS test_models (
             id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
@@ -60,22 +60,22 @@ const (
 // Fixture helpers
 
 func CreateTestTable(t *testing.T, database *sql.DB) {
-    CreateSchema(t, database, TestModelSchema)
+	CreateSchema(t, database, TestModelSchema)
 }
 
 func CreateUserTable(t *testing.T, database *sql.DB) {
-    CreateSchema(t, database, UserSchema)
+	CreateSchema(t, database, UserSchema)
 }
 
 func CreateCategoryTable(t *testing.T, database *sql.DB) {
-    CreateSchema(t, database, CategorySchema)
+	CreateSchema(t, database, CategorySchema)
 }
 
 func CreateProductTable(t *testing.T, database *sql.DB) {
-    CreateSchema(t, database, ProductSchema)
+	CreateSchema(t, database, ProductSchema)
 }
 
 func CreateEcommerceTables(t *testing.T, database *sql.DB) {
-    CreateCategoryTable(t, database)
-    CreateProductTable(t, database)
+	CreateCategoryTable(t, database)
+	CreateProductTable(t, database)
 }
