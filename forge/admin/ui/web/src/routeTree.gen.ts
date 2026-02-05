@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StyleGuideRouteImport } from './routes/style-guide'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as FormPlaygroundRouteImport } from './routes/form-playground'
 import { Route as ModelRouteRouteImport } from './routes/$model/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ModelIndexRouteImport } from './routes/$model/index'
@@ -26,6 +27,11 @@ const StyleGuideRoute = StyleGuideRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FormPlaygroundRoute = FormPlaygroundRouteImport.update({
+  id: '/form-playground',
+  path: '/form-playground',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ModelRouteRoute = ModelRouteRouteImport.update({
@@ -63,6 +69,7 @@ const PluginsPluginIdPagesPageIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$model': typeof ModelRouteRouteWithChildren
+  '/form-playground': typeof FormPlaygroundRoute
   '/login': typeof LoginRoute
   '/style-guide': typeof StyleGuideRoute
   '/$model/$id': typeof ModelIdRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/form-playground': typeof FormPlaygroundRoute
   '/login': typeof LoginRoute
   '/style-guide': typeof StyleGuideRoute
   '/$model/$id': typeof ModelIdRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$model': typeof ModelRouteRouteWithChildren
+  '/form-playground': typeof FormPlaygroundRoute
   '/login': typeof LoginRoute
   '/style-guide': typeof StyleGuideRoute
   '/$model/$id': typeof ModelIdRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$model'
+    | '/form-playground'
     | '/login'
     | '/style-guide'
     | '/$model/$id'
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/form-playground'
     | '/login'
     | '/style-guide'
     | '/$model/$id'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$model'
+    | '/form-playground'
     | '/login'
     | '/style-guide'
     | '/$model/$id'
@@ -125,6 +137,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ModelRouteRoute: typeof ModelRouteRouteWithChildren
+  FormPlaygroundRoute: typeof FormPlaygroundRoute
   LoginRoute: typeof LoginRoute
   StyleGuideRoute: typeof StyleGuideRoute
   PluginsPluginIdPagesPageIdRoute: typeof PluginsPluginIdPagesPageIdRoute
@@ -144,6 +157,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/form-playground': {
+      id: '/form-playground'
+      path: '/form-playground'
+      fullPath: '/form-playground'
+      preLoaderRoute: typeof FormPlaygroundRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$model': {
@@ -210,6 +230,7 @@ const ModelRouteRouteWithChildren = ModelRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ModelRouteRoute: ModelRouteRouteWithChildren,
+  FormPlaygroundRoute: FormPlaygroundRoute,
   LoginRoute: LoginRoute,
   StyleGuideRoute: StyleGuideRoute,
   PluginsPluginIdPagesPageIdRoute: PluginsPluginIdPagesPageIdRoute,

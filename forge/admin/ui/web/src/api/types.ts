@@ -202,6 +202,8 @@ export interface HistoryEntry {
 
 export interface HistoryResponse {
   entries: HistoryEntry[];
+}
+
 export interface SavedView {
   id: string;
   name: string;

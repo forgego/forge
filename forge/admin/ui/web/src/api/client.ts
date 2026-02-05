@@ -244,6 +244,8 @@ export class AdminAPIClient {
 
     const query = searchParams.toString();
     return `${this.baseURL}/${model}/export${query ? `?${query}` : ""}`;
+  }
+
   // Saved views
   async listSavedViews(model: string): Promise<{ views: SavedView[] }> {
     const response = await this.client.get(`/saved-views/${model}`);

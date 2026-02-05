@@ -1,40 +1,38 @@
 import * as React from "react";
-import { Search, Loader2, FileText, ArrowRight, Database } from "lucide-react";
-import { adminAPI } from "../../api/client";
+import { Search } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
+
 import type { ModelListMetadata } from "../../api/types";
+import { adminAPI } from "../../api/client";
 import { cn } from "../../lib/utils";
 
 type GlobalSearchProps = {
   models?: ModelListMetadata[];
-};
-
-export function GlobalSearch({ models = [] }: GlobalSearchProps) {
   compact?: boolean;
   triggerLabel?: string;
   className?: string;
 };
 
 export function GlobalSearch({
+  models = [],
   compact = false,
   triggerLabel = "Search...",
   className,
 }: GlobalSearchProps) {
+  const navigate = useNavigate();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [results, setResults] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
-  const navigate = useNavigate();
-  const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((prev) => !prev);
+        setOpen(true);
         setTimeout(() => inputRef.current?.focus(), 0);
-        return;
       }
       if (
         e.key === "/" &&
@@ -55,7 +53,7 @@ export function GlobalSearch({
   }, []);
 
   React.useEffect(() => {
-    if (!open || !query) {
+    if (!open || query.trim() === "") {
       setResults([]);
       return;
     }
@@ -70,12 +68,11 @@ export function GlobalSearch({
       } finally {
         setIsLoading(false);
       }
-    }, 300);
+    }, 250);
 
     return () => clearTimeout(timer);
-  }, [query, open]);
+  }, [open, query]);
 
-  // Click outside
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -89,186 +86,105 @@ export function GlobalSearch({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSelect = (item: any) => {
-    const path = item.url;
-    navigate({ to: path });
-    setOpen(false);
-    setQuery("");
-  };
-
   const handleModelSelect = (model: ModelListMetadata) => {
     navigate({ to: "/$model", params: { model: model.name } });
     setOpen(false);
     setQuery("");
   };
 
-  const filteredModels = React.useMemo(() => {
-    if (!query) {
-      return models;
+  const handleResultSelect = (item: any) => {
+    if (item.url) {
+      navigate({ to: item.url.replace("/admin", "") });
     }
-    const lowerQuery = query.toLowerCase();
-    return models.filter(
-      (model) =>
-        model.verbose_name_plural.toLowerCase().includes(lowerQuery) ||
-        model.name.toLowerCase().includes(lowerQuery)
-    );
-  }, [models, query]);
+    setOpen(false);
+    setQuery("");
+  };
 
   return (
-    <>
+    <div className={cn("relative", className)}>
       <button
+        type="button"
+        className={cn(
+          "flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground",
+          compact ? "h-9 w-9 justify-center p-0" : "w-full"
+        )}
         onClick={() => {
           setOpen(true);
           setTimeout(() => inputRef.current?.focus(), 0);
         }}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted transition-all group w-48 lg:w-64"
+        aria-label="Open search"
       >
         <Search className="h-4 w-4" />
-        <span className="text-sm font-medium">Search models...</span>
-        <div className="ml-auto flex items-center gap-1">
-          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-            <span className="text-xs">⌘</span>K
-          </kbd>
-          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-            /
-          </kbd>
-        </div>
-        onClick={() => setOpen(true)}
-        aria-label="Open command palette"
-        aria-keyshortcuts="Control+K Meta+K"
-        className={
-          compact
-            ? `flex items-center justify-center h-9 w-9 rounded-md bg-muted/50 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted transition-all ${className ?? ""}`
-            : `flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted transition-all group w-48 lg:w-64 ${className ?? ""}`
-        }
-      >
-        <Search className="h-4 w-4" />
-        {!compact && (
-          <>
-            <span className="text-sm font-medium">{triggerLabel}</span>
-            <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-              <span className="text-xs">⌘</span>K
-            </kbd>
-          </>
-        )}
+        {!compact && <span>{triggerLabel}</span>}
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] bg-background/70 backdrop-blur-sm">
           <div className="flex items-start justify-center pt-[15vh] px-4">
             <div
               ref={containerRef}
-              className="w-full max-w-xl bg-card border border-border/50 rounded-2xl shadow-2xl shadow-black/20 overflow-hidden animate-in zoom-in-95 duration-200"
+              className="w-full max-w-xl rounded-xl border border-border bg-card shadow-xl"
             >
-              <div className="flex items-center p-4 border-b border-border/50">
-                <Search className="h-5 w-5 text-muted-foreground mr-3" />
+              <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+                <Search className="h-4 w-4 text-muted-foreground" />
                 <input
                   ref={inputRef}
-                  autoFocus
-                  placeholder="Search models and records..."
-                  className="flex-1 bg-transparent border-none outline-none text-lg font-medium placeholder:text-muted-foreground"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search models and records..."
+                  className="w-full bg-transparent text-sm outline-none"
                 />
                 {isLoading && (
-                  <Loader2 className="h-5 w-5 animate-spin text-primary ml-2" />
+                  <span className="text-xs text-muted-foreground">Loading</span>
                 )}
               </div>
 
-              <div className="max-h-[60vh] overflow-y-auto">
-                {!query && (
-                  <div className="p-8 text-center">
-                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <FileText className="h-6 w-6 text-primary" />
-                    </div>
-                    <p className="text-sm font-bold text-foreground/80">
-                      Search Forge Models
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Start typing to see models and records
-                    </p>
+              <div className="max-h-[60vh] overflow-y-auto p-2">
+                {query.trim() === "" && (
+                  <div className="p-4 text-xs text-muted-foreground">
+                    Start typing to search.
                   </div>
                 )}
 
-                {query && results.length === 0 && filteredModels.length === 0 && !isLoading && (
-                  <div className="p-8 text-center text-muted-foreground">
-                    No results found for "{query}"
+                {query.trim() !== "" && results.length === 0 && (
+                  <div className="p-4 text-xs text-muted-foreground">
+                    No matching records.
                   </div>
                 )}
 
-                {filteredModels.length > 0 && (
-                  <div className="p-2">
-                    <div className="px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
+                {results.map((item, index) => (
+                  <button
+                    key={`${item.url}-${index}`}
+                    type="button"
+                    onClick={() => handleResultSelect(item)}
+                    className="block w-full text-left rounded-md px-3 py-2 text-sm hover:bg-muted"
+                  >
+                    {item.label || item.title || item.url}
+                  </button>
+                ))}
+
+                {query.trim() === "" && models.length > 0 && (
+                  <div className="border-t border-border pt-2 mt-2">
+                    <p className="px-3 pb-1 text-[11px] uppercase tracking-wide text-muted-foreground">
                       Models
-                    </div>
-                    {filteredModels.map((model) => (
+                    </p>
+                    {models.map((model) => (
                       <button
                         key={model.name}
+                        type="button"
                         onClick={() => handleModelSelect(model)}
-                        className={cn(
-                          "w-full flex items-center justify-between p-3 rounded-xl hover:bg-accent hover:text-accent-foreground transition-all text-left group/item",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                        )}
+                        className="block w-full text-left rounded-md px-3 py-2 text-sm hover:bg-muted"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-background border border-border/50 flex items-center justify-center">
-                            <Database className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                          <div>
-                            <span className="text-sm font-medium">
-                              {model.verbose_name_plural}
-                            </span>
-                            <p className="text-xs text-muted-foreground">
-                              {model.name}
-                            </p>
-                          </div>
-                        </div>
-                        <ArrowRight className="h-4 w-4 opacity-0 group-hover/item:opacity-100 -translate-x-2 group-hover/item:translate-x-0 transition-all text-primary" />
+                        {model.verbose_name_plural}
                       </button>
                     ))}
                   </div>
                 )}
-
-                {results.map((group) => (
-                  <div key={group.model} className="p-2">
-                    <div className="px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
-                      {group.model}
-                    </div>
-                    {group.items.map((item: any) => (
-                      <button
-                        key={item.url}
-                        onClick={() => handleSelect(item)}
-                        className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-accent hover:text-accent-foreground transition-all text-left group/item"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-background border border-border/50 flex items-center justify-center">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                          <span className="text-sm font-medium">
-                            {item.title}
-                          </span>
-                        </div>
-                        <ArrowRight className="h-4 w-4 opacity-0 group-hover/item:opacity-100 -translate-x-2 group-hover/item:translate-x-0 transition-all text-primary" />
-                      </button>
-                    ))}
-                  </div>
-                ))}
-              </div>
-
-              <div className="p-3 bg-muted/20 border-t border-border/10 flex items-center justify-between">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                  Forge Deep Search Engine
-                </p>
-                <div className="flex gap-2">
-                  <span className="text-[10px] bg-background px-1.5 py-0.5 rounded border border-border/50 text-muted-foreground">
-                    ESC to close
-                  </span>
-                </div>
               </div>
             </div>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
