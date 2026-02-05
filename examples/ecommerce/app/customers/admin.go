@@ -28,6 +28,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*CustomerGroup) error {
 					for _, group := range instances {
 						group.IsActive = true
+						if err := CustomerGroupObjects.Update(ctx, group); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -62,6 +65,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*Customer) error {
 					for _, customer := range instances {
 						customer.IsActive = true
+						if err := CustomerObjects.Update(ctx, customer); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -90,6 +96,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*Address) error {
 					for _, address := range instances {
 						address.IsDefaultShipping = true
+						if err := AddressObjects.Update(ctx, address); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -118,6 +127,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*WishList) error {
 					for _, wishList := range instances {
 						wishList.IsPublic = true
+						if err := WishListObjects.Update(ctx, wishList); err != nil {
+							return err
+						}
 					}
 					return nil
 				},

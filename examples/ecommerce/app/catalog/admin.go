@@ -39,6 +39,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*Category) error {
 					for _, category := range instances {
 						category.IsActive = true
+						if err := CategoryObjects.Update(ctx, category); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -74,6 +77,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*Brand) error {
 					for _, brand := range instances {
 						brand.IsActive = true
+						if err := BrandObjects.Update(ctx, brand); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -113,7 +119,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*Product) error {
 					for _, p := range instances {
 						p.IsActive = true
-						// Save would be handled by a manager call or similar depending on ORM context
+						if err := ProductObjects.Update(ctx, p); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -124,6 +132,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*Product) error {
 					for _, p := range instances {
 						p.IsActive = false
+						if err := ProductObjects.Update(ctx, p); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -156,6 +167,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*ProductVariant) error {
 					for _, variant := range instances {
 						variant.IsActive = true
+						if err := ProductVariantObjects.Update(ctx, variant); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -183,6 +197,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*ProductImage) error {
 					for _, image := range instances {
 						image.IsPrimary = true
+						if err := ProductImageObjects.Update(ctx, image); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
