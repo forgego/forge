@@ -10,15 +10,22 @@ import {
   Bell,
   Package,
   ChevronDown,
+  PanelLeftOpen,
   Star,
   ChevronLeft,
   ChevronRight,
+  Plus,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 import { GlobalSearch } from "./GlobalSearch";
 import { ThemeCustomizer } from "../../features/theme/ThemeCustomizer";
 
+const buildSectionId = (label: string) =>
+  `models-${label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")}`;
 const normalizeAdminPath = (path?: string) =>
   path?.startsWith("/admin/") ? path.substring(6) : path;
 
@@ -114,9 +121,10 @@ export default function AdminLayout({
       }
     }, [location.pathname, item, hasChildren]);
 
-    const handleClick = (e: React.MouseEvent) => {
-      e.stopPropagation();
+    const handleActivate = () => {
       if (hasChildren) {
+        setExpanded((prev) => !prev);
+        return;
         setExpanded(!expanded);
       } else {
         const path = normalizeAdminPath(item.path);
@@ -124,13 +132,23 @@ export default function AdminLayout({
           navigate({ to: path });
         }
       }
+      const path = item.path.startsWith("/admin/")
+        ? item.path.substring(6)
+        : item.path;
+      navigate({ to: path });
     };
 
     return (
       <div>
-        <div
-          onClick={handleClick}
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            handleActivate();
+          }}
           className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer text-sm group select-none mb-1 w-full text-left",
+            location.pathname === item.path &&
             "flex items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer text-sm group select-none mb-1",
             isMenuEntryActive(item) &&
               "bg-sidebar-accent text-sidebar-accent-foreground font-medium",
@@ -139,16 +157,19 @@ export default function AdminLayout({
           )}
           style={{
             paddingLeft:
+              depth === 0 || compact ? "0.75rem" : `${depth * 1 + 0.75}rem`,
               depth === 0 || compact
                 ? "0.75rem"
                 : `${depth * 1 + 0.75}rem`,
           }}
           title={compact ? item.label : undefined}
           aria-label={compact ? item.label : undefined}
+          aria-expanded={hasChildren ? expanded : undefined}
         >
           {depth === 0 && (
             <Package className="h-4 w-4 text-muted-foreground group-hover:text-foreground shrink-0" />
           )}
+          {compact && depth > 0 && (
           {compact && depth > 0 ? (
             <div className="h-6 w-6 rounded-md bg-muted/70 border border-border/60 flex items-center justify-center text-[10px] font-semibold text-muted-foreground group-hover:text-foreground">
               {item.label?.charAt(0).toUpperCase()}
@@ -156,6 +177,7 @@ export default function AdminLayout({
           ) : (
             <span className="flex-1 truncate">{item.label}</span>
           )}
+          {!compact && <span className="flex-1 truncate">{item.label}</span>}
           {hasChildren && !compact && (
             <ChevronDown
               className={cn(
@@ -164,6 +186,7 @@ export default function AdminLayout({
               )}
             />
           )}
+        </button>
         </div>
         {hasChildren && expanded && !compact && (
           <div className="space-y-1 pt-1">
@@ -208,7 +231,7 @@ export default function AdminLayout({
       .replace(/[_-]+/g, " ")
       .replace(/\b\w/g, (char) => char.toUpperCase());
 
-  const groupByModel = useMemo(() => {
+  const modelGroups = useMemo(() => {
     const configGroups =
       configData?.model_groups ??
       configData?.modelGroups ??
@@ -235,7 +258,10 @@ export default function AdminLayout({
       });
     }
 
-    const grouped = new Map<string, any[]>();
+    const grouped = new Map<
+      string,
+      { id: string; label: string; models: any[] }
+    >();
     models.forEach((model: any) => {
       const configLabel = modelGroupMap.get(model.name);
       const derivedGroup = (() => {
@@ -251,20 +277,35 @@ export default function AdminLayout({
         return "Other";
       })();
       const label = formatGroupLabel(configLabel || derivedGroup);
-      const existing = grouped.get(label) || [];
-      existing.push(model);
-      grouped.set(label, existing);
+      if (!grouped.has(label)) {
+        grouped.set(label, {
+          id: buildSectionId(label),
+          label,
+          models: [],
+        });
+      }
+      grouped.get(label)?.models.push(model);
     });
 
-    return Array.from(grouped.entries())
-      .map(([label, groupModels]) => ({
-        label,
-        models: groupModels.sort((a: any, b: any) =>
+    return Array.from(grouped.values())
+      .map((group) => ({
+        ...group,
+        models: group.models.sort((a: any, b: any) =>
           a.verbose_name_plural.localeCompare(b.verbose_name_plural)
         ),
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [configData, models]);
+
+  const modelGroupLookup = useMemo(() => {
+    const lookup = new Map<string, string>();
+    modelGroups.forEach((group) => {
+      group.models.forEach((model: any) => {
+        lookup.set(model.name, group.id);
+      });
+    });
+    return lookup;
+  }, [modelGroups]);
 
   const pluginSections = useMemo(
     () =>
@@ -283,16 +324,8 @@ export default function AdminLayout({
       location.pathname.startsWith(`/${model.name}`)
     );
     if (!activeModel) return null;
-    let groupKey = "";
-    if (activeModel.name.includes(".")) {
-      groupKey = activeModel.name.split(".")[0];
-    } else if (activeModel.name.includes("_")) {
-      groupKey = activeModel.name.split("_")[0];
-    } else {
-      groupKey = activeModel.name.charAt(0).toUpperCase();
-    }
-    return `models-${groupKey.toLowerCase()}`;
-  }, [location.pathname, models]);
+    return modelGroupLookup.get(activeModel.name) ?? null;
+  }, [location.pathname, models, modelGroupLookup]);
 
   const activePluginSectionId = useMemo(() => {
     const activePlugin = plugins.find((plugin: any) =>
@@ -320,6 +353,18 @@ export default function AdminLayout({
     }));
   }, [activeModelSectionId, activePluginSectionId]);
 
+  const handleModelRowKeyDown = (
+    event: React.KeyboardEvent<HTMLDivElement>,
+    modelName: string
+  ) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      navigate({
+        to: "/$model",
+        params: { model: modelName },
+      });
+    }
+  };
   const showPluginHeader = Boolean(activePluginInfo.plugin);
   const pluginLabel =
     activePluginInfo.plugin?.label || activePluginInfo.plugin?.name;
@@ -335,6 +380,7 @@ export default function AdminLayout({
         className={cn(
           "fixed inset-y-0 left-0 z-50 bg-card/95 backdrop-blur-sm border-r border-border transition-all duration-300 ease-in-out lg:relative lg:translate-x-0",
           sidebarCompact ? "lg:w-20" : "lg:w-64",
+          "w-64",
           !sidebarOpen && "-translate-x-full lg:hidden"
         )}
       >
@@ -411,12 +457,17 @@ export default function AdminLayout({
                   <div
                     key={model.name}
                     data-testid={`nav-pinned-${model.name}`}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => {
                       navigate({
                         to: "/$model",
                         params: { model: model.name },
                       });
                     }}
+                    onKeyDown={(event) =>
+                      handleModelRowKeyDown(event, model.name)
+                    }
                     className={cn(
                       "flex items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-accent hover:text-accent-foreground cursor-pointer group mb-1",
                       location.pathname.startsWith(`/${model.name}`) &&
@@ -424,6 +475,28 @@ export default function AdminLayout({
                       sidebarCompact && "justify-center px-2"
                     )}
                     title={sidebarCompact ? model.verbose_name_plural : undefined}
+                    aria-label={
+                      sidebarCompact ? model.verbose_name_plural : undefined
+                    }
+                  >
+                    <Star className="h-4 w-4 text-yellow-500" />
+                    {!sidebarCompact && (
+                      <span className="text-sm flex-1 truncate">
+                        {model.verbose_name_plural}
+                      </span>
+                    )}
+                    {!sidebarCompact && (
+                      <button
+                        type="button"
+                        aria-label={`Unpin ${model.verbose_name_plural}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          togglePinnedModel(model.name);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-primary"
+                      >
+                        <Star className="h-4 w-4" />
+                      </button>
                   >
                     <Star className="h-4 w-4 text-yellow-500" />
                     {!sidebarCompact && (
@@ -444,6 +517,30 @@ export default function AdminLayout({
                 Content Models
               </h4>
             )}
+            {modelGroups.map((group) => {
+              const isExpanded = expandedSections[group.id] ?? false;
+              return (
+                <div key={group.id} className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedSections((prev) => ({
+                        ...prev,
+                        [group.id]: !isExpanded,
+                      }))
+                    }
+                    className={cn(
+                      "flex items-center w-full gap-2 px-3 py-2 rounded-md text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-all",
+                      sidebarCompact && "justify-center px-2"
+                    )}
+                    title={sidebarCompact ? group.label : undefined}
+                    aria-expanded={isExpanded}
+                    aria-controls={`${group.id}-panel`}
+                  >
+                    <Database className="h-3.5 w-3.5" />
+                    {!sidebarCompact && <span>{group.label}</span>}
+                    {!sidebarCompact && (
+                      <ChevronDown
             {groupByModel.map((group) => (
               <div key={group.label} className="space-y-1">
                 {!sidebarCompact && (
@@ -501,14 +598,124 @@ export default function AdminLayout({
                           togglePinnedModel(model.name);
                         }}
                         className={cn(
-                          "opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-primary",
-                          pinnedModels.includes(model.name) &&
-                            "opacity-100 text-yellow-500"
+                          "ml-auto h-3 w-3 transition-transform",
+                          isExpanded && "rotate-180"
                         )}
-                      >
-                        <Star className="h-4 w-4" />
-                      </button>
+                      />
                     )}
+                  </button>
+                  {isExpanded && (
+                    <div
+                      id={`${group.id}-panel`}
+                      className="space-y-1"
+                      role="region"
+                      aria-label={group.label}
+                    >
+                      {group.models.map((model: any) => {
+                        const canAdd = model.permissions?.add;
+                        return (
+                          <div
+                            key={model.name}
+                            data-testid={`nav-${model.name}`}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
+                              navigate({
+                                to: "/$model",
+                                params: { model: model.name },
+                              });
+                            }}
+                            onKeyDown={(event) =>
+                              handleModelRowKeyDown(event, model.name)
+                            }
+                            className={cn(
+                              "flex items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-accent hover:text-accent-foreground cursor-pointer group mb-1 text-sm relative",
+                              location.pathname.startsWith(`/${model.name}`) &&
+                                "bg-accent text-accent-foreground font-medium",
+                              sidebarCompact && "justify-center px-2"
+                            )}
+                            title={
+                              sidebarCompact
+                                ? model.verbose_name_plural
+                                : undefined
+                            }
+                            aria-label={
+                              sidebarCompact
+                                ? model.verbose_name_plural
+                                : undefined
+                            }
+                          >
+                            {sidebarCompact ? (
+                              <div className="h-7 w-7 rounded-md bg-muted/70 border border-border/60 flex items-center justify-center text-xs font-semibold text-muted-foreground group-hover:text-foreground">
+                                {model.verbose_name_plural
+                                  .split(" ")
+                                  .map((part: string) => part[0])
+                                  .join("")
+                                  .slice(0, 2)
+                                  .toUpperCase()}
+                              </div>
+                            ) : (
+                              <>
+                                <Database className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                                <span className="text-sm flex-1 truncate">
+                                  {model.verbose_name_plural}
+                                </span>
+                              </>
+                            )}
+                            {(canAdd || !sidebarCompact) && (
+                              <div
+                                className={cn(
+                                  "flex items-center gap-2",
+                                  sidebarCompact && "absolute right-2"
+                                )}
+                              >
+                                {canAdd && (
+                                  <button
+                                    type="button"
+                                    aria-label={`Create ${model.verbose_name_plural}`}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      navigate({
+                                        to: "/$model/create",
+                                        params: { model: model.name },
+                                      });
+                                    }}
+                                    className="opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-foreground h-6 w-6 rounded-md border border-border/60 flex items-center justify-center"
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </button>
+                                )}
+                                {!sidebarCompact && (
+                                  <button
+                                    type="button"
+                                    aria-label={
+                                      pinnedModels.includes(model.name)
+                                        ? `Unpin ${model.verbose_name_plural}`
+                                        : `Pin ${model.verbose_name_plural}`
+                                    }
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      togglePinnedModel(model.name);
+                                    }}
+                                    className={cn(
+                                      "opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-primary",
+                                      pinnedModels.includes(model.name) &&
+                                        "opacity-100 text-yellow-500"
+                                    )}
+                                  >
+                                    <Star className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
                   </div>
                 ))}
               </div>
@@ -541,6 +748,7 @@ export default function AdminLayout({
                       )}
                       title={sidebarCompact ? section.label : undefined}
                       aria-expanded={isExpanded}
+                      aria-controls={`${section.id}-panel`}
                     >
                       <Package className="h-3.5 w-3.5" />
                       {!sidebarCompact && <span>{section.label}</span>}
@@ -554,6 +762,12 @@ export default function AdminLayout({
                       )}
                     </button>
                     {isExpanded && (
+                      <div
+                        id={`${section.id}-panel`}
+                        className="space-y-1"
+                        role="region"
+                        aria-label={section.label}
+                      >
                       <div className="space-y-1">
                         {section.entries.map((entry: any, idx: number) => (
                           <SidebarItem
@@ -597,8 +811,13 @@ export default function AdminLayout({
             size="icon"
             className="lg:hidden text-muted-foreground"
             onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label={sidebarOpen ? "Close menu" : "Open menu"}
           >
-            <Menu className="h-5 w-5" />
+            {sidebarOpen ? (
+              <PanelLeftOpen className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
           </Button>
 
           <GlobalSearch models={models} />
