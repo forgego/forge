@@ -26,6 +26,11 @@ const buildSectionId = (label: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "")}`;
+const normalizeAdminPath = (path?: string) =>
+  path?.startsWith("/admin/") ? path.substring(6) : path;
+
+const isExternalIcon = (icon?: string) =>
+  Boolean(icon && (icon.startsWith("http") || icon.startsWith("/") || icon.startsWith("data:")));
 
 export default function AdminLayout({
   children,
@@ -58,9 +63,42 @@ export default function AdminLayout({
     navigate({ to: "/login" });
   };
 
+  const isEntryMatch = (entry: any): boolean => {
+    const normalizedPath = normalizeAdminPath(entry.path);
+    return Boolean(normalizedPath && normalizedPath === location.pathname);
+  };
+
   const isMenuEntryActive = (entry: any): boolean => {
-    if (entry.path && entry.path === location.pathname) return true;
+    if (isEntryMatch(entry)) return true;
     return entry.children?.some(isMenuEntryActive) ?? false;
+  };
+
+  const findActiveMenuEntry = (entries: any[]): any | null => {
+    for (const entry of entries) {
+      if (isEntryMatch(entry)) return entry;
+      if (entry.children?.length) {
+        const nested = findActiveMenuEntry(entry.children);
+        if (nested) return nested;
+      }
+    }
+    return null;
+  };
+
+  const renderIconBadge = (icon?: string, label?: string) => {
+    const fallbackText = (label ?? icon ?? "?").charAt(0).toUpperCase();
+    return (
+      <div className="h-8 w-8 rounded-md bg-muted/70 border border-border/60 flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+        {isExternalIcon(icon) ? (
+          <img
+            src={icon}
+            alt={label ?? "Plugin icon"}
+            className="h-4 w-4 object-contain"
+          />
+        ) : (
+          fallbackText
+        )}
+      </div>
+    );
   };
 
   // Recursive Sidebar Item
@@ -78,11 +116,7 @@ export default function AdminLayout({
 
     // Auto-expand if active child
     useEffect(() => {
-      const isChildActive = (it: any): boolean => {
-        if (it.path === location.pathname) return true;
-        return it.children?.some(isChildActive) ?? false;
-      };
-      if (hasChildren && isChildActive(item)) {
+      if (hasChildren && isMenuEntryActive(item)) {
         setExpanded(true);
       }
     }, [location.pathname, item, hasChildren]);
@@ -91,6 +125,12 @@ export default function AdminLayout({
       if (hasChildren) {
         setExpanded((prev) => !prev);
         return;
+        setExpanded(!expanded);
+      } else {
+        const path = normalizeAdminPath(item.path);
+        if (path) {
+          navigate({ to: path });
+        }
       }
       const path = item.path.startsWith("/admin/")
         ? item.path.substring(6)
@@ -109,6 +149,8 @@ export default function AdminLayout({
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer text-sm group select-none mb-1 w-full text-left",
             location.pathname === item.path &&
+            "flex items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer text-sm group select-none mb-1",
+            isMenuEntryActive(item) &&
               "bg-sidebar-accent text-sidebar-accent-foreground font-medium",
             depth > 0 && "text-muted-foreground",
             compact && "justify-center px-2"
@@ -116,6 +158,9 @@ export default function AdminLayout({
           style={{
             paddingLeft:
               depth === 0 || compact ? "0.75rem" : `${depth * 1 + 0.75}rem`,
+              depth === 0 || compact
+                ? "0.75rem"
+                : `${depth * 1 + 0.75}rem`,
           }}
           title={compact ? item.label : undefined}
           aria-label={compact ? item.label : undefined}
@@ -125,9 +170,12 @@ export default function AdminLayout({
             <Package className="h-4 w-4 text-muted-foreground group-hover:text-foreground shrink-0" />
           )}
           {compact && depth > 0 && (
+          {compact && depth > 0 ? (
             <div className="h-6 w-6 rounded-md bg-muted/70 border border-border/60 flex items-center justify-center text-[10px] font-semibold text-muted-foreground group-hover:text-foreground">
               {item.label?.charAt(0).toUpperCase()}
             </div>
+          ) : (
+            <span className="flex-1 truncate">{item.label}</span>
           )}
           {!compact && <span className="flex-1 truncate">{item.label}</span>}
           {hasChildren && !compact && (
@@ -139,6 +187,7 @@ export default function AdminLayout({
             />
           )}
         </button>
+        </div>
         {hasChildren && expanded && !compact && (
           <div className="space-y-1 pt-1">
             {item.children.map((child: any, idx: number) => (
@@ -285,6 +334,17 @@ export default function AdminLayout({
     return activePlugin ? `plugin-${activePlugin.name}` : null;
   }, [location.pathname, plugins]);
 
+  const activePluginInfo = useMemo(() => {
+    for (const plugin of plugins) {
+      const entries = plugin.menuEntries ?? [];
+      const activeEntry = findActiveMenuEntry(entries);
+      if (activeEntry) {
+        return { plugin, entry: activeEntry };
+      }
+    }
+    return { plugin: null, entry: null };
+  }, [plugins, location.pathname]);
+
   useEffect(() => {
     setExpandedSections((prev) => ({
       ...prev,
@@ -305,6 +365,13 @@ export default function AdminLayout({
       });
     }
   };
+  const showPluginHeader = Boolean(activePluginInfo.plugin);
+  const pluginLabel =
+    activePluginInfo.plugin?.label || activePluginInfo.plugin?.name;
+  const entryLabel = activePluginInfo.entry?.label;
+  const showIconGroup =
+    Boolean(activePluginInfo.plugin?.icon) ||
+    Boolean(activePluginInfo.entry?.icon);
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -333,9 +400,7 @@ export default function AdminLayout({
             size="icon"
             className="hidden lg:inline-flex text-muted-foreground"
             onClick={() => setSidebarCompact((prev) => !prev)}
-            aria-label={
-              sidebarCompact ? "Expand sidebar" : "Collapse sidebar"
-            }
+            aria-label={sidebarCompact ? "Expand sidebar" : "Collapse sidebar"}
           >
             {sidebarCompact ? (
               <ChevronRight className="h-4 w-4" />
@@ -432,6 +497,12 @@ export default function AdminLayout({
                       >
                         <Star className="h-4 w-4" />
                       </button>
+                  >
+                    <Star className="h-4 w-4 text-yellow-500" />
+                    {!sidebarCompact && (
+                      <span className="text-sm">
+                        {model.verbose_name_plural}
+                      </span>
                     )}
                   </div>
                 );
@@ -470,6 +541,62 @@ export default function AdminLayout({
                     {!sidebarCompact && <span>{group.label}</span>}
                     {!sidebarCompact && (
                       <ChevronDown
+            {groupByModel.map((group) => (
+              <div key={group.label} className="space-y-1">
+                {!sidebarCompact && (
+                  <h5 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">
+                    {group.label}
+                  </h5>
+                )}
+                {group.models.map((model: any) => (
+                  <div
+                    key={model.name}
+                    data-testid={`nav-${model.name}`}
+                    onClick={() => {
+                      navigate({
+                        to: "/$model",
+                        params: { model: model.name },
+                      });
+                    }}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-accent hover:text-accent-foreground cursor-pointer group mb-1",
+                      location.pathname.startsWith(`/${model.name}`) &&
+                        "bg-accent text-accent-foreground font-medium",
+                      sidebarCompact && "justify-center px-2"
+                    )}
+                    title={
+                      sidebarCompact ? model.verbose_name_plural : undefined
+                    }
+                  >
+                    {sidebarCompact ? (
+                      <div className="h-7 w-7 rounded-md bg-muted/70 border border-border/60 flex items-center justify-center text-xs font-semibold text-muted-foreground group-hover:text-foreground">
+                        {model.verbose_name_plural
+                          .split(" ")
+                          .map((part: string) => part[0])
+                          .join("")
+                          .slice(0, 2)
+                          .toUpperCase()}
+                      </div>
+                    ) : (
+                      <>
+                        <Database className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                        <span className="text-sm flex-1 truncate">
+                          {model.verbose_name_plural}
+                        </span>
+                      </>
+                    )}
+                    {!sidebarCompact && (
+                      <button
+                        type="button"
+                        aria-label={
+                          pinnedModels.includes(model.name)
+                            ? `Unpin ${model.verbose_name_plural}`
+                            : `Pin ${model.verbose_name_plural}`
+                        }
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          togglePinnedModel(model.name);
+                        }}
                         className={cn(
                           "ml-auto h-3 w-3 transition-transform",
                           isExpanded && "rotate-180"
@@ -589,6 +716,10 @@ export default function AdminLayout({
                 </div>
               );
             })}
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
 
           {/* Plugins Section */}
@@ -637,6 +768,7 @@ export default function AdminLayout({
                         role="region"
                         aria-label={section.label}
                       >
+                      <div className="space-y-1">
                         {section.entries.map((entry: any, idx: number) => (
                           <SidebarItem
                             key={`${section.id}-${idx}`}
@@ -690,6 +822,24 @@ export default function AdminLayout({
 
           <GlobalSearch models={models} />
 
+          {showPluginHeader && (
+            <div className="hidden md:flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <span>Plugin</span>
+              <ChevronRight className="h-3 w-3" />
+              <span className="text-foreground normal-case text-sm font-medium">
+                {pluginLabel}
+              </span>
+              {entryLabel && (
+                <>
+                  <ChevronRight className="h-3 w-3" />
+                  <span className="text-muted-foreground normal-case text-sm">
+                    {entryLabel}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+
           <div className="ml-auto flex items-center gap-2">
             <ThemeCustomizer />
             <Button
@@ -720,6 +870,38 @@ export default function AdminLayout({
         {/* Content Area */}
         <div className="flex-1 p-6 lg:p-8 overflow-auto">
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
+            {showPluginHeader && (
+              <div className="rounded-lg border border-border bg-card/80 px-4 py-3 shadow-sm">
+                <div className="flex flex-wrap items-center gap-3">
+                  {showIconGroup && (
+                    <div className="flex items-center -space-x-2">
+                      {renderIconBadge(
+                        activePluginInfo.plugin?.icon,
+                        pluginLabel
+                      )}
+                      {activePluginInfo.entry?.icon &&
+                        renderIconBadge(
+                          activePluginInfo.entry?.icon,
+                          entryLabel
+                        )}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      Plugin
+                    </p>
+                    <p className="text-lg font-semibold text-foreground truncate">
+                      {pluginLabel}
+                    </p>
+                    {entryLabel && (
+                      <p className="text-sm text-muted-foreground truncate">
+                        {entryLabel}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
             {children}
           </div>
         </div>
