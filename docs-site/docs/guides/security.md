@@ -160,13 +160,13 @@ err := sessionManager.Destroy(r.Context())
 Always hash passwords using bcrypt:
 
 ```go
-import "github.com/forgego/forge/pkg/users/backends"
+import "github.com/forgego/forge/identity"
 
 // Hash password
-hashed, err := backends.HashPassword(password)
+hashed, err := identity.HashPassword(password)
 
 // Verify password
-err := backends.VerifyPassword(hashed, password)
+ok := identity.CheckPassword(password, hashed)
 ```
 
 ### Password Validation
@@ -185,7 +185,7 @@ func (User) Hooks() *schema.ModelHooks {
             }
             
             // Hash password
-            hashed, err := backends.HashPassword(user.Password)
+            hashed, err := identity.HashPassword(user.Password)
             if err != nil {
                 return err
             }

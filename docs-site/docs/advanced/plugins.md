@@ -13,7 +13,8 @@ Plugins implement the `Plugin` interface:
 ```go
 type Plugin interface {
     Name() string
-    Initialize(app *Application) error
+    Version() string
+    Install() error
 }
 ```
 
@@ -25,7 +26,7 @@ type Plugin interface {
 package plugins
 
 import (
-    "github.com/forgego/forge/pkg/registry"
+    "github.com/forgego/forge/registry"
 )
 
 type MyPlugin struct{}
@@ -34,7 +35,11 @@ func (p *MyPlugin) Name() string {
     return "my-plugin"
 }
 
-func (p *MyPlugin) Initialize(app *registry.Application) error {
+func (p *MyPlugin) Version() string {
+    return "0.1.0"
+}
+
+func (p *MyPlugin) Install() error {
     // Plugin initialization logic
     return nil
 }
@@ -44,18 +49,12 @@ func (p *MyPlugin) Initialize(app *registry.Application) error {
 
 ```go
 import (
-    "github.com/forgego/forge/pkg/registry"
+    "github.com/forgego/forge/registry"
     "myapp/plugins"
 )
 
 func main() {
-    app := registry.NewApplication()
-    
-    // Register plugin
-    app.RegisterPlugin(&plugins.MyPlugin{})
-    
-    // Initialize all plugins
-    if err := app.Initialize(); err != nil {
+    if err := registry.RegisterPlugin(&plugins.MyPlugin{}); err != nil {
         log.Fatal(err)
     }
 }
@@ -68,11 +67,34 @@ Plugins can hook into various framework events:
 ### Model Registration
 
 ```go
-func (p *MyPlugin) Initialize(app *registry.Application) error {
-    app.OnModelRegister(func(model schema.Schema) {
-        // Called when a model is registered
-        log.Printf("Model registered: %T", model)
-    })
+type AuditModelPlugin struct{}
+
+func (p *AuditModelPlugin) Name() string {
+    return "audit"
+}
+
+func (p *AuditModelPlugin) Version() string {
+    return "0.1.0"
+}
+
+func (p *AuditModelPlugin) Install() error {
+    return nil
+}
+
+func (p *AuditModelPlugin) ExtendModel(model interface{}) error {
+    log.Printf("Model registered: %T", model)
+    return nil
+}
+
+func (p *AuditModelPlugin) GetModelFields(modelName string) []interface{} {
+    return nil
+}
+
+func (p *AuditModelPlugin) GetModelRelations(modelName string) []interface{} {
+    return nil
+}
+
+func (p *AuditModelPlugin) GetModelHooks(modelName string) interface{} {
     return nil
 }
 ```

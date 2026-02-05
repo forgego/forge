@@ -66,7 +66,7 @@ database:
   port: 5432
   user: postgres
   password: your_password
-  dbname: myblog_db
+  name: myblog_db
   sslmode: disable
 
 server:
@@ -76,6 +76,11 @@ server:
 admin:
   enabled: true
   path: "/admin"
+
+security:
+  secret_key: "your-secret-key-here"
+  csrf_secret_key: "your-csrf-secret-here"
+  session_secret: "your-session-secret-here"
 ```
 
 Create the database:
@@ -92,7 +97,7 @@ Edit `app/blog/models.go`:
 package blog
 
 import (
-    "github.com/forgego/forge/pkg/schema"
+    "github.com/forgego/forge/schema"
 )
 
 type Post struct {
@@ -101,12 +106,12 @@ type Post struct {
 
 func (Post) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64("id").Primary().AutoIncrement().Build(),
-        schema.String("title").Required().MaxLength(200).Build(),
-        schema.Text("content").Required().Build(),
-        schema.Bool("published").Default(false).Build(),
-        schema.Time("created_at").AutoNowAdd().Build(),
-        schema.Time("updated_at").AutoNow().Build(),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+        schema.StringField("title", schema.Required(), schema.MaxLength(200)),
+        schema.TextField("content", schema.Required()),
+        schema.BoolField("published", schema.Default(false)),
+        schema.TimeField("created_at", schema.AutoNowAdd()),
+        schema.TimeField("updated_at", schema.AutoNow()),
     }
 }
 
@@ -150,11 +155,11 @@ Edit `app/blog/admin.go`:
 package blog
 
 import (
-    "github.com/forgego/forge/pkg/admin"
+    "github.com/forgego/forge/admin"
 )
 
 func init() {
-    admin.RegisterModel(&Post{})
+    admin.Register(&admin.Config[Post]{})
 }
 ```
 
@@ -164,7 +169,7 @@ Create and apply migrations:
 
 ```bash
 forge makemigrations
-forge migrate
+forge migrate up
 ```
 
 ## Step 8: Start the Server

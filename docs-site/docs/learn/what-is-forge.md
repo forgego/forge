@@ -79,7 +79,7 @@ post := &Post{
     Content:   "This is the content",
     Published: true,
 }
-err := Post.Objects.Create(ctx, post)
+err := PostObjects.Create(ctx, post)
 ```
 
 No SQL, no string field names, no runtime errors.
@@ -89,7 +89,7 @@ No SQL, no string field names, no runtime errors.
 One line:
 
 ```go
-admin.RegisterModel(&models.Post{})
+admin.Register(&admin.Config[models.Post]{})
 ```
 
 Visit `/admin/` and you have a full admin panel. Search, filters, pagination—all there.
@@ -107,8 +107,8 @@ You don't write structs and then create tables. You write the schema once, and f
 ### Type safety everywhere
 
 Everything is checked at compile time:
-- `Post.Fields.Title` instead of `"title"` (typos won't compile)
-- `Post.Fields.Published.Equals(true)` instead of `"published = true"`
+- `PostFieldsInstance.Title` instead of `"title"` (typos won't compile)
+- `PostFieldsInstance.Published.Equals(true)` instead of `"published = true"`
 - You get `[]*Post` back, not `[]interface{}`
 
 ### Sensible defaults

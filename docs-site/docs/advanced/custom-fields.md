@@ -6,17 +6,17 @@ sidebar_position: 3
 
 Create custom field types for specialized data.
 
-## Field Interface
+## Field Structure
 
-All fields implement the `Field` interface:
+Custom fields are built on the `schema.Field` struct:
 
 ```go
-type Field interface {
-    Name() string
-    Type() string
-    SQLType() string
-    Validate(value interface{}) error
-    ToSQL(value interface{}) (string, []interface{}, error)
+type Field struct {
+    Name       string
+    Type       FieldType
+    DBType     string
+    Required   bool
+    Validators []Validator
 }
 ```
 
@@ -28,7 +28,7 @@ type Field interface {
 package fields
 
 import (
-    "github.com/forgego/forge/pkg/schema"
+    "github.com/forgego/forge/schema"
 )
 
 type IPAddressField struct {
@@ -48,49 +48,35 @@ func (f *IPAddressField) Required() *IPAddressField {
 }
 
 func (f *IPAddressField) Build() schema.Field {
-    return &IPAddressFieldImpl{
-        name:     f.name,
-        required: f.required,
+    opts := []schema.FieldOpt{}
+    if f.required {
+        opts = append(opts, schema.Required())
     }
+    field := schema.StringField(f.name, opts...)
+    field.DBType = "INET"
+    field.Validators = append(field.Validators, IPAddressValidator{required: f.required})
+    return field
 }
 
-type IPAddressFieldImpl struct {
-    name     string
+type IPAddressValidator struct {
     required bool
 }
 
-func (f *IPAddressFieldImpl) Name() string {
-    return f.name
-}
-
-func (f *IPAddressFieldImpl) Type() string {
-    return "ipaddress"
-}
-
-func (f *IPAddressFieldImpl) SQLType() string {
-    return "INET"
-}
-
-func (f *IPAddressFieldImpl) Validate(value interface{}) error {
-    if f.required && value == nil {
-        return errors.New("IP address is required")
-    }
-    
-    if value != nil {
-        ip := value.(string)
-        if net.ParseIP(ip) == nil {
-            return errors.New("invalid IP address")
-        }
-    }
-    
-    return nil
-}
-
-func (f *IPAddressFieldImpl) ToSQL(value interface{}) (string, []interface{}, error) {
+func (v IPAddressValidator) Validate(value interface{}) error {
     if value == nil {
-        return "NULL", nil, nil
+        if v.required {
+            return errors.New("IP address is required")
+        }
+        return nil
     }
-    return "$1", []interface{}{value}, nil
+    ip, ok := value.(string)
+    if !ok {
+        return errors.New("expected string")
+    }
+    if net.ParseIP(ip) == nil {
+        return errors.New("invalid IP address")
+    }
+    return nil
 }
 ```
 
@@ -99,8 +85,8 @@ func (f *IPAddressFieldImpl) ToSQL(value interface{}) (string, []interface{}, er
 ```go
 func (Server) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64("id").Primary().AutoIncrement().Build(),
-        schema.String("name").Required().Build(),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+        schema.StringField("name", schema.Required()),
         fields.IPAddress("ip_address").Required().Build(),
         fields.IPAddress("gateway").Build(),
     }
@@ -131,32 +117,37 @@ func (f *JSONSchemaField) Required() *JSONSchemaField {
 }
 
 func (f *JSONSchemaField) Build() schema.Field {
-    return &JSONSchemaFieldImpl{
-        name:     f.name,
+    opts := []schema.FieldOpt{}
+    if f.required {
+        opts = append(opts, schema.Required())
+    }
+    field := schema.JSONField(f.name, opts...)
+    field.Validators = append(field.Validators, JSONSchemaValidator{
         required: f.required,
         schema:   f.schema,
-    }
+    })
+    return field
 }
 
-type JSONSchemaFieldImpl struct {
-    name     string
+type JSONSchemaValidator struct {
     required bool
     schema   map[string]interface{}
 }
 
-func (f *JSONSchemaFieldImpl) Validate(value interface{}) error {
-    if f.required && value == nil {
-        return errors.New("field is required")
-    }
-    
-    if value != nil {
-        // Validate against JSON schema
-        data, _ := json.Marshal(value)
-        if err := validateJSONSchema(data, f.schema); err != nil {
-            return err
+func (v JSONSchemaValidator) Validate(value interface{}) error {
+    if value == nil {
+        if v.required {
+            return errors.New("field is required")
         }
+        return nil
     }
-    
+
+    // Validate against JSON schema
+    data, _ := json.Marshal(value)
+    if err := validateJSONSchema(data, v.schema); err != nil {
+        return err
+    }
+
     return nil
 }
 ```

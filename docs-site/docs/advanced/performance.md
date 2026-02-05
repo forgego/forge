@@ -41,12 +41,12 @@ Use JOINs for foreign keys:
 
 ```go
 // Good: Single query with JOIN
-posts, err := Post.Objects.
+posts, err := PostObjects.
     SelectRelated("author").
     All(ctx)
 
 // Bad: N+1 queries
-posts, err := Post.Objects.All(ctx)
+posts, err := PostObjects.All(ctx)
 for _, post := range posts {
     author := post.Author  // Separate query
 }
@@ -58,12 +58,12 @@ Prefetch many relations:
 
 ```go
 // Good: Two queries total
-users, err := User.Objects.
+users, err := UserObjects.
     PrefetchRelated("posts").
     All(ctx)
 
 // Bad: N+1 queries
-users, err := User.Objects.All(ctx)
+users, err := UserObjects.All(ctx)
 for _, user := range users {
     posts := user.Posts  // Separate query for each user
 }
@@ -75,12 +75,12 @@ Select only needed fields:
 
 ```go
 // Good: Only fetch needed fields
-users, err := User.Objects.
+users, err := UserObjects.
     Only("username", "email").
     All(ctx)
 
 // Bad: Fetch all fields including large text
-users, err := User.Objects.All(ctx)
+users, err := UserObjects.All(ctx)
 ```
 
 ## Caching
@@ -90,16 +90,16 @@ users, err := User.Objects.All(ctx)
 Cache frequently accessed queries:
 
 ```go
-import "github.com/forgego/forge/pkg/cache"
+import "github.com/forgego/forge/api/caching"
 
-cache := cache.NewRedisCache(redisClient)
+cache := caching.NewMemoryCache()
 
 key := fmt.Sprintf("user:%d", userID)
 if cached, err := cache.Get(key); err == nil {
     return cached.(*User), nil
 }
 
-user, err := User.Objects.Get(ctx, userID)
+user, err := UserObjects.Get(ctx, userID)
 if err == nil {
     cache.Set(key, user, 5*time.Minute)
 }
@@ -118,7 +118,7 @@ func GetUserCached(ctx context.Context, id int64) (*User, error) {
         return cached.(*User), nil
     }
     
-    user, err := User.Objects.Get(ctx, id)
+    user, err := UserObjects.Get(ctx, id)
     if err == nil {
         cache.Set(key, user, 10*time.Minute)
     }
@@ -135,12 +135,12 @@ Always paginate large result sets:
 func GetUsers(page, pageSize int) ([]*User, int64, error) {
     ctx := context.Background()
     
-    total, err := User.Objects.Count(ctx)
+    total, err := UserObjects.Count(ctx)
     if err != nil {
         return nil, 0, err
     }
     
-    users, err := User.Objects.
+    users, err := UserObjects.
         Limit(pageSize).
         Offset((page - 1) * pageSize).
         OrderBy("-date_joined").
@@ -156,19 +156,19 @@ Use bulk operations when possible:
 
 ```go
 // Good: Single query
-affected, err := User.Objects.
-    Filter(User.Fields.IsActive.Equals(false)).
+affected, err := UserObjects.
+    Filter(UserFieldsInstance.IsActive.Equals(false)).
     Update(ctx, map[string]interface{}{
         "is_active": true,
     })
 
 // Bad: Multiple queries
-users, _ := User.Objects.
-    Filter(User.Fields.IsActive.Equals(false)).
+users, _ := UserObjects.
+    Filter(UserFieldsInstance.IsActive.Equals(false)).
     All(ctx)
 for _, user := range users {
     user.IsActive = true
-    User.Objects.Update(ctx, user)
+    UserObjects.Update(ctx, user)
 }
 ```
 
@@ -179,7 +179,9 @@ for _, user := range users {
 Enable query logging in development:
 
 ```go
-logger, _ := logging.NewLogger(true) // development mode
+import forgelog "github.com/forgego/forge/log"
+
+logger, _ := forgelog.NewLogger(true) // development mode
 logger.Info("Query executed",
     zap.String("query", query),
     zap.Duration("duration", duration),

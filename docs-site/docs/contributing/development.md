@@ -10,7 +10,7 @@ Guide for contributing to forge framework development.
 
 ### Prerequisites
 
-- Go 1.21 or later
+- Go 1.25 or later
 - PostgreSQL 12 or later
 - Git
 
@@ -19,7 +19,7 @@ Guide for contributing to forge framework development.
 ```bash
 # Clone repository
 git clone https://github.com/forgego/forge.git
-cd forge/newforge
+cd forge
 
 # Install dependencies
 go mod download
@@ -28,34 +28,33 @@ go mod download
 go test ./...
 
 # Build CLI
-go build ./cli/cmd
+go build -o forge ./cli/cmd
 ```
 
 ## Project Structure
 
 ```
-newforge/
-├── cmd/
-│   └── forge/              # CLI tool
-├── pkg/
-│   ├── schema/             # Schema definitions
-│   ├── generator/          # Code generation
-│   ├── query/              # Query builder
-│   ├── db/                 # Database layer
-│   ├── http/               # HTTP router
-│   ├── admin/              # Admin interface
-│   ├── security/           # Security features
-│   ├── validation/         # Validation
-│   ├── auth/               # Authentication
-│   ├── config/             # Configuration
-│   ├── logging/            # Logging
-│   ├── registry/           # Model registry
-│   └── utils/              # Utilities
-├── examples/
-│   ├── ecommerce/          # E-commerce example
-│   └── library/            # Library example
-├── docs/                   # Documentation
-└── go.mod
+forge/
+├── admin/                  # Admin interface
+├── api/                    # REST API framework
+├── cli/                    # CLI tool
+├── codegen/                # Code generation
+├── config/                 # Configuration
+├── db/                     # Database layer + migrations
+├── identity/               # Auth + user management
+├── log/                    # Logging
+├── orm/                    # ORM + QuerySet
+├── registry/               # Plugin/model registry
+├── schema/                 # Schema definitions
+├── server/                 # HTTP server + router
+├── validate/               # Validation
+└── ...
+
+examples/
+├── ecommerce/              # E-commerce example
+
+docs-site/                  # Documentation site
+tests/                      # Integration/e2e tests
 ```
 
 ## Development Workflow

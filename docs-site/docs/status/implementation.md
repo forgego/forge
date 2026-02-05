@@ -207,7 +207,7 @@ Go's performance + Django's productivity:
 
 Ready to use forge?
 
-1. **Install** - `go install github.com/forgego/forge/newforge/cli/cmd@latest`
+1. **Install** - `go install github.com/forgego/forge/cli/cmd@latest`
 2. **Create Project** - `forge new myapp`
 3. **Define Models** - Write schema definitions
 4. **Generate Code** - `forge generate`

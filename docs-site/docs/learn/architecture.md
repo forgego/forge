@@ -57,16 +57,16 @@ When you run `forge generate`, forge:
 
 ```go
 // Type-safe queries - no string field names
-posts, err := Post.Objects.
-    Filter(Post.Fields.Published.Equals(true)).
+posts, err := PostObjects.
+    Filter(PostFieldsInstance.Published.Equals(true)).
     OrderBy("-created_at").
     All(ctx)
 
 // Admin interface - just register your model
-admin.RegisterModel(&Post{})
+admin.Register(&admin.Config[Post]{})
 
 // REST API - one line of code
-router.Handle("/api/posts", api.NewBaseViewSet(serializer, Post.Objects, &Post{}))
+router.Handle("/api/posts", api.NewBaseViewSet(serializer, PostObjects, &Post{}))
 ```
 
 ## The Layers

@@ -49,8 +49,8 @@ Run `forge generate` to automatically create:
 Query your data with compile-time type checking:
 
 ```go
-posts, err := Post.Objects.
-    Filter(Post.Fields.Published.Equals(true)).
+posts, err := PostObjects.
+    Filter(PostFieldsInstance.Published.Equals(true)).
     OrderBy("-created_at").
     All(ctx)
 ```
@@ -59,7 +59,7 @@ posts, err := Post.Objects.
 Register your model and get a full admin interface:
 
 ```go
-admin.RegisterModel(&models.Post{})
+admin.Register(&admin.Config[models.Post]{})
 ```
 
 ## Fast Startup (5 Minutes)
@@ -69,11 +69,11 @@ admin.RegisterModel(&models.Post{})
 ```bash
 # Build from source (recommended)
 git clone https://github.com/forgego/forge.git
-cd forge/newforge
+cd forge
 go build -o forge ./cli/cmd
 
 # Or install via go install
-go install github.com/forgego/forge/newforge/cli/cmd@latest
+go install github.com/forgego/forge/cli/cmd@latest
 ```
 
 ### Step 2: Create Project
@@ -99,8 +99,11 @@ database:
 server:
   host: localhost
   port: 8000
-  
-secret_key: "your-secret-key-here"
+
+security:
+  secret_key: "your-secret-key-here"
+  csrf_secret_key: "your-csrf-secret-here"
+  session_secret: "your-session-secret-here"
 ```
 
 Create the database:
@@ -124,11 +127,11 @@ type Post struct {
 
 func (Post) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64("id").Primary().AutoIncrement().Build(),
-        schema.String("title").Required().MaxLength(200).Build(),
-        schema.Text("content").Required().Build(),
-        schema.Bool("published").Default(false).Build(),
-        schema.Time("created_at").AutoNowAdd().Build(),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+        schema.StringField("title", schema.Required(), schema.MaxLength(200)),
+        schema.TextField("content", schema.Required()),
+        schema.BoolField("published", schema.Default(false)),
+        schema.TimeField("created_at", schema.AutoNowAdd()),
     }
 }
 
@@ -164,36 +167,65 @@ Update `main.go`:
 package main
 
 import (
-    "log"
+    "fmt"
+    stdlog "log"
+    "net/http"
+
     "github.com/forgego/forge/admin"
-    "github.com/forgego/forge/server"
     "github.com/forgego/forge/config"
+    "github.com/forgego/forge/db"
+    forgelog "github.com/forgego/forge/log"
+    "github.com/forgego/forge/server"
     "myapp/models"
 )
 
 func main() {
-    // Load configuration
-    cfg := config.Load()
-    
-    // Initialize database
-    db, err := server.NewDatabase(cfg.Database)
+    cfg := config.NewConfig()
+    settings := config.LoadSettings(cfg)
+
+    logger, err := forgelog.NewLogger(settings.App.Debug)
     if err != nil {
-        log.Fatal("Failed to connect to database:", err)
+        stdlog.Fatal(err)
     }
-    defer db.Close()
-    
-    // Register models for admin
-    admin.RegisterModel(&models.Post{})
-    
-    // Setup routes and start server
-    srv := &server.Server{
-        Config: cfg,
-        DB:     db,
+    defer logger.Sync()
+
+    database, err := db.NewDBFromConfig(cfg)
+    if err != nil {
+        stdlog.Fatal(err)
     }
-    
-    log.Printf("Starting server on %s", cfg.Server.Address())
+    defer database.Close()
+
+    // Wire ORM managers
+    models.PostObjects.SetDB(database)
+
+    adminSite := admin.DefaultSite
+    uiConfig := adminSite.GetUIConfig()
+    uiConfig.Prefix = settings.Admin.Path
+    adminSite.WithUIConfig(uiConfig)
+    adminSite.SetDB(database)
+
+    if _, err := admin.Register(&admin.Config[models.Post]{}); err != nil {
+        stdlog.Fatal(err)
+    }
+
+    srv, err := server.NewServer(cfg, settings, logger)
+    if err != nil {
+        stdlog.Fatal(err)
+    }
+
+    srv.RegisterRoutes(func(router *server.Router) {
+        router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+            fmt.Fprintln(w, "Welcome to myapp!")
+        })
+
+        if settings.Admin.Enabled {
+            router.Mount(settings.Admin.Path, adminSite.Handler())
+        }
+    })
+
+    fmt.Printf("Starting server on %s:%s\n", settings.Server.Host, settings.Server.Port)
     if err := srv.Start(); err != nil {
-        log.Fatal("Server failed:", err)
+        stdlog.Fatal(err)
     }
 }
 ```
@@ -202,7 +234,8 @@ func main() {
 
 ```bash
 forge generate
-forge migrate
+forge makemigrations
+forge migrate up
 forge runserver
 ```
 
@@ -268,15 +301,15 @@ forge uses Go generics to ensure type safety:
 
 ```go
 // Type-safe field access
-Post.Fields.Title  // Compiler knows this is a string field
+PostFieldsInstance.Title  // Compiler knows this is a string field
 
 // Type-safe queries
-Post.Objects.Filter(
-    Post.Fields.Published.Equals(true)  // Compiler validates
+PostObjects.Filter(
+    PostFieldsInstance.Published.Equals(true)  // Compiler validates
 )
 
 // Type-safe results
-posts, err := Post.Objects.All(ctx)  // []*Post, not []interface{}
+posts, err := PostObjects.All(ctx)  // []*Post, not []interface{}
 ```
 
 ### Code Generation Benefits
@@ -291,7 +324,7 @@ posts, err := Post.Objects.All(ctx)  // []*Post, not []interface{}
 When you register a model:
 
 ```go
-admin.RegisterModel(&models.Post{})
+admin.Register(&admin.Config[models.Post]{})
 ```
 
 forge automatically:
@@ -326,8 +359,8 @@ Now that you understand the basics:
 ### Pattern 1: Filter Published Posts
 
 ```go
-publishedPosts, err := Post.Objects.
-    Filter(Post.Fields.Published.Equals(true)).
+publishedPosts, err := PostObjects.
+    Filter(PostFieldsInstance.Published.Equals(true)).
     OrderBy("-created_at").
     All(ctx)
 ```
@@ -341,7 +374,7 @@ post := &Post{
     Published: false,
 }
 
-err := Post.Objects.Create(ctx, post)
+err := PostObjects.Create(ctx, post)
 // Hooks run automatically (BeforeSave, BeforeCreate, etc.)
 ```
 
@@ -349,18 +382,18 @@ err := Post.Objects.Create(ctx, post)
 
 ```go
 post.Title = "Updated Title"
-err := Post.Objects.Update(ctx, post)
+err := PostObjects.Update(ctx, post)
 ```
 
 ### Pattern 4: Complex Queries
 
 ```go
-posts, err := Post.Objects.
+posts, err := PostObjects.
     Filter(
-        Post.Fields.Published.Equals(true).
-            And(Post.Fields.CreatedAt.GreaterThan(someDate)),
+        PostFieldsInstance.Published.Equals(true).
+            And(PostFieldsInstance.CreatedAt.GreaterThan(someDate)),
     ).
-    Exclude(Post.Fields.Deleted.Equals(true)).
+    Exclude(PostFieldsInstance.Title.Contains("draft")).
     OrderBy("-created_at").
     Limit(10).
     All(ctx)
@@ -378,7 +411,7 @@ posts, err := Post.Objects.
 - Ensure database exists
 
 **Admin not showing?**
-- Register models with `admin.RegisterModel()`
+- Register models with `admin.Register(&admin.Config[YourModel]{})`
 - Enable admin in config: `admin.enabled: true`
 - Check admin path matches config
 

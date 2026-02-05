@@ -23,8 +23,7 @@ This example shows how to build a blog with:
 package models
 
 import (
-    "github.com/forgego/forge/pkg/schema"
-    "github.com/forgego/forge/pkg/schema/relations"
+    "github.com/forgego/forge/schema"
 )
 
 type Post struct {
@@ -33,26 +32,27 @@ type Post struct {
 
 func (Post) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64("id").Primary().AutoIncrement().Build(),
-        schema.String("title").Required().MaxLength(200).Build(),
-        schema.String("slug").Unique().MaxLength(200).Build(),
-        schema.Text("content").Required().Build(),
-        schema.Text("excerpt").MaxLength(500).Build(),
-        schema.Bool("published").Default(false).Build(),
-        schema.Time("created_at").AutoNowAdd().Build(),
-        schema.Time("updated_at").AutoNow().Build(),
-        schema.Time("published_at").Build(),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+        schema.StringField("title", schema.Required(), schema.MaxLength(200)),
+        schema.StringField("slug", schema.Unique(), schema.MaxLength(200)),
+        schema.TextField("content", schema.Required()),
+        schema.TextField("excerpt", schema.MaxLength(500)),
+        schema.BoolField("published", schema.Default(false)),
+        schema.TimeField("created_at", schema.AutoNowAdd()),
+        schema.TimeField("updated_at", schema.AutoNow()),
+        schema.TimeField("published_at"),
     }
 }
 
 func (Post) Relations() []schema.Relation {
     return []schema.Relation{
-        relations.ForeignKey("author", "User").
-            Required().
-            OnDelete(schema.Cascade).
-            RelatedName("posts"),
-        relations.ManyToMany("categories", "Category").
-            RelatedName("posts"),
+        schema.ForeignKeyField("author", "User",
+            schema.OnDelete(schema.CascadeCASCADE),
+            schema.RelatedName("posts"),
+        ),
+        schema.ManyToManyField("categories", "Category",
+            schema.RelatedName("posts"),
+        ),
     }
 }
 
@@ -79,10 +79,10 @@ type Category struct {
 
 func (Category) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64("id").Primary().AutoIncrement().Build(),
-        schema.String("name").Required().Unique().MaxLength(100).Build(),
-        schema.String("slug").Required().Unique().MaxLength(100).Build(),
-        schema.Text("description").Build(),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+        schema.StringField("name", schema.Required(), schema.Unique(), schema.MaxLength(100)),
+        schema.StringField("slug", schema.Required(), schema.Unique(), schema.MaxLength(100)),
+        schema.TextField("description"),
     }
 }
 
@@ -120,8 +120,8 @@ import (
 func ListPosts(w http.ResponseWriter, r *http.Request) {
     ctx := context.Background()
     
-    posts, err := models.Post.Objects.
-        Filter(models.Post.Fields.Published.Equals(true)).
+    posts, err := models.PostObjects.
+        Filter(models.PostFieldsInstance.Published.Equals(true)).
         OrderBy("-created_at").
         PrefetchRelated("author", "categories").
         All(ctx)
@@ -145,9 +145,9 @@ func GetPost(w http.ResponseWriter, r *http.Request) {
     // Extract ID from URL
     id := extractID(r.URL.Path)
     
-    post, err := models.Post.Objects.
-        Filter(models.Post.Fields.ID.Equals(id)).
-        Filter(models.Post.Fields.Published.Equals(true)).
+    post, err := models.PostObjects.
+        Filter(models.PostFieldsInstance.ID.Equals(id)).
+        Filter(models.PostFieldsInstance.Published.Equals(true)).
         SelectRelated("author").
         PrefetchRelated("categories").
         Get(ctx)
@@ -165,19 +165,34 @@ func GetPost(w http.ResponseWriter, r *http.Request) {
 ## Admin Setup
 
 ```go
-admin.RegisterModelWithOptions(
-    &models.Post{},
-    admin.WithListDisplay("title", "author", "published", "created_at"),
-    admin.WithSearchFields("title", "content"),
-    admin.WithListFilter("published", "author", "created_at"),
-    admin.WithDateHierarchy("created_at"),
-)
+admin.Register(&admin.Config[models.Post]{
+    ListDisplay: []admin.Field{
+        models.PostFieldsInstance.Title,
+        models.PostFieldsInstance.Author,
+        models.PostFieldsInstance.Published,
+        models.PostFieldsInstance.CreatedAt,
+    },
+    SearchFields: []admin.Field{
+        models.PostFieldsInstance.Title,
+        models.PostFieldsInstance.Content,
+    },
+    ListFilter: []admin.Field{
+        models.PostFieldsInstance.Published,
+        models.PostFieldsInstance.Author,
+        models.PostFieldsInstance.CreatedAt,
+    },
+    DateHierarchy: "created_at",
+})
 
-admin.RegisterModelWithOptions(
-    &models.Category{},
-    admin.WithListDisplay("name", "slug"),
-    admin.WithSearchFields("name"),
-)
+admin.Register(&admin.Config[models.Category]{
+    ListDisplay: []admin.Field{
+        models.CategoryFieldsInstance.Name,
+        models.CategoryFieldsInstance.Slug,
+    },
+    SearchFields: []admin.Field{
+        models.CategoryFieldsInstance.Name,
+    },
+})
 ```
 
 ## REST API
@@ -188,7 +203,7 @@ func RegisterPostViewSet(router *api.Router) {
         func() api.Serializer {
             return NewPostSerializer()
         },
-        models.Post.Objects.Filter(models.Post.Fields.Published.Equals(true)),
+        models.PostObjects.Filter(models.PostFieldsInstance.Published.Equals(true)),
         &models.Post{},
     )
     
@@ -208,14 +223,14 @@ post := &models.Post{
     Published: true,
     Author:    author,
 }
-err := models.Post.Objects.Create(ctx, post)
+err := models.PostObjects.Create(ctx, post)
 ```
 
 ### Get Published Posts
 
 ```go
-posts, err := models.Post.Objects.
-    Filter(models.Post.Fields.Published.Equals(true)).
+posts, err := models.PostObjects.
+    Filter(models.PostFieldsInstance.Published.Equals(true)).
     OrderBy("-created_at").
     All(ctx)
 ```
@@ -223,8 +238,8 @@ posts, err := models.Post.Objects.
 ### Filter by Category
 
 ```go
-posts, err := models.Post.Objects.
-    Filter(models.Post.Fields.Categories.Contains(categoryID)).
+posts, err := models.PostObjects.
+    Filter(models.PostFieldsInstance.Categories.Contains(categoryID)).
     All(ctx)
 ```
 

@@ -133,7 +133,7 @@ Build reusable plugins:
 ```go
 package myplugin
 
-import "github.com/forgego/forge/pkg/registry"
+import "github.com/forgego/forge/registry"
 
 func init() {
     registry.RegisterPlugin(&MyPlugin{})
@@ -254,41 +254,18 @@ Here's a complete example of extending forge:
 ```go
 package myfields
 
-import (
-    "github.com/forgego/forge/pkg/schema"
-    "github.com/forgego/forge/pkg/schema/validators"
-)
+import "github.com/forgego/forge/schema"
 
 // PhoneField creates a phone number field with validation
-func PhoneField(name string) *PhoneFieldBuilder {
-    return &PhoneFieldBuilder{
-        BaseFieldBuilder: &schema.BaseFieldBuilder{
-            field: schema.Field{
-                Name: name,
-                Type: schema.TypeString,
-            },
-        },
-    }
-}
-
-type PhoneFieldBuilder struct {
-    *schema.BaseFieldBuilder
-}
-
-func (b *PhoneFieldBuilder) Required() *PhoneFieldBuilder {
-    b.field.Required = true
-    return b
-}
-
-func (b *PhoneFieldBuilder) Build() schema.Field {
-    // Add phone validation
-    b.field.Validators = append(b.field.Validators, &PhoneValidator{})
-    return b.field
+func PhoneField(name string, opts ...schema.FieldOpt) schema.Field {
+    field := schema.StringField(name, opts...)
+    field.Validators = append(field.Validators, PhoneValidator{})
+    return field
 }
 
 type PhoneValidator struct{}
 
-func (v *PhoneValidator) Validate(value interface{}) error {
+func (v PhoneValidator) Validate(value interface{}) error {
     str, ok := value.(string)
     if !ok {
         return fmt.Errorf("expected string")
@@ -305,7 +282,7 @@ func (v *PhoneValidator) Validate(value interface{}) error {
 // Usage
 func (User) Fields() []schema.Field {
     return []schema.Field{
-        PhoneField("phone").Required().Build(),
+        PhoneField("phone", schema.Required()),
     }
 }
 ```
