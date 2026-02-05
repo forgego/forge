@@ -7,7 +7,7 @@ keywords:
   - go django
   - golang web framework
   - type-safe go
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # What is forge?

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="forge social card">
+  <defs>
+    <linearGradient id="bgGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#667eea"/>
+      <stop offset="100%" stop-color="#764ba2"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+
+  <g transform="translate(80 90)">
+    <rect width="128" height="128" rx="24" fill="url(#accentGradient)"/>
+    <path d="M44 36h48v14H58v18h28v14H58v32H44z" fill="#ffffff"/>
+  </g>
+
+  <text x="80" y="310" fill="#ffffff" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="72" font-weight="700">
+    forge
+  </text>
+  <text x="80" y="370" fill="#cbd5f5" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="36" font-weight="500">
+    Django-like Go Framework
+  </text>
+  <text x="80" y="430" fill="#94a3b8" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="28">
+    Type-safe ORM, auto-generated admin, and REST APIs
+  </text>
+</svg>

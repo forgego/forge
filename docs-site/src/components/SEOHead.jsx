@@ -9,7 +9,7 @@ export default function SEOHead({
   title,
   description,
   keywords = [],
-  image = '/img/forge-social-card.jpg',
+  image = '/forge-social-card.svg',
   type = 'website',
   url,
   author = 'forge Framework',

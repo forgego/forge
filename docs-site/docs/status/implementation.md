@@ -7,7 +7,7 @@ keywords:
   - forge features
   - django go status
   - framework progress
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Implementation Status
@@ -237,7 +237,7 @@ Want to help build forge?
 - Background tasks
 - Monitoring tools
 
-Check the [contributing guide](/docs/contributing) for details.
+Check the [contributing guide](/docs/contributing/development/) for details.
 
 ## Support
 

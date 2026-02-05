@@ -8,7 +8,7 @@ keywords:
   - forge viewset
   - forge serializer
   - api framework
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # REST API

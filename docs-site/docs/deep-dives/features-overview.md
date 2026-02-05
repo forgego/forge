@@ -6,7 +6,7 @@ keywords:
   - feature list
   - framework features
   - complete features
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Features Overview
@@ -18,63 +18,63 @@ This document provides an overview of all features in the forge framework. For d
 ### 1. Schema Definition System
 **Status:** ✅ Complete  
 **Location:** `forge/schema/`  
-**Documentation:** [Schema System Deep Dive](../deep-dives/schema-system)
+**Documentation:** [Schema System Deep Dive](/docs/deep-dives/schema-system/)
 
 Declarative model definitions with full Django field options, relationships, metadata, and lifecycle hooks.
 
 ### 2. Code Generation
 **Status:** ✅ Complete  
 **Location:** `forge/codegen/`  
-**Documentation:** [Code Generation Deep Dive](../deep-dives/code-generation)
+**Documentation:** [Code Generation Guide](/docs/features/code-generation/)
 
 AST-based code generation for models, managers, querysets, and field expressions. Generates type-safe Go code from schema definitions.
 
 ### 3. Type-Safe ORM
 **Status:** ✅ Complete  
 **Location:** `forge/orm/`  
-**Documentation:** [ORM System Deep Dive](../deep-dives/orm-system)
+**Documentation:** [ORM System Guide](/docs/features/orm-system/)
 
 Complete Django-like ORM with type-safe queries, managers, field expressions, and SQL builder.
 
 ### 4. Admin System
 **Status:** ✅ Complete  
 **Location:** `forge/admin/`  
-**Documentation:** [Admin System Deep Dive](../deep-dives/admin-system)
+**Documentation:** [Admin System Guide](/docs/features/admin-system/)
 
 Django-style admin interface with type-safe configuration, CRUD operations, filters, widgets, and export.
 
 ### 5. REST API Framework
 **Status:** ✅ Complete  
 **Location:** `forge/api/`  
-**Documentation:** [API Framework Deep Dive](../deep-dives/api-framework)
+**Documentation:** [API Framework Guide](/docs/features/api-framework/)
 
 DRF-like REST API framework with serializers, viewsets, authentication, permissions, throttling, and more.
 
 ### 6. Filter System
 **Status:** ✅ Complete  
 **Location:** `forge/filter/`  
-**Documentation:** [Filter System Deep Dive](../deep-dives/filter-system)
+**Documentation:** [Filter System Guide](/docs/features/filter-system/)
 
 Advanced filtering system with AST support, query parsing, expression conversion, security validation, and query optimization.
 
 ### 7. Identity System
 **Status:** ✅ Complete  
 **Location:** `forge/identity/`  
-**Documentation:** [Identity System Deep Dive](../deep-dives/identity-system)
+**Documentation:** [Identity System Guide](/docs/features/identity-system/)
 
 Complete user management and authentication system with repositories, services, authentication backends, permissions, sessions, password management, and HTTP handlers.
 
 ### 8. Database Layer
 **Status:** ✅ Complete  
 **Location:** `forge/db/`  
-**Documentation:** [Database Layer Deep Dive](../deep-dives/database-layer)
+**Documentation:** [Database Layer Guide](/docs/features/database-layer/)
 
 Database connection management with pooling, transaction support with savepoints, and migration integration.
 
 ### 9. Migration System
 **Status:** ✅ Complete  
 **Location:** `forge/db/migrate/` and `forge/migrate/`  
-**Documentation:** [Migration System Deep Dive](../deep-dives/migration-system)
+**Documentation:** [Migration System Guide](/docs/features/migration-system/)
 
 Complete migration system with schema detection, diff generation, SQL generation, execution, rollback, state management, and drift detection.
 
@@ -146,7 +146,7 @@ Command-line interface for project creation, code generation, migrations, and se
 
 ### 📋 Planned Features
 
-See [Roadmap](../contributing/roadmap) for detailed planned features.
+See the [Roadmap](/docs/status/roadmap/) for detailed planned features.
 
 ## Feature Dependencies
 
@@ -224,15 +224,15 @@ Each feature has:
 
 ## Feature Documentation
 
-For detailed documentation on each feature, see the Deep Dives section:
-- [Architecture](../deep-dives/architecture) - Complete system architecture
-- [Design Principles](../deep-dives/design-principles) - Framework design principles
-- [Schema System](../deep-dives/schema-system) - Schema definition system
-- [Code Generation](../deep-dives/code-generation) - Code generation from schemas
-- [ORM System](../deep-dives/orm-system) - Type-safe ORM system
-- [Admin System](../deep-dives/admin-system) - Django-like admin interface
-- [API Framework](../deep-dives/api-framework) - DRF-like REST API framework
-- [Filter System](../deep-dives/filter-system) - Advanced filtering system
-- [Identity System](../deep-dives/identity-system) - User management and authentication
-- [Database Layer](../deep-dives/database-layer) - Database connection and transactions
-- [Migration System](../deep-dives/migration-system) - Database migration system
+For detailed documentation on each feature, see the Deep Dives and Guides:
+- [Architecture](/docs/deep-dives/architecture/) - Complete system architecture
+- [Design Principles](/docs/deep-dives/design-principles/) - Framework design principles
+- [Schema System](/docs/deep-dives/schema-system/) - Schema definition system
+- [Code Generation](/docs/features/code-generation/) - Code generation from schemas
+- [ORM System](/docs/features/orm-system/) - Type-safe ORM system
+- [Admin System](/docs/features/admin-system/) - Django-like admin interface
+- [API Framework](/docs/features/api-framework/) - DRF-like REST API framework
+- [Filter System](/docs/features/filter-system/) - Advanced filtering system
+- [Identity System](/docs/features/identity-system/) - User management and authentication
+- [Database Layer](/docs/features/database-layer/) - Database connection and transactions
+- [Migration System](/docs/features/migration-system/) - Database migration system

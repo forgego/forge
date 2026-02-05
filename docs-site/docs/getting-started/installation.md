@@ -7,7 +7,7 @@ keywords:
   - setup forge
   - forge cli
   - forge setup
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Installation
@@ -113,7 +113,7 @@ Now that you have forge installed:
 
 1. [Create your first project](/docs/getting-started/quickstart)
 2. [Learn about models](/docs/guides/models)
-3. [Explore the examples](../examples/blog)
+3. [Explore the examples](/docs/examples/blog/)
 
 ## Troubleshooting
 

@@ -6,7 +6,7 @@ keywords:
   - manager reference
   - crud operations
   - model manager
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Manager

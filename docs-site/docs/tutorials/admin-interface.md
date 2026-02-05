@@ -17,7 +17,7 @@ You'll create an admin interface for a blog application with:
 
 ## Prerequisites
 
-- Completed [Tutorial 1: Getting Started](/docs/tutorials/02-getting-started)
+- Completed [Tutorial 1: Getting Started](/docs/tutorials/getting-started/)
 - A working forge application
 - Basic understanding of Go and the forge ORM
 

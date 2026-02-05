@@ -7,7 +7,7 @@ keywords:
   - code generation
   - forge internals
   - framework architecture
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Architecture

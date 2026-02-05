@@ -7,7 +7,7 @@ keywords:
   - complete application
   - django go tutorial
   - web app tutorial
-image: /img/forge-social-card.jpg
+image: /forge-social-card.svg
 ---
 
 # Build a Complete Blog Application

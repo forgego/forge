@@ -11,6 +11,11 @@ const sidebars = {
   gettingStarted: [
     {
       type: 'doc',
+      id: 'index',
+      label: 'Documentation',
+    },
+    {
+      type: 'doc',
       id: 'introduction',
       label: 'Introduction',
     },
@@ -64,6 +69,10 @@ const sidebars = {
         'guides/queries',
         'guides/admin',
         'guides/rest-api',
+        'guides/authentication',
+        'guides/validation',
+        'guides/middleware',
+        'guides/error-handling',
         'guides/migrations',
         'guides/security',
         'guides/deployment',

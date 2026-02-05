@@ -49,6 +49,6 @@ If you get stuck:
 
 ## Next Steps
 
-Ready to start? Begin with [Tutorial 1: Getting Started](/docs/tutorials/02-getting-started).
+Ready to start? Begin with [Tutorial 1: Getting Started](/docs/tutorials/getting-started/).
 
-After completing the getting started tutorial, continue with [Tutorial 2: Admin Interface](/docs/tutorials/03-admin-interface) to learn how to build powerful admin panels.
+After completing the getting started tutorial, continue with [Tutorial 2: Admin Interface](/docs/tutorials/admin-interface/) to learn how to build powerful admin panels.
