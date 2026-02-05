@@ -237,7 +237,7 @@ Want to help build forge?
 - Background tasks
 - Monitoring tools
 
-Check the [contributing guide](/docs/contributing) for details.
+Check the [contributing guide](/docs/contributing/development/) for details.
 
 ## Support
 

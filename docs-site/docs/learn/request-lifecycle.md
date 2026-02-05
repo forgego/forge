@@ -266,6 +266,6 @@ for _, post := range posts {
 
 ## Next steps
 
-- **[Middleware](/docs/guides/middleware)** - Learn about middleware
-- **[Authentication](/docs/guides/authentication)** - Understand authentication
-- **[Error Handling](/docs/guides/error-handling)** - Handle errors properly
+- **[Middleware](/docs/guides/middleware/)** - Learn about middleware
+- **[Authentication](/docs/guides/authentication/)** - Understand authentication
+- **[Error Handling](/docs/guides/error-handling/)** - Handle errors properly

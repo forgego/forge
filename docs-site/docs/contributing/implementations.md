@@ -397,7 +397,7 @@ This document provides detailed implementation information for all features in t
 
 ### 📋 Planned Features
 
-See [ROADMAP.md](ROADMAP.md) for detailed planned features.
+See the [roadmap](/docs/contributing/roadmap/) for detailed planned features.
 
 ## Implementation Patterns
 

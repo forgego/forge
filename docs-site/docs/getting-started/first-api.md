@@ -290,6 +290,6 @@ curl -X DELETE http://localhost:8000/api/posts/1
 ## Next steps
 
 - **[Use ViewSets](/docs/guides/rest-api)** - Use forge's ViewSet system for cleaner APIs
-- **[Add authentication](/docs/guides/authentication)** - Secure your API
-- **[Add validation](/docs/guides/validation)** - Validate request data
+- **[Add authentication](/docs/guides/authentication/)** - Secure your API
+- **[Add validation](/docs/guides/validation/)** - Validate request data
 - **[Explore examples](/docs/examples/blog)** - See complete examples

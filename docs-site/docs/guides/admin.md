@@ -680,7 +680,7 @@ func InitPostAdmin(postManager *query.Manager[Post], commentManager *query.Manag
 
 ## Next Steps
 
-- [Admin Tutorial](/docs/tutorials/03-admin-interface) - Step-by-step tutorial
+- [Admin Tutorial](/docs/tutorials/admin-interface/) - Step-by-step tutorial
 - [REST API Guide](/docs/guides/rest-api) - Build APIs for your frontend
 - [Security Guide](/docs/guides/security) - Secure your admin interface
 - [Advanced Topics](/docs/advanced/plugins) - Extend the admin with plugins

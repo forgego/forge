@@ -173,7 +173,7 @@ Now that you have a working application, try:
 
 1. **[Add a model](/docs/getting-started/first-api)** - Create your first database model
 2. **[Build an API](/docs/guides/rest-api)** - Create a REST API
-3. **[Add authentication](/docs/guides/authentication)** - Secure your API
+3. **[Add authentication](/docs/guides/authentication/)** - Secure your API
 4. **[Explore examples](/docs/examples/blog)** - See complete examples
 
 ## Troubleshooting

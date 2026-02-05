@@ -204,9 +204,7 @@ Congratulations! You've created your first forge application.
 
 ## What's Next?
 
-In the next tutorial, you'll learn:
-- How to add relationships between models
-- How to query data with the ORM
-- How to customize the admin interface
-
-Continue to [Tutorial 2: Models and Relationships](/docs/getting-started/03-models-relationships).
+Continue with these guides and tutorials:
+- [Models and relationships](/docs/guides/models/)
+- [Queries guide](/docs/guides/queries/)
+- [Admin Interface tutorial](/docs/tutorials/admin-interface/)

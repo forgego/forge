@@ -12,7 +12,7 @@ This document tracks all todos, tasks, and improvements needed for the forge fra
 
 **Status:** ✅ All actionable TODOS complete. Remaining items are planned features for future releases.
 
-**Summary:** 77+ tasks completed (73%), 28 tasks planned for future (27%). See [TODOS_SUMMARY.md](TODOS_SUMMARY.md) for details.
+**Summary:** 77+ tasks completed (73%), 28 tasks planned for future (27%). See the summary below for details.
 
 ## Code Quality & Cleanup
 

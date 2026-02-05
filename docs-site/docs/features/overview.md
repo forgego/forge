@@ -236,7 +236,7 @@ Everything can be extended:
 All features listed above are **fully implemented and production ready**. The MVP is complete and you can build real applications with forge today.
 
 ### What's Next?
-See the [Roadmap](/docs/roadmap) for planned future features and enhancements.
+See the [Roadmap](/docs/status/roadmap/) for planned future features and enhancements.
 
 ### Ready to Start?
 - [Installation Guide](/docs/getting-started/installation)
