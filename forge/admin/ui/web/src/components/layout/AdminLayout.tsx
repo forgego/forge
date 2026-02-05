@@ -21,6 +21,16 @@ import { cn } from "../../lib/utils";
 import { GlobalSearch } from "./GlobalSearch";
 import { ThemeCustomizer } from "../../features/theme/ThemeCustomizer";
 
+<<<<<<< codex/add-quick-actions-to-modellistpage
+type QuickAction = {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  hidden?: boolean;
+  icon?: React.ReactNode;
+  ariaLabel?: string;
+};
+=======
 const buildSectionId = (label: string) =>
   `models-${label
     .toLowerCase()
@@ -31,11 +41,14 @@ const normalizeAdminPath = (path?: string) =>
 
 const isExternalIcon = (icon?: string) =>
   Boolean(icon && (icon.startsWith("http") || icon.startsWith("/") || icon.startsWith("data:")));
+>>>>>>> v8
 
 export default function AdminLayout({
   children,
+  quickActions = [],
 }: {
   children: React.ReactNode;
+  quickActions?: QuickAction[];
 }) {
   const { data: modelsData } = useModels();
   const { data: configData } = useConfig();
@@ -353,6 +366,12 @@ export default function AdminLayout({
     }));
   }, [activeModelSectionId, activePluginSectionId]);
 
+<<<<<<< codex/add-quick-actions-to-modellistpage
+  const visibleQuickActions = useMemo(
+    () => quickActions.filter((action) => !action.hidden),
+    [quickActions]
+  );
+=======
   const handleModelRowKeyDown = (
     event: React.KeyboardEvent<HTMLDivElement>,
     modelName: string
@@ -372,6 +391,7 @@ export default function AdminLayout({
   const showIconGroup =
     Boolean(activePluginInfo.plugin?.icon) ||
     Boolean(activePluginInfo.entry?.icon);
+>>>>>>> v8
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -821,6 +841,33 @@ export default function AdminLayout({
           </Button>
 
           <GlobalSearch models={models} />
+          {visibleQuickActions.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Quick Actions
+              </span>
+              <div className="flex items-center gap-2">
+                {visibleQuickActions.map((action) => (
+                  <Button
+                    key={action.label}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest"
+                    onClick={action.onClick}
+                    disabled={action.disabled}
+                    aria-label={action.ariaLabel || action.label}
+                  >
+                    {action.icon && (
+                      <span className="mr-2 flex items-center">
+                        {action.icon}
+                      </span>
+                    )}
+                    {action.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {showPluginHeader && (
             <div className="hidden md:flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
