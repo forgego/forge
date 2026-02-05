@@ -81,10 +81,11 @@ func (db *DB) RebindPlaceholders(query string) string {
 //
 // Deprecated: Use RebindPlaceholders() for clarity. Rebind will be removed in v3.0.
 // Migration:
-//   // Old
-//   sql := db.Rebind(query)
-//   // New
-//   sql := db.RebindPlaceholders(query)
+//
+//	// Old
+//	sql := db.Rebind(query)
+//	// New
+//	sql := db.RebindPlaceholders(query)
 func (db *DB) Rebind(query string) string {
 	return db.RebindPlaceholders(query)
 }
