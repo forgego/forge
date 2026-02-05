@@ -148,7 +148,7 @@ func (s *Site) Handler() http.Handler {
 
 	// 2. Serve Static UI Assets
 	prefix := s.uiConfig.Prefix
-	
+
 	// Determine the route pattern
 	// Since we might be mounted, we should use a wildcard that matches everything passed to this handler
 	// If prefix is set, StaticFS will handle stripping it from the path

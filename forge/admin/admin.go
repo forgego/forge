@@ -22,7 +22,7 @@ func RegisterWithSite[T any](s *Site, config *core.Config[T]) (*core.Admin[T], e
 	// T must implement schema.Schema
 	var schemaInstance schema.Schema
 	var ok bool
-	
+
 	// Try pointer first (common for models)
 	schemaInstance, ok = any(new(T)).(schema.Schema)
 	if !ok {
@@ -37,7 +37,7 @@ func RegisterWithSite[T any](s *Site, config *core.Config[T]) (*core.Admin[T], e
 
 	// Get table name from schema for manager
 	tableName := schemaInstance.Meta().TableName
-	
+
 	manager, err := orm.NewManager[T](tableName)
 	if err != nil {
 		return nil, err
