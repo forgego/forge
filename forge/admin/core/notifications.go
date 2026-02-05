@@ -84,7 +84,7 @@ func (h *NotificationHub) SSEHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	ch := h.Subscribe()
-	
+
 	// Send initial heartbeat/ack
 	fmt.Fprintf(w, "event: connected\ndata: {\"status\":\"ok\"}\n\n")
 	flusher.Flush()
