@@ -1,8 +1,6 @@
 module github.com/forgego/forge
 
-go 1.24.0
-
-toolchain go1.24.13
+go 1.25
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
