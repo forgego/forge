@@ -18,29 +18,38 @@
 
 ## Features
 
-- **Type-Safe ORM**: Full Django ORM features with compile-time type checking
-- **Code Generation**: AST-based code generation for models, managers, and querysets
-- **Auto-Generated Admin**: Django-style admin interface auto-generated from model registry
-- **Dual API**: Type-safe primary API + dynamic secondary API for runtime flexibility
-- **Migration System**: Built-in migration system with golang-migrate
-- **Security**: Built-in CSRF, XSS, and SQL injection protection
-- **Extensible**: Everything is extendable/overridable via plugins
-- **SQL Builder**: Type-safe SQL generation with proper escaping and parameter binding
+- Type-safe ORM and migrations
+- Code generation for models and admin
+- Extensible plugin system
 
 ## Quick Start
 
-### 1. Create a New Project
+### 1. Install the CLI
+
+Install the `forge` command without cloning the repo:
+
+```bash
+go install github.com/forgego/forge/cli/cmd@latest
+```
+
+Make sure `$GOBIN` (or `$GOPATH/bin`) is on your `PATH`, then verify:
+
+```bash
+forge --help
+```
+
+### 2. Create a New Project
 
 ```bash
 forge new myapp
 cd myapp
 ```
 
-### 2. Configure Database
+### 3. Configure Database
 
 Edit `config/config.yaml` with your PostgreSQL credentials.
 
-### 3. Define Models
+### 4. Define Models
 
 Edit `models/example.go` or create new model files:
 
@@ -77,20 +86,20 @@ func (Post) Hooks() *schema.ModelHooks {
 }
 ```
 
-### 4. Generate Code
+### 5. Generate Code
 
 ```bash
 forge generate
 ```
 
-### 5. Run Migrations
+### 6. Run Migrations
 
 ```bash
 forge makemigrations
 forge migrate up
 ```
 
-### 6. Start Server
+### 7. Start Server
 
 ```bash
 forge runserver
@@ -100,139 +109,40 @@ Visit `http://localhost:8000/admin/` for the auto-generated admin interface!
 
 For detailed instructions, see the [Getting Started Guide](docs-site/docs/getting-started/quickstart.md).
 
-## Documentation
+## Install as a Library
 
-- **[Getting Started](docs-site/docs/getting-started/quickstart.md)** - 10-minute quick start guide ⭐
-- **[REST API Guide](docs-site/docs/guides/rest-api.md)** - Build APIs for React/Vue frontends
-- **[Admin Guide](docs-site/docs/guides/admin.md)** - Admin interface patterns and best practices
-- **[Architecture](docs-site/docs/deep-dives/architecture.md)** - Framework architecture
-- **[Schema Reference](docs-site/docs/api-reference/schema.md)** - Schema definition guide
-- **[API Reference](docs-site/docs/api-reference/fields.md)** - API documentation
-- **[Usage Guide](docs-site/docs/guides/models.md)** - Step-by-step tutorials
-- **[Features](docs-site/docs/features/overview.md)** - Current and planned features
-- **[Roadmap](docs-site/docs/status/roadmap.md)** - Development roadmap
-- **[Development](docs-site/docs/contributing/development.md)** - Contributing guide
-
-## Example
-
-See `examples/ecommerce/` for a complete example application.
-
-## Technology Stack
-
-- **Go 1.25+**
-- **chi/v5** - HTTP router
-- **database/sql** - Standard SQL interface
-- **golang-migrate** - Migrations
-- **zap** - Logging
-- **viper** - Configuration
-- **testify** - Testing
-
-## 🔒 Security
-
-Forge takes security seriously with:
-
-- ✅ **Zero Known Vulnerabilities** - All dependencies scanned and updated
-- 🛡️ **10+ Security Tools** - Automated scanning with govulncheck, CodeQL, Trivy, Snyk, gosec, and more
-- 🔐 **Secret Detection** - TruffleHog prevents credential leaks
-- 📊 **Daily Security Scans** - Continuous monitoring
-- 🚨 **PR Security Gates** - Automatic security review on every pull request
-- 📋 **Security Policy** - Responsible disclosure process ([SECURITY.md](SECURITY.md))
-
-See our [Security Audit Report](SECURITY_AUDIT.md) for details.
-
-## 📊 Status
-
-**Current:** Production Ready - Secure, tested, and documented! 🎉
-
-**Implementation Status:**
-- ✅ Schema system - Complete
-- ✅ Code generation - Complete
-- ✅ Type-safe ORM - Complete (All, Get, First, Last, Count, Exists)
-- ✅ Q Objects - Complete (And, Or, Not)
-- ✅ Manager CRUD - Complete (Create, Update, Delete with hooks)
-- ✅ Admin Interface - Complete (List view, Create/Edit forms)
-- ✅ REST API - Complete (Full CRUD with pagination, filtering, ordering)
-- ✅ Plugin System - Complete
-- ✅ CLI - Complete (new, generate, migrate, runserver)
-
-See [Features](docs/FEATURES.md) and [Roadmap](docs/ROADMAP.md) for details.
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](docs-site/docs/contributing/development.md) for:
-
-- Code of Conduct
-- Development setup
-- Pull request process
-- Testing guidelines
-- Code style guidelines
-
-### Quick Start for Contributors
+If you want to use Forge packages directly in an existing Go project:
 
 ```bash
-# Fork and clone the repository
-git clone https://github.com/YOUR_USERNAME/foreit.git
-cd foreit
-
-# Install Go 1.25+
-go version  # Should be 1.25+
-
-# Build and test
-cd forge
-go mod download
-go build ./...
-go test ./...
-
-# See tests/ for integration tests
-cd ../tests
-go test ./integration/...
+go get github.com/forgego/forge@latest
 ```
 
-## 📈 Project Stats
+Then import the packages you need, for example:
 
-- **78 Test Functions** - Comprehensive test coverage
-- **60+ Documentation Pages** - Complete guides and references
-- **679 Tracked Files** - Clean, organized codebase
-- **10+ Security Scans** - Enterprise-grade security
-- **Zero Vulnerabilities** - All dependencies secure
+```go
+import "github.com/forgego/forge/schema"
+```
 
-## 🌟 Why Forge?
+## CLI Usage (Forge Commands)
 
-- **🚀 Productivity**: Build full-stack apps 10x faster than traditional Go
-- **✨ Type Safety**: Full type safety with Go generics, catch errors at compile time
-- **🎨 Modern UI**: Beautiful React admin interface with TanStack Router
-- **🔐 Secure**: Built-in security features and continuous scanning
-- **📚 Documented**: Comprehensive documentation with examples
-- **🧪 Tested**: 78 test functions with real PostgreSQL integration
-- **🔧 Extensible**: Plugin system for custom functionality
+Once installed, the `forge` binary is your entry point:
 
-## 📞 Support
+```bash
+forge new myapp
+forge generate
+forge makemigrations
+forge migrate up
+forge runserver
+```
 
-- **Documentation**: [https://hamidrabedi.github.io/foreit/](https://hamidrabedi.github.io/foreit/)
-- **Issues**: [GitHub Issues](https://github.com/hamidrabedi/foreit/issues)
-- **Security**: See [SECURITY.md](SECURITY.md)
-- **Discussions**: [GitHub Discussions](https://github.com/hamidrabedi/foreit/discussions)
+Run `forge --help` to see all commands and flags.
 
-## 📄 License
+## Documentation & Support
+
+- Docs: https://hamidrabedi.github.io/foreit/
+- Issues: https://github.com/hamidrabedi/foreit/issues
+- Security policy: [SECURITY.md](SECURITY.md)
+
+## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-Built with ❤️ using:
-- [Go](https://go.dev/) - Programming language
-- [chi](https://github.com/go-chi/chi) - HTTP router
-- [React](https://react.dev/) - Frontend framework
-- [TanStack](https://tanstack.com/) - Query and Router
-- [Radix UI](https://www.radix-ui.com/) - UI components
-- [Docusaurus](https://docusaurus.io/) - Documentation
-
----
-
-<div align="center">
-
-**[⭐ Star us on GitHub](https://github.com/hamidrabedi/foreit) • [📖 Read the Docs](https://hamidrabedi.github.io/foreit/) • [🐛 Report a Bug](https://github.com/hamidrabedi/foreit/issues)**
-
-Made with ❤️ by the Forge community
-
-</div>
