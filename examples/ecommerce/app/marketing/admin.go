@@ -30,6 +30,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*Coupon) error {
 					for _, coupon := range instances {
 						coupon.IsActive = true
+						if err := CouponObjects.Update(ctx, coupon); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -59,6 +62,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*CouponUsage) error {
 					for _, usage := range instances {
 						usage.DiscountAmount = 0
+						if err := CouponUsageObjects.Update(ctx, usage); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -89,6 +95,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*Review) error {
 					for _, review := range instances {
 						review.Status = "approved"
+						if err := ReviewObjects.Update(ctx, review); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -114,6 +123,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*ReviewImage) error {
 					for _, image := range instances {
 						image.SortOrder = 0
+						if err := ReviewImageObjects.Update(ctx, image); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -139,6 +151,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*ReviewHelpfulness) error {
 					for _, helpfulness := range instances {
 						helpfulness.IsHelpful = true
+						if err := ReviewHelpfulnessObjects.Update(ctx, helpfulness); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -167,6 +182,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*ProductQuestion) error {
 					for _, question := range instances {
 						question.Status = "answered"
+						if err := ProductQuestionObjects.Update(ctx, question); err != nil {
+							return err
+						}
 					}
 					return nil
 				},

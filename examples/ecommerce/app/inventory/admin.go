@@ -31,6 +31,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*Warehouse) error {
 					for _, warehouse := range instances {
 						warehouse.IsActive = true
+						if err := WarehouseObjects.Update(ctx, warehouse); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -59,6 +62,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*Stock) error {
 					for _, stock := range instances {
 						stock.IsActive = true
+						if err := StockObjects.Update(ctx, stock); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -88,6 +94,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*StockMovement) error {
 					for _, movement := range instances {
 						movement.Type = "adjustment"
+						if err := StockMovementObjects.Update(ctx, movement); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -117,6 +126,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*StockAlert) error {
 					for _, alert := range instances {
 						alert.Status = "resolved"
+						if err := StockAlertObjects.Update(ctx, alert); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -146,6 +158,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*StockTransfer) error {
 					for _, transfer := range instances {
 						transfer.Status = "completed"
+						if err := StockTransferObjects.Update(ctx, transfer); err != nil {
+							return err
+						}
 					}
 					return nil
 				},

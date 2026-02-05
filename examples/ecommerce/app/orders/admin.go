@@ -32,6 +32,9 @@ func RegisterAdmin(ctx context.Context) {
 					for _, cart := range instances {
 						cart.IsAbandoned = true
 						cart.Status = "abandoned"
+						if err := CartObjects.Update(ctx, cart); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -60,6 +63,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*CartItem) error {
 					for _, item := range instances {
 						item.Quantity = 1
+						if err := CartItemObjects.Update(ctx, item); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -95,6 +101,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*Order) error {
 					for _, order := range instances {
 						order.Status = "processing"
+						if err := OrderObjects.Update(ctx, order); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -124,6 +133,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*OrderItem) error {
 					for _, item := range instances {
 						item.FulfillmentStatus = "fulfilled"
+						if err := OrderItemObjects.Update(ctx, item); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -153,6 +165,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*Payment) error {
 					for _, payment := range instances {
 						payment.Status = "completed"
+						if err := PaymentObjects.Update(ctx, payment); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
@@ -181,6 +196,9 @@ func RegisterAdmin(ctx context.Context) {
 				Handler: func(ctx context.Context, instances []*Shipment) error {
 					for _, shipment := range instances {
 						shipment.Status = "in_transit"
+						if err := ShipmentObjects.Update(ctx, shipment); err != nil {
+							return err
+						}
 					}
 					return nil
 				},
