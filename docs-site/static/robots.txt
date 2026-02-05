@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://forgego.github.io/forge/sitemap.xml
+Sitemap: https://hamidrabedi.github.io/foreit/sitemap.xml
 
 # Disallow admin and internal paths
 Disallow: /admin/
