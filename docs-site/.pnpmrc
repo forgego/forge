@@ -1,9 +1,0 @@
-# pnpm configuration for fastest installs
-shamefully-hoist=true
-strict-peer-dependencies=false
-auto-install-peers=true
-prefer-frozen-lockfile=true
-store-dir=.pnpm-store
-
-# Allow build scripts for native dependencies
-ignore-scripts=false

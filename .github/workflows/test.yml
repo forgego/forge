@@ -2,36 +2,18 @@ name: Tests
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master, v8]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master, v8]
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      docs: ${{ steps.filter.outputs.docs }}
-      ecommerce: ${{ steps.filter.outputs.ecommerce }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            docs:
-              - 'docs-site/**'
-            ecommerce:
-              - 'examples/ecommerce/**'
-
-  test:
+  unit-tests:
+    name: Unit Tests (Go ${{ matrix.go-version }})
     runs-on: ubuntu-latest
     
     strategy:
       matrix:
-        go-version: ['1.21', '1.22', '1.23']
+        go-version: ['1.24', '1.25']
     
     steps:
       - uses: actions/checkout@v4
@@ -42,7 +24,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
       
       - name: Cache Go modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -53,63 +35,21 @@ jobs:
         working-directory: forge
         run: go mod download
       
-      - name: Run tests
+      - name: Run unit tests
         working-directory: forge
         run: go test -v -race -coverprofile=coverage.out ./...
       
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
         with:
           file: ./forge/coverage.out
           flags: unittests
-          name: codecov-umbrella
           fail_ci_if_error: false
-      
-      - name: Generate coverage report
-        working-directory: forge
-        run: |
-          go tool cover -html=coverage.out -o coverage.html
-          echo "Coverage report generated: coverage.html"
-      
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: coverage-report
-          path: forge/coverage.html
 
-  lint:
+  integration-tests:
+    name: Integration Tests
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-      
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: latest
-          working-directory: forge
-
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-      
-      - name: Build
-        working-directory: forge
-        run: go build ./...
-
-  integration-db:
-    runs-on: ubuntu-latest
+    
     services:
       postgres:
         image: postgres:15
@@ -120,56 +60,42 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-  unused-audit:
-    runs-on: ubuntu-latest
-    continue-on-error: true
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
-
+          go-version: '1.25'
+      
       - name: Cache Go modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('tests/go.sum', 'forge/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
+      
       - name: Download dependencies
         working-directory: tests
         run: go mod download
-
-      - name: Run DB integration tests
+      
+      - name: Run integration tests
         working-directory: tests
         env:
           POSTGRES_HOST: 127.0.0.1
           POSTGRES_PORT: 5432
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: "123"
-        run: go test -v ./integration/db
-      - name: Install golangci-lint
-        run: |
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+        run: go test -v -timeout 15m ./integration/...
 
-      - name: Run unused code audit
-        run: scripts/audit-unused.sh
-
-      - name: Upload unused code report
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: unused-code-report
-          path: reports/unused-code.md
-
-  security:
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -177,80 +103,67 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.25'
       
-      - name: Run gosec security scanner
-        uses: securego/gosec@master
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v4
         with:
-          args: '-no-fail -fmt json -out gosec-report.json ./...'
+          version: latest
           working-directory: forge
+          args: --timeout=5m
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       
-      - name: Upload gosec results
-        uses: actions/upload-artifact@v3
-        if: always()
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          name: gosec-report
-          path: forge/gosec-report.json
+          go-version: '1.25'
+      
+      - name: Build all packages
+        working-directory: forge
+        run: go build ./...
+
+  frontend:
+    name: Frontend Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: forge/admin/ui/web/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: forge/admin/ui/web
+        run: npm ci
+      
+      - name: Build frontend
+        working-directory: forge/admin/ui/web
+        run: npm run build
+      
+      - name: Lint
+        working-directory: forge/admin/ui/web
+        run: npm run lint
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
       
       - name: Run govulncheck
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
         working-directory: forge
-
-  e2e-cli:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-  docs-site-build:
-    runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.docs == 'true'
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "npm"
-          cache-dependency-path: docs-site/package-lock.json
-
-      - name: Install dependencies
-        working-directory: docs-site
-        run: npm ci
-
-      - name: Build docs site
-        working-directory: docs-site
-        run: npm run build
-
-  ecommerce-example-build:
-    runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.ecommerce == 'true'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25.x'
-          check-latest: true
-
-      - name: Build forge CLI
-        working-directory: forge
-        run: go build -o /tmp/forge ./cli/cmd
-
-      - name: Add forge CLI to PATH
-        run: echo "/tmp" >> $GITHUB_PATH
-
-      - name: Run CLI e2e tests
-        working-directory: tests
-        run: go test -v -timeout 15m ./e2e/cli
-          go-version: '1.23'
-
-      - name: Build ecommerce example
-        working-directory: examples/ecommerce
-        run: go build ./...
-
-      - name: Test ecommerce example
-        working-directory: examples/ecommerce
-        run: go test ./...

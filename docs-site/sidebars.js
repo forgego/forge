@@ -51,9 +51,9 @@ const sidebars = {
       type: 'category',
       label: 'Tutorials',
       items: [
-        'tutorials/01-overview',
-        'tutorials/02-getting-started',
-        'tutorials/03-admin-interface',
+        'tutorials/overview',
+        'tutorials/getting-started',
+        'tutorials/admin-interface',
       ],
     },
     {

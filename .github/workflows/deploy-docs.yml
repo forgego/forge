@@ -1,11 +1,13 @@
-name: Deploy Documentation to GitHub Pages
+name: Deploy Documentation
 
 on:
   push:
-    # branches:
-    # - master
-    # paths:
-    # - "docs-site/**"
+    branches:
+      - main
+      - master
+    paths:
+      - 'docs-site/**'
+      - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
 
 permissions:
@@ -19,24 +21,26 @@ concurrency:
 
 jobs:
   build:
+    name: Build Documentation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: recursive
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
           cache-dependency-path: docs-site/package-lock.json
 
       - name: Install dependencies
         working-directory: docs-site
         run: npm ci
 
-      - name: Build website
+      - name: Build documentation
         working-directory: docs-site
         run: npm run build
         env:
@@ -51,6 +55,7 @@ jobs:
           path: docs-site/build
 
   deploy:
+    name: Deploy to GitHub Pages
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
