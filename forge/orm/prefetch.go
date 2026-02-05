@@ -50,7 +50,7 @@ func (qs *BaseQuerySet[T]) prefetchForeignKey(ctx context.Context, results []*T,
 		}
 		// Try to match by type if it's a pointer to the relation type? No, simple naming convention for now.
 	}
-	
+
 	// Fallback: Check if there's a field with "ID" suffix
 	if fkField == "" {
 		fkField = rel.Name + "ID"
@@ -61,15 +61,15 @@ func (qs *BaseQuerySet[T]) prefetchForeignKey(ctx context.Context, results []*T,
 		val := reflect.ValueOf(result).Elem()
 		field := val.FieldByName(fkField)
 		if !field.IsValid() {
-			continue 
+			continue
 		}
-		
+
 		id := field.Interface()
 		// Check for zero value
 		if isZero(id) {
 			continue
 		}
-		
+
 		if !idMap[id] {
 			ids = append(ids, id)
 			idMap[id] = true
@@ -105,7 +105,7 @@ func (qs *BaseQuerySet[T]) prefetchForeignKey(ctx context.Context, results []*T,
 		if !fkFieldVal.IsValid() {
 			continue
 		}
-		
+
 		id := fkFieldVal.Interface()
 		if target, ok := resultMap[id]; ok {
 			relField := val.FieldByName(rel.Name)
@@ -149,7 +149,7 @@ func (qs *BaseQuerySet[T]) prefetchManyToMany(ctx context.Context, results []*T,
 	throughTable := rel.Through
 	if throughTable == "" {
 		// Infer through table name
-		// For MVP, simplistic: table1_table2 sorted? 
+		// For MVP, simplistic: table1_table2 sorted?
 		// Or assume standard naming if not provided.
 		// For now, fail if not provided, but usually schema builder should have set default.
 		return fmt.Errorf("through table not defined for M2M relation %s", rel.Name)
@@ -158,7 +158,6 @@ func (qs *BaseQuerySet[T]) prefetchManyToMany(ctx context.Context, results []*T,
 	// Infer columns
 	// source_id, target_id
 	// This assumes standard naming: {model}_id
-	sourceCol := qs.table + "_id" // simplistic
 	// Need proper column names from schema or relation info.
 	// RelationInfo assumes we know.
 	// Let's assume simplistic for MVP or use what we have.
@@ -166,14 +165,13 @@ func (qs *BaseQuerySet[T]) prefetchManyToMany(ctx context.Context, results []*T,
 	if err != nil {
 		return err
 	}
-	targetCol := targetSchema.TableName + "_id" // simplistic
 
-    // Handle singularization if needed? 
-    // Usually standard is singular_id.
-    // Let's try to be smart or rely on user providing explicit Through table with columns?
-    // For now, assume {singular_table}_id.
-    sourceCol = strings.TrimSuffix(qs.table, "s") + "_id"
-    targetCol = strings.TrimSuffix(targetSchema.TableName, "s") + "_id"
+	// Handle singularization if needed.
+	// Usually standard is singular_id.
+	// Let's try to be smart or rely on user providing explicit Through table with columns.
+	// For now, assume {singular_table}_id.
+	sourceCol := strings.TrimSuffix(qs.table, "s") + "_id"
+	targetCol := strings.TrimSuffix(targetSchema.TableName, "s") + "_id"
 
 	query := fmt.Sprintf("SELECT %s, %s FROM %s WHERE %s IN (%s)",
 		EscapeIdentifier(sourceCol),
@@ -238,9 +236,9 @@ func (qs *BaseQuerySet[T]) prefetchManyToMany(ctx context.Context, results []*T,
 					sliceType := relField.Type()
 					elemType := sliceType.Elem()
 					isPtr := elemType.Kind() == reflect.Ptr
-					
+
 					newSlice := reflect.MakeSlice(sliceType, 0, len(targetIDs))
-					
+
 					for _, tID := range targetIDs {
 						if target, ok := targetMap[tID]; ok {
 							if isPtr {
@@ -269,16 +267,16 @@ func (qs *BaseQuerySet[T]) fetchByIDs(ctx context.Context, schema *ModelSchema, 
 	// Build SQL
 	// Build placeholders manually because we are raw
 	placeholders := buildPlaceholders(len(ids))
-	
+
 	// We need to SELECT *
 	// We can reuse BaseQuerySet logic if we could instantiate it, but we can't easily.
 	// So we construct SQL manually.
-	
+
 	fields := make([]string, 0, len(schema.Fields))
 	for _, f := range schema.Fields {
 		fields = append(fields, EscapeIdentifier(f.DBColumn))
 	}
-	
+
 	query := fmt.Sprintf("SELECT %s FROM %s WHERE %s IN (%s)",
 		strings.Join(fields, ", "),
 		EscapeIdentifier(schema.TableName),
@@ -294,7 +292,7 @@ func (qs *BaseQuerySet[T]) fetchByIDs(ctx context.Context, schema *ModelSchema, 
 
 	var results []reflect.Value
 	columns, _ := rows.Columns()
-	
+
 	for rows.Next() {
 		// Create instance
 		instanceVal := reflect.New(schema.ModelType) // *Model
@@ -303,11 +301,11 @@ func (qs *BaseQuerySet[T]) fetchByIDs(ctx context.Context, schema *ModelSchema, 
 			// We want *User
 			instanceVal = reflect.New(schema.ModelType.Elem())
 		}
-		
+
 		// Scan
 		scanArgs := make([]interface{}, len(columns))
 		elem := instanceVal.Elem()
-		
+
 		for i, col := range columns {
 			fieldInfo := schema.GetField(col)
 			if fieldInfo != nil {
@@ -323,11 +321,11 @@ func (qs *BaseQuerySet[T]) fetchByIDs(ctx context.Context, schema *ModelSchema, 
 				scanArgs[i] = &dump
 			}
 		}
-		
+
 		if err := rows.Scan(scanArgs...); err != nil {
 			return nil, err
 		}
-		
+
 		results = append(results, instanceVal)
 	}
 
@@ -342,7 +340,7 @@ func buildPlaceholders(n int) string {
 	// We can default to $n for now as we seem to use Postgres in tests mainly?
 	// But previous tests used sqlite3 and postgres.
 	// NewSQLBuilder uses $n.
-	
+
 	parts := make([]string, n)
 	for i := 0; i < n; i++ {
 		parts[i] = fmt.Sprintf("$%d", i+1)

@@ -126,7 +126,7 @@ func TestAnonRateThrottle_AllowRequest(t *testing.T) {
 	assert.Equal(t, time.Duration(0), wait)
 
 	// Second request should be allowed
-	allowed, wait, err = throttle.AllowRequest(req, view)
+	allowed, _, err = throttle.AllowRequest(req, view)
 	require.NoError(t, err)
 	assert.True(t, allowed)
 
