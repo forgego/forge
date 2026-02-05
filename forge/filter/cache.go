@@ -7,17 +7,17 @@ import (
 
 // CacheEntry represents a cache entry
 type CacheEntry struct {
-	Value      interface{}
-	ExpiresAt  time.Time
+	Value     interface{}
+	ExpiresAt time.Time
 }
 
 // FilterCache caches filter-related data
 type FilterCache struct {
-	parsedTrees   map[string]*CacheEntry
-	compiledSQL   map[string]*CacheEntry
-	metadata      map[string]*CacheEntry
-	mu            sync.RWMutex
-	defaultTTL    time.Duration
+	parsedTrees map[string]*CacheEntry
+	compiledSQL map[string]*CacheEntry
+	metadata    map[string]*CacheEntry
+	mu          sync.RWMutex
+	defaultTTL  time.Duration
 }
 
 // NewFilterCache creates a new filter cache
@@ -26,7 +26,7 @@ func NewFilterCache(defaultTTL time.Duration) *FilterCache {
 		parsedTrees: make(map[string]*CacheEntry),
 		compiledSQL: make(map[string]*CacheEntry),
 		metadata:    make(map[string]*CacheEntry),
-		defaultTTL: defaultTTL,
+		defaultTTL:  defaultTTL,
 	}
 
 	// Start cleanup goroutine

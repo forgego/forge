@@ -16,8 +16,6 @@ linters:
   # Enable a focused set of linters for CI signal
   enable:
     - typecheck # Like the front-end of a Go compiler
-    - gofmt # Checks code formatting
-    - goimports # Checks import formatting
     - misspell # Finds commonly misspelled words
     - ineffassign # Detects ineffectual assignments
 

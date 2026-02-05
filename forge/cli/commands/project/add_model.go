@@ -322,7 +322,7 @@ func registerModelInAdmin(adminPath, appName, modelName string) error {
 		return err
 	}
 
-		// Check if model is already registered
+	// Check if model is already registered
 	registrationComment := fmt.Sprintf("// Register %s model for admin\n\t// schemaInstance := &%sSchema{}\n\t// manager := orm.NewManager[%s](db)\n\t// config := &admin.Config[%s]{...}\n\t// admin.Register(schemaInstance, manager, config)", modelName, modelName, modelName, modelName)
 	if strings.Contains(string(content), modelName+"Schema") || strings.Contains(string(content), "Register") {
 		return nil // Already registered or has registration pattern
