@@ -6,14 +6,17 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/forgego/forge/admin"
 	"github.com/forgego/forge/api"
+	"github.com/forgego/forge/config"
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/server"
 	"github.com/go-chi/chi/v5/middleware"
-	_ "github.com/lib/pq" // Import postgres driver
+	"github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 
 	"examples/ecommerce/app/catalog"
 	"examples/ecommerce/app/customers"
@@ -28,60 +31,85 @@ func main() {
 	ctx := context.Background()
 	fmt.Println("🛒 Forge Ecommerce System")
 	fmt.Println("=" + string(make([]byte, 50)))
-    
-    // 1. Initialize Database
-    // Ensure Postgres is running and database 'forge_ecommerce' exists
-    // We try to create it if it doesn't exist
-    defaultDSN := "postgres://postgres:123@127.0.0.1:5432/postgres?sslmode=disable"
-    if defaultDB, err := sql.Open("postgres", defaultDSN); err == nil {
-        defer defaultDB.Close()
-        var exists bool
-        defaultDB.QueryRow("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = 'forge_ecommerce')").Scan(&exists)
-        if !exists {
-            if _, err := defaultDB.Exec("CREATE DATABASE forge_ecommerce"); err != nil {
-                log.Printf("Warning: Failed to create database: %v", err)
-            } else {
-                log.Println("Created database forge_ecommerce")
-            }
-        }
-    }
 
-    dsn := "postgres://postgres:123@127.0.0.1:5432/forge_ecommerce?sslmode=disable"
+	cfg := config.NewConfig()
+	dbHost := cfg.GetString("database.host", "localhost")
+	dbPort := cfg.GetInt("database.port", 5432)
+	dbUser := cfg.GetString("database.user", "postgres")
+	dbPassword := cfg.GetString("database.password", "")
+	dbSSLMode := cfg.GetString("database.sslmode", "disable")
+	dbName := cfg.GetString("database.name", "")
+	if dbName == "" {
+		dbName = cfg.GetString("database.dbname", "forge_ecommerce")
+	}
+
+	// 1. Initialize Database
+	// Ensure Postgres is running and database exists; fall back to SQLite if needed.
+	driver := cfg.GetDriver()
+	sqlitePath := cfg.GetString("database.sqlite_path", filepath.Join(".", "ecommerce.sqlite"))
+	defaultDSN := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=%s",
+		dbHost, dbPort, dbUser, dbPassword, dbSSLMode)
+	if driver == "postgres" || driver == "postgresql" {
+		if defaultDB, err := sql.Open("postgres", defaultDSN); err == nil && defaultDB.Ping() == nil {
+			defer defaultDB.Close()
+			var exists bool
+			if err := defaultDB.QueryRow("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = $1)", dbName).Scan(&exists); err != nil {
+				log.Printf("Warning: Failed to check database existence: %v", err)
+			} else if !exists {
+				if _, err := defaultDB.Exec("CREATE DATABASE " + pq.QuoteIdentifier(dbName)); err != nil {
+					log.Printf("Warning: Failed to create database: %v", err)
+				} else {
+					log.Printf("Created database %s", dbName)
+				}
+			}
+		} else {
+			log.Printf("Postgres not reachable at %s. Falling back to SQLite at %s", defaultDSN, sqlitePath)
+			driver = "sqlite3"
+		}
+	}
+
+	var dsn string
+	if driver == "sqlite" || driver == "sqlite3" {
+		dsn = sqlitePath
+	} else {
+		dsn = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+			dbHost, dbPort, dbUser, dbPassword, dbName, dbSSLMode)
+	}
 	database, err := db.NewDB(dsn)
 	if err != nil {
 		log.Printf("Failed to connect to database: %v", err)
-        log.Fatal("Make sure Postgres is running and database 'forge_ecommerce' exists.")
+		log.Fatal("Make sure Postgres is running and the configured database exists.")
 	}
-    defer database.Close()
-    
-    // 2. Setup Schema
-    SetupSchema(database)
-    
-    // 3. Initialize Apps
-    catalog.Init(database)
-    customers.Init(database)
-    inventory.Init(database)
-    marketing.Init(database)
-    orders.Init(database)
-    
-    // 4. Initialize Admin Site
+	defer database.Close()
+
+	// 2. Setup Schema
+	SetupSchema(database)
+
+	// 3. Initialize Apps
+	catalog.Init(database)
+	customers.Init(database)
+	inventory.Init(database)
+	marketing.Init(database)
+	orders.Init(database)
+
+	// 4. Initialize Admin Site
 	adminSite := admin.DefaultSite
 	adminSite.Title = "Forge Ecommerce Admin"
-	
+
 	// Set UI Prefix
 	uiConfig := adminSite.GetUIConfig()
 	uiConfig.Prefix = "/admin"
 	adminSite.WithUIConfig(uiConfig)
 
 	adminSite.SetDB(database)
-	
+
 	// Register application admins
 	catalog.RegisterAdmin(ctx)
 	customers.RegisterAdmin(ctx)
 	inventory.RegisterAdmin(ctx)
 	marketing.RegisterAdmin(ctx)
 	orders.RegisterAdmin(ctx)
-	
+
 	// Register Plugins
 	adminSite.RegisterPlugin(ctx, &ReportsPlugin{})
 
@@ -89,35 +117,35 @@ func main() {
 	SetupDashboard()
 
 	// 5. Setup API Router
-    apiRouter := api.NewRouter("/api/v1")
-    catalog.RegisterAPI(ctx, apiRouter, database)
-    customers.RegisterAPI(ctx, apiRouter, database)
-    inventory.RegisterAPI(ctx, apiRouter, database)
-    marketing.RegisterAPI(ctx, apiRouter, database)
-    orders.RegisterAPI(ctx, apiRouter, database)
+	apiRouter := api.NewRouter("/api/v1")
+	catalog.RegisterAPI(ctx, apiRouter, database)
+	customers.RegisterAPI(ctx, apiRouter, database)
+	inventory.RegisterAPI(ctx, apiRouter, database)
+	marketing.RegisterAPI(ctx, apiRouter, database)
+	orders.RegisterAPI(ctx, apiRouter, database)
 
 	// 6. Create Server Router
 	r := server.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
-	
-    // Register API routes
-    apiRouter.RegisterRoutes(r)
+
+	// Register API routes
+	apiRouter.RegisterRoutes(r)
 
 	// Admin handler (handles both REST API and UI)
 	r.Mount("/admin", adminSite.Handler())
-	
+
 	// Health check
 	r.Get("/health", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, `{"status":"healthy","message":"Forge Ecommerce Example is running"}`)
 	})
-	
+
 	// Homepage
 	r.Get("/", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-        fmt.Fprintf(w, `
+		fmt.Fprintf(w, `
 <!DOCTYPE html>
 <html>
 <head>
@@ -143,13 +171,15 @@ func main() {
 </html>
 `)
 	})
-	
-	port := ":8003"
+
+	serverHost := cfg.GetString("server.host", "localhost")
+	serverPort := cfg.GetString("server.port", "8000")
+	listenAddr := fmt.Sprintf("%s:%s", serverHost, serverPort)
 	fmt.Printf("\n✨ Forge Ecommerce is Alive ✨\n")
 	fmt.Printf("------------------------------\n")
-	fmt.Printf("🏠 Homepage: http://localhost%s\n", port)
-	fmt.Printf("🛠️  Premium Admin: http://localhost%s/admin/\n", port)
+	fmt.Printf("🏠 Homepage: http://%s\n", listenAddr)
+	fmt.Printf("🛠️  Premium Admin: http://%s/admin/\n", listenAddr)
 	fmt.Printf("------------------------------\n\n")
-	
-	log.Fatal(http.ListenAndServe(port, r))
+
+	log.Fatal(http.ListenAndServe(listenAddr, r))
 }

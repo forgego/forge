@@ -198,6 +198,7 @@ database:
   user: postgres
   password: postgres
   dbname: ecommerce_db
+  sqlite_path: ./ecommerce.sqlite
   sslmode: disable
 ```
 
@@ -206,6 +207,8 @@ Create the database:
 ```sql
 CREATE DATABASE ecommerce_db;
 ```
+
+If Postgres is unavailable, the example will fall back to SQLite automatically, or you can set `driver: sqlite` and use `sqlite_path` to point to a local file.
 
 ### 3. Generate Code
 
