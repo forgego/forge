@@ -15,7 +15,7 @@ Before deploying, ensure:
 - [ ] Environment variables are configured
 - [ ] Database is backed up
 - [ ] HTTPS is configured
-- [ ] Security settings are production-ready
+- [ ] Security settings are reviewed and hardened
 - [ ] Logging is configured
 - [ ] Monitoring is set up
 

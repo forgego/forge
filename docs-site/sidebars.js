@@ -145,8 +145,6 @@ const sidebars = {
         'contributing/development',
         'contributing/implementations',
         'contributing/changelog',
-        'contributing/roadmap',
-        'contributing/todos',
       ],
     },
   ],

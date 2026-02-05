@@ -1083,4 +1083,6 @@ In this tutorial, you built a complete blog application with forge. You learned:
 - How to add custom business logic
 - How to deploy the application
 
-forge gives you Django's productivity with Go's performance and type safety. Everything is type-safe, fast, and production-ready.
+forge gives you Django-like productivity with Go's performance and type safety.
+If you're building CRUD-heavy apps, it helps you move faster without losing
+compile-time checks.

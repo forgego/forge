@@ -140,7 +140,7 @@ db.Query("SELECT * FROM posts WHERE title LIKE ?", "%golang%")
 
 ### API Framework
 **Location:** `forge/api/`  
-**What it does:** Django REST Framework equivalent
+**What it does:** REST API framework inspired by Django REST Framework
 
 - Serializers for data validation
 - ViewSets for CRUD operations
