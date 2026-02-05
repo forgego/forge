@@ -4,8 +4,8 @@ go 1.25
 
 require (
 	github.com/forgego/forge v0.1.0
-	github.com/go-chi/chi/v5 v5.2.3
-	github.com/lib/pq v1.10.9
+	github.com/go-chi/chi/v5 v5.2.4
+	github.com/lib/pq v1.11.1
 )
 
 require (
