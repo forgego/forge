@@ -4,103 +4,127 @@ sidebar_position: 7
 
 # Deployment Guide
 
-This guide covers deploying forge applications to production.
+This guide covers deploying forge applications to production environments.
 
-## Preparation
+## Pre-Deployment Checklist
 
-### Build for Production
+Before deploying, ensure:
 
-Build your application:
+- [ ] All tests pass
+- [ ] Migrations are tested
+- [ ] Environment variables are configured
+- [ ] Database is backed up
+- [ ] HTTPS is configured
+- [ ] Security settings are production-ready
+- [ ] Logging is configured
+- [ ] Monitoring is set up
 
-```bash
-go build -o myapp ./main.go
-```
-
-Or with optimizations:
-
-```bash
-go build -ldflags="-s -w" -o myapp ./main.go
-```
+## Configuration
 
 ### Environment Variables
 
-Use environment variables for configuration:
+Use environment variables for sensitive configuration:
 
-```go
-import (
-    "os"
-    "github.com/forgego/forge/pkg/config"
-)
-
-func main() {
-    cfg := config.NewConfig()
-    
-    // Override with environment variables
-    if dbHost := os.Getenv("DB_HOST"); dbHost != "" {
-        cfg.Database.Host = dbHost
-    }
-    
-    // ... rest of setup
-}
+```bash
+export FORGE_DATABASE_HOST=db.example.com
+export FORGE_DATABASE_NAME=myapp_prod
+export FORGE_DATABASE_USER=myapp_user
+export FORGE_DATABASE_PASSWORD=secure_password
+export FORGE_SECRET_KEY=your-secret-key
+export FORGE_DEBUG=false
 ```
 
-### Configuration File
+### Production Config
 
 Create `config/production.yaml`:
 
 ```yaml
-database:
-  driver: postgres
-  host: ${DB_HOST}
-  port: ${DB_PORT}
-  user: ${DB_USER}
-  password: ${DB_PASSWORD}
-  dbname: ${DB_NAME}
-  sslmode: require
+app:
+  name: "My Application"
+  env: "production"
+  debug: false
 
 server:
-  host: 0.0.0.0
-  port: "8000"
+  host: "0.0.0.0"
+  port: "8080"
+  read_timeout: 30s
+  write_timeout: 30s
 
-admin:
-  enabled: true
-  path: "/admin"
+database:
+  host: "${FORGE_DATABASE_HOST}"
+  port: 5432
+  user: "${FORGE_DATABASE_USER}"
+  password: "${FORGE_DATABASE_PASSWORD}"
+  dbname: "${FORGE_DATABASE_NAME}"
+  sslmode: "require"
+  max_connections: 25
+  max_idle_connections: 5
+
+security:
+  secret_key: "${FORGE_SECRET_KEY}"
+  csrf_secret_key: "${FORGE_CSRF_SECRET_KEY}"
+  session_secret: "${FORGE_SESSION_SECRET}"
+  csrf:
+    enabled: true
+    secure: true
+  session:
+    secure: true
+    http_only: true
+    same_site: "strict"
 
 logging:
-  level: info
-  format: json
+  level: "info"
+  format: "json"
+  output: "stdout"
+```
+
+## Building for Production
+
+### Build Binary
+
+```bash
+# Build for Linux
+GOOS=linux GOARCH=amd64 go build -o myapp ./cmd/server
+
+# Or use Makefile
+make build
+```
+
+### Optimize Build
+
+```bash
+# Build with optimizations
+go build -ldflags="-s -w" -o myapp ./cmd/server
+
+# Reduce binary size
+strip myapp
 ```
 
 ## Database Setup
 
 ### Run Migrations
 
-Always run migrations before starting the application:
-
 ```bash
-# Set environment variables
-export DB_HOST=your-db-host
-export DB_USER=your-db-user
-export DB_PASSWORD=your-db-password
-export DB_NAME=your-db-name
+# Apply all migrations
+forge migrate
 
-# Run migrations
+# Or manually
 ./myapp migrate
 ```
 
-### Database Backup
-
-Set up regular backups:
+### Verify Database
 
 ```bash
-# Backup script
-#!/bin/bash
-pg_dump -h $DB_HOST -U $DB_USER $DB_NAME > backup_$(date +%Y%m%d_%H%M%S).sql
+# Check migration status
+forge migrate status
+
+# Verify connection
+psql -h db.example.com -U myapp_user -d myapp_prod -c "SELECT version();"
 ```
 
 ## Deployment Options
 
-### Docker
+### Docker Deployment
 
 Create `Dockerfile`:
 
@@ -108,28 +132,32 @@ Create `Dockerfile`:
 FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
-COPY . .
+COPY go.mod go.sum ./
 RUN go mod download
-RUN go build -o myapp ./main.go
+
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o myapp ./cmd/server
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
+
 COPY --from=builder /app/myapp .
 COPY --from=builder /app/config ./config
+COPY --from=builder /app/migrations ./migrations
+
+EXPOSE 8080
 CMD ["./myapp"]
 ```
 
 Build and run:
 
 ```bash
-docker build -t myapp .
-docker run -p 8000:8000 \
-  -e DB_HOST=db \
-  -e DB_USER=user \
-  -e DB_PASSWORD=pass \
-  -e DB_NAME=mydb \
-  myapp
+docker build -t myapp:latest .
+docker run -d -p 8080:8080 \
+  -e FORGE_DATABASE_HOST=db.example.com \
+  -e FORGE_SECRET_KEY=your-secret-key \
+  myapp:latest
 ```
 
 ### Docker Compose
@@ -140,33 +168,33 @@ Create `docker-compose.yml`:
 version: '3.8'
 
 services:
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: pass
-      POSTGRES_DB: mydb
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
   app:
     build: .
     ports:
-      - "8000:8000"
+      - "8080:8080"
     environment:
-      DB_HOST: db
-      DB_USER: user
-      DB_PASSWORD: pass
-      DB_NAME: mydb
+      - FORGE_DATABASE_HOST=db
+      - FORGE_DATABASE_NAME=myapp_prod
+      - FORGE_SECRET_KEY=${FORGE_SECRET_KEY}
     depends_on:
       - db
-    command: ./myapp migrate && ./myapp runserver
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=myapp_prod
+      - POSTGRES_USER=myapp_user
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
 
 volumes:
   postgres_data:
 ```
 
-Run:
+Deploy:
 
 ```bash
 docker-compose up -d
@@ -178,20 +206,18 @@ Create `/etc/systemd/system/myapp.service`:
 
 ```ini
 [Unit]
-Description=My Forge Application
-After=network.target postgresql.service
+Description=My Application
+After=network.target
 
 [Service]
 Type=simple
-User=www-data
+User=myapp
 WorkingDirectory=/opt/myapp
-ExecStart=/opt/myapp/myapp runserver
+ExecStart=/opt/myapp/myapp
 Restart=always
-RestartSec=10
-Environment="DB_HOST=localhost"
-Environment="DB_USER=myapp"
-Environment="DB_PASSWORD=secret"
-Environment="DB_NAME=myapp_db"
+RestartSec=5
+Environment="FORGE_DATABASE_HOST=db.example.com"
+Environment="FORGE_SECRET_KEY=your-secret-key"
 
 [Install]
 WantedBy=multi-user.target
@@ -205,17 +231,75 @@ sudo systemctl start myapp
 sudo systemctl status myapp
 ```
 
-### Nginx Reverse Proxy
+### Kubernetes Deployment
 
-Create `/etc/nginx/sites-available/myapp`:
+Create `k8s/deployment.yaml`:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+      - name: myapp
+        image: myapp:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: FORGE_DATABASE_HOST
+          valueFrom:
+            secretKeyRef:
+              name: myapp-secrets
+              key: database-host
+        - name: FORGE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: myapp-secrets
+              key: secret-key
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+```
+
+## Reverse Proxy
+
+### Nginx Configuration
 
 ```nginx
 server {
     listen 80;
     server_name example.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name example.com;
+
+    ssl_certificate /etc/ssl/certs/example.com.crt;
+    ssl_certificate_key /etc/ssl/private/example.com.key;
 
     location / {
-        proxy_pass http://localhost:8000;
+        proxy_pass http://localhost:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -224,48 +308,15 @@ server {
 }
 ```
 
-Enable:
+### Caddy Configuration
 
-```bash
-sudo ln -s /etc/nginx/sites-available/myapp /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-### SSL with Let's Encrypt
-
-Install certbot:
-
-```bash
-sudo apt-get install certbot python3-certbot-nginx
-```
-
-Get certificate:
-
-```bash
-sudo certbot --nginx -d example.com
+```caddy
+example.com {
+    reverse_proxy localhost:8080
+}
 ```
 
 ## Monitoring
-
-### Logging
-
-Configure structured logging:
-
-```go
-import "github.com/forgego/forge/pkg/logging"
-
-logger, err := logging.NewLogger(false) // production mode
-if err != nil {
-    log.Fatal(err)
-}
-defer logger.Sync()
-
-logger.Info("Application started",
-    zap.String("version", "1.0.0"),
-    zap.String("environment", "production"),
-)
-```
 
 ### Health Checks
 
@@ -280,134 +331,157 @@ router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
     }
     
     w.WriteHeader(http.StatusOK)
-    json.NewEncoder(w).Encode(map[string]string{
-        "status": "healthy",
-    })
+    w.Write([]byte("OK"))
 })
+```
+
+### Logging
+
+Configure structured logging:
+
+```yaml
+logging:
+  level: "info"
+  format: "json"
+  output: "stdout"
+  fields:
+    service: "myapp"
+    environment: "production"
 ```
 
 ### Metrics
 
-Add metrics endpoint:
+Add Prometheus metrics:
 
 ```go
 import "github.com/prometheus/client_golang/prometheus"
 
-router.Get("/metrics", promhttp.Handler())
-```
-
-## Performance
-
-### Database Connection Pooling
-
-Configure connection pool:
-
-```go
-database.SetMaxOpenConns(25)
-database.SetMaxIdleConns(5)
-database.SetConnMaxLifetime(5 * time.Minute)
-```
-
-### Caching
-
-Add caching for frequently accessed data:
-
-```go
-import "github.com/forgego/forge/pkg/cache"
-
-cache := cache.NewRedisCache(redisClient)
-
-// Cache query results
-key := fmt.Sprintf("user:%d", userID)
-if cached, err := cache.Get(key); err == nil {
-    return cached.(*User), nil
-}
-
-user, err := User.Objects.Get(ctx, userID)
-if err == nil {
-    cache.Set(key, user, 5*time.Minute)
-}
-return user, err
-```
-
-## Security
-
-### Environment Variables
-
-Never commit secrets. Use environment variables or secrets management.
-
-### HTTPS
-
-Always use HTTPS in production. Set up SSL certificates.
-
-### Security Headers
-
-Add security headers (see [Security Guide](/docs/guides/security)).
-
-### Firewall
-
-Configure firewall to only allow necessary ports:
-
-```bash
-sudo ufw allow 22/tcp   # SSH
-sudo ufw allow 80/tcp   # HTTP
-sudo ufw allow 443/tcp  # HTTPS
-sudo ufw enable
+var (
+    httpRequestsTotal = prometheus.NewCounterVec(
+        prometheus.CounterOpts{
+            Name: "http_requests_total",
+            Help: "Total HTTP requests",
+        },
+        []string{"method", "endpoint", "status"},
+    )
+)
 ```
 
 ## Backup and Recovery
 
 ### Database Backups
 
-Set up automated backups:
-
 ```bash
-# Daily backup script
-0 2 * * * pg_dump -h $DB_HOST -U $DB_USER $DB_NAME | gzip > /backups/db_$(date +\%Y\%m\%d).sql.gz
+# Automated backup script
+#!/bin/bash
+DATE=$(date +%Y%m%d_%H%M%S)
+pg_dump -h db.example.com -U myapp_user myapp_prod > backup_$DATE.sql
+
+# Restore
+psql -h db.example.com -U myapp_user myapp_prod < backup_20240101_120000.sql
 ```
 
 ### Application Backups
 
-Backup application files:
+```bash
+# Backup application files
+tar -czf myapp_backup_$(date +%Y%m%d).tar.gz \
+    /opt/myapp/myapp \
+    /opt/myapp/config \
+    /opt/myapp/migrations
+```
+
+## Rollback Procedure
+
+### Application Rollback
 
 ```bash
-tar -czf app_backup_$(date +%Y%m%d).tar.gz /opt/myapp
+# Stop current version
+sudo systemctl stop myapp
+
+# Restore previous binary
+cp myapp.backup myapp
+
+# Start service
+sudo systemctl start myapp
 ```
+
+### Database Rollback
+
+```bash
+# Rollback migrations
+forge migrate down 1
+
+# Or restore from backup
+psql -h db.example.com -U myapp_user myapp_prod < backup.sql
+```
+
+## Performance Tuning
+
+### Database Connection Pool
+
+```yaml
+database:
+  max_connections: 25
+  max_idle_connections: 5
+  max_lifetime: 5m
+```
+
+### Application Settings
+
+```yaml
+server:
+  read_timeout: 30s
+  write_timeout: 30s
+  idle_timeout: 120s
+  max_header_bytes: 1048576
+```
+
+## Security in Production
+
+- Use HTTPS only
+- Set secure cookies
+- Enable CSRF protection
+- Use strong secret keys
+- Limit database connections
+- Enable rate limiting
+- Monitor for attacks
+- Regular security updates
 
 ## Troubleshooting
 
 ### Check Logs
 
 ```bash
-# Systemd
+# Application logs
 sudo journalctl -u myapp -f
 
-# Docker
+# Docker logs
 docker logs -f myapp
 
-# Application logs
-tail -f /var/log/myapp/app.log
+# Nginx logs
+tail -f /var/log/nginx/error.log
 ```
 
-### Database Issues
+### Common Issues
 
-```bash
-# Check connection
-psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c "SELECT 1"
+1. **Database Connection Errors**
+   - Check database is running
+   - Verify credentials
+   - Check network connectivity
 
-# Check migrations
-./myapp migrate version
-```
+2. **Migration Failures**
+   - Check migration status
+   - Verify database permissions
+   - Review migration SQL
 
-### Performance Issues
-
-- Check database query performance
-- Monitor connection pool usage
-- Review application logs
-- Use profiling tools
+3. **Performance Issues**
+   - Check database connection pool
+   - Review query performance
+   - Monitor resource usage
 
 ## Next Steps
 
-- [Security Guide](/docs/guides/security) - Secure your deployment
-- [Performance Guide](/docs/advanced/performance) - Optimize performance
-
+- [Security Guide](/docs/guides/security) - Production security
+- [Monitoring](/docs/advanced/performance) - Performance monitoring
+- [Development Guide](/docs/contributing/development) - Contributing

@@ -1,0 +1,68 @@
+package main
+
+import (
+	"embed"
+	"fmt"
+	"log"
+	"net/http"
+
+	"github.com/forgego/forge/pkg/config"
+	"github.com/forgego/forge/pkg/db"
+	"github.com/forgego/forge/pkg/logging"
+	httplib "github.com/forgego/forge/pkg/http"
+	// adminv2 "github.com/forgego/forge/pkg/admin"
+	// adminhttp "github.com/forgego/forge/pkg/admin/http"
+)
+
+//go:generate forge discover
+
+//go:embed static templates
+var staticFiles embed.FS
+
+func main() {
+	// Load configuration
+	cfg := config.NewConfig()
+	settings := config.LoadSettings(cfg)
+
+	// Create logger
+	logger, err := logging.NewLogger(cfg.IsDevelopment())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer logger.Sync()
+
+	// Connect to database
+	database, err := db.NewDBFromConfig(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer database.Close()
+
+	// Create server
+	server, err := httplib.NewServer(cfg, settings, logger)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Register routes
+	server.RegisterRoutes(func(router *httplib.Router) {
+		// Health check
+		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintf(w, "Welcome to {{.ProjectName}}!")
+		})
+
+		// Register admin routes
+		// if settings.Admin.Enabled {
+		// 	adminRegistry := admin.GetGlobalRegistry()
+		// 	adminRouter := adminhttp.NewRouter(adminRegistry)
+		// 	adminRouter.RegisterRoutes(router, settings.Admin.Path)
+		// }
+	})
+
+	// Start server
+	fmt.Printf("Starting server on %s:%s\n", settings.Server.Host, settings.Server.Port)
+	if err := server.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+

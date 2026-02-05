@@ -1,50 +1,59 @@
 ---
 sidebar_position: 2
+description: Learn how to query your database with forge's type-safe QuerySet API. Filter, order, aggregate, and optimize queries with compile-time type checking.
+keywords:
+  - forge queries
+  - forge queryset
+  - type-safe queries
+  - go database queries
+  - forge filter
+  - forge orm queries
+image: /img/forge-social-card.jpg
 ---
 
-# Queries Guide
+# Queries
 
-The forge QuerySet API provides a powerful, type-safe way to query your database. It's similar to Django's QuerySet but with Go's type safety.
+The QuerySet API is how you query your database in forge. No SQL strings, no runtime errors from typos—everything is type-safe and checked at compile time.
 
-## Basic Queries
+## Why QuerySet?
+
+QuerySet fixes the usual problems:
+
+- **Type safety** - Your code won't compile if you typo a field name
+- **No SQL injection** - Everything uses parameter binding automatically
+- **IDE support** - Autocomplete works, refactoring is safe
+- **Familiar API** - If you know Django's ORM, this feels the same
+
+## Basic queries
 
 ### Get All Objects
 
 ```go
 ctx := context.Background()
-
-// Get all users
 users, err := User.Objects.All(ctx)
 ```
 
 ### Get a Single Object
 
 ```go
-// Get by ID
 user, err := User.Objects.Get(ctx, 1)
-
-// Get first object
 user, err := User.Objects.First(ctx)
-
-// Get last object
 user, err := User.Objects.Last(ctx)
 ```
 
 ### Filtering
 
 ```go
-// Filter by field
 users, err := User.Objects.
     Filter(User.Fields.IsActive.Equals(true)).
     All(ctx)
 
-// Multiple filters (AND)
+// Multiple filters are ANDed together
 users, err := User.Objects.
     Filter(User.Fields.IsActive.Equals(true)).
     Filter(User.Fields.IsStaff.Equals(true)).
     All(ctx)
 
-// Exclude
 users, err := User.Objects.
     Exclude(User.Fields.IsDeleted.Equals(true)).
     All(ctx)
@@ -90,7 +99,7 @@ User.Fields.Status.NotIn("deleted", "banned")
 User.Fields.Username.Contains("john")
 User.Fields.Username.StartsWith("admin")
 User.Fields.Username.EndsWith(".com")
-User.Fields.Username.IContains("JOHN")  // Case-insensitive
+User.Fields.Username.IContains("JOHN")
 ```
 
 ### Range
@@ -105,7 +114,6 @@ User.Fields.CreatedAt.Range(startDate, endDate)
 ### Combining Conditions
 
 ```go
-// AND
 users, err := User.Objects.
     Filter(
         User.Fields.IsActive.Equals(true).
@@ -113,7 +121,6 @@ users, err := User.Objects.
     ).
     All(ctx)
 
-// OR
 users, err := User.Objects.
     Filter(
         User.Fields.IsActive.Equals(true).
@@ -121,11 +128,8 @@ users, err := User.Objects.
     ).
     All(ctx)
 
-// NOT
 users, err := User.Objects.
-    Filter(
-        User.Fields.IsActive.Equals(true).Not(),
-    ).
+    Filter(User.Fields.IsActive.Equals(true).Not()).
     All(ctx)
 ```
 
@@ -387,7 +391,7 @@ func SearchUsers(query string) ([]*User, error) {
 
 ## Next Steps
 
-- [API Reference](/docs/reference/queryset) - Complete QuerySet API
-- [Manager Reference](/docs/reference/manager) - Manager methods
-- [Field Reference](/docs/reference/fields) - Field expression methods
+- [API Reference](/docs/api-reference/queryset) - Complete QuerySet API
+- [Manager Reference](/docs/api-reference/manager) - Manager methods
+- [Field Reference](/docs/api-reference/fields) - Field expression methods
 

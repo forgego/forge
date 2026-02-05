@@ -8,12 +8,16 @@ bin/
 
 # Test binary
 *.test
+db.test
 
 # Output of the go coverage tool
 *.out
+coverage/
+*.coverprofile
 
 # Dependency directories
 vendor/
+node_modules/
 
 # Go workspace file
 go.work
@@ -21,29 +25,99 @@ go.work
 # Generated files
 *.gen.go
 
-# IDE
+# IDE - JetBrains
 .idea/
+*.iml
+*.ipr
+*.iws
+
+# IDE - VSCode
 .vscode/
+*.code-workspace
+
+# IDE - Vim
 *.swp
 *.swo
 *~
 
-# OS
+# IDE - Emacs
+*~
+\#*\#
+.\#*
+
+# OS - macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# OS - Windows
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# OS - Linux
+*~
 
 # Config (may contain secrets)
 config.local.yaml
 .env
 .env.local
+.env.*.local
 
 # Migrations (generated)
 migrations/*.sql
 
 # Logs
 *.log
+logs/
 
 # Build artifacts
 dist/
 build/
+out/
+*.min.js
+*.min.css
 
+# Frontend specific
+node_modules/
+.tanstack/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+.turbo/
+
+# AI/Code Assistant tools (personal configs)
+.agent/
+.claude/
+.continue/
+.trae/
+.cursor/
+.aider*
+
+# DevContainer (personal preference)
+.devcontainer/
+
+# NPM/PNPM config (personal preferences)
+.npmrc
+.pnpmrc
+.pnpm-store/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Test coverage
+coverage.txt
+coverage.html
+
+# Helper projects
+helper-projects/

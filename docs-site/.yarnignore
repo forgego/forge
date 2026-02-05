@@ -1,0 +1,7 @@
+# Ignore unnecessary files for faster installs
+*.log
+.DS_Store
+node_modules
+build
+.cache
+.parcel-cache

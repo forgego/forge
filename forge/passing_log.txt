@@ -1,0 +1,14 @@
+=== RUN   TestUserRepository_Update
+=== RUN   TestUserRepository_Update/updates_user_fields
+    user_test.go:281: 
+        	Error Trace:	E:/projects/foreit/forge/identity/repository/user_test.go:281
+        	Error:      	Received unexpected error:
+        	            	user not found
+        	Test:       	TestUserRepository_Update/updates_user_fields
+=== RUN   TestUserRepository_Update/fails_to_update_with_duplicate_email
+--- FAIL: TestUserRepository_Update (0.05s)
+    --- FAIL: TestUserRepository_Update/updates_user_fields (0.00s)
+    --- PASS: TestUserRepository_Update/fails_to_update_with_duplicate_email (0.00s)
+FAIL
+FAIL	github.com/forgego/forge/identity/repository	0.418s
+FAIL

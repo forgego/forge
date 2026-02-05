@@ -1,23 +1,33 @@
 ---
 sidebar_position: 1
+description: Learn how to define models in forge. Declarative model definitions with type-safe fields, relations, and hooks. Complete guide to forge ORM models.
+keywords:
+  - forge models
+  - forge orm
+  - go models
+  - type-safe models
+  - forge schema
+  - database models
+image: /img/forge-social-card.jpg
 ---
 
-# Models Guide
+# Models
 
-Models are the foundation of your forge application. They define your data structure and provide the interface for interacting with your database.
+Models are how you define your data in forge. Instead of writing database schemas and Go structs separately, you write the model once and forge handles the rest.
 
-## What is a Model?
+## Why models?
 
-A model is a Go struct that implements the `Schema` interface. It defines:
+Models solve real problems:
 
-- **Fields** - The data columns in your database table
-- **Relations** - Relationships to other models
-- **Meta** - Metadata like table name, ordering, indexes
-- **Hooks** - Lifecycle callbacks for create, update, delete operations
+- **One source of truth** - Define your data structure once, not in three places
+- **Type safety** - Everything is checked at compile time
+- **Less code** - No more writing the same CRUD code for every model
+- **Auto migrations** - Database schema updates automatically
+- **Free admin** - Admin interface appears automatically
 
-## Defining a Model
+## Defining a model
 
-Here's a basic model definition:
+Here's a simple example:
 
 ```go
 package models
@@ -57,9 +67,9 @@ func (Post) Hooks() *schema.ModelHooks {
 }
 ```
 
-## Field Types
+## Field types
 
-forge supports many field types:
+forge supports many field types. Here are the most common:
 
 ### Numeric Fields
 
@@ -110,22 +120,22 @@ All field types support chainable options:
 
 ```go
 schema.String("username")
-    .Required()              // NOT NULL constraint
-    .Unique()               // UNIQUE constraint
-    .Primary()              // PRIMARY KEY
-    .Index()                // Create database index
-    .DBColumn("user_name")  // Custom column name
-    .Default("guest")       // Default value
-    .MaxLength(150)         // Maximum length (strings)
-    .MinLength(3)           // Minimum length (strings)
-    .HelpText("Username")   // Help text for admin
-    .VerboseName("Username") // Human-readable name
-    .Choices(...)           // Predefined choices
-    .Null()                 // Allow NULL
-    .Blank()                // Allow blank (strings)
-    .Editable(false)        // Read-only in admin
-    .AutoNow()              // Set on save
-    .AutoNowAdd()           // Set on create only
+    .Required()
+    .Unique()
+    .Primary()
+    .Index()
+    .DBColumn("user_name")
+    .Default("guest")
+    .MaxLength(150)
+    .MinLength(3)
+    .HelpText("Username")
+    .VerboseName("Username")
+    .Choices(...)
+    .Null()
+    .Blank()
+    .Editable(false)
+    .AutoNow()
+    .AutoNowAdd()
     .Build()
 ```
 
@@ -203,35 +213,27 @@ func (User) Hooks() *schema.ModelHooks {
     return &schema.ModelHooks{
         BeforeCreate: func(ctx context.Context, instance interface{}) error {
             user := instance.(*User)
-            // Hash password, set defaults, etc.
             return nil
         },
         AfterCreate: func(ctx context.Context, instance interface{}) error {
-            // Send notification, log, etc.
             return nil
         },
         BeforeUpdate: func(ctx context.Context, instance interface{}) error {
-            // Validate changes, etc.
             return nil
         },
         AfterUpdate: func(ctx context.Context, instance interface{}) error {
-            // Update cache, etc.
             return nil
         },
         BeforeSave: func(ctx context.Context, instance interface{}) error {
-            // Common logic for create/update
             return nil
         },
         AfterSave: func(ctx context.Context, instance interface{}) error {
-            // Common logic for create/update
             return nil
         },
         BeforeDelete: func(ctx context.Context, instance interface{}) error {
-            // Check dependencies, etc.
             return nil
         },
         AfterDelete: func(ctx context.Context, instance interface{}) error {
-            // Cleanup, etc.
             return nil
         },
     }
@@ -322,7 +324,6 @@ func (User) Hooks() *schema.ModelHooks {
     return &schema.ModelHooks{
         BeforeCreate: func(ctx context.Context, instance interface{}) error {
             user := instance.(*User)
-            // Hash password
             if user.Password != "" {
                 hashed, err := auth.HashPassword(user.Password)
                 if err != nil {
@@ -347,6 +348,6 @@ func (User) Hooks() *schema.ModelHooks {
 ## Next Steps
 
 - [Learn about Queries](/docs/guides/queries) - Query your models
-- [Explore Relations](/docs/reference/relations) - Deep dive into relationships
-- [Check Field Reference](/docs/reference/fields) - Complete field type reference
+- [Explore Relations](/docs/api-reference/relations) - Deep dive into relationships
+- [Check Field Reference](/docs/api-reference/fields) - Complete field type reference
 

@@ -1,150 +1,242 @@
-# Forge Framework Tests
+# Forge Testing Suite
 
-Comprehensive test suite for the Forge migration and schema system.
+Comprehensive testing suite for the Forge framework's schema and migration system.
 
-## Structure
+## Quick Start
 
-```
-tests/
-├── go.mod                          # Tests module manifest
-├── testhelpers/                    # Shared test utilities
-│   ├── docker_testhelper.go       # Postgres/SQLite container setup
-│   ├── sql_assertions.go          # Schema assertions
-│   ├── fs_helper.go               # Filesystem utilities
-│   └── cli_helper.go              # CLI invocation
-├── pkg_migrations/                 # Migration tests
-│   ├── migration_unit_test.go      # Unit tests (fast)
-│   └── migration_integration_test.go # Integration tests (needs DB)
-├── cmd_forge/                      # CLI tests
-│   └── cli_e2e_test.go            # End-to-end tests
-└── testdata/                       # Sample models for testing
-    └── sample_app_models.go
-```
-
-## Running Tests
-
-### Run All Tests
 ```bash
 cd tests
 go test ./...
 ```
 
-### Run Unit Tests Only (Fast)
-```bash
-go test ./pkg_migrations -short
-```
-
-### Run Integration Tests
-```bash
-# SQLite (no external dependencies)
-go test -v -timeout 30m ./pkg_migrations
-
-# Postgres (requires Postgres 15+ running)
-export RUN_POSTGRES_TESTS=true
-go test -v -timeout 30m -run TestMigrationApplyPostgres ./pkg_migrations
-```
-
-### Run E2E Tests
-```bash
-go test -v -timeout 60m ./cmd_forge
-```
-
-### Run Specific Test
-```bash
-go test -v -run TestMigrationApplySQLite ./pkg_migrations
-```
-
 ## Test Organization
 
-**Unit Tests** - Fast, isolated tests without database dependencies
-- Location: `pkg_migrations/migration_unit_test.go`
-- Run with: `go test -short`
+```
+tests/
+├── integration/          # Integration tests with real databases
+│   ├── migrate/         # Migration system tests (45+ tests)
+│   ├── orm/             # ORM/Query tests
+│   └── schema/          # Schema builder tests
+├── e2e/                 # End-to-end CLI tests
+│   └── cli/
+├── helpers/             # Test assertion helpers
+├── infra/               # Infrastructure setup (docker, filesystem)
+├── testhelpers/         # Test utilities
+├── testdata/            # Test fixtures and models
+│   └── models/          # Model definitions for testing
+├── TESTING.md           # Comprehensive testing guide
+└── README.md            # This file
+```
 
-**Integration Tests** - Tests against real SQLite/Postgres databases
-- Location: `pkg_migrations/migration_integration_test.go`
-- Coverage: FK cascades, indexes, constraints, schema introspection
+## Test Coverage
 
-**E2E Tests** - Full CLI workflow tests
-- Location: `cmd_forge/cli_e2e_test.go`
-- Coverage: makemigrations, apply, status, migrations
+### Migration System (45+ tests)
 
-## Test Helpers
+**Generation & Change Detection:**
+- Create/drop/rename tables
+- Add/drop/rename/modify columns
+- Add/drop indexes (simple, unique, composite, GIN, GiST, functional, partial, covering)
+- Add/drop foreign keys and constraints
+- No-change detection
 
-The `testhelpers` package provides utilities:
+**Execution:**
+- Migrate up/down
+- Migrate to specific version
+- Rollback to specific version
+- Partial rollback
 
-- **`docker_testhelper.go`**
-  - `StartPostgresContainer()` - Launch ephemeral Postgres
-  - `StartSQLiteMemory()` - Create in-memory SQLite DB
-  - `WaitForDBReady()` - Poll for DB readiness
+**PostgreSQL Features:**
+- GIN/GiST indexes
+- JSONB operations
+- Array types
+- Custom enum types
+- Partial/functional/covering indexes
+- UUID type
+- Numeric precision
+- Timestamp with time zone
 
-- **`sql_assertions.go`**
-  - `AssertTableExists()`, `AssertColumnExists()`, `AssertIndexExists()`
-  - `AssertForeignKeyExists()`, `AssertRowCount()`
-  - `RunSQLExpectSuccess()`, `RunSQLExpectError()`
+**Advanced Fields:**
+- Generated columns (STORED/VIRTUAL)
+- Custom DB column names
+- Column comments
+- Database-level defaults
+- Custom constraints (CHECK)
+- Min/Max value constraints
 
-- **`fs_helper.go`**
-  - `TempWorkdir()` - Create temporary working directory
-  - `ReadFileString()`, `WriteFileString()` - File I/O
+**Recovery & Status:**
+- Force recovery from dirty state
+- Migration status reporting
+- Version tracking
 
-- **`cli_helper.go`**
-  - `RunCLI()` - Execute forge CLI with timeout and env vars
+**Scenarios:**
+- Full e-commerce schema
+- Incremental e-commerce migrations
+- Complex schema evolution
+
+### Schema System (3+ tests)
+
+- All field types (Int64, String, Text, Bool, DateTime, Decimal, JSON, UUID, etc.)
+- Field options (Required, Unique, MaxLength, MinValue, etc.)
+- Database options (DBColumn, DBType, DBDefault, DBComment, etc.)
+- Presentation options (VerboseName, HelpText, Editable, Serialize)
+- Complex models with multiple field types
+
+### ORM System (5+ tests)
+
+- Field expressions
+- Comparison expressions
+- Query building (Q objects)
+- SQL generation
+- Identifier escaping
+
+## Running Tests
+
+### All Tests
+
+```bash
+cd tests
+go test ./...
+```
+
+### Specific Package
+
+```bash
+# Migration tests only
+go test ./integration/migrate -v
+
+# Schema tests only
+go test ./integration/schema -v
+
+# ORM tests only
+go test ./integration/orm -v
+```
+
+### Specific Test
+
+```bash
+go test ./integration/migrate -run TestGeneration_CreateTable -v
+```
+
+### With Coverage
+
+```bash
+go test ./... -coverprofile=coverage.out
+go tool cover -html=coverage.out
+```
 
 ## Prerequisites
 
-### For SQLite Tests (included)
-- No external dependencies needed
+- **PostgreSQL**: Running on `localhost:5432`
+  - User: `postgres`
+  - Password: `123`
+  - Or set environment variables: `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
+- **Go**: 1.21 or higher
 
-### For Postgres Tests
-- Docker installed (for `dockertest`)
-- Postgres 15+ running, or `RUN_POSTGRES_TESTS` env var unset to skip
+## Test Helpers
 
-### For CLI Tests
-- Forge CLI built: `cd .. && go build ./cmd/forge`
-
-## Example Test
+### PostgreSQL Setup
 
 ```go
-func TestMyFeature(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// Start in-memory SQLite
-	db, err := testhelpers.StartSQLiteMemory("")
-	require.NoError(t, err)
-	defer db.Close()
-
-	// Run SQL
-	testhelpers.RunSQLExpectSuccess(ctx, t, db, 
-		"CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(255))")
-
-	// Assert schema
-	testhelpers.AssertTableExists(ctx, t, db, "sqlite", "users")
-	testhelpers.AssertColumnExists(ctx, t, db, "sqlite", "users", "name")
-	
-	// Test business logic
-	testhelpers.AssertRowCount(ctx, t, db, "users", 0)
+opts := testhelpers.PostgresOpts{
+    UseDirect: true,
+    Host:      "localhost",
+    Port:      "5432",
+    User:      "postgres",
+    Password:  "123",
+    DBName:    fmt.Sprintf("test_%d", time.Now().UnixNano()),
 }
+postgresDB, dsn, cleanup, err := testhelpers.StartPostgresContainer(ctx, opts)
+require.NoError(t, err)
+defer cleanup()
 ```
 
-## CI/CD
+### Assertions
 
-The main module's CI/CD (`.github/workflows/`) runs tests from this module:
-- Unit tests on Go 1.20, 1.21
-- Integration tests with Postgres 15
-- E2E tests against live CLI
+```go
+// Table and column assertions
+helpers.AssertTableExists(ctx, t, db, "postgres", "table_name")
+helpers.AssertColumnExists(ctx, t, db, "postgres", "table_name", "column_name")
+helpers.AssertForeignKeyExists(ctx, t, db, "postgres", "table_name", "column_name")
 
-## Notes
+// Migration state
+helpers.AssertMigrationState(ctx, t, database, migrationsDir, expectedVersion, expectDirty)
 
-- Tests module has its own `go.mod` to isolate test dependencies from the main module
-- Main module users are not affected by test dependencies
-- All test files follow Go conventions: `_test.go` suffix
-- Use `testhelpers` package for database operations to ensure consistency
+// Row count
+helpers.AssertRowCount(ctx, t, db, "table_name", expectedCount)
+```
+
+## Test Fixtures
+
+Pre-defined model fixtures in `testdata/models/`:
+
+- **basic_models.go**: User, Product, Order
+- **relationships_models.go**: Author, Post, Tag, UserProfile (with ForeignKey, OneToOne, ManyToMany)
+- **complex_fields_models.go**: Event, Settings (with JSON, Bytes, Decimal, DateTime)
+- **postgres_features_models.go**: ProductWithJSONB, UserWithUUID, DocumentWithTimestamps, OrderWithStatusEnum
+
+## Documentation
+
+See [TESTING.md](./TESTING.md) for comprehensive testing guide including:
+- Detailed test categories
+- Writing new tests
+- Best practices
+- Troubleshooting
 
 ## Contributing
 
-When adding new tests:
-1. Place unit tests in `pkg_migrations/migration_unit_test.go`
-2. Place integration tests in the appropriate location under their package
-3. Use `testhelpers` for common operations
-4. Update imports if moving between packages
-5. Run tests locally before committing: `go test ./...`
+When adding new features:
+
+1. Write tests first (TDD)
+2. Add tests to the appropriate package (`integration/migrate`, `integration/schema`, etc.)
+3. Update documentation (this README and TESTING.md)
+4. Ensure all tests pass: `go test ./...`
+5. Check test coverage
+
+## Test Status
+
+✅ **All major features tested**
+- Schema definition and builders
+- Migration generation (all change types)
+- Migration execution (up/down/to version/rollback)
+- PostgreSQL-specific features
+- Advanced field options
+- Recovery scenarios
+- Full schema evolution scenarios
+
+## Quick Reference
+
+| Command | Description |
+|---------|-------------|
+| `go test ./...` | Run all tests |
+| `go test ./integration/migrate -v` | Run migration tests with verbose output |
+| `go test ./integration/migrate -run TestName` | Run specific test |
+| `go test ./... -short` | Run only short tests (skip slow integration tests) |
+| `go test ./... -coverprofile=coverage.out` | Generate coverage report |
+| `go test ./... -count=1` | Disable test caching |
+
+## Troubleshooting
+
+### Connection Refused
+
+Ensure PostgreSQL is running:
+```bash
+psql -h localhost -U postgres -c "SELECT 1"
+```
+
+### Slow Tests
+
+Integration tests use real databases and are slower. This is expected.
+
+### Build Errors
+
+```bash
+go mod tidy
+go mod download
+```
+
+## References
+
+- [Forge Schema Package](../forge/schema/)
+- [Forge Migration Package](../forge/migrate/)
+- [Forge DB Package](../forge/db/)
+- [Comprehensive Testing Guide](./TESTING.md)

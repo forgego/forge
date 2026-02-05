@@ -282,7 +282,7 @@ available := inventory.Quantity - inventory.Reserved
 
 ## See Also
 
+- [E-commerce Website Sample](/docs/examples/ecommerce-website) - Run the full sample locally and explore the UI.
 - [Models Guide](/docs/guides/models) - Model definitions
-- [Relations Reference](/docs/reference/relations) - Relationship types
+- [Relations Reference](/docs/api-reference/relations) - Relationship types
 - [Library Example](/docs/examples/library) - Another complex example
-

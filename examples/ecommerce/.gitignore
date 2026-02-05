@@ -1,0 +1,72 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+ecommerce
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.html
+
+# Go workspace file
+go.work
+
+# Dependency directories
+vendor/
+
+# Generated files
+*_gen.go
+*_fields.gen.go
+*_manager.gen.go
+*_queryset.gen.go
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config (keep template, ignore local)
+config/local.yaml
+config/production.yaml
+.env
+.env.local
+
+# Logs
+*.log
+logs/
+
+# Build artifacts
+dist/
+build/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Static files (if generated)
+static/dist/
+static/build/
+
+# Node modules (if using for frontend)
+node_modules/
+
+# Docker
+.dockerignore
+docker-compose.override.yml

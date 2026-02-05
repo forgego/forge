@@ -193,6 +193,6 @@ func (f *IPAddressField) IPv6() *IPAddressField {
 
 ## See Also
 
-- [Fields Reference](/docs/reference/fields) - Built-in field types
+- [Fields Reference](/docs/api-reference/fields) - Built-in field types
 - [Models Guide](/docs/guides/models) - Using fields in models
 

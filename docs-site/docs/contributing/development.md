@@ -28,7 +28,7 @@ go mod download
 go test ./...
 
 # Build CLI
-go build ./cmd/forge
+go build ./cli/cmd
 ```
 
 ## Project Structure

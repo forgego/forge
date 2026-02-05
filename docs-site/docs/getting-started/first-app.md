@@ -1,10 +1,10 @@
 ---
-sidebar_position: 3
+sidebar_position: 5
 ---
 
 # Building Your First Application
 
-This guide walks you through building a complete blog application with forge, covering models, views, admin, and more.
+This guide walks you through building a complete blog application with forge. You'll learn how to create models, build APIs, customize the admin interface, and more.
 
 ## Project Overview
 

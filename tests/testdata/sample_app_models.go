@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/forgego/forge/pkg/schema"
+	"github.com/forgego/forge/schema"
 )
 
 // User is a sample model for testing
@@ -40,7 +40,7 @@ type Tag struct {
 // PostTag represents a many-to-many relationship
 type PostTag struct {
 	schema.BaseSchema
-	ID    int64 `db:"id"`
+	ID     int64 `db:"id"`
 	PostID int64 `db:"post_id"`
 	TagID  int64 `db:"tag_id"`
 }

@@ -1,10 +1,30 @@
 ---
 sidebar_position: 4
+description: Build REST APIs with forge's ViewSet framework. Complete guide to serializers, viewsets, authentication, permissions, and API best practices.
+keywords:
+  - forge rest api
+  - forge api
+  - go rest api
+  - forge viewset
+  - forge serializer
+  - api framework
+image: /img/forge-social-card.jpg
 ---
 
-# REST API Guide
+# REST API
 
-forge provides a comprehensive REST API system similar to Django REST Framework. Build APIs for React, Vue, or any frontend that consumes JSON.
+forge's REST API framework is like Django REST Framework for Go. Instead of writing HTTP handlers for every endpoint, you use ViewSets and get CRUD operations, pagination, and filtering for free.
+
+## Why use it?
+
+Because writing API endpoints is repetitive:
+
+- **Automatic CRUD** - Get all the endpoints without writing them
+- **Pagination** - Built in, works out of the box
+- **Filtering** - Filter by any field via query params
+- **Serialization** - Control what fields get exposed
+- **Authentication** - Token, JWT, session—pick what you need
+- **Permissions** - Flexible permission system
 
 ## Overview
 
@@ -322,11 +342,11 @@ func NewPostViewSet() *PostViewSet {
 }
 
 func (vs *PostViewSet) Create(w http.ResponseWriter, r *http.Request) {
-    // Custom create logic
+    // your custom logic here
 }
 
 func (vs *PostViewSet) List(w http.ResponseWriter, r *http.Request) {
-    // Custom list logic with additional filtering
+    // your custom filtering logic here
 }
 ```
 
@@ -388,17 +408,13 @@ import (
 )
 
 func main() {
-    // ... setup code ...
+    // ... your setup code ...
 
-    // Create API router
     apiRouter := api.NewRouter("/api/v1")
-
-    // Register viewsets
     api.RegisterUserViewSet(apiRouter)
     api.RegisterPostViewSet(apiRouter)
     api.RegisterCategoryViewSet(apiRouter)
 
-    // Register routes
     server.RegisterRoutes(func(router *httplib.Router) {
         apiRouter.RegisterRoutes(router)
     })

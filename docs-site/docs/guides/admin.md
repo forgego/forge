@@ -1,38 +1,99 @@
 ---
 sidebar_position: 3
+description: Learn how to use and customize forge's auto-generated admin interface. Django-style admin panel with CRUD operations, search, filtering, and more.
+keywords:
+  - forge admin
+  - admin interface
+  - django admin go
+  - auto-generated admin
+  - forge admin panel
+image: /img/forge-social-card.jpg
 ---
 
-# Admin Interface Guide
+# Admin Interface
 
-forge provides a Django-like auto-generated admin interface for your models. Just register your models and you get a full-featured admin panel.
+The admin interface is forge's auto-generated admin panel. Register your models and you get a full web UI for managing your data. No code required.
 
-## Quick Start
+## Why use it?
 
-### 1. Register Models
+Because building admin interfaces is boring:
 
-In your `main.go`:
+- **Zero code** - Just register your models
+- **Full CRUD** - Create, read, update, delete—all there
+- **Search and filters** - Find what you need fast
+- **Bulk actions** - Update or delete multiple records at once
+- **Export** - Download your data as CSV or JSON
+
+## Quick start
+
+### 1. Define Your Schema
+
+First, ensure your models implement the schema interface:
 
 ```go
-import (
-    "github.com/forgego/forge/pkg/admin"
-    "myapp/models"
-)
+type UserSchema struct{}
 
-func main() {
-    // ... setup code ...
-    
-    // Register models with admin
-    admin.RegisterModel(&models.User{})
-    admin.RegisterModel(&models.Post{})
-    
-    // Register admin routes
-    if settings.Admin.Enabled {
-        admin.RegisterAdminRoutes(router, settings.Admin.Path)
+func (s *UserSchema) Fields() []schema.Field {
+    return []schema.Field{
+        {Name: "ID", Type: schema.TypeInt64, PrimaryKey: true},
+        {Name: "Username", Type: schema.TypeString, Required: true},
+        {Name: "Email", Type: schema.TypeEmail, Required: true},
+        {Name: "IsActive", Type: schema.TypeBool, Default: true},
+    }
+}
+
+func (s *UserSchema) Meta() schema.Meta {
+    return schema.Meta{
+        TableName: "users",
+        VerboseName: "User",
+        VerboseNamePlural: "Users",
     }
 }
 ```
 
-### 2. Access Admin
+### 2. Register Models with Admin
+
+```go
+import (
+    admincore "github.com/forgego/forge/admin/core"
+    "github.com/forgego/forge/admin/http"
+    "github.com/forgego/forge/schema"
+    query "github.com/forgego/forge/orm"
+)
+
+func main() {
+    // Setup database and managers
+    database := db.NewDBFromConfig(cfg)
+    userManager := query.NewManager[User](database)
+    
+    // Register admin
+    userSchema := &UserSchema{}
+    userAdmin, err := admincore.Register[User](
+        schema.NewSchema(userSchema),
+        userManager,
+        &admincore.Config[User]{
+            ListDisplay: []string{"username", "email", "is_active"},
+            SearchFields: []string{"username", "email"},
+        },
+    )
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    // Register for HTTP handlers
+    http.RegisterAdminForHTTP(userAdmin)
+    
+    // Setup router
+    router := httplib.NewRouter()
+    adminRouter := http.NewRouter(admin.GetGlobalRegistry())
+    adminRouter.RegisterRoutes(router, "/admin")
+    
+    // Start server
+    log.Fatal(http.ListenAndServe(":8080", router))
+}
+```
+
+### 3. Access Admin
 
 Start your server and visit `http://localhost:8000/admin/`
 
@@ -40,18 +101,29 @@ You'll see:
 - A list of all registered models
 - Links to view, add, and manage each model
 - Search and filtering capabilities
+- Full CRUD operations
 
-## Admin Options
+## Admin Configuration Options
 
 ### List Display
 
 Control which fields appear in the list view:
 
 ```go
-admin.RegisterModelWithOptions(
-    &models.User{},
-    admin.WithListDisplay("username", "email", "is_active", "date_joined"),
-)
+config := &admincore.Config[User]{
+    ListDisplay: []string{"username", "email", "is_active", "created_at"},
+}
+```
+
+### List Display Links
+
+Make fields clickable to navigate to detail view:
+
+```go
+config := &admincore.Config[User]{
+    ListDisplay: []string{"username", "email"},
+    ListDisplayLinks: []string{"username"}, // username is clickable
+}
 ```
 
 ### Search Fields
@@ -59,10 +131,9 @@ admin.RegisterModelWithOptions(
 Enable search on specific fields:
 
 ```go
-admin.RegisterModelWithOptions(
-    &models.User{},
-    admin.WithSearchFields("username", "email"),
-)
+config := &admincore.Config[User]{
+    SearchFields: []string{"username", "email"},
+}
 ```
 
 ### List Filter
@@ -70,10 +141,26 @@ admin.RegisterModelWithOptions(
 Add filters to the sidebar:
 
 ```go
-admin.RegisterModelWithOptions(
-    &models.Post{},
-    admin.WithListFilter("published", "created_at", "author"),
-)
+config := &admincore.Config[Post]{
+    ListFilter: []string{"published", "created_at", "author"},
+}
+```
+
+You can also use custom filter objects:
+
+```go
+import adminfilters "github.com/forgego/forge/admin/filters"
+
+config := &admincore.Config[Post]{
+    ListFilter: []admincore.Filter[Post]{
+        adminfilters.NewBooleanFilter[Post]("published"),
+        adminfilters.NewDateFilter[Post]("created_at"),
+        adminfilters.NewRelatedFieldListFilter[Post, User](
+            authorField,
+            userManager,
+        ),
+    },
+}
 ```
 
 ### Date Hierarchy
@@ -81,10 +168,9 @@ admin.RegisterModelWithOptions(
 Add date-based navigation:
 
 ```go
-admin.RegisterModelWithOptions(
-    &models.Post{},
-    admin.WithDateHierarchy("created_at"),
-)
+config := &admincore.Config[Post]{
+    DateHierarchy: "created_at",
+}
 ```
 
 ### Ordering
@@ -92,10 +178,9 @@ admin.RegisterModelWithOptions(
 Set default ordering:
 
 ```go
-admin.RegisterModelWithOptions(
-    &models.Post{},
-    admin.WithOrdering("-created_at", "title"),
-)
+config := &admincore.Config[Post]{
+    Ordering: []string{"-created_at", "title"}, // Descending by created_at, then ascending by title
+}
 ```
 
 ### Read Only Fields
@@ -103,10 +188,9 @@ admin.RegisterModelWithOptions(
 Make fields read-only in forms:
 
 ```go
-admin.RegisterModelWithOptions(
-    &models.User{},
-    admin.WithReadOnlyFields("date_joined", "last_login"),
-)
+config := &admincore.Config[User]{
+    ReadOnlyFields: []string{"created_at", "last_login"},
+}
 ```
 
 ### Fieldsets
@@ -114,53 +198,92 @@ admin.RegisterModelWithOptions(
 Organize form fields into groups:
 
 ```go
-admin.RegisterModelWithOptions(
-    &models.User{},
-    admin.WithFieldsets(
-        admin.Fieldset("Personal Information", "username", "email"),
-        admin.Fieldset("Permissions", "is_active", "is_staff", "is_superuser"),
-        admin.Fieldset("Important Dates", "date_joined", "last_login"),
-    ),
-)
+config := &admincore.Config[User]{
+    Fieldsets: []admincore.Fieldset[User]{
+        {
+            Title: "Personal Information",
+            Fields: []string{"username", "email"},
+        },
+        {
+            Title: "Permissions",
+            Fields: []string{"is_active", "is_staff", "is_superuser"},
+            Collapsible: true, // Optional: make collapsible
+        },
+        {
+            Title: "Important Dates",
+            Fields: []string{"created_at", "last_login"},
+        },
+    },
+}
 ```
 
-## Customizing Admin
+### List Per Page
 
-### Custom List View
-
-You can customize the list view by creating a custom admin class:
+Control pagination:
 
 ```go
-type UserAdmin struct {
-    *admin.ModelAdmin
+config := &admincore.Config[Post]{
+    ListPerPage: 25, // Items per page
+    ListMaxShowAll: 100, // Max items for "show all"
 }
-
-func (a *UserAdmin) ListDisplay() []string {
-    return []string{"username", "email", "is_active", "date_joined"}
-}
-
-func (a *UserAdmin) SearchFields() []string {
-    return []string{"username", "email"}
-}
-
-admin.RegisterModelWithAdmin(&models.User{}, &UserAdmin{})
 ```
 
-### Custom Form
+## Advanced Customization
 
-Customize the form for creating/editing:
+### Custom Queryset
+
+Override the base queryset:
 
 ```go
-type UserAdmin struct {
-    *admin.ModelAdmin
+config := &admincore.Config[Post]{
+    GetQueryset: func(ctx context.Context, admin *admincore.Admin[Post], qs query.QuerySet[Post]) (query.QuerySet[Post], error) {
+        // Only show published posts to non-staff users
+        if user := GetUserFromContext(ctx); user != nil && !user.IsStaff {
+            return qs.Filter(publishedField.Eq(true)), nil
+        }
+        return qs, nil
+    },
 }
+```
 
-func (a *UserAdmin) GetFormFields() []string {
-    return []string{"username", "email", "password", "is_active"}
+### Custom Save Logic
+
+Customize how models are saved:
+
+```go
+config := &admincore.Config[Post]{
+    SaveModel: func(ctx context.Context, admin *admincore.Admin[Post], instance *Post, formData admincore.FormData, isNew bool) error {
+        // Custom validation
+        if instance.Title == "" {
+            return errors.New("title is required")
+        }
+        
+        // Set timestamps
+        if isNew {
+            instance.CreatedAt = time.Now()
+        }
+        instance.UpdatedAt = time.Now()
+        
+        // Call default save
+        if isNew {
+            return admin.Manager().Create(ctx, instance)
+        }
+        return admin.Manager().Update(ctx, instance)
+    },
 }
+```
 
-func (a *UserAdmin) GetExcludeFields() []string {
-    return []string{"date_joined", "last_login"}
+### Custom Delete Logic
+
+Customize delete behavior:
+
+```go
+config := &admincore.Config[Post]{
+    DeleteModel: func(ctx context.Context, admin *admincore.Admin[Post], instance *Post) error {
+        // Soft delete instead of hard delete
+        instance.Deleted = true
+        return admin.Manager().Update(ctx, instance)
+    },
 }
 ```
 
@@ -169,29 +292,62 @@ func (a *UserAdmin) GetExcludeFields() []string {
 Add custom bulk actions:
 
 ```go
-type PostAdmin struct {
-    *admin.ModelAdmin
-}
+import (
+    "context"
+    admincore "github.com/forgego/forge/admin/core"
+)
 
-func (a *PostAdmin) GetActions() []admin.Action {
-    return []admin.Action{
-        {
-            Name: "publish",
-            Label: "Publish selected posts",
-            Handler: func(ids []int64) error {
-                // Publish logic
+config := &admincore.Config[Post]{
+    Actions: []admincore.Action[Post]{
+        admincore.NewAction[Post](
+            "publish",
+            "Publish selected posts",
+            func(ctx context.Context, posts []*Post) error {
+                for _, post := range posts {
+                    post.Published = true
+                    if err := postManager.Update(ctx, post); err != nil {
+                        return err
+                    }
+                }
                 return nil
             },
-        },
-        {
-            Name: "unpublish",
-            Label: "Unpublish selected posts",
-            Handler: func(ids []int64) error {
-                // Unpublish logic
+        ),
+        admincore.NewAction[Post](
+            "unpublish",
+            "Unpublish selected posts",
+            func(ctx context.Context, posts []*Post) error {
+                for _, post := range posts {
+                    post.Published = false
+                    if err := postManager.Update(ctx, post); err != nil {
+                        return err
+                    }
+                }
                 return nil
             },
-        },
-    }
+        ),
+    },
+}
+```
+
+### Inlines
+
+Add related model editing:
+
+```go
+config := &admincore.Config[Post]{
+    Inlines: []admincore.Inline[Post, Comment]{
+        admincore.TabularInline[Post, Comment](
+            commentManager,
+            "post_id", // Foreign key field name
+            []string{"author", "content", "created_at"}, // Fields to display
+        ),
+        // Or use StackedInline for a different layout
+        admincore.StackedInline[Post, Comment](
+            commentManager,
+            "post_id",
+            []string{"author", "content", "created_at"},
+        ),
+    },
 }
 ```
 
@@ -237,16 +393,48 @@ Delete with confirmation:
 
 ## Permissions
 
-Control access to admin:
+Control access to admin with permission checking:
 
 ```go
-admin.RegisterModelWithOptions(
-    &models.User{},
-    admin.WithPermissions(
-        admin.RequirePermission("can_view_user"),
-        admin.RequirePermission("can_change_user"),
-    ),
+import (
+    "github.com/forgego/forge/identity"
 )
+
+// Setup permission checker
+permissionChecker := identity.NewPermissionChecker(userRepo)
+
+config := &admincore.Config[User]{
+    PermissionChecker: permissionChecker,
+    
+    // Custom permission checks
+    HasAddPermission: func(ctx context.Context, user interface{}) bool {
+        return permissionChecker.HasPermission(ctx, user, "auth.add_user")
+    },
+    
+    HasChangePermission: func(ctx context.Context, user interface{}, obj *User) bool {
+        // Users can only edit themselves unless they're staff
+        if staff, ok := user.(*User); ok {
+            if !staff.IsStaff && staff.ID != obj.ID {
+                return false
+            }
+        }
+        return permissionChecker.HasPermission(ctx, user, "auth.change_user")
+    },
+    
+    HasDeletePermission: func(ctx context.Context, user interface{}, obj *User) bool {
+        // Only staff can delete users
+        if staff, ok := user.(*User); ok {
+            if !staff.IsStaff {
+                return false
+            }
+        }
+        return permissionChecker.HasPermission(ctx, user, "auth.delete_user")
+    },
+    
+    HasViewPermission: func(ctx context.Context, user interface{}, obj *User) bool {
+        return permissionChecker.HasPermission(ctx, user, "auth.view_user")
+    },
+}
 ```
 
 ## Custom Templates
@@ -313,8 +501,186 @@ admin.RegisterModelWithOptions(
 )
 ```
 
+## Export Functionality
+
+Export your data in various formats:
+
+```go
+// Export is automatically available in the list view
+// Users can export filtered results as CSV or JSON
+```
+
+The export feature:
+- Exports current filtered results
+- Supports CSV and JSON formats
+- Respects permissions (only exports what user can view)
+- Handles large datasets efficiently
+
+## Custom Widgets
+
+Customize form widgets for specific fields:
+
+```go
+import (
+    adminwidgets "github.com/forgego/forge/admin/widgets"
+)
+
+config := &admincore.Config[Post]{
+    FormFieldOverrides: map[string]admincore.Widget{
+        "content": adminwidgets.NewRichTextWidget(),
+        "published_at": adminwidgets.NewDateTimePicker(),
+        "tags": adminwidgets.NewSelectSearchWidget(),
+    },
+}
+```
+
+Available widgets:
+- `TextInput` - Standard text input
+- `Textarea` - Multi-line text input
+- `Select` - Dropdown select
+- `SelectSearch` - Searchable select (for foreign keys)
+- `Checkbox` - Boolean checkbox
+- `RadioButtons` - Radio button group
+- `DatePicker` - Date picker
+- `TimePicker` - Time picker
+- `DateTimePicker` - Combined date/time picker
+- `RichTextEditor` - WYSIWYG editor
+- `FileUpload` - File upload widget
+- `ImageUpload` - Image upload with preview
+
+## Type Safety
+
+The admin system is fully type-safe using Go generics:
+
+```go
+// Type-safe field expressions
+usernameField := admincore.StringField[User](
+    "username",
+    func(u *User) string { return u.Username },
+    func(u *User, v string) { u.Username = v },
+)
+
+// Type-safe filters
+activeFilter := adminfilters.NewBooleanFilter[User](usernameField)
+
+// Type-safe actions
+action := admincore.NewAction[User](
+    "activate",
+    "Activate users",
+    func(ctx context.Context, users []*User) error {
+        // users is []*User, fully typed
+        for _, user := range users {
+            user.IsActive = true
+        }
+        return nil
+    },
+)
+```
+
+## Performance Optimization
+
+### Select Related
+
+Optimize queries with select_related:
+
+```go
+config := &admincore.Config[Post]{
+    ListSelectRelated: []string{"author"}, // Join author in list view
+}
+```
+
+### Prefetch Related
+
+Optimize many-to-many and reverse foreign keys:
+
+```go
+config := &admincore.Config[Post]{
+    ListPrefetchRelated: []string{"comments", "tags"}, // Prefetch related objects
+}
+```
+
+## Complete Example
+
+Here's a complete example with all features:
+
+```go
+package blog
+
+import (
+    "context"
+    admincore "github.com/forgego/forge/admin/core"
+    "github.com/forgego/forge/admin/http"
+    "github.com/forgego/forge/schema"
+    query "github.com/forgego/forge/orm"
+)
+
+func InitPostAdmin(postManager *query.Manager[Post], commentManager *query.Manager[Comment]) (*admincore.Admin[Post], error) {
+    postSchema := &PostSchema{}
+    
+    admin, err := admincore.Register[Post](
+        schema.NewSchema(postSchema),
+        postManager,
+        &admincore.Config[Post]{
+            // List configuration
+            ListDisplay: []string{"title", "author", "published", "created_at"},
+            ListDisplayLinks: []string{"title"},
+            ListPerPage: 25,
+            Ordering: []string{"-created_at"},
+            
+            // Search and filters
+            SearchFields: []string{"title", "content"},
+            ListFilter: []string{"published", "author", "created_at"},
+            DateHierarchy: "created_at",
+            
+            // Form configuration
+            Fieldsets: []admincore.Fieldset[Post]{
+                {Title: "Post", Fields: []string{"title", "content", "author"}},
+                {Title: "Publishing", Fields: []string{"published"}},
+            },
+            ReadOnlyFields: []string{"created_at", "updated_at"},
+            
+            // Inlines
+            Inlines: []admincore.Inline[Post, Comment]{
+                admincore.TabularInline[Post, Comment](
+                    commentManager,
+                    "post_id",
+                    []string{"author", "content", "created_at"},
+                ),
+            },
+            
+            // Actions
+            Actions: []admincore.Action[Post]{
+                admincore.NewAction[Post](
+                    "publish",
+                    "Publish selected",
+                    func(ctx context.Context, posts []*Post) error {
+                        for _, post := range posts {
+                            post.Published = true
+                            postManager.Update(ctx, post)
+                        }
+                        return nil
+                    },
+                ),
+            },
+            
+            // Performance
+            ListSelectRelated: []string{"author"},
+            ListPrefetchRelated: []string{"comments"},
+        },
+    )
+    
+    if err != nil {
+        return nil, err
+    }
+    
+    http.RegisterAdminForHTTP(admin)
+    return admin, nil
+}
+```
+
 ## Next Steps
 
+- [Admin Tutorial](/docs/tutorials/03-admin-interface) - Step-by-step tutorial
 - [REST API Guide](/docs/guides/rest-api) - Build APIs for your frontend
 - [Security Guide](/docs/guides/security) - Secure your admin interface
 - [Advanced Topics](/docs/advanced/plugins) - Extend the admin with plugins

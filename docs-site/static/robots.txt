@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://forgego.github.io/forge/sitemap.xml
+
+# Disallow admin and internal paths
+Disallow: /admin/
+Disallow: /api/
