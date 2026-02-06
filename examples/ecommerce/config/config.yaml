@@ -3,7 +3,7 @@ database:
   host: localhost
   port: 5432
   user: postgres
-  password: postgres
+  password: 123
   dbname: ecommerce_db
   sqlite_path: ./ecommerce.sqlite
   sslmode: disable
@@ -34,13 +34,13 @@ api:
 security:
   session_secret: change-me-in-production-with-random-string
   csrf_secret_key: change-me-in-production-with-random-string
-  session_lifetime: 86400  # 24 hours
-  
+  session_lifetime: 86400 # 24 hours
+
 logging:
-  level: info  # debug, info, warn, error
-  format: json  # json, console
-  output: stdout  # stdout, stderr, file
-  
+  level: info # debug, info, warn, error
+  format: json # json, console
+  output: stdout # stdout, stderr, file
+
 cors:
   allowed_origins:
     - http://localhost:3000
@@ -65,7 +65,7 @@ cors:
 # Application-specific settings
 ecommerce:
   currency: USD
-  tax_rate: 0.08  # 8%
+  tax_rate: 0.08 # 8%
   shipping_cost: 10.00
   free_shipping_threshold: 100.00
   low_stock_threshold: 10

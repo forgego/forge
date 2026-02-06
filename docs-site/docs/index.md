@@ -2,29 +2,49 @@
 title: Documentation
 slug: /
 sidebar_position: 0
-description: Start here for the forge documentation and quick links.
+description: Start here for forge documentation.
 image: /forge-social-card.svg
 ---
 
 # Documentation
 
-Welcome to the forge docs. Whether you're here to build your first app or to
-learn how the internals fit together, this page points to the fastest paths.
+Start with Quick Start, then follow the core build docs.
 
 ## Start here
 
+- [Quick Start](/docs/quickstart/)
+- [Installation](/docs/installation/)
 - [Introduction](/docs/introduction/)
-- [Installation](/docs/getting-started/installation/)
-- [Quick Start](/docs/getting-started/quickstart/)
 
-## Learn the core systems
+## Core build
 
-- [Schema system](/docs/features/schema-system/)
-- [Type-safe ORM](/docs/features/orm-system/)
-- [Admin system](/docs/features/admin-system/)
+- [Models](/docs/models/)
+- [ORM](/docs/orm/)
+- [Migrations](/docs/migrations/)
 
-## Explore guides and references
+## Admin
 
-- [Guides](/docs/guides/models/)
-- [API reference](/docs/api-reference/schema/)
-- [Examples](/docs/examples/blog/)
+- [Overview](/docs/admin/overview/)
+- [Config](/docs/admin/config/)
+
+## API
+
+- [Overview](/docs/api/overview/)
+- [Serializers](/docs/api/serializers/)
+
+## Platform
+
+- [Filters](/docs/filters/)
+- [Identity](/docs/identity/)
+- [Server](/docs/server/overview/)
+
+## Config
+
+- [Config Overview](/docs/config/overview/)
+- [Logging Settings](/docs/config/logging/)
+
+## Reference
+
+- [Features](/docs/features/)
+- [API Reference](/docs/api-reference/)
+- [Status](/docs/status/)

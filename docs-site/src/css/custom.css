@@ -1,92 +1,78 @@
 /**
- * Next.js-inspired styling for forge documentation
- * Based on Next.js documentation design principles
+ * forge documentation theme
  */
 
-/* ============================================
-   Color Variables (Next.js Blue Theme)
-   ============================================ */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;600;700&display=swap');
 
 :root {
-  /* Primary colors - Django/Laravel inspired purple gradient */
-  --ifm-color-primary: #667eea;
-  --ifm-color-primary-dark: #5568d3;
-  --ifm-color-primary-darker: #4c5bc0;
-  --ifm-color-primary-darkest: #3e4a9e;
-  --ifm-color-primary-light: #7c8ff0;
-  --ifm-color-primary-lighter: #8fa0f3;
-  --ifm-color-primary-lightest: #b8c4f7;
+  --ifm-color-primary: #0f172a;
+  --ifm-color-primary-dark: #0b1220;
+  --ifm-color-primary-darker: #0a0f1c;
+  --ifm-color-primary-darkest: #070b14;
+  --ifm-color-primary-light: #1f2a44;
+  --ifm-color-primary-lighter: #334155;
+  --ifm-color-primary-lightest: #475569;
 
-  /* Background colors */
   --ifm-background-color: #ffffff;
-  --ifm-background-surface-color: #fafafa;
+  --ifm-background-surface-color: #f8fafc;
 
-  /* Text colors */
-  --ifm-font-color-base: #111111;
-  --ifm-font-color-secondary: #666666;
-  --ifm-heading-color: #000000;
+  --ifm-font-color-base: #0f172a;
+  --ifm-font-color-secondary: #475569;
+  --ifm-heading-color: #0f172a;
 
-  /* Code colors */
   --ifm-code-font-size: 0.9em;
-  --ifm-code-background: #f5f5f5;
-  --ifm-code-color: #e83e8c;
+  --ifm-code-background: #f1f5f9;
+  --ifm-code-color: #0f172a;
   --ifm-code-border-radius: 6px;
 
-  /* Spacing */
   --ifm-spacing-horizontal: 1.5rem;
   --ifm-spacing-vertical: 1.5rem;
 
-  /* Typography */
-  --ifm-font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  --ifm-font-family-monospace: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  --ifm-font-family-base: 'IBM Plex Sans', 'Segoe UI', Arial, sans-serif;
+  --ifm-font-family-monospace: 'JetBrains Mono', Consolas, 'Courier New', monospace;
   --ifm-font-size-base: 16px;
   --ifm-line-height-base: 1.75;
 
-  /* Borders */
-  --ifm-border-color: #eaeaea;
-  --ifm-border-radius: 8px;
+  --ifm-border-color: #e2e8f0;
+  --ifm-border-radius: 10px;
 
-  /* Shadows */
-  --ifm-global-shadow-lw: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --ifm-global-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --ifm-global-shadow-tl: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --ifm-global-shadow-lw: 0 1px 2px 0 rgba(15, 23, 42, 0.08);
+  --ifm-global-shadow-md: 0 8px 20px rgba(15, 23, 42, 0.12);
+  --ifm-global-shadow-tl: 0 16px 40px rgba(15, 23, 42, 0.2);
 
-  /* Highlighted code line */
-  --docusaurus-highlighted-code-line-bg: rgba(102, 126, 234, 0.15);
+  --docusaurus-highlighted-code-line-bg: rgba(15, 23, 42, 0.1);
 }
 
-/* Dark mode colors */
 [data-theme='dark'] {
-  --ifm-color-primary: #818cf8;
-  --ifm-color-primary-dark: #667eea;
-  --ifm-color-primary-darker: #5568d3;
-  --ifm-color-primary-darkest: #3e4a9e;
-  --ifm-color-primary-light: #9ca3fb;
-  --ifm-color-primary-lighter: #b8c4f7;
-  --ifm-color-primary-lightest: #d1d5f9;
+  --ifm-color-primary: #e2e8f0;
+  --ifm-color-primary-dark: #cbd5f5;
+  --ifm-color-primary-darker: #94a3b8;
+  --ifm-color-primary-darkest: #64748b;
+  --ifm-color-primary-light: #f8fafc;
+  --ifm-color-primary-lighter: #f1f5f9;
+  --ifm-color-primary-lightest: #ffffff;
 
-  --ifm-background-color: #111111;
-  --ifm-background-surface-color: #1a1a1a;
+  --ifm-background-color: #0b1120;
+  --ifm-background-surface-color: #111827;
 
-  --ifm-font-color-base: #eaeaea;
-  --ifm-font-color-secondary: #b0b0b0;
-  --ifm-heading-color: #ffffff;
+  --ifm-font-color-base: #e2e8f0;
+  --ifm-font-color-secondary: #94a3b8;
+  --ifm-heading-color: #f8fafc;
 
-  --ifm-code-background: #1a1a1a;
-  --ifm-code-color: #ff79c6;
+  --ifm-code-background: #0f172a;
+  --ifm-code-color: #e2e8f0;
 
-  --ifm-border-color: #333333;
+  --ifm-border-color: #1f2937;
 
-  --docusaurus-highlighted-code-line-bg: rgba(129, 140, 248, 0.2);
+  --docusaurus-highlighted-code-line-bg: rgba(148, 163, 184, 0.2);
 }
 
-/* ============================================
-   Typography Improvements
-   ============================================ */
+h1, h2, h3, h4 {
+  font-family: 'Space Grotesk', 'IBM Plex Sans', sans-serif;
+}
 
-/* Better heading styles */
 h1 {
-  font-size: 2.5rem;
+  font-size: 2.6rem;
   font-weight: 700;
   line-height: 1.2;
   margin-top: 0;
@@ -95,16 +81,15 @@ h1 {
 }
 
 h2 {
-  font-size: 1.875rem;
+  font-size: 1.9rem;
   font-weight: 600;
   line-height: 1.3;
   margin-top: 2.5rem;
   margin-bottom: 1rem;
-  letter-spacing: -0.01em;
 }
 
 h3 {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 600;
   line-height: 1.4;
   margin-top: 2rem;
@@ -112,37 +97,30 @@ h3 {
 }
 
 h4 {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 600;
   line-height: 1.4;
   margin-top: 1.5rem;
   margin-bottom: 0.5rem;
 }
 
-/* Better paragraph spacing */
 p {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.1rem;
   line-height: 1.75;
 }
 
-/* Better list spacing */
 ul, ol {
   margin-bottom: 1.25rem;
   padding-left: 1.5rem;
 }
 
 li {
-  margin-bottom: 0.5rem;
-  line-height: 1.75;
+  margin-bottom: 0.45rem;
+  line-height: 1.7;
 }
 
-/* ============================================
-   Code Blocks (Next.js Style)
-   ============================================ */
-
-/* Code blocks */
 .prism-code {
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid var(--ifm-border-color);
   background: var(--ifm-code-background) !important;
   font-size: 0.9em;
@@ -156,7 +134,6 @@ li {
   background: var(--ifm-code-background) !important;
 }
 
-/* Inline code */
 code {
   background: var(--ifm-code-background);
   color: var(--ifm-code-color);
@@ -167,15 +144,13 @@ code {
   border: 1px solid var(--ifm-border-color);
 }
 
-/* Code block container */
 .theme-code-block {
   margin: 1.5rem 0;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
   box-shadow: var(--ifm-global-shadow-md);
 }
 
-/* Copy button */
 .theme-code-block button {
   background: var(--ifm-background-surface-color);
   border: 1px solid var(--ifm-border-color);
@@ -190,248 +165,17 @@ code {
   border-color: var(--ifm-color-primary);
 }
 
-/* ============================================
-   Callouts / Admonitions (Next.js Style)
-   ============================================ */
-
 .admonition {
-  border-radius: 8px;
+  border-radius: 10px;
   border-left: 4px solid;
   padding: 1rem 1.25rem;
-  margin: 1.5rem 0;
-  background: var(--ifm-background-surface-color);
-  border-color: var(--ifm-color-primary);
 }
 
-.admonition-heading {
+.admonition-title {
   font-weight: 600;
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   margin-bottom: 0.5rem;
 }
 
-.admonition-icon {
-  margin-right: 0.5rem;
-}
-
-/* Info callout */
-.admonition.admonition-info {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.08);
-}
-
-[data-theme='dark'] .admonition.admonition-info {
-  background: rgba(129, 140, 248, 0.15);
-}
-
-/* Warning callout */
-.admonition.admonition-warning {
-  border-color: #f5a623;
-  background: rgba(245, 166, 35, 0.05);
-}
-
-[data-theme='dark'] .admonition.admonition-warning {
-  background: rgba(245, 166, 35, 0.1);
-}
-
-/* Danger callout */
-.admonition.admonition-danger {
-  border-color: #e00;
-  background: rgba(238, 0, 0, 0.05);
-}
-
-[data-theme='dark'] .admonition.admonition-danger {
-  background: rgba(238, 0, 0, 0.1);
-}
-
-/* Tip callout */
-.admonition.admonition-tip {
-  border-color: #50e3c2;
-  background: rgba(80, 227, 194, 0.05);
-}
-
-[data-theme='dark'] .admonition.admonition-tip {
-  background: rgba(80, 227, 194, 0.1);
-}
-
-/* ============================================
-   Tables (Next.js Style)
-   ============================================ */
-
-table {
-  display: table;
-  width: 100%;
-  margin: 1.5rem 0;
-  border-collapse: collapse;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid var(--ifm-border-color);
-}
-
-table th {
-  background: var(--ifm-background-surface-color);
-  font-weight: 600;
-  padding: 0.75rem 1rem;
-  text-align: left;
-  border-bottom: 2px solid var(--ifm-border-color);
-  color: var(--ifm-heading-color);
-}
-
-table td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--ifm-border-color);
-}
-
-table tr:last-child td {
-  border-bottom: none;
-}
-
-table tr:hover {
-  background: var(--ifm-background-surface-color);
-}
-
-[data-theme='dark'] table th {
-  background: var(--ifm-background-surface-color);
-}
-
-/* ============================================
-   Navigation & Sidebar
-   ============================================ */
-
-/* Sidebar improvements */
-.theme-doc-sidebar-container {
-  border-right: 1px solid var(--ifm-border-color);
-}
-
-.menu__link {
-  border-radius: 6px;
-  transition: all 0.2s ease;
-}
-
-.menu__link:hover {
-  background: var(--ifm-background-surface-color);
-}
-
-.menu__link--active {
-  background: rgba(102, 126, 234, 0.12);
-  color: var(--ifm-color-primary);
-  font-weight: 600;
-}
-
-[data-theme='dark'] .menu__link--active {
-  background: rgba(129, 140, 248, 0.2);
-}
-
-/* Navbar improvements */
-.navbar {
-  border-bottom: 1px solid var(--ifm-border-color);
-  box-shadow: var(--ifm-global-shadow-lw);
-}
-
-.navbar__item {
-  font-weight: 500;
-}
-
-/* ============================================
-   Search
-   ============================================ */
-
-.DocSearch-Button {
-  border-radius: 6px;
-  border: 1px solid var(--ifm-border-color);
-  background: var(--ifm-background-surface-color);
-  transition: all 0.2s ease;
-}
-
-.DocSearch-Button:hover {
-  border-color: var(--ifm-color-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
-}
-
-/* ============================================
-   Footer
-   ============================================ */
-
 .footer {
   border-top: 1px solid var(--ifm-border-color);
-  background: var(--ifm-background-surface-color);
-}
-
-/* ============================================
-   Mobile Optimizations
-   ============================================ */
-
-@media (max-width: 996px) {
-  h1 {
-    font-size: 2rem;
-  }
-
-  h2 {
-    font-size: 1.5rem;
-  }
-
-  .prism-code {
-    font-size: 0.85em;
-    padding: 1rem;
-  }
-}
-
-/* ============================================
-   Utility Classes
-   ============================================ */
-
-/* Next.js-style badge */
-.badge {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: var(--ifm-background-surface-color);
-  color: var(--ifm-font-color-base);
-  border: 1px solid var(--ifm-border-color);
-}
-
-.badge--primary {
-  background: rgba(102, 126, 234, 0.12);
-  color: var(--ifm-color-primary);
-  border-color: var(--ifm-color-primary);
-}
-
-/* Better link styles */
-a {
-  color: var(--ifm-color-primary);
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-a:hover {
-  color: var(--ifm-color-primary-dark);
-  text-decoration: underline;
-}
-
-/* ============================================
-   Content Improvements
-   ============================================ */
-
-/* Better spacing for content */
-.markdown {
-  max-width: 65ch;
-}
-
-/* Better blockquote */
-blockquote {
-  border-left: 4px solid var(--ifm-color-primary);
-  padding-left: 1rem;
-  margin: 1.5rem 0;
-  color: var(--ifm-font-color-secondary);
-  font-style: italic;
-}
-
-/* Better horizontal rule */
-hr {
-  border: none;
-  border-top: 1px solid var(--ifm-border-color);
-  margin: 2rem 0;
 }

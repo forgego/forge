@@ -5,7 +5,7 @@
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "docusaurus start --port 3000",
-    "build": "docusaurus build",
+    "build": "docusaurus build --no-minify",
     "build:fast": "docusaurus build --no-minify",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
@@ -16,8 +16,7 @@
     "install:pnpm": "npx pnpm@latest install",
     "install:fast": "npx pnpm@latest install --frozen-lockfile",
     "install:yarn": "yarn install --frozen-lockfile",
-    "install:npm": "npm ci",
-    "prebuild": "docusaurus clear"
+    "install:npm": "npm ci"
   },
   "dependencies": {
     "@docusaurus/core": "^3.9.2",

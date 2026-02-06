@@ -1,0 +1,4 @@
+interface:
+  display_name: "Forge Admin"
+  short_description: "Register and customize Forge admin interfaces."
+  default_prompt: "Help me configure Forge admin for my models."
