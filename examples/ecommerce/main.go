@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/forgego/forge/admin"
@@ -33,6 +34,8 @@ func main() {
 	fmt.Println("=" + string(make([]byte, 50)))
 
 	cfg := config.NewConfig()
+	adminPath := normalizePath(cfg.GetString("admin.path", "/admin"), "/admin")
+	apiPath := normalizePath(cfg.GetString("api.path", "/api/v1"), "/api/v1")
 	dbHost := cfg.GetString("database.host", "localhost")
 	dbPort := cfg.GetInt("database.port", 5432)
 	dbUser := cfg.GetString("database.user", "postgres")
@@ -98,7 +101,7 @@ func main() {
 
 	// Set UI Prefix
 	uiConfig := adminSite.GetUIConfig()
-	uiConfig.Prefix = "/admin"
+	uiConfig.Prefix = adminPath
 	adminSite.WithUIConfig(uiConfig)
 
 	adminSite.SetDB(database)
@@ -117,7 +120,7 @@ func main() {
 	SetupDashboard()
 
 	// 5. Setup API Router
-	apiRouter := api.NewRouter("/api/v1")
+	apiRouter := api.NewRouter(apiPath)
 	catalog.RegisterAPI(ctx, apiRouter, database)
 	customers.RegisterAPI(ctx, apiRouter, database)
 	inventory.RegisterAPI(ctx, apiRouter, database)
@@ -134,7 +137,7 @@ func main() {
 	apiRouter.RegisterRoutes(r)
 
 	// Admin handler (handles both REST API and UI)
-	r.Mount("/admin", adminSite.Handler())
+	r.Mount(adminPath, adminSite.Handler())
 
 	// Health check
 	r.Get("/health", func(w http.ResponseWriter, req *http.Request) {
@@ -162,14 +165,14 @@ func main() {
 	<h1>🛒 Forge Ecommerce</h1>
 	<p>Example application showcasing the Forge Framework.</p>
     <p>
-        <a href="/admin/" class="btn">Admin Panel</a>
-        <a href="/api/v1/categories" class="btn">Categories API</a>
-        <a href="/api/v1/products" class="btn">Products API</a>
-        <a href="/api/v1/orders" class="btn">Orders API</a>
+        <a href="%s/" class="btn">Admin Panel</a>
+        <a href="%s/categories" class="btn">Categories API</a>
+        <a href="%s/products" class="btn">Products API</a>
+        <a href="%s/orders" class="btn">Orders API</a>
     </p>
 </body>
 </html>
-`)
+`, adminPath, apiPath, apiPath, apiPath)
 	})
 
 	serverHost := cfg.GetString("server.host", "localhost")
@@ -178,8 +181,23 @@ func main() {
 	fmt.Printf("\n✨ Forge Ecommerce is Alive ✨\n")
 	fmt.Printf("------------------------------\n")
 	fmt.Printf("🏠 Homepage: http://%s\n", listenAddr)
-	fmt.Printf("🛠️  Premium Admin: http://%s/admin/\n", listenAddr)
+	fmt.Printf("🛠️  Premium Admin: http://%s%s/\n", listenAddr, adminPath)
 	fmt.Printf("------------------------------\n\n")
 
 	log.Fatal(http.ListenAndServe(listenAddr, r))
+}
+
+func normalizePath(value string, fallback string) string {
+	path := strings.TrimSpace(value)
+	if path == "" {
+		path = fallback
+	}
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	path = strings.TrimRight(path, "/")
+	if path == "" {
+		return "/"
+	}
+	return path
 }
