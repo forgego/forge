@@ -190,13 +190,25 @@ func main() {
 	serverHost := cfg.GetString("server.host", "localhost")
 	serverPort := cfg.GetString("server.port", "8000")
 	listenAddr := fmt.Sprintf("%s:%s", serverHost, serverPort)
+	readTimeout := time.Duration(cfg.GetInt("server.read_timeout", 30)) * time.Second
+	writeTimeout := time.Duration(cfg.GetInt("server.write_timeout", 30)) * time.Second
+	idleTimeout := time.Duration(cfg.GetInt("server.idle_timeout", 120)) * time.Second
+	maxHeaderBytes := cfg.GetInt("server.max_header_bytes", 1048576)
 	fmt.Printf("\n✨ Forge Ecommerce is Alive ✨\n")
 	fmt.Printf("------------------------------\n")
 	fmt.Printf("🏠 Homepage: http://%s\n", listenAddr)
 	fmt.Printf("🛠️  Premium Admin: http://%s%s/\n", listenAddr, adminPath)
 	fmt.Printf("------------------------------\n\n")
 
-	log.Fatal(http.ListenAndServe(listenAddr, r))
+	server := &http.Server{
+		Addr:           listenAddr,
+		Handler:        r,
+		ReadTimeout:    readTimeout,
+		WriteTimeout:   writeTimeout,
+		IdleTimeout:    idleTimeout,
+		MaxHeaderBytes: maxHeaderBytes,
+	}
+	log.Fatal(server.ListenAndServe())
 }
 
 func normalizePath(value string, fallback string) string {
