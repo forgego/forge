@@ -14,6 +14,7 @@ import (
 	"github.com/forgego/forge/config"
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/server"
+	"github.com/go-chi/cors"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
@@ -126,6 +127,14 @@ func main() {
 
 	// 6. Create Server Router
 	r := server.NewRouter()
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   cfg.GetStringSlice("cors.allowed_origins"),
+		AllowedMethods:   cfg.GetStringSlice("cors.allowed_methods"),
+		AllowedHeaders:   cfg.GetStringSlice("cors.allowed_headers"),
+		ExposedHeaders:   cfg.GetStringSlice("cors.exposed_headers"),
+		AllowCredentials: cfg.GetBool("cors.allow_credentials", false),
+		MaxAge:           cfg.GetInt("cors.max_age", 0),
+	}))
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
