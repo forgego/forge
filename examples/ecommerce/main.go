@@ -81,6 +81,9 @@ func main() {
 		log.Printf("Failed to connect to database: %v", err)
 		log.Fatal("Make sure Postgres is running and the configured database exists.")
 	}
+	database.SetMaxOpenConns(cfg.GetInt("database.max_open_conns", 0))
+	database.SetMaxIdleConns(cfg.GetInt("database.max_idle_conns", 0))
+	database.SetConnMaxLifetime(time.Duration(cfg.GetInt("database.conn_max_lifetime", 0)) * time.Second)
 	defer database.Close()
 
 	// 2. Setup Schema
