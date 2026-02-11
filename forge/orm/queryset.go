@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/forgego/forge/utils"
 )
 
 // QuerySet is the type-safe QuerySet interface
@@ -258,9 +260,13 @@ func extractOrderFieldPath(field any) string {
 	if spec, ok := field.(OrderFieldSpec); ok {
 		return spec.GetFieldPath()
 	}
-	// Fallback for OrderField (struct type)
-	if of, ok := field.(OrderField); ok {
-		return of.GetFieldPath()
+	// Allow FieldPath (e.g. orm.Field[T]) directly
+	if fp, ok := field.(FieldPath); ok {
+		return fp.Path()
+	}
+	// Allow plain string field names, including "-field" prefix
+	if s, ok := field.(string); ok {
+		return strings.TrimPrefix(s, "-")
 	}
 	return ""
 }
@@ -271,9 +277,13 @@ func extractOrderFieldAscending(field any) bool {
 	if spec, ok := field.(OrderFieldSpec); ok {
 		return spec.IsAscending()
 	}
-	// Fallback for OrderField (struct type)
-	if of, ok := field.(OrderField); ok {
-		return of.IsAscending()
+	// FieldPath defaults to ascending
+	if _, ok := field.(FieldPath); ok {
+		return true
+	}
+	// String supports "-" prefix for descending
+	if s, ok := field.(string); ok {
+		return !strings.HasPrefix(s, "-")
 	}
 	return true
 }
@@ -806,6 +816,12 @@ func (qs *BaseQuerySet[T]) prepareScanArgs(instance *T, columns []string, fieldM
 
 	// Map relationName -> map[fieldName]holder
 	relatedHolders := make(map[string]map[string]*interface{})
+	// Track optional local fields scanned into holders
+	type localHolder struct {
+		field  reflect.Value
+		holder *interface{}
+	}
+	localHolders := make([]localHolder, 0)
 
 	for i, col := range columns {
 		info, ok := fieldMap[col]
@@ -826,12 +842,24 @@ func (qs *BaseQuerySet[T]) prepareScanArgs(instance *T, columns []string, fieldM
 			relatedHolders[info.relationName][info.fieldInfo.Name] = holder
 		} else {
 			// Local field
-			field := instanceValue.FieldByName(info.fieldInfo.Name)
+			var field reflect.Value
 			if info.fieldInfo.StructFieldName != "" {
 				field = instanceValue.FieldByName(info.fieldInfo.StructFieldName)
+			} else {
+				field = instanceValue.FieldByName(info.fieldInfo.Name)
+				if !field.IsValid() {
+					field = instanceValue.FieldByName(utils.ToPascal(info.fieldInfo.Name))
+				}
 			}
 			if field.IsValid() && field.CanSet() {
-				scanArgs[i] = field.Addr().Interface()
+				// For optional fields, scan into a holder to tolerate NULLs
+				if !info.fieldInfo.Required && field.Kind() != reflect.Ptr {
+					holder := new(interface{})
+					scanArgs[i] = holder
+					localHolders = append(localHolders, localHolder{field: field, holder: holder})
+				} else {
+					scanArgs[i] = field.Addr().Interface()
+				}
 			} else {
 				var val interface{}
 				scanArgs[i] = &val
@@ -840,6 +868,14 @@ func (qs *BaseQuerySet[T]) prepareScanArgs(instance *T, columns []string, fieldM
 	}
 
 	postScan := func() {
+		// Populate optional local fields from holders
+		for _, lh := range localHolders {
+			if lh.holder == nil || *lh.holder == nil {
+				continue
+			}
+			setFieldValue(lh.field, *lh.holder)
+		}
+
 		for relName, fields := range relatedHolders {
 			rel := qs.schema.GetRelation(relName)
 			if rel == nil {

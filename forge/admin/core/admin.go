@@ -641,6 +641,7 @@ func (a *Admin[T]) decodeData(data map[string]interface{}, result interface{}) e
 		Result:           result,
 		TagName:          "json",
 		WeaklyTypedInput: true,
+		Squash:           true,
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
 			stringToDateTimeHook(),
 		),

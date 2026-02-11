@@ -4,7 +4,10 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
+	"time"
 
+	"github.com/forgego/forge/orm"
 	forgehttp "github.com/forgego/forge/server"
 )
 
@@ -516,31 +519,18 @@ func applyFilters(qs reflect.Value, r *http.Request) reflect.Value {
 	// Get filter parameters from query string
 	query := r.URL.Query()
 
-	// Import query package for QueryExpr
-	// We'll use dynamic filtering via query.NewFieldQueryExpr
-
 	for key, values := range query {
 		if len(values) == 0 || key == "page" || key == "page_size" || key == "ordering" || key == "search" {
 			continue
 		}
 
-		// Try to apply filter using reflection
 		filterMethod := qs.MethodByName("Filter")
 		if filterMethod.IsValid() {
-			// Create a QueryExpr using query.NewFieldQueryExpr
-			// We need to import query package, but to avoid circular imports,
-			// we'll use reflection to call query.NewFieldQueryExpr
-
-			// For now, use dynamic query building
-			// Full implementation would use query.QueryExpr properly
 			value := values[0]
 
-			// Try to create a filter expression
-			// This is a simplified version - full implementation would parse operators
-			// For MVP, assume equality
-			filterExpr := createFilterExpr(key, value)
-			if filterExpr.IsValid() {
-				results := filterMethod.Call([]reflect.Value{filterExpr})
+			expr := buildFilterExpr(key, value)
+			if expr != nil {
+				results := filterMethod.Call([]reflect.Value{reflect.ValueOf(expr)})
 				if len(results) > 0 {
 					if newQS, ok := results[0].Interface().(interface{}); ok {
 						qs = reflect.ValueOf(newQS)
@@ -553,18 +543,79 @@ func applyFilters(qs reflect.Value, r *http.Request) reflect.Value {
 	return qs
 }
 
-// createFilterExpr creates a QueryExpr from field name and value
-func createFilterExpr(field string, value string) reflect.Value {
-	// We need to create a query.QueryExpr
-	// Since we can't import query here (circular), we'll use a workaround
-	// For MVP, return invalid value - full implementation would use proper QueryExpr
+func buildFilterExpr(rawKey string, rawValue string) orm.Expression {
+	field, lookup := parseLookup(rawKey)
+	parsed := parseFilterValue(rawValue)
 
-	// This is a placeholder - full implementation would:
-	// 1. Parse value type (int, string, bool)
-	// 2. Create query.NewFieldQueryExpr(field, query.OpEquals, parsedValue)
-	// 3. Return the QueryExpr
+	f := orm.F(field)
+	switch lookup {
+	case "exact":
+		return f.Eq(parsed)
+	case "ne":
+		return f.Ne(parsed)
+	case "gt":
+		return f.Gt(parsed)
+	case "gte":
+		return f.Gte(parsed)
+	case "lt":
+		return f.Lt(parsed)
+	case "lte":
+		return f.Lte(parsed)
+	case "contains":
+		return f.Contains(rawValue)
+	case "icontains":
+		return f.IContains(rawValue)
+	case "startswith":
+		return f.StartsWith(rawValue)
+	case "endswith":
+		return f.EndsWith(rawValue)
+	case "in":
+		parts := strings.Split(rawValue, ",")
+		args := make([]interface{}, 0, len(parts))
+		for _, part := range parts {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+			args = append(args, parseFilterValue(part))
+		}
+		if len(args) == 0 {
+			return f.Eq(parsed)
+		}
+		return f.In(args...)
+	case "isnull":
+		lower := strings.ToLower(rawValue)
+		if lower == "true" || lower == "1" {
+			return f.IsNull()
+		}
+		return f.IsNotNull()
+	default:
+		return f.Eq(parsed)
+	}
+}
 
-	return reflect.Value{}
+func parseLookup(key string) (string, string) {
+	if strings.Contains(key, "__") {
+		parts := strings.SplitN(key, "__", 2)
+		return parts[0], parts[1]
+	}
+	return key, "exact"
+}
+
+func parseFilterValue(raw string) interface{} {
+	if raw == "" {
+		return raw
+	}
+	if boolVal, err := strconv.ParseBool(raw); err == nil {
+		return boolVal
+	}
+	if intVal, err := strconv.ParseInt(raw, 10, 64); err == nil {
+		return intVal
+	}
+	if floatVal, err := strconv.ParseFloat(raw, 64); err == nil {
+		return floatVal
+	}
+	return raw
 }
 
 // applyOrdering applies ordering from query parameters
@@ -576,10 +627,19 @@ func applyOrdering(qs reflect.Value, r *http.Request) reflect.Value {
 
 	orderByMethod := qs.MethodByName("OrderBy")
 	if orderByMethod.IsValid() {
-		fields := []string{ordering}
-		results := orderByMethod.Call([]reflect.Value{
-			reflect.ValueOf(fields),
-		})
+		rawFields := strings.Split(ordering, ",")
+		args := make([]reflect.Value, 0, len(rawFields))
+		for _, field := range rawFields {
+			field = strings.TrimSpace(field)
+			if field == "" {
+				continue
+			}
+			args = append(args, reflect.ValueOf(field))
+		}
+		if len(args) == 0 {
+			return qs
+		}
+		results := orderByMethod.Call(args)
 		if len(results) > 0 {
 			if newQS, ok := results[0].Interface().(interface{}); ok {
 				return reflect.ValueOf(newQS)
@@ -612,27 +672,53 @@ func populateFromMap(instance interface{}, data map[string]interface{}) {
 		instanceValue = instanceValue.Elem()
 	}
 
-	typ := instanceValue.Type()
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
-		if !field.IsExported() {
-			continue
-		}
+	if instanceValue.Kind() != reflect.Struct {
+		return
+	}
 
-		// Get JSON tag
-		jsonTag := field.Tag.Get("json")
-		if jsonTag == "" || jsonTag == "-" {
-			continue
-		}
+	var applyToStruct func(target reflect.Value)
+	applyToStruct = func(target reflect.Value) {
+		targetType := target.Type()
+		for i := 0; i < targetType.NumField(); i++ {
+			field := targetType.Field(i)
+			if !field.IsExported() {
+				continue
+			}
+			fieldValue := target.Field(i)
 
-		key := jsonTag
-		if value, ok := data[key]; ok {
-			fieldValue := instanceValue.Field(i)
-			if fieldValue.CanSet() {
-				setFieldValue(fieldValue, value)
+			if field.Anonymous {
+				switch fieldValue.Kind() {
+				case reflect.Struct:
+					applyToStruct(fieldValue)
+				case reflect.Ptr:
+					if fieldValue.IsNil() {
+						continue
+					}
+					if fieldValue.Elem().Kind() == reflect.Struct {
+						applyToStruct(fieldValue.Elem())
+					}
+				}
+				continue
+			}
+
+			jsonTag := field.Tag.Get("json")
+			if jsonTag == "" || jsonTag == "-" {
+				continue
+			}
+			tagParts := strings.Split(jsonTag, ",")
+			key := tagParts[0]
+			if key == "" {
+				continue
+			}
+			if value, ok := data[key]; ok {
+				if fieldValue.CanSet() {
+					setFieldValue(fieldValue, value)
+				}
 			}
 		}
 	}
+
+	applyToStruct(instanceValue)
 }
 
 // setFieldValue sets a field value from interface{}
@@ -657,6 +743,23 @@ func setFieldValue(field reflect.Value, value interface{}) {
 	case reflect.Bool:
 		if valueValue.Kind() == reflect.Bool {
 			field.SetBool(valueValue.Bool())
+		}
+	case reflect.Struct:
+		if field.Type() == reflect.TypeOf(time.Time{}) {
+			if str, ok := value.(string); ok {
+				if str == "" {
+					field.Set(reflect.ValueOf(time.Time{}))
+					return
+				}
+				if parsed, err := time.Parse(time.RFC3339, str); err == nil {
+					field.Set(reflect.ValueOf(parsed))
+					return
+				}
+				if parsed, err := time.Parse("2006-01-02", str); err == nil {
+					field.Set(reflect.ValueOf(parsed))
+					return
+				}
+			}
 		}
 	default:
 		if valueValue.Type().AssignableTo(field.Type()) {

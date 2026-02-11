@@ -123,14 +123,6 @@ func main() {
 	// Setup Dashboard
 	SetupDashboard()
 
-	// 5. Setup API Router
-	apiRouter := api.NewRouter(apiPath)
-	catalog.RegisterAPI(ctx, apiRouter, database)
-	customers.RegisterAPI(ctx, apiRouter, database)
-	inventory.RegisterAPI(ctx, apiRouter, database)
-	marketing.RegisterAPI(ctx, apiRouter, database)
-	orders.RegisterAPI(ctx, apiRouter, database)
-
 	// 6. Create Server Router
 	r := server.NewRouter()
 	r.Use(cors.Handler(cors.Options{
@@ -145,8 +137,17 @@ func main() {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	// Register API routes
-	apiRouter.RegisterRoutes(r)
+	// 5. Initialize API
+	if cfg.GetBool("api.enabled", true) {
+		api.Initialize()
+		apiRouter := api.NewRouter(apiPath)
+		catalog.RegisterAPI(ctx, apiRouter, database)
+		customers.RegisterAPI(ctx, apiRouter, database)
+		inventory.RegisterAPI(ctx, apiRouter, database)
+		marketing.RegisterAPI(ctx, apiRouter, database)
+		orders.RegisterAPI(ctx, apiRouter, database)
+		apiRouter.RegisterRoutes(r)
+	}
 
 	// Admin handler (handles both REST API and UI)
 	r.Mount(adminPath, adminSite.Handler())
@@ -178,13 +179,10 @@ func main() {
 	<p>Example application showcasing the Forge Framework.</p>
     <p>
         <a href="%s/" class="btn">Admin Panel</a>
-        <a href="%s/categories" class="btn">Categories API</a>
-        <a href="%s/products" class="btn">Products API</a>
-        <a href="%s/orders" class="btn">Orders API</a>
     </p>
 </body>
 </html>
-`, adminPath, apiPath, apiPath, apiPath)
+`, adminPath)
 	})
 
 	serverHost := cfg.GetString("server.host", "localhost")

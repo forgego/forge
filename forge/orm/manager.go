@@ -69,18 +69,22 @@ func (m *Manager[T]) Get(ctx context.Context, id int64) (*T, error) {
 		return nil, errors.NewNotImplementedError("Manager.Get() - database connection not set")
 	}
 
-	fa, err := m.FieldAccessor()
-	if err != nil {
-		return nil, err
+	// Prefer schema primary key if available.
+	idFieldName := m.schema.PrimaryKey
+	if idFieldName == "" {
+		// Try common ID variants.
+		for _, candidate := range []string{"id", "ID", "Id"} {
+			if m.schema.GetField(candidate) != nil {
+				idFieldName = candidate
+				break
+			}
+		}
+	}
+	if idFieldName == "" {
+		return nil, fmt.Errorf("primary key field not found for %s", m.tableName)
 	}
 
-	idField := FieldFor[T, int64](fa, "ID")
-	if idField.Path() == "" {
-		// Try lowercase
-		idField = FieldFor[T, int64](fa, "id")
-	}
-
-	qs, err := m.Filter(idField.Eq(id))
+	qs, err := m.Filter(F(idFieldName).Eq(id))
 	if err != nil {
 		return nil, err
 	}
@@ -344,15 +348,44 @@ func (m *Manager[T]) setID(instance *T, id int64) {
 		return
 	}
 
-	// Fallback to reflection
+	// Fallback to reflection (including embedded structs)
 	instanceValue := reflect.ValueOf(instance).Elem()
-	idField := instanceValue.FieldByName("ID")
-	if !idField.IsValid() {
-		idField = instanceValue.FieldByName("id")
+	var setInValue func(v reflect.Value) bool
+	setInValue = func(v reflect.Value) bool {
+		t := v.Type()
+		for i := 0; i < t.NumField(); i++ {
+			field := t.Field(i)
+			fieldValue := v.Field(i)
+
+			if field.Anonymous {
+				switch fieldValue.Kind() {
+				case reflect.Struct:
+					if setInValue(fieldValue) {
+						return true
+					}
+				case reflect.Ptr:
+					if fieldValue.IsNil() {
+						continue
+					}
+					if fieldValue.Elem().Kind() == reflect.Struct {
+						if setInValue(fieldValue.Elem()) {
+							return true
+						}
+					}
+				}
+			}
+
+			for _, name := range []string{"ID", "Id", "id"} {
+				if field.Name == name && fieldValue.CanSet() && fieldValue.Kind() == reflect.Int64 {
+					fieldValue.SetInt(id)
+					return true
+				}
+			}
+		}
+		return false
 	}
-	if idField.IsValid() && idField.CanSet() {
-		idField.SetInt(id)
-	}
+
+	_ = setInValue(instanceValue)
 }
 
 func (m *Manager[T]) validate(instance *T) error {

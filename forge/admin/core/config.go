@@ -42,20 +42,20 @@ type Config[T any] struct {
 	Ordering            []Field
 	ListPerPage         int
 	ListMaxShowAll      int
-	ListSelectRelated   []any
-	ListPrefetchRelated []any
+	ListSelectRelated   []string
+	ListPrefetchRelated []string
 	ShowFullResultCount bool
 	PreserveFilters     bool
 	EmptyValueDisplay   string
 	SortableBy          []Field
 
 	// Form configuration
-	Fields                []any
-	Exclude               []any
-	ReadOnlyFields        []any
+	Fields                []string
+	Exclude               []string
+	ReadOnlyFields        []string
 	PrepopulatedFields    map[string][]string
-	RawIDFields           []any
-	AutocompleteFields    []any
+	RawIDFields           []string
+	AutocompleteFields    []string
 	RadioFields           map[string]RadioLayout
 	Fieldsets             []Fieldset[T]
 	InlineRelations       map[string]InlineRelationConfig
@@ -105,6 +105,12 @@ type Fieldset[T any] struct {
 	Description string
 }
 
+// InlineConfig configures UI behavior for inline relations.
+type InlineConfig struct {
+	ListDisplay []string
+	Fieldsets   any
+}
+
 // InlineRelationConfig configures inline relation behavior in forms.
 type InlineRelationConfig struct {
 	Type         string   `json:"type,omitempty"` // one_to_many, one_to_one, many_to_many
@@ -112,6 +118,7 @@ type InlineRelationConfig struct {
 	Fields       []string `json:"fields,omitempty"`
 	RelatedModel string   `json:"related_model,omitempty"`
 	RelatedField string   `json:"related_field,omitempty"`
+	InlineConfig InlineConfig `json:"inline_config,omitempty"`
 }
 
 // NewFieldset creates a new fieldset

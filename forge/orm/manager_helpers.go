@@ -507,30 +507,64 @@ func GetIDValue(instance interface{}, idFieldName string) (interface{}, error) {
 		return nil, fmt.Errorf("instance must be a struct")
 	}
 
-	typ := instanceValue.Type()
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
-		fieldValue := instanceValue.Field(i)
+	var findValue func(v reflect.Value) (reflect.Value, bool, error)
+	findValue = func(v reflect.Value) (reflect.Value, bool, error) {
+		t := v.Type()
+		for i := 0; i < t.NumField(); i++ {
+			field := t.Field(i)
+			fieldValue := v.Field(i)
 
-		// Check field name
-		if strings.EqualFold(field.Name, idFieldName) {
-			if !fieldValue.CanInterface() {
-				return nil, fmt.Errorf("id field is not accessible")
-			}
-			return fieldValue.Interface(), nil
-		}
-
-		// Check db tag
-		if dbTag := field.Tag.Get("db"); dbTag != "" {
-			tagParts := strings.Split(dbTag, ",")
-			if strings.EqualFold(tagParts[0], idFieldName) {
-				if !fieldValue.CanInterface() {
-					return nil, fmt.Errorf("id field is not accessible")
+			// Recurse into anonymous embedded structs.
+			if field.Anonymous {
+				switch fieldValue.Kind() {
+				case reflect.Struct:
+					if nested, ok, err := findValue(fieldValue); err != nil {
+						return reflect.Value{}, false, err
+					} else if ok {
+						return nested, true, nil
+					}
+				case reflect.Ptr:
+					if fieldValue.IsNil() {
+						continue
+					}
+					if fieldValue.Elem().Kind() == reflect.Struct {
+						if nested, ok, err := findValue(fieldValue.Elem()); err != nil {
+							return reflect.Value{}, false, err
+						} else if ok {
+							return nested, true, nil
+						}
+					}
 				}
-				return fieldValue.Interface(), nil
+			}
+
+			// Check field name
+			if strings.EqualFold(field.Name, idFieldName) {
+				if !fieldValue.CanInterface() {
+					return reflect.Value{}, false, fmt.Errorf("id field is not accessible")
+				}
+				return fieldValue, true, nil
+			}
+
+			// Check db tag
+			if dbTag := field.Tag.Get("db"); dbTag != "" {
+				tagParts := strings.Split(dbTag, ",")
+				if strings.EqualFold(tagParts[0], idFieldName) {
+					if !fieldValue.CanInterface() {
+						return reflect.Value{}, false, fmt.Errorf("id field is not accessible")
+					}
+					return fieldValue, true, nil
+				}
 			}
 		}
+		return reflect.Value{}, false, nil
 	}
 
+	val, ok, err := findValue(instanceValue)
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		return val.Interface(), nil
+	}
 	return nil, fmt.Errorf("id field '%s' not found", idFieldName)
 }

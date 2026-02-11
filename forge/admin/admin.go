@@ -75,6 +75,28 @@ type Plugin = core.Plugin
 type Field = core.Field
 type Method = core.Method
 type Fieldset[T any] = core.Fieldset[T]
+type Admin[T any] = core.Admin[T]
+type InlineRelationConfig = core.InlineRelationConfig
+type InlineConfig = core.InlineConfig
+type Choice = core.Choice
+
+const (
+	FilterTypeText      = "text"
+	FilterTypeString    = "text"
+	FilterTypeNumber    = "number"
+	FilterTypeBoolean   = "boolean"
+	FilterTypeChoice    = "choice"
+	FilterTypeDateRange = "date_range"
+	FilterTypeRelation  = "relation"
+	FilterTypeRelated   = "relation"
+	FilterTypeObjectID  = "object_id"
+)
+
+const (
+	InlineTypeOneToMany = "one_to_many"
+	InlineTypeOneToOne  = "one_to_one"
+	InlineTypeManyToMany = "many_to_many"
+)
 
 // NewFieldset creates a new fieldset for admin forms.
 func NewFieldset[T any](name string, fields ...string) core.Fieldset[T] {
