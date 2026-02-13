@@ -2,6 +2,7 @@ package orm
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -40,23 +41,50 @@ func (TestModel) Fields() []schema.Field {
 	}
 }
 
-func TestQuerySet_Integration_Filter(t *testing.T) {
+func setupIsolatedTestTable(t *testing.T) (*db.DB, string) {
+	t.Helper()
+
 	sqlDB := testutils.SetupTestDB(t)
-	testutils.CreateTestTable(t, sqlDB)
-	defer sqlDB.Close()
-	
+	t.Cleanup(func() {
+		_ = sqlDB.Close()
+	})
+
 	database := &db.DB{DB: sqlDB, Driver: "postgres"}
+	tableName := fmt.Sprintf("test_models_%d", time.Now().UnixNano())
+	escapedTable := EscapeIdentifier(tableName)
+
+	_, err := database.Exec(fmt.Sprintf(`DROP TABLE IF EXISTS %s`, escapedTable))
+	require.NoError(t, err)
+
+	_, err = database.Exec(fmt.Sprintf(`
+		CREATE TABLE %s (
+			id SERIAL PRIMARY KEY,
+			name TEXT NOT NULL,
+			email TEXT,
+			price DECIMAL(10, 2) DEFAULT 0.0,
+			available BOOLEAN DEFAULT TRUE,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+		)
+	`, escapedTable))
+	require.NoError(t, err)
+
+	return database, tableName
+}
+
+func TestQuerySet_Integration_Filter(t *testing.T) {
+	database, tableName := setupIsolatedTestTable(t)
+	escapedTable := EscapeIdentifier(tableName)
 
 	// Insert test data
-	_, err := database.Exec(`
-		INSERT INTO test_models (name, email, price, available) VALUES
+	_, err := database.Exec(fmt.Sprintf(`
+		INSERT INTO %s (name, email, price, available) VALUES
 		('Product 1', 'test1@example.com', 10.0, true),
 		('Product 2', 'test2@example.com', 20.0, true),
 		('Product 3', 'test3@example.com', 30.0, false)
-	`)
+	`, escapedTable))
 	require.NoError(t, err)
 
-	qs, err := NewQuerySet[TestModel]("test_models")
+	qs, err := NewQuerySet[TestModel](tableName)
 	if err != nil {
 		t.Fatalf("Failed to create QuerySet: %v", err)
 	}
@@ -64,7 +92,7 @@ func TestQuerySet_Integration_Filter(t *testing.T) {
 	// Set DB connection
 	qs = qs.SetDB(database)
 
-	priceField := NewField[float64]("price", "test_models")
+	priceField := NewField[float64]("price", tableName)
 	expr := priceField.Gt(15.0)
 
 	filtered := qs.Filter(expr)
@@ -81,19 +109,16 @@ func TestQuerySet_Integration_Filter(t *testing.T) {
 }
 
 func TestQuerySet_Integration_OrderBy(t *testing.T) {
-	sqlDB := testutils.SetupTestDB(t)
-	testutils.CreateTestTable(t, sqlDB)
-	defer sqlDB.Close()
+	database, tableName := setupIsolatedTestTable(t)
+	escapedTable := EscapeIdentifier(tableName)
 	
-	database := &db.DB{DB: sqlDB, Driver: "postgres"}
-	
-	_, err := database.Exec(`
-		INSERT INTO test_models (name, price, email) VALUES
+	_, err := database.Exec(fmt.Sprintf(`
+		INSERT INTO %s (name, price, email) VALUES
 		('A', 10.0, ''), ('B', 30.0, ''), ('C', 20.0, '')
-	`)
+	`, escapedTable))
 	require.NoError(t, err)
 
-	qs, err := NewQuerySet[TestModel]("test_models")
+	qs, err := NewQuerySet[TestModel](tableName)
 	require.NoError(t, err)
 	qs = qs.SetDB(database)
 
@@ -107,20 +132,17 @@ func TestQuerySet_Integration_OrderBy(t *testing.T) {
 }
 
 func TestQuerySet_Integration_LimitOffset(t *testing.T) {
-	sqlDB := testutils.SetupTestDB(t)
-	testutils.CreateTestTable(t, sqlDB)
-	defer sqlDB.Close()
-	
-	database := &db.DB{DB: sqlDB, Driver: "postgres"}
+	database, tableName := setupIsolatedTestTable(t)
+	escapedTable := EscapeIdentifier(tableName)
 
 	// Insert 15 records
 	for i := 1; i <= 15; i++ {
-		_, err := database.Exec(`INSERT INTO test_models (name, price, email) VALUES ($1, $2, $3)`, 
+		_, err := database.Exec(fmt.Sprintf(`INSERT INTO %s (name, price, email) VALUES ($1, $2, $3)`, escapedTable), 
 			"Product", float64(i), "")
 		require.NoError(t, err)
 	}
 
-	qs, err := NewQuerySet[TestModel]("test_models")
+	qs, err := NewQuerySet[TestModel](tableName)
 	require.NoError(t, err)
 	qs = qs.SetDB(database)
 
@@ -135,27 +157,24 @@ func TestQuerySet_Integration_LimitOffset(t *testing.T) {
 }
 
 func TestQuerySet_Integration_ComplexQuery(t *testing.T) {
-	sqlDB := testutils.SetupTestDB(t)
-	testutils.CreateTestTable(t, sqlDB)
-	defer sqlDB.Close()
-	
-	database := &db.DB{DB: sqlDB, Driver: "postgres"}
+	database, tableName := setupIsolatedTestTable(t)
+	escapedTable := EscapeIdentifier(tableName)
 
-	_, err := database.Exec(`
-		INSERT INTO test_models (name, price, available, email) VALUES
+	_, err := database.Exec(fmt.Sprintf(`
+		INSERT INTO %s (name, price, available, email) VALUES
 		('P1', 100.0, true, ''),
 		('P2', 50.0, true, ''),
 		('P3', 200.0, false, ''),
 		('P4', 150.0, true, '')
-	`)
+	`, escapedTable))
 	require.NoError(t, err)
 
-	qs, err := NewQuerySet[TestModel]("test_models")
+	qs, err := NewQuerySet[TestModel](tableName)
 	require.NoError(t, err)
 	qs = qs.SetDB(database)
 
-	priceField := NewField[float64]("price", "test_models")
-	availableField := NewField[bool]("available", "test_models")
+	priceField := NewField[float64]("price", tableName)
+	availableField := NewField[bool]("available", tableName)
 
 	// Complex query: price > 60 AND available = true, ordered by price DESC
 	complex := qs.
@@ -172,16 +191,13 @@ func TestQuerySet_Integration_ComplexQuery(t *testing.T) {
 }
 
 func TestUpdateBuilder_Integration(t *testing.T) {
-	sqlDB := testutils.SetupTestDB(t)
-	testutils.CreateTestTable(t, sqlDB)
-	defer sqlDB.Close()
-	
-	database := &db.DB{DB: sqlDB, Driver: "postgres"}
+	database, tableName := setupIsolatedTestTable(t)
+	escapedTable := EscapeIdentifier(tableName)
 
-	_, err := database.Exec(`INSERT INTO test_models (id, name, price, email) VALUES (1, 'Old Name', 10.0, '')`)
+	_, err := database.Exec(fmt.Sprintf(`INSERT INTO %s (id, name, price, email) VALUES (1, 'Old Name', 10.0, '')`, escapedTable))
 	require.NoError(t, err)
 
-	qs, err := NewQuerySet[TestModel]("test_models")
+	qs, err := NewQuerySet[TestModel](tableName)
 	require.NoError(t, err)
 	qs = qs.SetDB(database)
 
@@ -205,7 +221,7 @@ func TestUpdateBuilder_Integration(t *testing.T) {
 	var name string
 	var price float64
 	var id int64
-	err = database.QueryRow("SELECT id, name, price FROM test_models").Scan(&id, &name, &price)
+	err = database.QueryRow(fmt.Sprintf("SELECT id, name, price FROM %s", escapedTable)).Scan(&id, &name, &price)
 	require.NoError(t, err)
 	
 	assert.Equal(t, "Updated Name", name)

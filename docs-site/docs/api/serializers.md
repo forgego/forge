@@ -8,6 +8,12 @@ image: /forge-social-card.svg
 
 Serializers map model fields to API responses and validate input.
 
+## What you can do
+
+- Model serializers with field lists
+- Typed serializers and enhanced serializers
+- Field-level validation and mapping
+
 ## Example
 
 ```go

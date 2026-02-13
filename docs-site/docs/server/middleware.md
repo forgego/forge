@@ -8,16 +8,20 @@ image: /forge-social-card.svg
 
 Default middleware includes request ID, logging, recoverer, and timeouts.
 
-## Common middleware
+## Default stack
 
 - RequestID
 - RealIP
 - Recoverer
 - Logger
 - Timeout
+
+## Additional middleware
+
 - CORS
 - Compress
 - SecureHeaders
+- StripSlashes, RedirectSlashes
 
 ## Next steps
 

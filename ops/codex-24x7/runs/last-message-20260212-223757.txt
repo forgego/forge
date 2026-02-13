@@ -1,0 +1,24 @@
+Implemented one focused high-impact batch on admin REST reliability: `handleReplace` is now fully functional with validation and tests.
+
+- Code change: `forge/admin/api/rest/router.go:468`
+  - Replaced TODO in `handleReplace` with:
+  - object fetch via `GetObject`
+  - object-level permission check
+  - JSON body parse + empty-body validation
+  - persistence via `UpdateObject`
+  - updated object response payload
+
+- Tests added: `forge/admin/api/rest/router_test.go:183`
+  - `TestHandleReplace_ReplacesObject`
+  - `TestHandleReplace_ReturnsNotFoundWhenObjectMissing`
+  - `TestHandleReplace_ChecksObjectPermission`
+  - `TestHandleReplace_RejectsEmptyBody`
+
+- Run tracking updated:
+  - `ops/codex-24x7/STATUS.md:3`
+  - `ops/codex-24x7/HISTORY.md:34`
+
+Tests run:
+- `go test ./admin/api/rest` (pass)
+- `go test ./...` in `examples/ecommerce` (pass; no test files)
+- Note: initial test runs failed due default Go cache permissions; reran with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\go-build-cache`.

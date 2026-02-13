@@ -1,6 +1,7 @@
 import { useModelMetadata } from '../api/hooks/adminHooks';
 import ModelListPage from '../pages/ModelListPage';
 import ModelUpsertPage from '../pages/ModelUpsertPage';
+import ModelViewPage from '../pages/ModelViewPage';
 import { useParams } from '@tanstack/react-router';
 
 interface DynamicModelPageProps {
@@ -37,6 +38,5 @@ export default function DynamicModelPage({ mode }: DynamicModelPageProps) {
     return <ModelUpsertPage mode={mode as any} />;
   }
 
-  // Detail view (TODO: implement ModelViewPage)
-  return <ModelListPage />; 
+  return <ModelViewPage />;
 }

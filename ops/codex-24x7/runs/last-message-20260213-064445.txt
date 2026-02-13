@@ -1,0 +1,21 @@
+Implemented one focused high-impact batch on migrations reliability.
+
+**What changed**
+- `forge/db/migrate/execute/status.go`
+  - Fixed dirty-state merge behavior: `mergeAppliedVersions(...)` now excludes the dirty current version so failed migrations are not reported as applied.
+- `forge/db/migrate/execute/status_test.go`
+  - Updated `TestMergeAppliedVersions_ExcludesCurrentWhenDirty` to assert current dirty version is excluded.
+  - Added `TestMergeAppliedVersions_KeepsExplicitPastVersionsWhenDirty`.
+- `ops/codex-24x7/STATUS.md`
+  - Updated all three required sections for this run: Completed this run / Remaining work / Next run plan.
+- `ops/codex-24x7/HISTORY.md`
+  - Appended a concise run log entry for timestamp `2026-02-13 06:45:00`.
+
+**Tests run**
+- In `forge`:
+  - `go test ./db/migrate/execute ./cli/commands/migrations -count=1` (pass)
+- In `examples/ecommerce`:
+  - `go test ./... -count=1` (pass)
+
+**Note**
+- `git status` could not be run due local safe-directory ownership restriction (`dubious ownership`) in this environment.

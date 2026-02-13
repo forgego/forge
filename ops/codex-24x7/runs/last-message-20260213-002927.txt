@@ -1,0 +1,23 @@
+Implemented one focused high-impact batch on ORM reliability by closing three framework TODOs and adding coverage.
+
+Changed:
+- `forge/orm/aggregates.go:102`  
+  Implemented custom aggregate registry with thread-safe registration and lookup/build (`RegisterAggregate`, `BuildAggregate`), including normalized names and sane fallback defaults.
+- `forge/orm/annotations.go:27`  
+  Implemented thread-safe annotation registry/build path (`RegisterAnnotation`, `BuildAnnotation`).
+- `forge/orm/query_expr.go:262`  
+  Implemented thread-safe query expression registry/build path (`RegisterQueryExpr`, `BuildQueryExpr`) and shared registry name normalizer.
+- `forge/orm/registry_test.go:5`  
+  Added unit tests covering registry registration, normalized lookup, builder behavior, and unknown-name handling.
+- `ops/codex-24x7/STATUS.md:3`  
+  Updated `Completed this run / Remaining work / Next run plan`.
+- `ops/codex-24x7/HISTORY.md`  
+  Appended a new run log entry for timestamp `2026-02-13 00:29:35`.
+
+Validation run:
+- `go test ./orm -run "TestRegisterAggregateAndBuildAggregate|TestRegisterAnnotationAndBuildAnnotation|TestRegisterQueryExprAndBuildQueryExpr|TestRegistryBuilders_ReturnFalseForUnknownNames" -count=1` (pass)
+- `go test ./orm -count=1` (fails in pre-existing integration tests: `TestQuerySet_Integration_Filter`, `TestQuerySet_Integration_LimitOffset`)
+- `go test ./...` in `examples/ecommerce` (pass; no test files)
+
+Note:
+- `git status` is currently blocked in this environment by Git safe-directory ownership settings (`dubious ownership`), so I did not use Git status output for reporting.

@@ -12,18 +12,22 @@ Configure how models are displayed and edited in the admin UI.
 
 ```go
 admin.Register(Post{}, admin.ModelConfig{
+    VerboseName: "Post",
     ListDisplay: []string{"id", "title", "published"},
     SearchFields: []string{"title"},
     Filters: []string{"published"},
+    Ordering: []admin.Ordering{admin.Desc("created_at")},
+    ListPerPage: 25,
 })
 ```
 
-## Common options
+## Common config fields
 
+- VerboseName, VerboseNamePlural
 - ListDisplay, SearchFields, Filters
 - Ordering, ListPerPage
-- Actions (bulk actions)
-- Field widgets and overrides
+- Actions
+- UI overrides
 
 ## Next steps
 

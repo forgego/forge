@@ -22,7 +22,12 @@ fs, _ := filter.NewFilterSet[Post]()
 qs := fs.WithQueryset(PostObjects).Where("title").Contains("forge")
 ```
 
+## Built-in filters
+
+- String, Number, Boolean, Date, Range
+- Choice and ModelChoice
+
 ## Next steps
 
 - [ORM](/docs/orm/)
-- [REST API](/docs/rest-api/)
+- [API Overview](/docs/api/overview/)

@@ -1,0 +1,17 @@
+Implemented one focused high-impact batch for ecommerce admin/API parity and run tracking.
+
+- Added a new authenticated mixed-outcome action integration test in `examples/ecommerce/main_test.go:1043`:
+  - `TestBuildEcommerceRouter_AdminAPIActionObjectSpecificPaymentChangePermission`
+  - Covers `POST /admin/api/payments/action/mark_failed` with one immutable (`completed`) and one mutable (`pending`) payment.
+  - Asserts `207 Multi-Status`, `permission_denied` error for the immutable object, and persisted state verification via follow-up GETs.
+
+- Updated run status in `ops/codex-24x7/STATUS.md:4`:
+  - Completed this run
+  - Remaining work
+  - Next run plan
+
+- Appended run history in `ops/codex-24x7/HISTORY.md:597`.
+
+Tests run (all passing):
+1. `go test ./admin/api/rest -count=1` (in `forge`, with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache`)
+2. `go test ./... -count=1` (in `examples/ecommerce`, with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache`)

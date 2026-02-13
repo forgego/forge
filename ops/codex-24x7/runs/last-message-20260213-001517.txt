@@ -1,0 +1,22 @@
+Implemented one focused ORM reliability batch and updated run tracking.
+
+- Closed nested-path validation TODO in `forge/orm/expression.go:61` by fully validating relation traversal paths in `Field.Resolve`.
+- Added `resolveNestedFieldPath(...)` in `forge/orm/expression.go:95` to:
+  - reject traversal through non-relation fields,
+  - resolve each relation hop target model schema,
+  - reject terminal relation paths and missing nested fields with explicit errors.
+- Added tests in `forge/orm/expression_test.go:638` (`TestFieldResolve_RelationPaths`) covering valid nested relation path + 4 failure modes.
+- Updated run files:
+  - `ops/codex-24x7/STATUS.md:3`
+  - `ops/codex-24x7/HISTORY.md:127`
+
+Test results:
+- `go test ./orm -run "TestFieldResolve_RelationPaths|TestFieldExpression_ToSQL|TestFieldRef_AllMethods" -count=1` passed.
+- `go test ./...` in `examples/ecommerce` passed (`[no test files]` across packages).
+- `go test ./orm -count=1` still fails on pre-existing integration tests:
+  - `TestQuerySet_Integration_Filter`
+  - `TestQuerySet_Integration_LimitOffset`
+
+Environment note:
+- Default Go cache path had permission errors; tests were run with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache`.
+- `git` inspection commands were blocked by repository safe-directory ownership settings, so I validated changes via direct file reads/tests instead.

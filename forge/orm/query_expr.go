@@ -3,6 +3,7 @@ package orm
 import (
 	"fmt"
 	"strings"
+	"sync"
 )
 
 // Operator represents a SQL operator
@@ -45,8 +46,9 @@ type QueryExpr struct {
 // This is the recommended way to create conditions when you don't have type-safe fields
 //
 // Example:
-//   qs.Filter(Where("age", OpGreater, 18))
-//   qs.Filter(Where("name", OpEquals, "John"))
+//
+//	qs.Filter(Where("age", OpGreater, 18))
+//	qs.Filter(Where("name", OpEquals, "John"))
 func Where(field string, op Operator, value interface{}) Expression {
 	return &ComparisonExpression[interface{}]{
 		Field: Field[interface{}]{
@@ -64,12 +66,13 @@ func Where(field string, op Operator, value interface{}) Expression {
 // NewFieldQueryExpr will be removed in v2.0.
 //
 // Migration:
-//   // Old
-//   expr := orm.NewFieldQueryExpr("age", orm.OpGreater, 18)
-//   // New - Option 1: Where (explicit)
-//   expr := orm.Where("age", orm.OpGreater, 18)
-//   // New - Option 2: Type-safe (best)
-//   expr := User.Age.Gt(18)
+//
+//	// Old
+//	expr := orm.NewFieldQueryExpr("age", orm.OpGreater, 18)
+//	// New - Option 1: Where (explicit)
+//	expr := orm.Where("age", orm.OpGreater, 18)
+//	// New - Option 2: Type-safe (best)
+//	expr := User.Age.Gt(18)
 func NewFieldQueryExpr(field string, op Operator, value interface{}) QueryExpr {
 	return QueryExpr{
 		field: field,
@@ -121,7 +124,6 @@ func (q QueryExpr) ToSQL(paramIndex int) (string, []interface{}, int) {
 
 	return q.buildSingle(paramIndex)
 }
-
 
 // buildCombined builds SQL for combined conditions (AND/OR)
 func (q QueryExpr) buildCombined(paramIndex int) (string, []interface{}, int) {
@@ -258,5 +260,31 @@ func (q QueryExpr) buildSingle(paramIndex int) (string, []interface{}, int) {
 
 // RegisterQueryExpr registers a custom query expression type
 func RegisterQueryExpr(name string, builder func(...interface{}) QueryExpr) {
-	// TODO: Implement custom query expression registry
+	if builder == nil || normalizeRegistryName(name) == "" {
+		return
+	}
+
+	queryExprRegistryMu.Lock()
+	defer queryExprRegistryMu.Unlock()
+	queryExprRegistry[normalizeRegistryName(name)] = builder
+}
+
+// BuildQueryExpr builds a query expression from a registered custom query expression name.
+func BuildQueryExpr(name string, args ...interface{}) (QueryExpr, bool) {
+	queryExprRegistryMu.RLock()
+	builder, ok := queryExprRegistry[normalizeRegistryName(name)]
+	queryExprRegistryMu.RUnlock()
+	if !ok {
+		return QueryExpr{}, false
+	}
+	return builder(args...), true
+}
+
+var (
+	queryExprRegistryMu sync.RWMutex
+	queryExprRegistry   = map[string]func(...interface{}) QueryExpr{}
+)
+
+func normalizeRegistryName(name string) string {
+	return strings.ToLower(strings.TrimSpace(name))
 }

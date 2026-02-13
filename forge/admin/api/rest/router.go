@@ -2,10 +2,16 @@ package rest
 
 import (
 	"bytes"
+	"context"
+	"crypto/rand"
+	"crypto/subtle"
 	"encoding/csv"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -24,6 +30,7 @@ type Router struct {
 	registry *core.Registry
 	prefix   string
 	views    *savedViewStore
+	sessions *adminSessionStore
 }
 
 // NewRouter creates a new admin API router
@@ -32,6 +39,7 @@ func NewRouter(registry *core.Registry) *Router {
 		registry: registry,
 		prefix:   "/api",
 		views:    newSavedViewStore(),
+		sessions: newAdminSessionStore(),
 	}
 }
 
@@ -50,30 +58,57 @@ func (r *Router) RegisterRoutes(router chi.Router) {
 			MaxAge:           300,
 		}))
 
-		// Configuration endpoint
-		sub.Get("/config", r.handleConfig)
-
-		// Metadata endpoints
-		sub.Get("/meta", r.handleMetaList)
-		sub.Get("/meta/{model}", r.handleMetaDetail)
-
 		// Auth endpoints
 		sub.Post("/login", r.handleLogin)
 
-		// Global search
-		sub.Get("/search", r.handleGlobalSearch)
+		sub.Group(func(protected chi.Router) {
+			protected.Use(r.authMiddleware)
 
-		// Plugin page endpoint
-		sub.Get("/plugins/{plugin}/pages/{page}", r.handlePluginPage)
+			// Configuration endpoint
+			protected.Get("/config", r.handleConfig)
 
-		// Saved views
-		sub.Route("/saved-views/{model}", func(viewRouter chi.Router) {
-			viewRouter.Get("/", r.handleSavedViewsList)
-			viewRouter.Post("/", r.handleSavedViewSave)
+			// Metadata endpoints
+			protected.Get("/meta", r.handleMetaList)
+			protected.Get("/meta/{model}", r.handleMetaDetail)
+
+			// Global search
+			protected.Get("/search", r.handleGlobalSearch)
+
+			// Plugin page endpoint
+			protected.Get("/plugins/{plugin}/pages/{page}", r.handlePluginPage)
+
+			// Saved views
+			protected.Route("/saved-views/{model}", func(viewRouter chi.Router) {
+				viewRouter.Get("/", r.handleSavedViewsList)
+				viewRouter.Post("/", r.handleSavedViewSave)
+			})
+
+			// Model routes (registered dynamically)
+			r.registerModelRoutes(protected)
 		})
+	})
+}
 
-		// Model routes (registered dynamically)
-		r.registerModelRoutes(sub)
+func (r *Router) authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		token, err := bearerToken(req.Header.Get("Authorization"))
+		if err != nil {
+			respondError(w, http.StatusUnauthorized, "authentication_required", "Authentication required", nil)
+			return
+		}
+
+		session, ok := r.sessions.Validate(token)
+		if !ok {
+			respondError(w, http.StatusUnauthorized, "authentication_required", "Invalid or expired token", nil)
+			return
+		}
+
+		user := map[string]interface{}{
+			"username": session.Username,
+			"role":     "superuser",
+		}
+		ctx := apicore.WithUser(req.Context(), user)
+		next.ServeHTTP(w, req.WithContext(ctx))
 	})
 }
 
@@ -160,7 +195,7 @@ func (r *Router) handleConfig(w http.ResponseWriter, req *http.Request) {
 		"version":     "1.0.0",
 		"user":        user,
 		"plugins":     plugins,
-		"environment": "development", // TODO: Get from global config
+		"environment": adminEnvironment(),
 		"dashboard":   core.GetDashboard(ctx),
 	}
 
@@ -187,8 +222,7 @@ func (r *Router) handleMetaList(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		// TODO: Get count from manager
-		count := int64(0)
+		count := modelCountFromList(ctx, admin)
 
 		models = append(models, core.ModelListMetadata{
 			Name:              name,
@@ -205,14 +239,92 @@ func (r *Router) handleMetaList(w http.ResponseWriter, req *http.Request) {
 	})
 }
 
+func adminEnvironment() string {
+	for _, key := range []string{"FORGE_ENV", "APP_ENV", "GO_ENV", "ENV"} {
+		if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+			return value
+		}
+	}
+	return "development"
+}
+
+func modelCountFromList(ctx context.Context, admin core.AdminInterface) int64 {
+	response, err := admin.ListObjects(ctx, core.ListParams{
+		Page:     1,
+		PageSize: 1,
+		Filters:  map[string]interface{}{},
+	})
+	if err != nil || response == nil {
+		return 0
+	}
+	return response.Count
+}
+
 // handleLogin handles admin login
 func (r *Router) handleLogin(w http.ResponseWriter, req *http.Request) {
-	// Simple stub for now - just return success
-	// Production auth should verify credentials
+	var payload struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+
+	decoder := json.NewDecoder(req.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_body", "Invalid login payload", nil)
+		return
+	}
+	if decoder.More() {
+		respondError(w, http.StatusBadRequest, "invalid_body", "Invalid login payload", nil)
+		return
+	}
+
+	payload.Username = strings.TrimSpace(payload.Username)
+	payload.Password = strings.TrimSpace(payload.Password)
+	if payload.Username == "" || payload.Password == "" {
+		respondError(w, http.StatusBadRequest, "invalid_credentials", "Username and password are required", nil)
+		return
+	}
+	expectedUsername, expectedPassword := adminCredentials()
+	if !secureEqual(payload.Username, expectedUsername) || !secureEqual(payload.Password, expectedPassword) {
+		respondError(w, http.StatusUnauthorized, "invalid_credentials", "Invalid username or password", nil)
+		return
+	}
+
+	token, err := r.sessions.Issue(payload.Username, 24*time.Hour)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "login_failed", "Could not create session token", nil)
+		return
+	}
+
 	respondJSON(w, http.StatusOK, map[string]interface{}{
-		"token": "dummy-token",
-		"user":  map[string]string{"name": "Admin", "role": "superuser"},
+		"token": token,
+		"user": map[string]string{
+			"name": payload.Username,
+			"role": "superuser",
+		},
+		"expires_at": time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339),
 	})
+}
+
+func adminCredentials() (string, string) {
+	username := strings.TrimSpace(os.Getenv("FORGE_ADMIN_USERNAME"))
+	if username == "" {
+		username = "admin"
+	}
+
+	password := strings.TrimSpace(os.Getenv("FORGE_ADMIN_PASSWORD"))
+	if password == "" {
+		password = "secret"
+	}
+
+	return username, password
+}
+
+func secureEqual(a, b string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }
 
 // handleMetaDetail returns detailed metadata for a model
@@ -352,7 +464,7 @@ func (r *Router) handleDetail(admin core.AdminInterface) http.HandlerFunc {
 		user, _ := apicore.UserFromContext(ctx)
 		idStr := chi.URLParam(req, "id")
 
-		id, err := strconv.ParseInt(idStr, 10, 64)
+		id, err := normalizePathID(idStr)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, "invalid_id", "Invalid ID format", nil)
 			return
@@ -412,7 +524,7 @@ func (r *Router) handleUpdate(admin core.AdminInterface) http.HandlerFunc {
 		user, _ := apicore.UserFromContext(ctx)
 		idStr := chi.URLParam(req, "id")
 
-		id, err := strconv.ParseInt(idStr, 10, 64)
+		id, err := normalizePathID(idStr)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, "invalid_id", "Invalid ID format", nil)
 			return
@@ -420,6 +532,16 @@ func (r *Router) handleUpdate(admin core.AdminInterface) http.HandlerFunc {
 
 		// Check change permission
 		if !admin.HasChangePermission(ctx, user, nil) {
+			respondError(w, http.StatusForbidden, "permission_denied", "You don't have permission to change this object", nil)
+			return
+		}
+
+		existing, err := admin.GetObject(ctx, id)
+		if err != nil {
+			respondError(w, http.StatusNotFound, "not_found", "Object not found", nil)
+			return
+		}
+		if !admin.HasChangePermission(ctx, user, existing) {
 			respondError(w, http.StatusForbidden, "permission_denied", "You don't have permission to change this object", nil)
 			return
 		}
@@ -449,7 +571,7 @@ func (r *Router) handleReplace(admin core.AdminInterface) http.HandlerFunc {
 		user, _ := apicore.UserFromContext(ctx)
 		idStr := chi.URLParam(req, "id")
 
-		id, err := strconv.ParseInt(idStr, 10, 64)
+		id, err := normalizePathID(idStr)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, "invalid_id", "Invalid ID format", nil)
 			return
@@ -461,12 +583,34 @@ func (r *Router) handleReplace(admin core.AdminInterface) http.HandlerFunc {
 			return
 		}
 
-		// TODO: Fetch object, parse request body, validate, replace object
-		_ = id
+		existing, err := admin.GetObject(ctx, id)
+		if err != nil {
+			respondError(w, http.StatusNotFound, "not_found", "Object not found", nil)
+			return
+		}
 
-		respondJSON(w, http.StatusOK, map[string]interface{}{
-			"message": "Object replaced",
-		})
+		if !admin.HasChangePermission(ctx, user, existing) {
+			respondError(w, http.StatusForbidden, "permission_denied", "You don't have permission to change this object", nil)
+			return
+		}
+
+		var data map[string]interface{}
+		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
+			respondError(w, http.StatusBadRequest, "invalid_body", err.Error(), nil)
+			return
+		}
+		if len(data) == 0 {
+			respondError(w, http.StatusBadRequest, "invalid_body", "Request body must include at least one field", nil)
+			return
+		}
+
+		obj, err := admin.UpdateObject(ctx, id, data)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "update_failed", err.Error(), nil)
+			return
+		}
+
+		respondJSON(w, http.StatusOK, obj)
 	}
 }
 
@@ -477,7 +621,7 @@ func (r *Router) handleDelete(admin core.AdminInterface) http.HandlerFunc {
 		user, _ := apicore.UserFromContext(ctx)
 		idStr := chi.URLParam(req, "id")
 
-		id, err := strconv.ParseInt(idStr, 10, 64)
+		id, err := normalizePathID(idStr)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, "invalid_id", "Invalid ID format", nil)
 			return
@@ -485,6 +629,16 @@ func (r *Router) handleDelete(admin core.AdminInterface) http.HandlerFunc {
 
 		// Check delete permission
 		if !admin.HasDeletePermission(ctx, user, nil) {
+			respondError(w, http.StatusForbidden, "permission_denied", "You don't have permission to delete this object", nil)
+			return
+		}
+
+		existing, err := admin.GetObject(ctx, id)
+		if err != nil {
+			respondError(w, http.StatusNotFound, "not_found", "Object not found", nil)
+			return
+		}
+		if !admin.HasDeletePermission(ctx, user, existing) {
 			respondError(w, http.StatusForbidden, "permission_denied", "You don't have permission to delete this object", nil)
 			return
 		}
@@ -512,12 +666,101 @@ func (r *Router) handleBulkCreate(admin core.AdminInterface) http.HandlerFunc {
 			return
 		}
 
-		// TODO: Parse request body, validate, create objects
+		var rawBody interface{}
+		if err := json.NewDecoder(req.Body).Decode(&rawBody); err != nil {
+			respondError(w, http.StatusBadRequest, "invalid_body", err.Error(), nil)
+			return
+		}
 
-		respondJSON(w, http.StatusCreated, map[string]interface{}{
-			"created": 0,
-			"objects": []interface{}{},
-		})
+		var rawObjects []interface{}
+		switch payload := rawBody.(type) {
+		case []interface{}:
+			rawObjects = payload
+		case map[string]interface{}:
+			objectsValue, exists := payload["objects"]
+			if !exists {
+				respondError(w, http.StatusBadRequest, "invalid_body", "Request body must be an array of objects or include an 'objects' array", nil)
+				return
+			}
+			objectsArray, ok := objectsValue.([]interface{})
+			if !ok {
+				respondError(w, http.StatusBadRequest, "invalid_body", "'objects' must be an array", nil)
+				return
+			}
+			rawObjects = objectsArray
+		default:
+			respondError(w, http.StatusBadRequest, "invalid_body", "Request body must be an array of objects or include an 'objects' array", nil)
+			return
+		}
+
+		if len(rawObjects) == 0 {
+			respondError(w, http.StatusBadRequest, "invalid_body", "Request body must include at least one object", nil)
+			return
+		}
+
+		objects := make([]interface{}, 0, len(rawObjects))
+		errors := make([]bulkItemError, 0)
+		hasCreateFailure := false
+
+		for i, rawObject := range rawObjects {
+			data, ok := rawObject.(map[string]interface{})
+			if !ok {
+				errors = append(errors, bulkItemError{
+					Index:   i,
+					Code:    "invalid_item",
+					Message: "Each item must be a JSON object",
+				})
+				continue
+			}
+			if len(data) == 0 {
+				errors = append(errors, bulkItemError{
+					Index:   i,
+					Code:    "invalid_item",
+					Message: "Each item must include at least one field",
+				})
+				continue
+			}
+
+			obj, err := admin.CreateObject(ctx, data)
+			if err != nil {
+				hasCreateFailure = true
+				errors = append(errors, bulkItemError{
+					Index:   i,
+					Code:    "create_failed",
+					Message: err.Error(),
+				})
+				continue
+			}
+			objects = append(objects, obj)
+		}
+
+		if len(objects) == 0 {
+			if hasCreateFailure {
+				respondError(w, http.StatusInternalServerError, "create_failed", "Failed to create any objects", map[string]interface{}{
+					"errors": errors,
+				})
+				return
+			}
+			respondError(w, http.StatusBadRequest, "invalid_body", "No valid objects to create", map[string]interface{}{
+				"errors": errors,
+			})
+			return
+		}
+
+		status := http.StatusCreated
+		if len(errors) > 0 {
+			status = http.StatusMultiStatus
+		}
+
+		response := map[string]interface{}{
+			"created": len(objects),
+			"objects": objects,
+		}
+		if len(errors) > 0 {
+			response["errors"] = errors
+		}
+
+		respondJSON(w, status, response)
 	}
 }
 
@@ -533,12 +776,126 @@ func (r *Router) handleBulkUpdate(admin core.AdminInterface) http.HandlerFunc {
 			return
 		}
 
-		// TODO: Parse request body, validate, update objects
+		var payload struct {
+			IDs  []interface{}          `json:"ids"`
+			Data map[string]interface{} `json:"data"`
+		}
+		if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+			respondError(w, http.StatusBadRequest, "invalid_body", err.Error(), nil)
+			return
+		}
+		if len(payload.IDs) == 0 {
+			respondError(w, http.StatusBadRequest, "invalid_body", "Request body must include at least one ID", nil)
+			return
+		}
+		if len(payload.Data) == 0 {
+			respondError(w, http.StatusBadRequest, "invalid_body", "Request body must include update data", nil)
+			return
+		}
 
-		respondJSON(w, http.StatusOK, map[string]interface{}{
-			"updated": 0,
-		})
+		objects := make([]interface{}, 0, len(payload.IDs))
+		errors := make([]bulkItemError, 0)
+		hasUpdateFailure := false
+
+		for i, rawID := range payload.IDs {
+			id, err := normalizeBulkID(rawID)
+			if err != nil {
+				errors = append(errors, bulkItemError{
+					Index:   i,
+					Code:    "invalid_id",
+					Message: err.Error(),
+				})
+				continue
+			}
+
+			existing, err := admin.GetObject(ctx, id)
+			if err != nil {
+				errors = append(errors, bulkItemError{
+					Index:   i,
+					Code:    "not_found",
+					Message: "Object not found",
+				})
+				continue
+			}
+			if !admin.HasChangePermission(ctx, user, existing) {
+				errors = append(errors, bulkItemError{
+					Index:   i,
+					Code:    "permission_denied",
+					Message: "You don't have permission to change this object",
+				})
+				continue
+			}
+
+			obj, err := admin.UpdateObject(ctx, id, payload.Data)
+			if err != nil {
+				hasUpdateFailure = true
+				errors = append(errors, bulkItemError{
+					Index:   i,
+					Code:    "update_failed",
+					Message: err.Error(),
+				})
+				continue
+			}
+			objects = append(objects, obj)
+		}
+
+		if len(objects) == 0 {
+			if hasUpdateFailure {
+				respondError(w, http.StatusInternalServerError, "update_failed", "Failed to update any objects", map[string]interface{}{
+					"errors": errors,
+				})
+				return
+			}
+			respondError(w, http.StatusBadRequest, "invalid_body", "No valid objects to update", map[string]interface{}{
+				"errors": errors,
+			})
+			return
+		}
+
+		status := http.StatusOK
+		if len(errors) > 0 {
+			status = http.StatusMultiStatus
+		}
+
+		response := map[string]interface{}{
+			"updated": len(objects),
+			"objects": objects,
+		}
+		if len(errors) > 0 {
+			response["errors"] = errors
+		}
+
+		respondJSON(w, status, response)
 	}
+}
+
+func normalizeBulkID(rawID interface{}) (interface{}, error) {
+	switch id := rawID.(type) {
+	case float64:
+		if id != float64(int64(id)) {
+			return nil, fmt.Errorf("ID must be an integer")
+		}
+		return int64(id), nil
+	case int:
+		return int64(id), nil
+	case int64:
+		return id, nil
+	case string:
+		trimmed := strings.TrimSpace(id)
+		if trimmed == "" {
+			return nil, fmt.Errorf("ID cannot be empty")
+		}
+		if parsed, err := strconv.ParseInt(trimmed, 10, 64); err == nil {
+			return parsed, nil
+		}
+		return trimmed, nil
+	default:
+		return nil, fmt.Errorf("ID must be a string or number")
+	}
+}
+
+func normalizePathID(rawID string) (interface{}, error) {
+	return normalizeBulkID(rawID)
 }
 
 // handleBulkDelete deletes multiple objects
@@ -553,7 +910,84 @@ func (r *Router) handleBulkDelete(admin core.AdminInterface) http.HandlerFunc {
 			return
 		}
 
-		// TODO: Parse request body, validate, delete objects
+		var payload struct {
+			IDs []interface{} `json:"ids"`
+		}
+		if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+			respondError(w, http.StatusBadRequest, "invalid_body", err.Error(), nil)
+			return
+		}
+		if len(payload.IDs) == 0 {
+			respondError(w, http.StatusBadRequest, "invalid_body", "Request body must include at least one ID", nil)
+			return
+		}
+
+		deleted := 0
+		errors := make([]bulkItemError, 0)
+		hasDeleteFailure := false
+
+		for i, rawID := range payload.IDs {
+			id, err := normalizeBulkID(rawID)
+			if err != nil {
+				errors = append(errors, bulkItemError{
+					Index:   i,
+					Code:    "invalid_id",
+					Message: err.Error(),
+				})
+				continue
+			}
+
+			existing, err := admin.GetObject(ctx, id)
+			if err != nil {
+				errors = append(errors, bulkItemError{
+					Index:   i,
+					Code:    "not_found",
+					Message: "Object not found",
+				})
+				continue
+			}
+			if !admin.HasDeletePermission(ctx, user, existing) {
+				errors = append(errors, bulkItemError{
+					Index:   i,
+					Code:    "permission_denied",
+					Message: "You don't have permission to delete this object",
+				})
+				continue
+			}
+
+			if err := admin.DeleteObject(ctx, id); err != nil {
+				hasDeleteFailure = true
+				errors = append(errors, bulkItemError{
+					Index:   i,
+					Code:    "delete_failed",
+					Message: err.Error(),
+				})
+				continue
+			}
+
+			deleted++
+		}
+
+		if deleted == 0 {
+			if hasDeleteFailure {
+				respondError(w, http.StatusInternalServerError, "delete_failed", "Failed to delete any objects", map[string]interface{}{
+					"errors": errors,
+				})
+				return
+			}
+			respondError(w, http.StatusBadRequest, "invalid_body", "No valid objects to delete", map[string]interface{}{
+				"errors": errors,
+			})
+			return
+		}
+
+		if len(errors) > 0 {
+			respondJSON(w, http.StatusMultiStatus, map[string]interface{}{
+				"deleted": deleted,
+				"errors":  errors,
+			})
+			return
+		}
 
 		w.WriteHeader(http.StatusNoContent)
 	}
@@ -578,6 +1012,10 @@ func (r *Router) handleAction(admin core.AdminInterface) http.HandlerFunc {
 			respondError(w, http.StatusBadRequest, "invalid_body", err.Error(), nil)
 			return
 		}
+		if len(request.IDs) == 0 {
+			respondError(w, http.StatusBadRequest, "invalid_body", "Request body must include at least one ID", nil)
+			return
+		}
 
 		// Call implementation
 		response, err := admin.ExecuteAction(ctx, actionName, request.IDs, request.Params)
@@ -586,8 +1024,23 @@ func (r *Router) handleAction(admin core.AdminInterface) http.HandlerFunc {
 			return
 		}
 
-		respondJSON(w, http.StatusOK, response)
+		status := http.StatusOK
+		if bulkResponse, ok := response.(*core.BulkActionResponse); ok {
+			status = actionResponseStatusCode(bulkResponse)
+		}
+
+		respondJSON(w, status, response)
 	}
+}
+
+func actionResponseStatusCode(response *core.BulkActionResponse) int {
+	if response == nil || len(response.Errors) == 0 {
+		return http.StatusOK
+	}
+	if response.Affected > 0 {
+		return http.StatusMultiStatus
+	}
+	return http.StatusBadRequest
 }
 
 // handleAutocomplete returns autocomplete suggestions
@@ -710,13 +1163,92 @@ type savedViewRequest struct {
 	Display  []string               `json:"display"`
 }
 
+type bulkItemError struct {
+	Index   int    `json:"index"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
 type savedViewStore struct {
 	mu    sync.RWMutex
 	views map[string]map[string][]savedView
 }
 
+type adminSession struct {
+	Username  string
+	ExpiresAt time.Time
+}
+
+type adminSessionStore struct {
+	mu       sync.RWMutex
+	sessions map[string]adminSession
+}
+
 func newSavedViewStore() *savedViewStore {
 	return &savedViewStore{views: make(map[string]map[string][]savedView)}
+}
+
+func newAdminSessionStore() *adminSessionStore {
+	return &adminSessionStore{
+		sessions: make(map[string]adminSession),
+	}
+}
+
+func (s *adminSessionStore) Issue(username string, ttl time.Duration) (string, error) {
+	if ttl <= 0 {
+		return "", errors.New("invalid session ttl")
+	}
+
+	randomBytes := make([]byte, 32)
+	if _, err := rand.Read(randomBytes); err != nil {
+		return "", err
+	}
+
+	token := hex.EncodeToString(randomBytes)
+	s.mu.Lock()
+	s.sessions[token] = adminSession{
+		Username:  username,
+		ExpiresAt: time.Now().Add(ttl),
+	}
+	s.mu.Unlock()
+
+	return token, nil
+}
+
+func (s *adminSessionStore) Validate(token string) (adminSession, bool) {
+	s.mu.RLock()
+	session, ok := s.sessions[token]
+	s.mu.RUnlock()
+	if !ok {
+		return adminSession{}, false
+	}
+
+	if time.Now().After(session.ExpiresAt) {
+		s.mu.Lock()
+		delete(s.sessions, token)
+		s.mu.Unlock()
+		return adminSession{}, false
+	}
+
+	return session, true
+}
+
+func bearerToken(authorizationHeader string) (string, error) {
+	header := strings.TrimSpace(authorizationHeader)
+	if header == "" {
+		return "", errors.New("missing authorization header")
+	}
+
+	const prefix = "Bearer "
+	if !strings.HasPrefix(header, prefix) {
+		return "", errors.New("invalid authorization scheme")
+	}
+
+	token := strings.TrimSpace(strings.TrimPrefix(header, prefix))
+	if token == "" {
+		return "", errors.New("missing bearer token")
+	}
+	return token, nil
 }
 
 func (s *savedViewStore) list(userID, model string) []savedView {
@@ -869,7 +1401,7 @@ func parseListParams(req *http.Request) core.ListParams {
 
 	// Parse filters from query params
 	for key, values := range req.URL.Query() {
-		if key == "page" || key == "page_size" || key == "search" || key == "ordering" {
+		if key == "page" || key == "page_size" || key == "search" || key == "ordering" || key == "format" {
 			continue
 		}
 		if len(values) > 0 {

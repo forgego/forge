@@ -1,0 +1,20 @@
+Implemented one focused high-impact batch on admin API permission reliability and updated run tracking.
+
+- Fixed object-level permission enforcement for single-object write paths:
+  - `forge/admin/api/rest/router.go:494` (`handleUpdate`) now fetches the object, returns `404` if missing, and enforces object-level `HasChangePermission`.
+  - `forge/admin/api/rest/router.go:591` (`handleDelete`) now fetches the object, returns `404` if missing, and enforces object-level `HasDeletePermission`.
+- Added regression coverage:
+  - `forge/admin/api/rest/router_test.go:355`
+  - `forge/admin/api/rest/router_test.go:373`
+  - `forge/admin/api/rest/router_test.go:388`
+  - `forge/admin/api/rest/router_test.go:406`
+- Updated run docs:
+  - `ops/codex-24x7/STATUS.md:3`
+  - `ops/codex-24x7/HISTORY.md:437`
+
+Tests run:
+- `go test ./admin/api/rest -count=1` (in `forge`) with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` -> pass
+- `go test ./... -count=1` (in `examples/ecommerce`) with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` -> pass
+
+Note:
+- `git status` could not be run due repository safe-directory ownership restrictions (`detected dubious ownership`).

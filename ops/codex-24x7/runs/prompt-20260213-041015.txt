@@ -1,0 +1,1363 @@
+You are Codex in continuous 24x7 framework-maintenance mode for this repository.
+
+Timestamp: 2026-02-13 04:10:29 
+Repository: H:\Coding\gogo\forgego\newforge
+
+Follow these instructions:
+1) Read and follow `ops/codex-24x7/RULES.md`, `ops/codex-24x7/GOALS.md`, and `ops/codex-24x7/PLAN.md`.
+2) Execute one focused high-impact batch of work now.
+3) Prioritize production readiness: tests, reliability fixes, TODO/FIXME debt, and example parity.
+4) Run relevant tests for files you changed; include framework tests and ecommerce tests when applicable.
+5) Update both files before finishing:
+   - `ops/codex-24x7/STATUS.md` (Completed this run / Remaining work / Next run plan)
+   - `ops/codex-24x7/HISTORY.md` (append concise run log with what changed and what remains)
+6) If blocked on one task, move to the next highest-value unblocked task.
+7) Prefer using `helper-projects/meta-shell` patterns/assets when reworking UI/admin ergonomics.
+
+Coverage mandate for ongoing runs:
+- Admin features
+- ORM + schema + migrations
+- API + server behavior
+- Ecommerce feature parity and tests
+
+State from orchestrator:
+- Open TODO count: 500
+- New TODO count: 8
+- Resolved TODO count (since last run): 8
+
+Open TODO/FIXME items (truncated):
+.kilocode/skills/skill-creator/SKILL.md:154: - Generates a SKILL.md template with proper frontmatter and TODO placeholders
+.kilocode/skills/skill-creator/scripts/init_skill.py:20: description: [TODO: Complete and informative explanation of what the skill does and when to use it. Include WHEN to use this skill - specific scenarios, file types, or tasks that trigger it.]
+.kilocode/skills/skill-creator/scripts/init_skill.py:27: [TODO: 1-2 sentences explaining what this skill enables]
+.kilocode/skills/skill-creator/scripts/init_skill.py:31: [TODO: Choose the structure that best fits this skill's purpose. Common patterns:
+.kilocode/skills/skill-creator/scripts/init_skill.py:57: ## [TODO: Replace with the first main section based on chosen structure]
+.kilocode/skills/skill-creator/scripts/init_skill.py:59: [TODO: Add content here. See examples in existing skills:
+.kilocode/skills/skill-creator/scripts/init_skill.py:119: # TODO: Add actual script logic here
+.kilocode/skills/skill-creator/scripts/init_skill.py:266: print("1. Edit SKILL.md to complete the TODO items and update the description")
+docs-site/package-lock.json:5264: "integrity": "sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA=="
+docs-site/package-lock.json:15686: "integrity": "sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==",
+docs-site/pnpm-lock.yaml:1532: resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
+docs-site/pnpm-lock.yaml:4344: resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
+docs-site/build/assets/css/styles.f15b7e30.css:209: /* TODO: add appropriate mobile leading */
+docs-site/build/assets/css/styles.f15b7e30.css:3763: TODO bad, but we currently always show light mode when there's no data-theme
+docs-site/build/assets/css/styles.f15b7e30.css:3983: TODO merge this logic back in Infima?
+docs-site/build/assets/css/styles.f15b7e30.css:4528: /* TODO: deprecation, need to remove this after Safari will support `::marker` */
+docs-site/build/assets/js/1a4e3797.7c0463e5.js:1020: hitsPerPage:15,advancedSyntax:true,disjunctiveFacets});algoliaHelper.on('result',({results:{query,hits,page,nbHits,nbPages}})=>{if(query===''||!Array.isArray(hits)){searchResultStateDispatcher({type:'reset'});return;}const sanitizeValue=value=>value.replace(/algolia-docsearch-suggestion--highlight/g,'search-result-match');const items=hits.map(({url,_highlightResult:{hierarchy},_snippetResult:snippet={}})=>{const titles=Object.keys(hierarchy).map(key=>sanitizeValue(hierarchy[key].value));return{title:titles.pop(),url:processSearchResultUrl(url),summary:snippet.content?`${sanitizeValue(snippet.content.value)}...`:'',breadcrumbs:titles};});searchResultStateDispatcher({type:'update',value:{items,query,totalResults:nbHits,totalPages:nbPages,lastPage:page,hasMore:nbPages>page+1,loading:false}});});const[loaderRef,setLoaderRef]=(0,react.useState)(null);const prevY=(0,react.useRef)(0);const observer=(0,react.useRef)(ExecutionEnvironment/* default */.A.canUseIntersectionObserver&&new IntersectionObserver(// TODO need to fix this React Compiler lint error
+docs-site/build/assets/js/1a4e3797.7c0463e5.js:5472: // @TODO remove the number of outdated queries discarded instead of just one
+docs-site/build/assets/js/1a4e3797.7c0463e5.js:5528: // @TODO remove the number of outdated queries discarded instead of just one
+docs-site/build/assets/js/1a4e3797.7c0463e5.js:5582: // TODO: emit "result" event when events for Recommend are implemented
+docs-site/build/assets/js/1a4e3797.7c0463e5.js:5593: // TODO: emit "result" event when events for Recommend are implemented
+docs-site/build/assets/js/1a4e3797.7c0463e5.js:5691: // TODO: emit "change" event when events for Recommend are implemented
+docs-site/build/assets/js/1a4e3797.7c0463e5.js:7638: // @TODO: remove this if it ever gets handled by the API
+docs-site/build/assets/js/1a4e3797.7c0463e5.js:7897: * @param  {boolean} hierarchicalRootLevel ?? FIXME
+docs-site/build/assets/js/1a4e3797.7c0463e5.js:8003: * @param  {boolean} [hierarchicalRootLevel] ?? FIXME
+docs-site/build/assets/js/819.981ffaaa.js:218: */// TODO make the hardcoded theme-classic classnames configurable (or add them
+docs-site/build/assets/js/819.981ffaaa.js:393: */// TODO move to design system folder
+docs-site/build/assets/js/819.981ffaaa.js:394: function BreadcrumbsItemLink({children,href,isLast}){const className='breadcrumbs__link';if(isLast){return/*#__PURE__*/(0,jsx_runtime.jsx)("span",{className:className,children:children});}return href?/*#__PURE__*/(0,jsx_runtime.jsx)(Link/* default */.A,{className:className,href:href,children:/*#__PURE__*/(0,jsx_runtime.jsx)("span",{children:children})}):/*#__PURE__*/(0,jsx_runtime.jsx)("span",{className:className,children:children});}// TODO move to design system folder
+docs-site/build/assets/js/819.981ffaaa.js:402: */function UnlistedBannerTitle(){return/*#__PURE__*/(0,jsx_runtime.jsx)(Translate/* default */.A,{id:"theme.contentVisibility.unlistedBanner.title",description:"The unlisted content banner title",children:"Unlisted page"});}function UnlistedBannerMessage(){return/*#__PURE__*/(0,jsx_runtime.jsx)(Translate/* default */.A,{id:"theme.contentVisibility.unlistedBanner.message",description:"The unlisted content banner message",children:"This page is unlisted. Search engines will not index it, and only users having a direct link can access it."});}// TODO Docusaurus v4 breaking change (since it's v3 public theme-common API :/)
+docs-site/build/assets/js/819.981ffaaa.js:513: return getCommentPattern(popularCommentTypes,magicCommentDirectives);}}function parseCodeBlockTitle(metastring){return metastring?.match(codeBlockTitleRegex)?.groups.title??'';}function getMetaLineNumbersStart(metastring){const showLineNumbersMeta=metastring?.split(' ').find(str=>str.startsWith('showLineNumbers'));if(showLineNumbersMeta){if(showLineNumbersMeta.startsWith('showLineNumbers=')){const value=showLineNumbersMeta.replace('showLineNumbers=','');return parseInt(value,10);}return 1;}return undefined;}function getLineNumbersStart({showLineNumbers,metastring}){const defaultStart=1;if(typeof showLineNumbers==='boolean'){return showLineNumbers?defaultStart:undefined;}if(typeof showLineNumbers==='number'){return showLineNumbers;}return getMetaLineNumbersStart(metastring);}// TODO Docusaurus v4: remove, only kept for internal retro-compatibility
+docs-site/build/assets/js/819.981ffaaa.js:565: */// TODO Docusaurus v4: move this component at the root?
+docs-site/build/assets/js/819.981ffaaa.js:579: // TODO handle options.attributeFilter array
+docs-site/build/assets/js/819.981ffaaa.js:625: */// TODO Docusaurus v4: remove useless forwardRef
+docs-site/build/assets/js/819.981ffaaa.js:716: */function useCodeBlockMetadata(props){const{prism}=(0,useThemeConfig/* useThemeConfig */.p)();return createCodeBlockMetadata({code:props.children,className:props.className,metastring:props.metastring,magicComments:prism.magicComments,defaultLanguage:prism.defaultLanguage,language:props.language,title:props.title,showLineNumbers:props.showLineNumbers});}// TODO Docusaurus v4: move this component at the root?
+docs-site/build/assets/js/819.981ffaaa.js:1001: */const Caution_infimaClassName='alert alert--warning';const Caution_defaultProps={icon:/*#__PURE__*/(0,jsx_runtime.jsx)(AdmonitionIconCaution,{}),title:/*#__PURE__*/(0,jsx_runtime.jsx)(Translate/* default */.A,{id:"theme.admonition.caution",description:"The default label used for the Caution admonition (:::caution)",children:"caution"})};// TODO remove before v4: Caution replaced by Warning
+docs-site/build/assets/js/main.39a6ae67.js:271: * TODO should become unnecessary in React v19?
+docs-site/build/assets/js/main.39a6ae67.js:1010: // TODO: If another transition starts while we're still confirming
+docs-site/build/assets/js/main.39a6ae67.js:1206: var toLocation = history.location; // TODO: We could probably make this more reliable by
+docs-site/build/assets/js/main.39a6ae67.js:1493: var toLocation = history.location; // TODO: We could probably make this more reliable by
+docs-site/build/assets/js/main.39a6ae67.js:2433: */// TODO Docusaurus v4: remove temporary inert workaround
+docs-site/build/assets/js/main.39a6ae67.js:2522: */function NavbarNavLink({activeBasePath,activeBaseRegex,to,href,label,html,isDropdownLink,prependBaseUrlToHref,...props}){// TODO all this seems hacky
+docs-site/build/assets/js/main.39a6ae67.js:2668: // TODO I'm pretty sure this is incorrect
+docs-site/build/assets/js/main.39a6ae67.js:2682: */// TODO Docusaurus v4: require DocSearch v4
+docs-site/build/assets/js/main.39a6ae67.js:2808: */function useNavbarItems(){// TODO temporary casting until ThemeConfig type is improved
+docs-site/build/assets/js/main.39a6ae67.js:2810: function NavbarMobilePrimaryMenu(){const mobileSidebar=(0,navbarMobileSidebar/* useNavbarMobileSidebar */.M)();// TODO how can the order be defined for mobile?
+docs-site/build/assets/js/main.39a6ae67.js:2896: */function Content_useNavbarItems(){// TODO temporary casting until ThemeConfig type is improved
+docs-site/build/assets/js/main.39a6ae67.js:2899: ${JSON.stringify(item,null,2)}`,{cause:error}),children:/*#__PURE__*/(0,jsx_runtime.jsx)(NavbarItem,{...item})},i))});}function NavbarContentLayout({left,right}){return/*#__PURE__*/(0,jsx_runtime.jsxs)("div",{className:"navbar__inner",children:[/*#__PURE__*/(0,jsx_runtime.jsx)("div",{className:(0,clsx/* default */.A)(ThemeClassNames/* ThemeClassNames */.G.layout.navbar.containerLeft,'navbar__items'),children:left}),/*#__PURE__*/(0,jsx_runtime.jsx)("div",{className:(0,clsx/* default */.A)(ThemeClassNames/* ThemeClassNames */.G.layout.navbar.containerRight,'navbar__items navbar__items--right'),children:right})]});}function NavbarContent(){const mobileSidebar=(0,navbarMobileSidebar/* useNavbarMobileSidebar */.M)();const items=Content_useNavbarItems();const[leftItems,rightItems]=splitNavbarItems(items);const searchBarItem=items.find(item=>item.type==='search');return/*#__PURE__*/(0,jsx_runtime.jsx)(NavbarContentLayout,{left:/*#__PURE__*/// TODO stop hardcoding items?
+docs-site/build/assets/js/main.39a6ae67.js:2900: (0,jsx_runtime.jsxs)(jsx_runtime.Fragment,{children:[!mobileSidebar.disabled&&/*#__PURE__*/(0,jsx_runtime.jsx)(MobileSidebarToggle,{}),/*#__PURE__*/(0,jsx_runtime.jsx)(NavbarLogo,{}),/*#__PURE__*/(0,jsx_runtime.jsx)(NavbarItems,{items:leftItems})]}),right:/*#__PURE__*/// TODO stop hardcoding items?
+docs-site/build/assets/js/main.39a6ae67.js:6257: */// TODO move to SiteMetadataDefaults or theme-common ?
+docs-site/build/assets/js/main.39a6ae67.js:6268: function useDefaultCanonicalUrl(){const{siteConfig:{url:siteUrl,baseUrl,trailingSlash}}=(0,useDocusaurusContext/* default */.A)();// TODO using useLocation().pathname is not a super idea
+docs-site/build/assets/js/main.39a6ae67.js:6270: const{pathname}=(0,react_router/* useLocation */.zy)();const canonicalPathname=(0,lib/* applyTrailingSlash */.Ks)((0,useBaseUrl/* default */.Ay)(pathname),{trailingSlash,baseUrl});return siteUrl+canonicalPathname;}// TODO move to SiteMetadataDefaults or theme-common ?
+docs-site/build/assets/js/main.39a6ae67.js:6271: function CanonicalUrlHeaders({permalink}){const{siteConfig:{url:siteUrl}}=(0,useDocusaurusContext/* default */.A)();const defaultCanonicalUrl=useDefaultCanonicalUrl();const canonicalUrl=permalink?`${siteUrl}${permalink}`:defaultCanonicalUrl;return/*#__PURE__*/(0,jsx_runtime.jsxs)(Head/* default */.A,{children:[/*#__PURE__*/(0,jsx_runtime.jsx)("meta",{property:"og:url",content:canonicalUrl}),/*#__PURE__*/(0,jsx_runtime.jsx)("link",{rel:"canonical",href:canonicalUrl})]});}function SiteMetadata(){const{i18n:{currentLocale}}=(0,useDocusaurusContext/* default */.A)();// TODO maybe move these 2 themeConfig to siteConfig?
+docs-site/build/assets/js/main.39a6ae67.js:6420: */// TODO, quick fix for CSS insertion order
+docs-site/build/assets/js/main.39a6ae67.js:6522: */function useAlternatePageUtils(){const{siteConfig:{baseUrl,trailingSlash},i18n:{localeConfigs}}=(0,_docusaurus_useDocusaurusContext__WEBPACK_IMPORTED_MODULE_0__/* ["default"] */ .A)();// TODO using useLocation().pathname is not a super idea
+docs-site/build/assets/js/main.39a6ae67.js:7254: */const Context=/*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0__.createContext(null);function mergeContexts({parent,value}){if(!parent){if(!value){throw new Error('Unexpected: no Docusaurus route context found');}else if(!('plugin'in value)){throw new Error('Unexpected: Docusaurus topmost route context has no `plugin` attribute');}return value;}// TODO deep merge this
+docs-site/build/assets/js/main.39a6ae67.js:7324: // TODO proper detection is currently unreliable!
+docs-site/build/assets/js/main.39a6ae67.js:7930: const useAllDocsData=()=>useAllPluginInstancesData('docusaurus-plugin-content-docs')??StableEmptyObject;const useDocsData=pluginId=>{try{return usePluginData('docusaurus-plugin-content-docs',pluginId,{failfast:true});}catch(error){throw new Error(`You are using a feature of the Docusaurus docs plugin, but this plugin does not seem to be enabled${pluginId==='Default'?'':` (pluginId=${pluginId}`}`,{cause:error});}};// TODO this feature should be provided by docusaurus core
+docs-site/build/assets/js/main.39a6ae67.js:8567: return Array.from(new Set(arr));}// TODO 2025: replace by std Object.groupBy ?
+docs-site/build/assets/js/main.39a6ae67.js:8640: - ${uniq(allDocs.map(versionDoc=>versionDoc.id)).join('\n- ')}`);}return doc;},[docId,versions]);}// TODO later read version/route directly from context
+docs-site/build/assets/js/main.39a6ae67.js:10347: if(!url||url.startsWith('#')||(0,_isInternalUrl__WEBPACK_IMPORTED_MODULE_2__/* .hasProtocol */ .z)(url)){return url;}// TODO hash router + /baseUrl/ is unlikely to work well in all situations
+docs-site/build/assets/js/main.39a6ae67.js:10683: // TODO: Replace with React.createContext once we can assume React 16+
+docs-site/build/assets/js/main.39a6ae67.js:11944: */const ThemeClassNames={page:{blogListPage:'blog-list-page',blogPostPage:'blog-post-page',blogTagsListPage:'blog-tags-list-page',blogTagPostListPage:'blog-tags-post-list-page',blogAuthorsListPage:'blog-authors-list-page',blogAuthorsPostsPage:'blog-authors-posts-page',docsDocPage:'docs-doc-page',docsTagsListPage:'docs-tags-list-page',docsTagDocListPage:'docs-tags-doc-list-page',mdxPage:'mdx-page'},// TODO Docusaurus v4: remove old classes?
+docs-site/build/assets/js/main.39a6ae67.js:11946: // TODO these wrapper class names are now quite useless
+docs-site/build/assets/js/main.39a6ae67.js:11947: // TODO do breaking change later in 3.0
+docs-site/build/assets/js/main.39a6ae67.js:11951: */docs:{docVersionBanner:'theme-doc-version-banner',docVersionBadge:'theme-doc-version-badge',docBreadcrumbs:'theme-doc-breadcrumbs',docMarkdown:'theme-doc-markdown',docTocMobile:'theme-doc-toc-mobile',docTocDesktop:'theme-doc-toc-desktop',docFooter:'theme-doc-footer',docFooterTagsRow:'theme-doc-footer-tags-row',docFooterEditMetaRow:'theme-doc-footer-edit-meta-row',docSidebarContainer:'theme-doc-sidebar-container',docSidebarMenu:'theme-doc-sidebar-menu',docSidebarItemCategory:'theme-doc-sidebar-item-category',docSidebarItemLink:'theme-doc-sidebar-item-link',docSidebarItemCategoryLevel:level=>`theme-doc-sidebar-item-category-level-${level}`,docSidebarItemLinkLevel:level=>`theme-doc-sidebar-item-link-level-${level}`// TODO add other stable classNames here
+docs-site/build/assets/js/main.39a6ae67.js:11952: },blog:{// TODO add other stable classNames here
+docs-site/build/assets/js/main.39a6ae67.js:12126: */// TODO all this wouldn't be necessary if we used ReactRouter basename feature
+docs-site/build/assets/js/main.39a6ae67.js:12140: // TODO read routes and automatically detect internal/external links?
+docs-site/build/assets/js/main.39a6ae67.js:12141: const targetLinkWithoutPathnameProtocol=targetLinkUnprefixed?.replace('pathname://','');// TODO we should use ReactRouter basename feature instead!
+docs-site/build/assets/js/main.39a6ae67.js:12143: let targetLink=typeof targetLinkWithoutPathnameProtocol!=='undefined'?maybeAddBaseUrl(targetLinkWithoutPathnameProtocol):undefined;// TODO find a way to solve this problem properly
+docs-site/build/assets/js/main.39a6ae67.js:12266: */function usePrevious(value){const ref=(0,react__WEBPACK_IMPORTED_MODULE_0__.useRef)();(0,_docusaurus_useIsomorphicLayoutEffect__WEBPACK_IMPORTED_MODULE_1__/* ["default"] */ .A)(()=>{ref.current=value;});// TODO need to fix this React Compiler lint error
+forge/log/encoder.go:258: return traceZapLevel // TRACE is below DEBUG
+helper-projects/coreui-free-bootstrap-admin-template-main/package-lock.json:9927: "integrity": "sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==",
+helper-projects/gentelella-master/package.json:9: "dev:debug": "DEBUG=vite:* vite --clearScreen false",
+helper-projects/gentelella-master/docs/configuration.md:400: VITE_DEBUG_MODE=true
+helper-projects/gentelella-master/docs/configuration.md:417: VITE_DEBUG_MODE=false
+helper-projects/gentelella-master/docs/configuration.md:430: const debugMode = import.meta.env.VITE_DEBUG_MODE === 'true';
+helper-projects/gentelella-master/docs/deployment.md:50: VITE_DEBUG_MODE=false
+helper-projects/gentelella-master/docs/deployment.md:61: VITE_GA_TRACKING_ID=UA-XXXXXXXX-X
+helper-projects/gentelella-master/docs/deployment.md:62: VITE_HOTJAR_ID=XXXXXXX
+helper-projects/gentelella-master/docs/README.md:252: ga_tracking: UA-XXXXXXXX-X
+helper-projects/gentelella-master/docs/_config.yml:28: # ga_tracking: UA-XXXXXXXX-X
+helper-projects/gentelella-master/docs/_site/assets/js/search-data.json:186: "content": "Development Environment . Create .env.development: . # Development settings VITE_API_URL=http://localhost:8080/api VITE_APP_NAME=Gentelella Admin (Dev) VITE_DEBUG_MODE=true VITE_BUNDLE_ANALYZER=false # Feature flags VITE_ENABLE_CHARTS=true VITE_ENABLE_MAPS=true VITE_ENABLE_REAL_TIME=false . Production Environment . Create .env.production: . # Production settings VITE_API_URL=https://api.yoursite.com VITE_APP_NAME=Gentelella Admin VITE_DEBUG_MODE=false VITE_BUNDLE_ANALYZER=false # Performance settings VITE_PRELOAD_MODULES=charts,forms VITE_CDN_URL=https://cdn.yoursite.com . Using Environment Variables . // In your JavaScript files const apiUrl = import.meta.env.VITE_API_URL; const debugMode = import.meta.env.VITE_DEBUG_MODE === 'true'; if (debugMode) { console.log('Debug mode enabled'); } // Conditional module loading if (import.meta.env.VITE_ENABLE_CHARTS === 'true') { const charts = await import('./modules/charts.js'); charts.initializeCharts(); } . ",
+helper-projects/gentelella-master/docs/_site/assets/js/search-data.json:284: "content": "Build Optimization . Before deploying, ensure your build is optimized: . # Run production build npm run build # Analyze bundle sizes npm run build:analyze # Run performance optimizations npm run optimize # Test production build locally npm run preview . Environment Configuration . Production Environment Variables . Create .env.production: . # API Configuration VITE_API_URL=https://api.yoursite.com VITE_APP_NAME=Gentelella Admin VITE_DEBUG_MODE=false # CDN Configuration VITE_CDN_URL=https://cdn.yoursite.com VITE_ASSETS_URL=https://assets.yoursite.com # Performance Settings VITE_PRELOAD_MODULES=charts,forms VITE_ENABLE_SERVICE_WORKER=true # Analytics VITE_GA_TRACKING_ID=UA-XXXXXXXX-X VITE_HOTJAR_ID=XXXXXXX . Build Configuration . Ensure vite.config.js has production optimizations: . export default defineConfig({ base: '/your-app-path/', // Set if not deploying to root build: { // Output directory outDir: 'dist', // Asset directory assetsDir: 'assets', // Source maps for production debugging sourcemap: process.env.NODE_ENV === 'development', // Minification minify: 'terser', terserOptions: { compress: { drop_console: true, drop_debugger: true } }, // Chunk size warning limit chunkSizeWarningLimit: 1000, rollupOptions: { output: { // Manual chunk splitting for optimal loading manualChunks: { 'vendor-core': ['bootstrap', '@popperjs/core'], 'vendor-charts': ['chart.js', 'morris.js'], 'vendor-forms': ['select2', 'tempus-dominus'], 'vendor-tables': ['datatables.net'], 'vendor-utils': ['dayjs', 'nprogress'] } } } } }); . ",
+helper-projects/gentelella-master/docs/_site/configuration/index.html:735: VITE_DEBUG_MODE=true
+helper-projects/gentelella-master/docs/_site/configuration/index.html:757: VITE_DEBUG_MODE=false
+helper-projects/gentelella-master/docs/_site/configuration/index.html:775: <span class="kd">const</span> <span class="nx">debugMode</span> <span class="o">=</span> <span class="k">import</span><span class="p">.</span><span class="nx">meta</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">VITE_DEBUG_MODE</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">true</span><span class="dl">'</span><span class="p">;</span>
+helper-projects/gentelella-master/docs/_site/deployment/index.html:387: VITE_DEBUG_MODE=false
+helper-projects/gentelella-master/docs/_site/deployment/index.html:398: VITE_GA_TRACKING_ID=UA-XXXXXXXX-X
+helper-projects/gentelella-master/docs/_site/deployment/index.html:399: VITE_HOTJAR_ID=XXXXXXX
+helper-projects/go-admin-main/.cursorrules:101: - Update TODO list when tasks complete
+helper-projects/go-admin-main/.github/ISSUE_TEMPLATE/bug_report.md:4: title: "[BUG]"
+helper-projects/go-admin-main/.github/ISSUE_TEMPLATE/bug_report_zh.md:4: title: "[BUG]"
+helper-projects/go-admin-main/forgego/cmd/cli/commands/startproject.go:42: Debug:       getEnvBool("DEBUG", false),
+helper-projects/go-admin-main/forgego/cmd/cli/commands/startproject.go:75: DEBUG=false
+helper-projects/go-admin-main/forgego/pkg/service/service.go:432: // TODO: Implement proper cursor-based pagination
+helper-projects/go-admin-main/forgego/pkg/settings/loader.go:148: "DEBUG":              "security.debug",
+helper-projects/go-admin-main/goAdmin/CONTRIBUTING_CN.md:8: * 寻找BUG
+helper-projects/go-admin-main/goAdmin/go.sum:17: github.com/CloudyKit/jet/v6 v6.2.0 h1:EpcZ6SR9n28BUGtNJSvlBqf90IpjeFr36Tizxhn/oME=
+helper-projects/go-admin-main/goAdmin/modules/db/mssql.go:51: // TODO: 整理优化
+helper-projects/go-admin-main/goAdmin/modules/db/performer.go:40: // TODO: regular expressions for sqlite, use the dialect module
+helper-projects/go-admin-main/goAdmin/modules/db/performer.go:103: // TODO: regular expressions for sqlite, use the dialect module
+helper-projects/go-admin-main/goAdmin/modules/db/postgresql.go:89: // TODO: add " to the keyword
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:29: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:32: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:35: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:38: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:41: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:44: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:47: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:50: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:53: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:56: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:59: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:62: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:65: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:68: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:71: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:74: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:77: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:80: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:83: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:86: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:89: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:92: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:95: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:98: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:101: // TODO
+helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:104: // TODO
+helper-projects/go-admin-main/goAdmin/modules/remote_server/remote_server.go:171: // TODO: add cache
+helper-projects/go-admin-main/goAdmin/plugins/plugins.go:411: // TODO: 验证插件合法性
+helper-projects/go-admin-main/goAdmin/plugins/admin/admin.go:28: // TODO: find a better way to manage the dependencies
+helper-projects/go-admin-main/goAdmin/plugins/admin/controller/common.go:130: // TODO: 避免重复增加，第一次加入后，后面大部分会存在重复情况，以下循环可以优化
+helper-projects/go-admin-main/goAdmin/plugins/admin/controller/menu.go:167: // TODO: use transaction
+helper-projects/go-admin-main/goAdmin/plugins/admin/controller/menu.go:214: // TODO: use transaction
+helper-projects/go-admin-main/goAdmin/plugins/admin/controller/plugins.go:486: // TODO: 实现运行环境与编译环境隔离
+helper-projects/go-admin-main/goAdmin/plugins/admin/controller/show.go:444: // TODO: support any numbers of fields.
+helper-projects/go-admin-main/goAdmin/plugins/admin/modules/guard/menu_delete.go:22: // TODO: check the user permission
+helper-projects/go-admin-main/goAdmin/plugins/admin/modules/table/default.go:305: // TODO: ToDisplay some same logic execute repeatedly, it can be improved.
+helper-projects/go-admin-main/goAdmin/plugins/admin/modules/table/default.go:443: // TODO: refactor
+helper-projects/go-admin-main/goAdmin/plugins/admin/modules/table/default.go:578: // TODO: use the dialect
+helper-projects/go-admin-main/goAdmin/plugins/admin/modules/table/generators.go:1351: // TODO: add transaction
+helper-projects/go-admin-main/goAdmin/template/types/form.go:298: // TODO: optimize
+helper-projects/go-admin-main/goAdmin/template/types/info.go:661: // TODO: support like operation and join table
+helper-projects/go-admin-main/goAdmin/template/types/form/select/select.go:23: // TODO: make clear
+helper-projects/go-admin-main/goAdmin/tests/web/web_test.go:542: //  TODO:
+helper-projects/go-admin-main/gogo/cmd/go-admin-cli/commands/createsuperuser.go:73: // TODO: Implement actual superuser creation
+helper-projects/go-admin-main/gogo/cmd/go-admin-cli/commands/migrate.go:58: // TODO: Implement actual migration logic
+helper-projects/go-admin-main/gogo/cmd/go-admin-cli/commands/startproject.go:98: Debug:       getEnvBool("DEBUG", false),
+helper-projects/go-admin-main/gogo/cmd/gogo-cli/commands/startproject.go:42: Debug:       getEnvBool("DEBUG", false),
+helper-projects/go-admin-main/gogo/cmd/gogo-cli/commands/startproject.go:75: DEBUG=false
+helper-projects/go-admin-main/gogo/docs/MODULAR_ARCHITECTURE.md:87: Debug       bool   `setting:"app.debug" env:"DEBUG" default:"false"`
+helper-projects/go-admin-main/gogo/examples/complete/main.go:25: Debug:       getEnvBool("DEBUG", false),
+helper-projects/go-admin-main/gogo/examples/complete/README.md:20: export DEBUG=false
+helper-projects/go-admin-main/gogo/examples/complete-app/main.go:116: Debug:       getEnvBool("DEBUG", true),
+helper-projects/go-admin-main/gogo/examples/modular/main.go:25: Debug       bool   `env:"DEBUG" default:"false"`
+helper-projects/go-admin-main/gogo/examples/working/main.go:114: Debug:       getEnvBool("DEBUG", true),
+helper-projects/go-admin-main/gogo/pkg/settings/README.md:13: Debug       bool   `env:"DEBUG" default:"false"`
+helper-projects/ngx-admin-master/package-lock.json:4396: "integrity": "sha512-sQXCasFk+U8lWYEe66WxRDOE9PjVz4vSM51fTu3Hw+ClTpUSQb718772vH3pyS5pShp6lvQM7SxgIDXXXmOX7w==",
+helper-projects/ngx-admin-master/package-lock.json:17135: "integrity": "sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg=="
+helper-projects/ngx-admin-master/src/app/pages/dashboard/temperature/temperature-dragger/temperature-dragger.component.ts:147: // TODO: review set data to styles object
+helper-projects/ngx-admin-master/src/app/pages/e-commerce/charts-panel/charts/orders-chart.component.ts:298: // TODO: investigate more deeply
+helper-projects/ngx-admin-master/src/app/pages/e-commerce/charts-panel/charts/profit-chart.component.ts:190: // TODO: investigate more deeply
+ops/codex-24x7/HISTORY.md:5: - TODO snapshot: open=132, new=132, resolved=0
+ops/codex-24x7/HISTORY.md:14: - Remaining: admin REST TODO implementation and executable ecommerce tests.
+ops/codex-24x7/HISTORY.md:18: - TODO snapshot: open=500, new=500, resolved=132
+ops/codex-24x7/HISTORY.md:26: - Remaining: admin REST object replace/bulk CRUD TODOs, API permission reflection TODO tests, executable ecommerce tests.
+ops/codex-24x7/HISTORY.md:30: - TODO snapshot: open=500, new=30, resolved=30
+ops/codex-24x7/HISTORY.md:39: - Remaining: admin REST bulk CRUD TODOs, API permission reflection TODO tests, executable ecommerce tests.
+ops/codex-24x7/HISTORY.md:43: - TODO snapshot: open=500, new=12, resolved=12
+ops/codex-24x7/HISTORY.md:44: - Last message summary: Implemented one focused high-impact batch on admin REST reliability: `handleReplace` is now fully functional with validation and tests. - Code change: `forge/admin/api/rest/router.go:468` - Replaced TODO in `handleReplace` with: - object fetch via `GetObject` - object-level permission check - JSON body parse + empty-body validation - persistence via `UpdateObject` - updated object response payload - Tests added: `forge/admin/api/rest/router_test.go:183` - `TestHandleReplace_ReplacesObject` - `Te...
+ops/codex-24x7/HISTORY.md:51: - TODO snapshot: open=500, new=12, resolved=12
+ops/codex-24x7/HISTORY.md:52: - Remaining: admin REST bulk-update/bulk-delete TODOs, API permission reflection TODO tests, executable ecommerce tests.
+ops/codex-24x7/HISTORY.md:56: - TODO snapshot: open=500, new=12, resolved=12
+ops/codex-24x7/HISTORY.md:57: - Last message summary: Implemented one focused high-impact batch on admin REST bulk-create reliability. Changed files: - `forge/admin/api/rest/router.go:548` - Replaced bulk-create TODO with full implementation: - accepts `[]object` or `{ "objects": [] }` - validates payload shape and non-empty batch - validates each item is a non-empty object - performs best-effort `CreateObject` calls - returns `201` on full success, `207` on partial success, and terminal error responses when none are created - `forge/admin/api/rest...
+ops/codex-24x7/HISTORY.md:65: - TODO snapshot: open=500, new=10, resolved=10
+ops/codex-24x7/HISTORY.md:66: - Remaining: API permission reflection TODO tests and executable ecommerce tests remain unaddressed.
+ops/codex-24x7/HISTORY.md:70: - TODO snapshot: open=500, new=10, resolved=10
+ops/codex-24x7/HISTORY.md:71: - Last message summary: Implemented one focused high-impact batch on admin REST reliability: bulk update/delete TODOs are now fully implemented and tested. ### Changed - `forge/admin/api/rest/router.go` - Implemented `handleBulkUpdate`: - validates `{ ids, data }` - normalizes IDs (new `normalizeBulkID`) - fetches object + checks object-level change permission - best-effort updates with per-item error collection - returns `200` (full), `207` (partial), `400`/`500` terminal failures - Implemented `handleBulkDelete`: - v...
+ops/codex-24x7/HISTORY.md:75: - Batch: API permission reflection reliability + TODO test closure (framework API)
+ops/codex-24x7/HISTORY.md:77: - Tests: replaced placeholder TODO assertions with concrete checks in `forge/api/permissions/permission_test.go` (`TestIsAdminUser_Admin`, `TestIsOwnerOrReadOnly_Owner`); ran `go test ./api/permissions` (pass) and `go test ./...` in `examples/ecommerce` (pass/no test files).
+ops/codex-24x7/HISTORY.md:78: - TODO snapshot: open=500, new=10, resolved=10
+ops/codex-24x7/HISTORY.md:79: - Remaining: ecommerce still lacks executable tests (compile-only parity), and broader admin/ORM/schema/migrations/API TODO/FIXME burn-down remains.
+ops/codex-24x7/HISTORY.md:83: - TODO snapshot: open=500, new=10, resolved=10
+ops/codex-24x7/HISTORY.md:84: - Last message summary: Implemented one focused high-impact batch on API permission reliability and TODO debt. **What changed** - Fixed reflection helper behavior in `forge/api/permissions/helpers.go`: - `getMethod` now correctly resolves pointer-receiver and value-receiver methods. - Added nil-safety for reflective method/field access. - Replaced TODO placeholder assertions in `forge/api/permissions/permission_test.go`: - `TestIsAdminUser_Admin` now asserts admin request/object permission behavior. - `TestIsOwnerOrRea...
+ops/codex-24x7/HISTORY.md:91: - TODO snapshot: open=500, new=14, resolved=14
+ops/codex-24x7/HISTORY.md:92: - Remaining: ecommerce still lacks executable tests (compile-only parity), and broad TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations.
+ops/codex-24x7/HISTORY.md:96: - TODO snapshot: open=500, new=14, resolved=14
+ops/codex-24x7/HISTORY.md:97: - Last message summary: Implemented one focused reliability batch in admin metadata and updated run tracking. - Fixed relation filter metadata mapping in `forge/admin/core/metadata_builder.go:199` and `forge/admin/core/metadata_builder.go:249`. - Replaced the prior FIXME path by setting `FilterMetadata.RelatedModel` from schema relations, including `_id` normalization (`category_id` -> `category`) in `forge/admin/core/metadata_builder.go:239`. - Added coverage in `forge/admin/core/metadata_builder_test.go:25` (`TestBui...
+ops/codex-24x7/HISTORY.md:102: - Changed: replaced the `RequirePermission` TODO in `forge/identity/middleware/auth.go` by integrating `PermissionService.CheckPermission`, added active-user enforcement, preserved superuser bypass, and kept a backward-compatible staff fallback for non-wired setups; added `NewAuthenticationMiddlewareWithPermissionService(...)` and wired it in `forge/identity/router.go`.
+ops/codex-24x7/HISTORY.md:105: - TODO snapshot: open=500, new=11, resolved=11
+ops/codex-24x7/HISTORY.md:106: - Remaining: ecommerce still lacks executable tests; identity repository test isolation needs hardening; broad TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations.
+ops/codex-24x7/HISTORY.md:110: - TODO snapshot: open=500, new=11, resolved=11
+ops/codex-24x7/HISTORY.md:111: - Last message summary: Implemented one focused high-impact batch on API/server auth reliability by closing the permission-check TODO in identity middleware. Changed files: - `forge/identity/middleware/auth.go:18` - `forge/identity/router.go:16` - `forge/identity/middleware/auth_test.go:1` - `ops/codex-24x7/STATUS.md:3` - `ops/codex-24x7/HISTORY.md:100` What changed: - Replaced `RequirePermission`’s staff-only TODO path with real `PermissionService.CheckPermission` enforcement in `forge/identity/middleware/auth.go:155`...
+ops/codex-24x7/HISTORY.md:118: - TODO snapshot: open=500, new=13, resolved=13
+ops/codex-24x7/HISTORY.md:119: - Remaining: ecommerce still lacks executable tests (compile-only parity); broad TODO/FIXME burn-down remains across admin/ORM/schema/migrations/API.
+ops/codex-24x7/HISTORY.md:123: - TODO snapshot: open=500, new=13, resolved=13
+ops/codex-24x7/HISTORY.md:129: - Changed: replaced the nested relation-path TODO in `forge/orm/expression.go` by validating full field paths in `Field.Resolve` (relation-hop traversal, non-relation traversal rejection, relation-terminal rejection, and target-model lookup errors with explicit messages).
+ops/codex-24x7/HISTORY.md:133: - Remaining: executable ecommerce tests are still missing; ORM integration failures need triage; broad TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations.
+ops/codex-24x7/HISTORY.md:137: - TODO snapshot: open=500, new=8, resolved=8
+ops/codex-24x7/HISTORY.md:138: - Last message summary: Implemented one focused ORM reliability batch and updated run tracking. - Closed nested-path validation TODO in `forge/orm/expression.go:61` by fully validating relation traversal paths in `Field.Resolve`. - Added `resolveNestedFieldPath(...)` in `forge/orm/expression.go:95` to: - reject traversal through non-relation fields, - resolve each relation hop target model schema, - reject terminal relation paths and missing nested fields with explicit errors. - Added tests in `forge/orm/expression_tes...
+ops/codex-24x7/HISTORY.md:143: - Changed: closed three ORM TODOs by implementing thread-safe registries + build helpers in `forge/orm/aggregates.go`, `forge/orm/annotations.go`, and `forge/orm/query_expr.go`:
+ops/codex-24x7/HISTORY.md:149: - TODO snapshot: open=500, new=10, resolved=10
+ops/codex-24x7/HISTORY.md:150: - Remaining: ecommerce still lacks executable tests; ORM integration failures still require triage; broad TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations.
+ops/codex-24x7/HISTORY.md:154: - TODO snapshot: open=500, new=10, resolved=10
+ops/codex-24x7/HISTORY.md:155: - Last message summary: Implemented one focused high-impact batch on ORM reliability by closing three framework TODOs and adding coverage. Changed: - `forge/orm/aggregates.go:102` Implemented custom aggregate registry with thread-safe registration and lookup/build (`RegisterAggregate`, `BuildAggregate`), including normalized names and sane fallback defaults. - `forge/orm/annotations.go:27` Implemented thread-safe annotation registry/build path (`RegisterAnnotation`, `BuildAnnotation`). - `forge/orm/query_expr.go:262` I...
+ops/codex-24x7/HISTORY.md:159: - Batch: logging observability TODO closure + ecommerce executable smoke tests (API/server parity)
+ops/codex-24x7/HISTORY.md:160: - Changed: replaced placeholder metrics hook TODO in `forge/log/hooks/metrics.go` with atomic counters by log level, plus `MetricsSnapshot`, `Snapshot()`, and `MarkDropped()`; added coverage in `forge/log/hooks/metrics_test.go`.
+ops/codex-24x7/HISTORY.md:163: - TODO snapshot: open=500, new=12, resolved=12
+ops/codex-24x7/HISTORY.md:164: - Remaining: ecommerce still needs HTTP/integration-level admin/API reachability tests; ORM integration failures (`TestQuerySet_Integration_Filter`, `TestQuerySet_Integration_LimitOffset`) still need triage; broader admin/API/ORM/schema/migrations TODO/FIXME burn-down remains.
+ops/codex-24x7/HISTORY.md:168: - TODO snapshot: open=500, new=12, resolved=12
+ops/codex-24x7/HISTORY.md:169: - Last message summary: Implemented one focused high-impact batch for production readiness: closed a framework TODO and added executable ecommerce tests. Changed files: - `forge/log/hooks/metrics.go` - `forge/log/hooks/metrics_test.go` - `examples/ecommerce/main_test.go` - `ops/codex-24x7/STATUS.md` - `ops/codex-24x7/HISTORY.md` What changed: - Replaced the TODO placeholder in `forge/log/hooks/metrics.go` with a thread-safe metrics hook: - per-level counters (trace/debug/info/warn/error/dpanic/panic/fatal) - total/unkn...
+ops/codex-24x7/HISTORY.md:177: - TODO snapshot: open=500, new=14, resolved=14
+ops/codex-24x7/HISTORY.md:178: - Remaining: ecommerce still needs HTTP/integration-level admin/API reachability tests; broad TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations.
+ops/codex-24x7/HISTORY.md:182: - TODO snapshot: open=500, new=14, resolved=14
+ops/codex-24x7/HISTORY.md:187: - Batch: codegen hooks extraction TODO closure (schema/codegen reliability)
+ops/codex-24x7/HISTORY.md:188: - Changed: replaced `extractHooks` TODO in `forge/codegen/ast_parser.go` with concrete parsing for `Hooks()` return values across struct literals, builder-chain style (`NewModelHooks().With...`), and simple assigned-variable returns.
+ops/codex-24x7/HISTORY.md:191: - TODO snapshot: open=500, new=9, resolved=9
+ops/codex-24x7/HISTORY.md:192: - Remaining: ecommerce still needs HTTP/integration-level admin/API reachability tests; broad admin/API/ORM/schema/migrations TODO/FIXME burn-down remains.
+ops/codex-24x7/HISTORY.md:196: - TODO snapshot: open=500, new=9, resolved=9
+ops/codex-24x7/HISTORY.md:197: - Last message summary: Implemented one focused high-impact batch on framework codegen reliability by closing the hooks-extraction TODO and adding coverage. Changed: - Implemented `Hooks()` AST extraction in `forge/codegen/ast_parser.go:1039`: - Parses `&schema.ModelHooks{...}` / `schema.ModelHooks{...}` - Parses `schema.NewModelHooks().With...(...)` chains - Handles simple assigned-variable returns (`hooks := ...; return hooks`) - Extracts hook refs for identifiers, selectors, and inline funcs (`<inline>`) - Added tes...
+ops/codex-24x7/HISTORY.md:201: - Batch: logging file-rotation reliability TODO closure (API/server operability)
+ops/codex-24x7/HISTORY.md:202: - Changed: replaced placeholder file-export TODO in `forge/log/exporters/file.go` with working in-process size-based rotation (max-size rollover, numbered backups, safe fallback to no-op writer on open failure); added thread-safe writer lifecycle (`Write`, `Sync`, `Close`).
+ops/codex-24x7/HISTORY.md:205: - TODO snapshot: open=500, new=14, resolved=14
+ops/codex-24x7/HISTORY.md:206: - Remaining: ecommerce still needs HTTP/integration-level admin/API reachability tests; broad TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations.
+ops/codex-24x7/HISTORY.md:210: - TODO snapshot: open=500, new=14, resolved=14
+ops/codex-24x7/HISTORY.md:211: - Last message summary: Implemented one focused production-readiness batch on logging reliability by closing the file-rotation TODO. ### What changed - Implemented in-process size-based file rotation in `forge/log/exporters/file.go`: - rotation on max size - numbered backups (`.1`, `.2`, ...) - thread-safe writer lifecycle (`Write`/`Sync`/`Close`) - safe no-op fallback if file open fails - Wired runtime logger file output to this exporter in `forge/log/logger.go`, so `FileOutputConfig.Rotation` is actually applied. - A...
+ops/codex-24x7/HISTORY.md:226: - TODO snapshot: open=500, new=13, resolved=13
+ops/codex-24x7/HISTORY.md:231: - Batch: identity password-reset token reliability + TODO closure (API/server auth)
+ops/codex-24x7/HISTORY.md:234: - Replaced password-reset delivery TODO with concrete notifier wiring via `PasswordResetNotifier` and `NewPasswordServiceWithNotifier(...)`.
+ops/codex-24x7/HISTORY.md:245: - TODO snapshot: open=500, new=8, resolved=8
+ops/codex-24x7/HISTORY.md:246: - Remaining: ecommerce still needs authenticated admin/API end-to-end integration coverage; broad admin/API/ORM/schema/migrations TODO/FIXME burn-down remains.
+ops/codex-24x7/HISTORY.md:250: - TODO snapshot: open=500, new=8, resolved=8
+ops/codex-24x7/HISTORY.md:251: - Last message summary: Implemented one focused high-impact batch in identity auth reliability and TODO debt: - Closed password-reset delivery TODO by adding notifier support in `forge/identity/service/password.go:19`, `forge/identity/service/password.go:45`, `forge/identity/service/password.go:129`. - Fixed broken hashed-token reset flow in `forge/identity/repository/token.go:132`, `forge/identity/repository/token.go:162`, `forge/identity/repository/token.go:189`. - Fixed token cleanup after reset to delete the persis...
+ops/codex-24x7/HISTORY.md:255: - Batch: CLI auth scaffolding production-readiness TODO closure (API/server parity)
+ops/codex-24x7/HISTORY.md:258: - Replaced scaffold TODOs for login/logout + JWT by generating concrete auth endpoints and handlers in scaffolded `app/auth/api.go`.
+ops/codex-24x7/HISTORY.md:262: - Added tests for scaffold output contents (login/logout routes, JWT helper, TODO removal).
+ops/codex-24x7/HISTORY.md:267: - TODO snapshot: open=500, new=13, resolved=13
+ops/codex-24x7/HISTORY.md:268: - Remaining: ecommerce still needs authenticated admin/API end-to-end CRUD coverage; first-party TODO/FIXME burn-down remains in admin/UI and broader admin/ORM/schema/migrations/API paths.
+ops/codex-24x7/HISTORY.md:272: - TODO snapshot: open=500, new=13, resolved=13
+ops/codex-24x7/HISTORY.md:273: - Last message summary: Implemented one focused high-impact batch on framework auth scaffolding TODO debt. **What changed** - Closed auth scaffold TODOs in `forge/cli/commands/project/auth.go`: - Added generated login/logout endpoint registration in scaffolded `api.go`: - `POST /api/v1/auth/login` - `POST /api/v1/auth/logout` - Added generated handlers `handleLogin`/`handleLogout` with request validation and JSON responses. - Added generated JWT helper `generateJWTToken(...)` (HMAC-SHA256 scaffold) and `writeJSON(...)`...
+ops/codex-24x7/HISTORY.md:285: - TODO snapshot: open=500, new=14, resolved=14
+ops/codex-24x7/HISTORY.md:286: - Remaining: authenticated admin/API end-to-end coverage is still missing; first-party TODO burn-down remains in admin UI detail page and broader admin/ORM/schema/migrations/API areas.
+ops/codex-24x7/HISTORY.md:290: - TODO snapshot: open=500, new=14, resolved=14
+ops/codex-24x7/HISTORY.md:295: - Batch: admin UI detail-view TODO closure + view-only navigation parity (admin features)
+ops/codex-24x7/HISTORY.md:298: - Replaced detail-mode TODO fallback with real `ModelViewPage` rendering.
+ops/codex-24x7/HISTORY.md:314: - TODO snapshot: open=500, new=8, resolved=8
+ops/codex-24x7/HISTORY.md:315: - Remaining: authenticated admin/API ecommerce integration coverage is still missing; frontend vitest execution is environment-blocked by process-spawn permissions; broader TODO/FIXME burn-down remains across admin/ORM/schema/migrations/API.
+ops/codex-24x7/HISTORY.md:319: - TODO snapshot: open=500, new=8, resolved=8
+ops/codex-24x7/HISTORY.md:320: - Last message summary: Implemented one focused high-impact batch on admin UI production readiness: closed the `DynamicModelPage` detail TODO and added view-only navigation parity. **What changed** - `forge/admin/ui/web/src/components/DynamicModelPage.tsx:41` now renders `ModelViewPage` for `mode="detail"` (TODO removed). - Added read-only detail page: `forge/admin/ui/web/src/pages/ModelViewPage.tsx:38`. - Added detail route: `forge/admin/ui/web/src/routes/$model/$id.view.tsx:4` (`/$model/$id/view`). - Added view actio...
+
+New TODO/FIXME items (truncated):
+forge/log/encoder.go:258: return traceZapLevel // TRACE is below DEBUG
+ops/codex-24x7/HISTORY.md:410: - TODO snapshot: open=500, new=7, resolved=7
+ops/codex-24x7/HISTORY.md:411: - Remaining: admin/auth permission-denial integration coverage is still thin (`403` object/role paths); admin UI `vitest` remains blocked in this runner by `spawn EPERM`; broad TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations.
+ops/codex-24x7/HISTORY.md:415: - TODO snapshot: open=500, new=7, resolved=7
+ops/codex-24x7/runner.log:269: [2026-02-13 03:56:14] TODO snapshot updated: open=500, new=7, resolved=7
+ops/codex-24x7/runner.log:274: [2026-02-13 04:10:15] Refreshing TODO/plan snapshot for this tick.
+ops/codex-24x7/runner.log:275: [2026-02-13 04:10:15] ripgrep (rg) not found; using built-in TODO scanner.
+ops/codex-24x7/STATUS.md:23: - Continue high-impact TODO/FIXME burn-down across admin, ORM/schema/migrations, and API/server reliability paths in framework-owned source.
+
+Recently resolved TODO/FIXME items (truncated):
+forge/log/encoder.go:219: case zapcore.DebugLevel - 1: // TRACE is one level below DEBUG
+forge/log/encoder.go:222: enc.AppendString("DEBUG")
+forge/log/encoder.go:242: return zapcore.DebugLevel - 1 // TRACE is below DEBUG
+ops/codex-24x7/STATUS.md:19: - Continue high-impact TODO/FIXME burn-down across admin, ORM/schema/migrations, and API/server reliability paths in framework-owned source.
+ops/codex-24x7/runs/prompt-20260212-174211.txt:113: .\tests\infra\docker\postgres.go:247: fmt.Printf("[DEBUG] Remote Docker detected - using fixed port 9091 (ensure SSH tunnel: ssh -L 9091:127.0.0.1:9091 sadra50)\n")
+ops/codex-24x7/runs/prompt-20260212-174211.txt:114: .\tests\infra\docker\postgres.go:250: fmt.Printf("[DEBUG] Local Docker - using port: %s\n", port)
+ops/codex-24x7/runs/prompt-20260212-174211.txt:115: .\tests\infra\docker\postgres.go:255: fmt.Printf("[DEBUG] DSN: %s\n", dsn)
+ops/codex-24x7/runs/prompt-20260212-174211.txt:116: .\tests\infra\docker\postgres.go:270: fmt.Printf("[DEBUG] Successfully connected to PostgreSQL after %d retries\n", retries)
+
+Plan/status/checklist file previews (truncated):
+### .claude/skills/forge-contributor/references/ci-checklist.md
+# Forge Contributor CI Checklist
+
+Use this as the authoritative "everything must happen" list. Run the checks that match your changes.
+
+## Versions and Tooling
+- Go versions in CI: 1.24 and 1.25 for unit tests.
+- Node version in CI: 22 for docs site and admin UI.
+- Docs site requires Node >= 20 (see `docs-site/package.json`).
+
+## Core Go (Forge framework)
+- `cd forge`
+- `go mod download`
+- `go test -v -race -coverprofile=coverage.out ./...`
+- `go build ./...`
+- `golangci-lint run --timeout=5m --config=../.golangci.yml`
+- `go install golang.org/x/vuln/cmd/govulncheck@latest`
+- `govulncheck ./...`
+
+## Integration Tests (Tests module)
+- Requires PostgreSQL on localhost.
+- Env vars: `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`.
+- `cd tests`
+- `go mod download`
+- `go test -v -timeout 15m ./integration/...`
+
+## CLI E2E Tests
+- `cd forge`
+- `go mod download`
+- `go build -o <bin>/forge ./cli/cmd`
+- Add `<bin>` to PATH for the test run.
+- `cd ..\\tests`
+- `$env:RUN_POSTGRES_TESTS="1"`
+- `go test -v ./e2e/cli/...`
+
+## Admin UI (forge/admin/ui/web)
+- `cd forge/admin/ui/web`
+- `npm ci`
+- `npm run build`
+- `npm run lint`
+- `npm run test -- --run`
+
+## Docs Site (docs-site)
+- `cd docs-site`
+- `npm ci`
+- `npm run build`
+- Optional fast check: `npm run build:fast`
+
+## Examples: Ecommerce (examples/ecommerce)
+- `cd examples/ecommerce`
+- `go mod download`
+- `go build -o ecommerce .`
+- `go test -v ./...`
+- Docker build: `docker build -t ecommerce-sample:<sha> -f Dockerfile .`
+- CI runs a full stack integration check (admin page reachable + health endpoint).
+
+## Security and CI-only Checks
+- PR security review: govulncheck, Semgrep, TruffleHog, dependency review, npm audit.
+- Scheduled security scan: Trivy (repo and docker), OSV scanner, Snyk, gosec, CodeQL.
+- If you change workflows or security-sensitive code, ensure these pass in CI or run locally where practical.
+
+## Docs and Test Updates
+- Update `docs-site/docs/contributing/development.md` when workflow changes.
+- Update `tests/README.md` and `tests/TESTING.md` when test strategy changes.
+
+### .codex/skills/forge-contributor/references/ci-checklist.md
+# Forge Contributor CI Checklist
+
+Use this as the authoritative "everything must happen" list. Run the checks that match your changes.
+
+## Versions and Tooling
+- Go versions in CI: 1.24 and 1.25 for unit tests.
+- Node version in CI: 22 for docs site and admin UI.
+- Docs site requires Node >= 20 (see `docs-site/package.json`).
+
+## Core Go (Forge framework)
+- `cd forge`
+- `go mod download`
+- `go test -v -race -coverprofile=coverage.out ./...`
+- `go build ./...`
+- `golangci-lint run --timeout=5m --config=../.golangci.yml`
+- `go install golang.org/x/vuln/cmd/govulncheck@latest`
+- `govulncheck ./...`
+
+## Integration Tests (Tests module)
+- Requires PostgreSQL on localhost.
+- Env vars: `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`.
+- `cd tests`
+- `go mod download`
+- `go test -v -timeout 15m ./integration/...`
+
+## CLI E2E Tests
+- `cd forge`
+- `go mod download`
+- `go build -o <bin>/forge ./cli/cmd`
+- Add `<bin>` to PATH for the test run.
+- `cd ..\\tests`
+- `$env:RUN_POSTGRES_TESTS="1"`
+- `go test -v ./e2e/cli/...`
+
+## Admin UI (forge/admin/ui/web)
+- `cd forge/admin/ui/web`
+- `npm ci`
+- `npm run build`
+- `npm run lint`
+- `npm run test -- --run`
+
+## Docs Site (docs-site)
+- `cd docs-site`
+- `npm ci`
+- `npm run build`
+- Optional fast check: `npm run build:fast`
+
+## Examples: Ecommerce (examples/ecommerce)
+- `cd examples/ecommerce`
+- `go mod download`
+- `go build -o ecommerce .`
+- `go test -v ./...`
+- Docker build: `docker build -t ecommerce-sample:<sha> -f Dockerfile .`
+- CI runs a full stack integration check (admin page reachable + health endpoint).
+
+## Security and CI-only Checks
+- PR security review: govulncheck, Semgrep, TruffleHog, dependency review, npm audit.
+- Scheduled security scan: Trivy (repo and docker), OSV scanner, Snyk, gosec, CodeQL.
+- If you change workflows or security-sensitive code, ensure these pass in CI or run locally where practical.
+
+## Docs and Test Updates
+- Update `docs-site/docs/contributing/development.md` when workflow changes.
+- Update `tests/README.md` and `tests/TESTING.md` when test strategy changes.
+
+### docs-site/.docusaurus/docusaurus-plugin-content-docs/default/site-docs-status-implementation-md-9ea.json
+{
+  "id": "status/implementation",
+  "title": "Implementation Status",
+  "description": "This is the detailed status of forge subsystems.",
+  "source": "@site/docs/status/implementation.md",
+  "sourceDirName": "status",
+  "slug": "/status/implementation",
+  "permalink": "/foreit/docs/status/implementation",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/hamidrabedi/foreit/tree/main/docs-site/docs/status/implementation.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_position": 1
+  }
+}
+
+### docs-site/.docusaurus/docusaurus-plugin-content-docs/default/site-docs-status-md-b41.json
+{
+  "id": "status",
+  "title": "Status",
+  "description": "Implementation status of forge modules.",
+  "source": "@site/docs/status.md",
+  "sourceDirName": ".",
+  "slug": "/status",
+  "permalink": "/foreit/docs/status",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/hamidrabedi/foreit/tree/main/docs-site/docs/status.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 21,
+  "frontMatter": {
+    "sidebar_position": 21,
+    "description": "Implementation status of forge modules.",
+    "image": "/forge-social-card.svg"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "API Reference",
+    "permalink": "/foreit/docs/api-reference"
+  },
+  "next": {
+    "title": "Changelog",
+    "permalink": "/foreit/docs/changelog"
+  }
+}
+
+### docs-site/build/docs/status/index.html
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-status" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.9.2">
+<title data-rh="true">Status | forge - Django-like Go Framework</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" property="og:url" content="https://hamidrabedi.github.io/foreit/docs/status/"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="keywords" content="go, golang, framework, django, orm, type-safe, web framework, rest api, code generation, postgresql"><meta data-rh="true" name="author" content="forge Framework"><meta data-rh="true" property="og:type" content="website"><meta data-rh="true" property="og:site_name" content="forge Framework"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" name="twitter:site" content="@forgego"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Status | forge - Django-like Go Framework"><meta data-rh="true" name="description" content="Implementation status of forge modules."><meta data-rh="true" property="og:description" content="Implementation status of forge modules."><meta data-rh="true" property="og:image" content="https://hamidrabedi.github.io/foreit/forge-social-card.svg"><meta data-rh="true" name="twitter:image" content="https://hamidrabedi.github.io/foreit/forge-social-card.svg"><link data-rh="true" rel="icon" href="/foreit/favicon.svg"><link data-rh="true" rel="canonical" href="https://hamidrabedi.github.io/foreit/docs/status/"><link data-rh="true" rel="alternate" href="https://hamidrabedi.github.io/foreit/docs/status/" hreflang="en"><link data-rh="true" rel="alternate" href="https://hamidrabedi.github.io/foreit/docs/status/" hreflang="x-default"><link data-rh="true" rel="preconnect" href="https://YOUR_APP_ID-dsn.algolia.net" crossorigin="anonymous"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Status","item":"https://hamidrabedi.github.io/foreit/docs/status"}]}</script><link rel="search" type="application/opensearchdescription+xml" title="forge - Django-like Go Framework" href="/foreit/opensearch.xml"><link rel="stylesheet" href="/foreit/assets/css/styles.f15b7e30.css">
+<script src="/foreit/assets/js/runtime~main.8de1fa6d.js" defer="defer"></script>
+<script src="/foreit/assets/js/main.39a6ae67.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{const n=new URLSearchParams(window.location.search).entries();for(var[t,e]of n)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}(),document.documentElement.setAttribute("data-announcement-bar-initially-dismissed",function(){try{return"true"===localStorage.getItem("docusaurus.announcement.dismiss")}catch(t){}return!1}())</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><div class="theme-announcement-bar announcementBar_mb4j" style="background-color:#334155;color:#ffffff" role="banner"><div class="announcementBarPlaceholder_vyr4"></div><div class="content_knG7 announcementBarContent_xLdY">forge v1.0.0 is now available.</div><button type="button" aria-label="Close" class="clean-btn close closeButton_CVFx announcementBarClose_gvF7"><svg viewBox="0 0 15 15" width="14" height="14"><g stroke="currentColor" stroke-width="3.1"><path d="M.75.75l13.5 13.5M14.25.75L.75 14.25"></path></g></svg></button></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/foreit/"><div class="navbar__logo"><img src="/foreit/logo.svg" alt="forge Logo" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/foreit/logo.svg" alt="forge Logo" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div><b class="navbar__title text--truncate">forge</b></a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/foreit/docs/">Docs</a><a class="navbar__item navbar__link" href="/foreit/docs/changelog/">Changelog</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href="https://github.com/hamidrabedi/foreit" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type="button" disabled="" title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP lightToggleIcon_pyhR"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP darkToggleIcon_wfgR"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP systemToggleIcon_QzmC"><path fill="currentColor" d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"></path></svg></button></div><div class="navbarSearchContainer_Bca1"><button type="button" class="DocSearch DocSearch-Button" aria-label="Search (Meta+k)" aria-keyshortcuts="Meta+k"><span class="DocSearch-Button-Container"><svg width="20" height="20" class="DocSearch-Search-Icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8" stroke="currentColor" fill="none" stroke-width="1.4"></circle><path d="m21 21-4.3-4.3" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="DocSearch-Button-Placeholder">Search</span></span><span class="DocSearch-Button-Keys"></span></button></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG menuWithAnnouncementBar_GW3s"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/foreit/docs/"><span title="Start Here" class="categoryLinkLabel_W154">Start Here</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/foreit/docs/models/"><span title="Core Build" class="categoryLinkLabel_W154">Core Build</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/foreit/docs/admin/"><span title="Platform Features" class="categoryLinkLabel_W154">Platform Features</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role="button" aria-expanded="true" href="/foreit/docs/features/"><span title="Reference" class="categoryLinkLabel_W154">Reference</span></a></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/foreit/docs/features/"><span title="Features" class="linkLabel_WmDU">Features</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/foreit/docs/api-reference/"><span title="API Reference" class="linkLabel_WmDU">API Reference</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/foreit/docs/status/"><span title="Status" class="linkLabel_WmDU">Status</span></a></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/foreit/docs/changelog/"><span title="Project" class="categoryLinkLabel_W154">Project</span></a></div></li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/foreit/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Reference</span></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">Status</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Status</h1></header>
+<p>forge covers the core ORM, admin, and API workflows. This is the current status.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="implemented">Implemented<a href="#implemented" class="hash-link" aria-label="Direct link to Implemented" title="Direct link to Implemented" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="core">Core<a href="#core" class="hash-link" aria-label="Direct link to Core" title="Direct link to Core" translate="no">​</a></h3>
+<ul>
+<li class="">Schema system (fields, relations, metadata, hooks)</li>
+<li class="">Code generation (models, managers, field expressions)</li>
+<li class="">Type-safe ORM (QuerySet, Manager CRUD, field expressions)</li>
+<li class="">Database layer (connections, transactions, migrations)</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="admin">Admin<a href="#admin" class="hash-link" aria-label="Direct link to Admin" title="Direct link to Admin" translate="no">​</a></h3>
+<ul>
+<li class="">Auto-generated admin CRUD</li>
+<li class="">List views (search, filtering, ordering)</li>
+<li class="">Form views with validation</li>
+<li class="">Actions and exports</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="api">API<a href="#api" class="hash-link" aria-label="Direct link to API" title="Direct link to API" translate="no">​</a></h3>
+<ul>
+<li class="">ViewSets (CRUD)</li>
+<li class="">Serializers and validation</li>
+<li class="">Authentication and permissions</li>
+<li class="">Throttling and pagination</li>
+<li class="">OpenAPI docs</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="supporting">Supporting<a href="#supporting" class="hash-link" aria-label="Direct link to Supporting" title="Direct link to Supporting" translate="no">​</a></h3>
+<ul>
+<li class="">Filter system</li>
+<li class="">Identity system</li>
+<li class="">CLI tooling (new, generate, migrations, runserver)</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="next-steps">Next steps<a href="#next-steps" class="hash-link" aria-label="Direct link to Next steps" title="Direct link to Next steps" translate="no">​</a></h2>
+<ul>
+<li class=""><a class="" href="/foreit/docs/features/">Features</a></li>
+<li class=""><a class="" href="/foreit/docs/api-reference/">API Reference</a></li>
+</ul></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_WFHX"><a href="https://github.com/hamidrabedi/foreit/tree/main/docs-site/docs/status.md" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>Edit this page</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/foreit/docs/api-reference/"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">API Reference</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/foreit/docs/changelog/"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Changelog</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#implemented" class="table-of-contents__link toc-highlight">Implemented</a><ul><li><a href="#core" class="table-of-contents__link toc-highlight">Core</a></li><li><a href="#admin" class="table-of-contents__link toc-highlight">Admin</a></li><li><a href="#api" class="table-of-contents__link toc-highlight">API</a></li><li><a href="#supporting" class="table-of-contents__link toc-highlight">Supporting</a></li></ul></li><li><a href="#next-steps" class="table-of-contents__link toc-highlight">Next steps</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Start Here</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/introduction/">Introduction</a></li><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/quickstart/">Quick Start</a></li><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/installation/">Installation</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Build</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/models/">Models</a></li><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/admin/">Admin UI</a></li><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/rest-api/">REST API</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Project</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/changelog/">Changelog</a></li><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/community/">Community</a></li><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/security/">Security</a></li><li class="footer__item"><a href="https://github.com/hamidrabedi/foreit" target="_blank" rel="noopener noreferrer" class="footer__link-item">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright � 2026 forge Framework. Built with Docusaurus.</div></div></div></footer></div>
+</body>
+</html>
+
+### docs-site/build/docs/status/implementation/index.html
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-status/implementation" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.9.2">
+<title data-rh="true">Implementation Status | forge - Django-like Go Framework</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" property="og:image" content="https://hamidrabedi.github.io/foreit/forge-social-card.svg"><meta data-rh="true" name="twitter:image" content="https://hamidrabedi.github.io/foreit/forge-social-card.svg"><meta data-rh="true" property="og:url" content="https://hamidrabedi.github.io/foreit/docs/status/implementation/"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="keywords" content="go, golang, framework, django, orm, type-safe, web framework, rest api, code generation, postgresql"><meta data-rh="true" name="author" content="forge Framework"><meta data-rh="true" property="og:type" content="website"><meta data-rh="true" property="og:site_name" content="forge Framework"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" name="twitter:site" content="@forgego"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Implementation Status | forge - Django-like Go Framework"><meta data-rh="true" name="description" content="This is the detailed status of forge subsystems."><meta data-rh="true" property="og:description" content="This is the detailed status of forge subsystems."><link data-rh="true" rel="icon" href="/foreit/favicon.svg"><link data-rh="true" rel="canonical" href="https://hamidrabedi.github.io/foreit/docs/status/implementation/"><link data-rh="true" rel="alternate" href="https://hamidrabedi.github.io/foreit/docs/status/implementation/" hreflang="en"><link data-rh="true" rel="alternate" href="https://hamidrabedi.github.io/foreit/docs/status/implementation/" hreflang="x-default"><link data-rh="true" rel="preconnect" href="https://YOUR_APP_ID-dsn.algolia.net" crossorigin="anonymous"><link rel="search" type="application/opensearchdescription+xml" title="forge - Django-like Go Framework" href="/foreit/opensearch.xml"><link rel="stylesheet" href="/foreit/assets/css/styles.f15b7e30.css">
+<script src="/foreit/assets/js/runtime~main.8de1fa6d.js" defer="defer"></script>
+<script src="/foreit/assets/js/main.39a6ae67.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{const n=new URLSearchParams(window.location.search).entries();for(var[t,e]of n)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}(),document.documentElement.setAttribute("data-announcement-bar-initially-dismissed",function(){try{return"true"===localStorage.getItem("docusaurus.announcement.dismiss")}catch(t){}return!1}())</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><div class="theme-announcement-bar announcementBar_mb4j" style="background-color:#334155;color:#ffffff" role="banner"><div class="announcementBarPlaceholder_vyr4"></div><div class="content_knG7 announcementBarContent_xLdY">forge v1.0.0 is now available.</div><button type="button" aria-label="Close" class="clean-btn close closeButton_CVFx announcementBarClose_gvF7"><svg viewBox="0 0 15 15" width="14" height="14"><g stroke="currentColor" stroke-width="3.1"><path d="M.75.75l13.5 13.5M14.25.75L.75 14.25"></path></g></svg></button></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/foreit/"><div class="navbar__logo"><img src="/foreit/logo.svg" alt="forge Logo" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/foreit/logo.svg" alt="forge Logo" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div><b class="navbar__title text--truncate">forge</b></a><a class="navbar__item navbar__link" href="/foreit/docs/">Docs</a><a class="navbar__item navbar__link" href="/foreit/docs/changelog/">Changelog</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href="https://github.com/hamidrabedi/foreit" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type="button" disabled="" title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP lightToggleIcon_pyhR"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP darkToggleIcon_wfgR"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP systemToggleIcon_QzmC"><path fill="currentColor" d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"></path></svg></button></div><div class="navbarSearchContainer_Bca1"><button type="button" class="DocSearch DocSearch-Button" aria-label="Search (Meta+k)" aria-keyshortcuts="Meta+k"><span class="DocSearch-Button-Container"><svg width="20" height="20" class="DocSearch-Search-Icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8" stroke="currentColor" fill="none" stroke-width="1.4"></circle><path d="m21 21-4.3-4.3" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="DocSearch-Button-Placeholder">Search</span></span><span class="DocSearch-Button-Keys"></span></button></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><main class="docMainContainer_TBSr docMainContainerEnhanced_lQrH"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Implementation Status</h1></header>
+<p>This is the detailed status of forge subsystems.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="implemented">Implemented<a href="#implemented" class="hash-link" aria-label="Direct link to Implemented" title="Direct link to Implemented" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="core">Core<a href="#core" class="hash-link" aria-label="Direct link to Core" title="Direct link to Core" translate="no">​</a></h3>
+<ul>
+<li class="">Schema system (fields, relations, metadata, hooks)</li>
+<li class="">Code generation (models, managers, field expressions)</li>
+<li class="">Type-safe ORM (QuerySet, Manager CRUD, field expressions)</li>
+<li class="">Database layer (connections, transactions, migrations)</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="admin">Admin<a href="#admin" class="hash-link" aria-label="Direct link to Admin" title="Direct link to Admin" translate="no">​</a></h3>
+<ul>
+<li class="">Auto-generated admin CRUD</li>
+<li class="">List views (search, filtering, ordering)</li>
+<li class="">Form views with validation</li>
+<li class="">Actions and exports</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="api">API<a href="#api" class="hash-link" aria-label="Direct link to API" title="Direct link to API" translate="no">​</a></h3>
+<ul>
+<li class="">ViewSets (CRUD)</li>
+<li class="">Serializers and validation</li>
+<li class="">Authentication and permissions</li>
+<li class="">Throttling and pagination</li>
+<li class="">OpenAPI docs</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="supporting">Supporting<a href="#supporting" class="hash-link" aria-label="Direct link to Supporting" title="Direct link to Supporting" translate="no">​</a></h3>
+<ul>
+<li class="">Filter system</li>
+<li class="">Identity system</li>
+<li class="">CLI tooling (new, generate, migrations, runserver)</li>
+</ul></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_WFHX"><a href="https://github.com/hamidrabedi/foreit/tree/main/docs-site/docs/status/implementation.md" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>Edit this page</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#implemented" class="table-of-contents__link toc-highlight">Implemented</a><ul><li><a href="#core" class="table-of-contents__link toc-highlight">Core</a></li><li><a href="#admin" class="table-of-contents__link toc-highlight">Admin</a></li><li><a href="#api" class="table-of-contents__link toc-highlight">API</a></li><li><a href="#supporting" class="table-of-contents__link toc-highlight">Supporting</a></li></ul></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Start Here</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/introduction/">Introduction</a></li><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/quickstart/">Quick Start</a></li><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/installation/">Installation</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Build</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/models/">Models</a></li><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/admin/">Admin UI</a></li><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/rest-api/">REST API</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Project</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/changelog/">Changelog</a></li><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/community/">Community</a></li><li class="footer__item"><a class="footer__link-item" href="/foreit/docs/security/">Security</a></li><li class="footer__item"><a href="https://github.com/hamidrabedi/foreit" target="_blank" rel="noopener noreferrer" class="footer__link-item">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright � 2026 forge Framework. Built with Docusaurus.</div></div></div></footer></div>
+</body>
+</html>
+
+### docs-site/docs/status.md
+---
+sidebar_position: 21
+description: Implementation status of forge modules.
+image: /forge-social-card.svg
+---
+
+# Status
+
+forge covers the core ORM, admin, and API workflows. This is the current status.
+
+## Implemented
+
+### Core
+- Schema system (fields, relations, metadata, hooks)
+- Code generation (models, managers, field expressions)
+- Type-safe ORM (QuerySet, Manager CRUD, field expressions)
+- Database layer (connections, transactions, migrations)
+
+### Admin
+- Auto-generated admin CRUD
+- List views (search, filtering, ordering)
+- Form views with validation
+- Actions and exports
+
+### API
+- ViewSets (CRUD)
+- Serializers and validation
+- Authentication and permissions
+- Throttling and pagination
+- OpenAPI docs
+
+### Supporting
+- Filter system
+- Identity system
+- CLI tooling (new, generate, migrations, runserver)
+
+## Next steps
+
+- [Features](/docs/features/)
+- [API Reference](/docs/api-reference/)
+
+### docs-site/docs/status/implementation.md
+---
+sidebar_position: 1
+---
+
+# Implementation Status
+
+This is the detailed status of forge subsystems.
+
+## Implemented
+
+### Core
+- Schema system (fields, relations, metadata, hooks)
+- Code generation (models, managers, field expressions)
+- Type-safe ORM (QuerySet, Manager CRUD, field expressions)
+- Database layer (connections, transactions, migrations)
+
+### Admin
+- Auto-generated admin CRUD
+- List views (search, filtering, ordering)
+- Form views with validation
+- Actions and exports
+
+### API
+- ViewSets (CRUD)
+- Serializers and validation
+- Authentication and permissions
+- Throttling and pagination
+- OpenAPI docs
+
+### Supporting
+- Filter system
+- Identity system
+- CLI tooling (new, generate, migrations, runserver)
+
+### docs-site/docs_old/status/implementation.md
+---
+sidebar_position: 0
+description: Current implementation status of forge framework features. See what's working right now.
+keywords:
+  - forge status
+  - implementation status
+  - forge features
+  - django go status
+  - framework progress
+image: /forge-social-card.svg
+---
+
+# Implementation Status
+
+This page is a quick, honest snapshot of what forge supports today.
+
+## Implemented
+
+### Core
+- Schema system (fields, relations, metadata, hooks)
+- Code generation (models, managers, field expressions)
+- Type-safe ORM (QuerySet, Manager CRUD, field expressions)
+- Database layer (connections, transactions, migrations)
+
+### Admin
+- Auto-generated admin CRUD
+- List views (search, filtering, ordering)
+- Form views with validation
+- Actions and exports
+
+### API
+- ViewSets (CRUD)
+- Serializers and validation
+- Authentication and permissions
+- Throttling and pagination
+- OpenAPI docs
+
+### Supporting
+- Filter system
+- Identity system
+- CLI tooling (new, generate, migrations, runserver)
+
+## Notes
+
+If a feature is not listed above, assume it is not shipped yet. Check the docs
+before relying on advanced behavior.
+
+## Getting Started
+
+1. **Install** - `go install github.com/forgego/forge/cli/cmd@latest`
+2. **Create** - `forge new myapp`
+3. **Define models** - write schema definitions
+4. **Generate** - `forge generate`
+5. **Run** - `forge runserver`
+
+### examples/ecommerce/ADMIN_UI_CHECKLIST.md
+# Admin UI Verification Checklist (Ecommerce Example)
+
+This checklist is for manual verification of the ecommerce admin UI using the local SQLite runtime.
+
+## Setup (SQLite)
+1. Open a terminal in `examples/ecommerce`.
+2. Confirm `config/config.yaml` has `database.driver: sqlite` and a valid `sqlite_path`.
+3. Generate code (if needed):
+   - `./forge.exe generate`
+4. Create migrations (if none exist):
+   - `./forge.exe makemigrations init --auto`
+5. Apply migrations:
+   - `./forge.exe migrate`
+6. Create a superuser:
+   - `./forge.exe createsuperuser`
+7. Start the server:
+   - `./forge.exe runserver`
+8. Open the admin UI:
+   - `http://localhost:8000/admin/`
+
+## Login
+- Log in with the superuser account.
+- Expected: dashboard loads, no 500 errors, admin sidebar visible.
+
+## Catalog
+- Categories list view loads.
+  - Expected: filters for `is_active`, `parent_id`, `level`, search works.
+- Create a Category with a parent.
+  - Expected: hierarchy fields save and appear in list.
+- Products list view loads.
+  - Expected: filters for `is_active`, `is_featured`, `category_id`, `brand_id`.
+- Create a Product with at least one Variant and Image inline.
+  - Expected: inline rows save; product shows related variants/images.
+- Use bulk actions:
+  - Activate/Deactivate, Feature/Unfeature products.
+
+## Customers
+- Customers list view loads.
+  - Expected: filters for active/verified/marketing/group.
+- Create a Customer with Address and WishList inline.
+  - Expected: inline address and wishlist items save.
+
+## Orders
+- Orders list view loads.
+  - Expected: filters for status, payment, fulfillment.
+- Create an Order with OrderItems inline.
+  - Expected: totals and status fields persist.
+- Use `Mark Delivered` action.
+  - Expected: status updates and `delivered_at` timestamp set.
+
+## Inventory
+- Stock list view loads.
+  - Expected: filters for low stock, warehouse.
+- Create a Stock record and a StockMovement inline (if present).
+
+## Marketing / Promotions
+- Coupons list view loads.
+  - Expected: filters for active, date ranges.
+- Create a Coupon, ensure validation on required fields.
+
+## Support / Engagement
+- Support ticket list view loads (if configured).
+- Create a ticket and update status via actions.
+
+## Validation & Errors
+- Attempt saving a form without required fields.
+  - Expected: validation errors shown, no server crash.
+
+## Notes
+Record any failures with:
+- model name
+- action performed
+- expected vs actual result
+- console or server error output
+
+### forge/cli/commands/migrations/status.go
+package migrations
+
+import (
+	"context"
+	"fmt"
+	"path/filepath"
+
+	"github.com/forgego/forge/cli/core"
+	"github.com/forgego/forge/db"
+	"github.com/spf13/cobra"
+)
+
+// StatusCommand creates the migration status command
+type StatusCommand struct{}
+
+// NewStatusCommand creates a new instance of StatusCommand
+func NewStatusCommand() *StatusCommand {
+	return &StatusCommand{}
+}
+
+// Definition returns the cobra command definition
+func (c *StatusCommand) Definition() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "status",
+		Short: "Show migration status",
+		Long:  "Display the current migration status, including applied and pending migrations",
+	}
+	cmd.Flags().String("path", "./migrations", "Path to migrations directory")
+	return cmd
+}
+
+// Execute runs the command logic
+func (c *StatusCommand) Execute(ctx *core.Context, args []string) error {
+	// Get migrations path
+	migrationsPath, err := ctx.Cmd.Flags().GetString("path")
+	if err != nil {
+		return fmt.Errorf("failed to get migrations path flag: %w", err)
+	}
+	if migrationsPath == "" {
+		migrationsPath = "./migrations"
+	}
+
+	// List migration files first (works without DB)
+	pattern := filepath.Join(migrationsPath, "*_*.up.sql")
+	matches, err := filepath.Glob(pattern)
+	if err == nil && len(matches) > 0 {
+		fmt.Printf("Migration Files (%d):\n", len(matches))
+		for _, match := range matches {
+			fmt.Printf("  - %s\n", filepath.Base(match))
+		}
+		fmt.Println()
+	}
+
+	// Try to connect to database for detailed status
+	database, err := db.NewDBFromConfig(ctx.Config)
+	if err != nil {
+		fmt.Println("⚠️  Could not connect to database - showing file listing only")
+		fmt.Println("   To see database status, ensure database is configured and running")
+		return nil
+	}
+	defer database.Close()
+
+	// Create migration runner
+	runner, err := db.NewMigrationRunner(database, migrationsPath)
+	if err != nil {
+		fmt.Println("⚠️  Could not create migration runner - showing file listing only")
+		return nil
+	}
+	defer runner.Close()
+
+	// Get status
+	cmdCtx := context.Background()
+	status, err := runner.Status(cmdCtx)
+	if err != nil {
+		fmt.Println("⚠️  Could not get database status - showing file listing only")
+		return nil
+	}
+
+	// Display status
+	fmt.Println("Database Migration Status:")
+
+### forge/db/migrate/execute/status.go
+package execute
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+
+	migrate "github.com/golang-migrate/migrate/v4"
+)
+
+// DetailedStatus provides detailed migration status information
+type DetailedStatus struct {
+	Current    string
+	Next       string
+	Applied    []MigrationInfo
+	Pending    []MigrationInfo
+	OutOfOrder []MigrationInfo
+	Status     string // "OK", "PENDING", "DIRTY"
+	Error      string
+}
+
+// MigrationInfo contains information about a single migration
+type MigrationInfo struct {
+	Version   string
+	Name      string
+	Applied   bool
+	Checksum  string
+	AppliedAt string
+}
+
+// StatusReporter collects detailed migration status
+type StatusReporter struct {
+	migrationsPath string
+	migrate        *migrate.Migrate
+	db             *sql.DB
+}
+
+// NewStatusReporter creates a new status reporter
+func NewStatusReporter(migrationsPath string, m *migrate.Migrate, db *sql.DB) *StatusReporter {
+	return &StatusReporter{
+		migrationsPath: migrationsPath,
+		migrate:        m,
+		db:             db,
+	}
+}
+
+// GetDetailedStatus returns detailed migration status
+func (r *StatusReporter) GetDetailedStatus(ctx context.Context) (*DetailedStatus, error) {
+	status := &DetailedStatus{
+		Applied:    []MigrationInfo{},
+		Pending:    []MigrationInfo{},
+		OutOfOrder: []MigrationInfo{},
+	}
+
+	// Get current version
+	version, dirty, err := r.migrate.Version()
+	if err != nil && err != migrate.ErrNilVersion {
+		return nil, fmt.Errorf("failed to get migration version: %w", err)
+	}
+
+	if err == migrate.ErrNilVersion {
+		status.Current = "No migration applied yet"
+		status.Status = "PENDING"
+	} else {
+		status.Current = fmt.Sprintf("%d", version)
+		if dirty {
+			status.Status = "DIRTY"
+			status.Error = "Migration is in a dirty state - manual intervention required"
+		} else {
+			status.Status = "OK"
+		}
+	}
+
+	// Get all migration files
+	allMigrations, err := r.getAllMigrations()
+	if err != nil {
+
+### forge/db/migrate/execute/status_test.go
+package execute
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestMergeAppliedVersions_InfersAppliedHistoryForCleanState(t *testing.T) {
+	merged := mergeAppliedVersions(3, false, map[uint]bool{3: true})
+
+	assert.True(t, merged[1])
+	assert.True(t, merged[2])
+	assert.True(t, merged[3])
+}
+
+func TestMergeAppliedVersions_ExcludesCurrentWhenDirty(t *testing.T) {
+	merged := mergeAppliedVersions(4, true, map[uint]bool{4: true})
+
+	assert.True(t, merged[1])
+	assert.True(t, merged[2])
+	assert.True(t, merged[3])
+	assert.True(t, merged[4]) // keep explicit versions reported by DB
+}
+
+func TestMergeAppliedVersions_HandlesNoVersion(t *testing.T) {
+	merged := mergeAppliedVersions(0, false, map[uint]bool{})
+
+	assert.Empty(t, merged)
+}
+
+### helper-projects/coreui-free-bootstrap-admin-template-main/src/assets/icons/airplane-mode-off.svg
+<!-- Generated by IcoMoon.io -->
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<title>airplane-mode-off</title>
+<path d="M10.5 5.339c0-0.001 0-0.003 0-0.004 0-1.059 0.479-2.006 1.233-2.636l0.005-0.004c0.070-0.059 0.162-0.095 0.261-0.095s0.191 0.036 0.262 0.095l-0.001-0.001c0.759 0.634 1.239 1.581 1.239 2.64 0 0.002 0 0.003 0 0.005v-0 4.312l7.777 3.889-0.125 0.626-4.075-0.532 1.74 1.74 3.531 0.461 0.625-3.124-7.973-3.986v-3.385c0-0.002 0-0.004 0-0.006 0-1.52-0.688-2.88-1.77-3.784l-0.008-0.006c-0.328-0.275-0.756-0.442-1.222-0.442s-0.893 0.167-1.225 0.445l0.003-0.002c-1.090 0.911-1.778 2.27-1.778 3.791 0 0.002 0 0.004 0 0.006v-0 0.219l1.5 1.5z"></path>
+<path d="M1.805 0.75h-1.054v1.062l7.358 7.357-7.082 3.541 0.625 3.124 7.368-0.961 0.363 3.807-3.383 1.45v3.12h12v-3.12l-3.383-1.45 0.261-2.742 7.312 7.312h1.059v-1.057zM16.5 21.12v0.63h-9v-0.63l3.48-1.491-0.48-5.039v-1.422l-7.652 0.998-0.125-0.626 6.504-3.252 4.273 4.273v0.029l-0.48 5.039z"></path>
+</svg>
+
+### helper-projects/coreui-free-bootstrap-admin-template-main/src/assets/icons/airplane-mode.svg
+<!-- Generated by IcoMoon.io -->
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<title>airplane-mode</title>
+<path d="M22.348 15.834l0.625-3.124-7.973-3.986v-3.385c0-0.002 0-0.004 0-0.006 0-1.52-0.688-2.88-1.77-3.784l-0.008-0.006c-0.328-0.275-0.756-0.442-1.222-0.442s-0.893 0.167-1.225 0.445l0.003-0.002c-1.090 0.911-1.778 2.27-1.778 3.791 0 0.002 0 0.004 0 0.007v-0 3.385l-7.973 3.986 0.625 3.124 7.368-0.961 0.363 3.807-3.383 1.45v3.12h12v-3.12l-3.383-1.45 0.363-3.807zM16.5 21.12v0.63h-9v-0.63l3.48-1.491-0.48-5.039v-1.422l-7.652 0.998-0.125-0.626 7.777-3.889v-4.313c0-0.001 0-0.003 0-0.004 0-1.059 0.479-2.006 1.233-2.636l0.005-0.004c0.070-0.059 0.162-0.095 0.261-0.095s0.191 0.036 0.262 0.095l-0.001-0.001c0.759 0.634 1.239 1.581 1.239 2.64 0 0.002 0 0.003 0 0.005v-0 4.313l7.777 3.889-0.125 0.626-7.652-0.998v1.422l-0.48 5.039z"></path>
+</svg>
+
+### helper-projects/coreui-free-bootstrap-admin-template-main/src/assets/icons/paper-plane.svg
+<!-- Generated by IcoMoon.io -->
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<title>paper-plane</title>
+<path d="M21.408 0.931c-0.164-0.137-0.377-0.22-0.609-0.22-0.146 0-0.285 0.033-0.409 0.092l0.006-0.002-19.646 9.222v1.784l8.252 3.301 5.293 8.143h1.785l5.639-21.347c0.020-0.072 0.031-0.156 0.031-0.241 0-0.293-0.132-0.555-0.34-0.73l-0.001-0.001zM14.977 21.548l-4.55-7 7.001-7.668-1.108-1.011-7.056 7.728-6.804-2.721 17.505-8.217z"></path>
+</svg>
+
+### helper-projects/coreui-free-bootstrap-admin-template-main/src/assets/icons/brands/mastodon.svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M433 179.11c0-97.2-63.71-125.7-63.71-125.7-62.52-28.7-228.56-28.4-290.48 0 0 0-63.72 28.5-63.72 125.7 0 115.7-6.6 259.4 105.63 289.1 40.51 10.7 75.32 13 103.33 11.4 50.81-2.8 79.32-18.1 79.32-18.1l-1.7-36.9s-36.31 11.4-77.12 10.1c-40.41-1.4-83-4.4-89.63-54a102.54 102.54 0 0 1-.9-13.9c85.63 20.9 158.65 9.1 178.75 6.7 56.12-6.7 105-41.3 111.23-72.9 9.8-49.8 9-121.5 9-121.5zm-75.12 125.2h-46.63v-114.2c0-49.7-64-51.6-64 6.9v62.5h-46.33V197c0-58.5-64-56.6-64-6.9v114.2H90.19c0-122.1-5.2-147.9 18.41-175 25.9-28.9 79.82-30.8 103.83 6.1l11.6 19.5 11.6-19.5c24.11-37.1 78.12-34.8 103.83-6.1 23.71 27.3 18.4 53 18.4 175z"/></svg>
+
+### helper-projects/coreui-free-bootstrap-admin-template-main/src/assets/icons/brands/telegram-plane.svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M446.7 98.6l-67.6 318.8c-5.1 22.5-18.4 28.1-37.3 17.5l-103-75.9-49.7 47.8c-5.5 5.5-10.1 10.1-20.7 10.1l7.4-104.9 190.9-172.5c8.3-7.4-1.8-11.5-12.9-4.1L117.8 284 16.2 252.2c-22.1-6.9-22.5-22.1 4.6-32.7L418.2 66.4c18.4-6.9 34.5 4.1 28.5 32.2z"/></svg>
+
+### helper-projects/gentelella-master/JQUERY_ELIMINATION_PLAN.md
+# jQuery Elimination Plan for Gentelella
+
+**Analysis Date:** December 5, 2025  
+**Current jQuery Version:** 3.7.1 (transitive dependency)  
+**Goal:** Complete jQuery removal from the codebase
+
+## Already Completed (Current State)
+
+### jQuery-Free Components Successfully Implemented:
+- **main-core.js** - Completely jQuery-free with vanilla JS DOM utilities
+- **Sparkline Charts** - All sparkline functionality migrated to Chart.js mini charts
+- **Knob/Circular Progress** - Replaced with Chart.js doughnut charts with percentage overlays  
+- **Weather Icons** - Skycons working with vanilla JS
+- **Maps** - Leaflet maps working without jQuery
+- **ECharts** - All ECharts functionality working with vanilla JS
+- **Bootstrap Components** - Tooltips, popovers, modals using Bootstrap 5 JS API
+- **Form Enhancements** - Choices.js, Nouislider, Tempus Dominus (all jQuery-free)
+
+### Modern Alternatives Already Active:
+- **Chart.js 4.5.0** - All chart functionality
+- **Choices.js 11.1.0** - Select2 replacement
+- **NoUiSlider 15.8.1** - Range sliders
+- **Tempus Dominus 6.10.4** - Date/time pickers
+- **Bootstrap 5.3.8** - Native JS components
+
+## Remaining jQuery Dependencies Analysis
+
+### Packages That Require jQuery
+
+**DataTables Ecosystem (Primary jQuery Dependency):**
+- `datatables.net@2.3.3` - Core DataTables package
+- `datatables.net-bs5@2.3.3` - Bootstrap 5 styling
+- `datatables.net-buttons@3.2.4` - Export buttons functionality
+- `datatables.net-buttons-bs5@3.2.4` - Bootstrap 5 button styling
+- `datatables.net-fixedheader@4.0.3` - Fixed header feature
+- `datatables.net-keytable@2.12.1` - Keyboard navigation
+- `datatables.net-responsive@3.0.6` - Responsive design
+- `datatables.net-responsive-bs5@3.0.6` - Bootstrap 5 responsive styling
+
+**Legacy Chart Library:**
+- `flot@4.2.6` - Legacy charting library (currently commented out in main.js)
+
+### Files Still Using jQuery
+
+**Active jQuery Usage:**
+1. `src/jquery-setup.js` - jQuery import and global setup
+2. `src/main.js` - Main bundle with jQuery plugins
+3. `src/main-form-advanced.js` - Form functionality with jQuery
+4. `src/main-form-basic-simple.js` - Basic form jQuery usage
+5. `src/main-upload.js` - Upload functionality
+6. `src/main-inbox.js` - Inbox/email functionality
+7. `src/main-calendar.js` - Calendar functionality
+8. `src/main-minimal.js` - Minimal bundle with some jQuery features
+
+**jQuery Plugins Still in Use:**
+- jQuery Sparkline - Small chart widgets
+- jQuery Knob - Circular progress indicators
+- jQuery UI Effects - Animation effects
+
+## jQuery Elimination Strategy
+
+### Phase 1: Remove Flot Dependencies (Low Risk)
+**Effort:** Low  
+**Risk:** Minimal  
+**Timeline:** 1-2 hours
+
+**Action Items:**
+- Remove `flot@4.2.6` from package.json
+- Remove commented Flot imports from `main.js`
+- Verify no active Flot usage in codebase
+
+**Benefits:**
+- Reduces bundle size
+- Eliminates one jQuery dependency
+- No functionality loss (already disabled)
+
+### Phase 2: Replace DataTables (Moderate Risk)
+**Effort:** High  
+**Risk:** Moderate  
+**Timeline:** 1-2 weeks
+
+### helper-projects/go-admin-main/goAdmin/tests/common/checklist.md
+# Test Case Checklist
+
+## Authentication
+
+- [ ] Show login page
+- [ ] Login
+- [ ] Logout without login
+- [ ] Logout
+
+## Admin Management
+
+- [ ] Show list page
+- [ ] Edit
+- [ ] Show form page without ID
+- [ ] Show form
+- [ ] Edit form
+- [ ] Show new form
+- [ ] New manager tester
+- [ ] Tester login with wrong password
+- [ ] Tester login with right password
+
+### helper-projects/ngx-admin-master/src/app/pages/dashboard/status-card/status-card.component.scss
+@import '../../../@theme/styles/themes';
+
+@include nb-install-component() {
+  nb-card {
+    flex-direction: row;
+    align-items: center;
+    height: 6rem;
+    overflow: visible;
+
+    .icon-container {
+      height: 100%;
+      padding: 0.625rem;
+    }
+
+    .icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 5.75rem;
+      height: 4.75rem;
+      font-size: 3.75rem;
+      border-radius: nb-theme(card-border-radius);
+      transition: width 0.4s ease;
+      transform: translate3d(0, 0, 0);
+      -webkit-transform-style: preserve-3d;
+      -webkit-backface-visibility: hidden;
+      color: nb-theme(text-control-color);
+
+      @each $status in nb-get-statuses() {
+        &.status-#{$status} {
+          $left-color: nb-theme(button-hero-#{$status}-left-background-color);
+          $right-color: nb-theme(button-hero-#{$status}-right-background-color);
+          background-image: linear-gradient(to right, $left-color, $right-color);
+
+          &:hover {
+            $left-hover-color: nb-theme(button-hero-#{$status}-hover-left-background-color);
+            $right-hover-color: nb-theme(button-hero-#{$status}-hover-right-background-color);
+            background-image: linear-gradient(to right, $left-hover-color, $right-hover-color);
+          }
+        }
+      }
+    }
+
+    &.off {
+      color: nb-theme(text-hint-color);
+
+      .status,
+      .title,
+      .icon {
+        color: nb-theme(text-hint-color);
+      }
+
+      @each $status in nb-get-statuses() {
+        .icon.status-#{$status} {
+          box-shadow: none;
+          background-image: linear-gradient(to right, transparent, transparent);
+        }
+      }
+    }
+
+    .details {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100%;
+      @include nb-ltr(padding, 0 0.5rem 0 0.75rem);
+      @include nb-rtl(padding, 0 0.75rem 0 0.5rem);
+      border-left: 1px solid transparent;
+    }
+
+    .title {
+      margin: 0;
+    }
+
+    .status {
+      text-transform: uppercase;
+    }
+  }
+}
+
+### helper-projects/ngx-admin-master/src/app/pages/dashboard/status-card/status-card.component.ts
+import { Component, Input } from '@angular/core';
+
+@Component({
+  selector: 'ngx-status-card',
+  styleUrls: ['./status-card.component.scss'],
+  template: `
+    <nb-card (click)="on = !on" [ngClass]="{'off': !on}">
+      <div class="icon-container">
+        <div class="icon status-{{ type }}">
+          <ng-content></ng-content>
+        </div>
+      </div>
+
+      <div class="details">
+        <div class="title h5">{{ title }}</div>
+        <div class="status paragraph-2">{{ on ? 'ON' : 'OFF' }}</div>
+      </div>
+    </nb-card>
+  `,
+})
+export class StatusCardComponent {
+
+  @Input() title: string;
+  @Input() type: string;
+  @Input() on = true;
+}
+
+### ops/codex-24x7/PLAN.md
+# Codex 24x7 Plan
+
+## Phase 1: Inventory + Baseline
+- Enumerate TODO/FIXME and map to components.
+- Build current coverage map for admin, ORM, schema, migrations, API/server, ecommerce.
+- Identify highest-risk production blockers.
+
+## Phase 2: Reliability Core
+- Fix high-severity framework bugs first.
+- Add missing tests around bug fixes.
+- Keep migrations/schema/API compatibility stable.
+
+## Phase 3: Ecommerce Parity
+- Add missing framework feature usage to ecommerce example.
+- Add/expand ecommerce integration + UI tests for those features.
+
+## Phase 4: Production Readiness
+- Harden security paths, error behavior, and operability checks.
+- Reduce flaky tests and improve deterministic CI behavior.
+- Keep status/history current with remaining blocker list.
+
+### ops/codex-24x7/STATUS.md
+# Codex 24x7 Status
+
+## Completed this run
+- Closed TRACE-level observability reliability gap in `forge/log/encoder.go`:
+  - Added a shared TRACE zap level constant and trace-aware level encoders:
+    - `TraceLevelEncoder` (uppercase)
+    - `TraceLowercaseLevelEncoder` (lowercase)
+    - `TraceColorLevelEncoder` (colorized console)
+  - Wired trace-aware level encoders into:
+    - development console/json encoder paths
+    - production json/text encoder paths
+  - Updated one-line console formatting to emit `TRACE` instead of generic unknown level text.
+- Added focused coverage in `forge/log/encoder_trace_test.go`:
+  - `TestTraceLevelEncoder_EncodesTrace`
+  - `TestTraceLowercaseLevelEncoder_EncodesTrace`
+  - `TestConsoleEncoder_OneLineTraceLevel`
+- Ran verification for this batch:
+  - `go test ./log -count=1` in `forge` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` (pass)
+  - `go test ./... -count=1` in `examples/ecommerce` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` (pass)
+
+## Remaining work
+- Extend admin auth coverage into explicit role/object-level `403` deny flows in ecommerce/admin integration tests.
+- Continue high-impact TODO/FIXME burn-down across admin, ORM/schema/migrations, and API/server reliability paths in framework-owned source.
+- Address admin UI test-runner environment issue (`vitest`/Vite config `spawn EPERM`) so frontend unit tests are executable in this runner.
+
+## Next run plan
+- Close one additional unblocked admin/API/server or ORM/schema/migrations reliability gap with targeted tests.
+- Add one ecommerce integration assertion for permission-denied (`403`) behavior on authenticated admin API operations.
+- Re-attempt admin UI unit tests once spawn restrictions are resolved; keep `STATUS.md`/`HISTORY.md` synchronized.
+
+### ops/codex-24x7/state/todo-current.json
+{
+  "generatedAt": "2026-02-13T00:40:29.195883+00:00",
+  "total": 500,
+  "entries": [
+    {
+      "key": ".kilocode/skills/skill-creator/SKILL.md:154",
+      "path": ".kilocode/skills/skill-creator/SKILL.md",
+      "line": 154,
+      "text": "- Generates a SKILL.md template with proper frontmatter and TODO placeholders"
+    },
+    {
+      "key": ".kilocode/skills/skill-creator/scripts/init_skill.py:20",
+      "path": ".kilocode/skills/skill-creator/scripts/init_skill.py",
+      "line": 20,
+      "text": "description: [TODO: Complete and informative explanation of what the skill does and when to use it. Include WHEN to use this skill - specific scenarios, file types, or tasks that trigger it.]"
+    },
+    {
+      "key": ".kilocode/skills/skill-creator/scripts/init_skill.py:27",
+      "path": ".kilocode/skills/skill-creator/scripts/init_skill.py",
+      "line": 27,
+      "text": "[TODO: 1-2 sentences explaining what this skill enables]"
+    },
+    {
+      "key": ".kilocode/skills/skill-creator/scripts/init_skill.py:31",
+      "path": ".kilocode/skills/skill-creator/scripts/init_skill.py",
+      "line": 31,
+      "text": "[TODO: Choose the structure that best fits this skill's purpose. Common patterns:"
+    },
+    {
+      "key": ".kilocode/skills/skill-creator/scripts/init_skill.py:57",
+      "path": ".kilocode/skills/skill-creator/scripts/init_skill.py",
+      "line": 57,
+      "text": "## [TODO: Replace with the first main section based on chosen structure]"
+    },
+    {
+      "key": ".kilocode/skills/skill-creator/scripts/init_skill.py:59",
+      "path": ".kilocode/skills/skill-creator/scripts/init_skill.py",
+      "line": 59,
+      "text": "[TODO: Add content here. See examples in existing skills:"
+    },
+    {
+      "key": ".kilocode/skills/skill-creator/scripts/init_skill.py:119",
+      "path": ".kilocode/skills/skill-creator/scripts/init_skill.py",
+      "line": 119,
+      "text": "# TODO: Add actual script logic here"
+    },
+    {
+      "key": ".kilocode/skills/skill-creator/scripts/init_skill.py:266",
+      "path": ".kilocode/skills/skill-creator/scripts/init_skill.py",
+      "line": 266,
+      "text": "print(\"1. Edit SKILL.md to complete the TODO items and update the description\")"
+    },
+    {
+      "key": "docs-site/package-lock.json:5264",
+      "path": "docs-site/package-lock.json",
+      "line": 5264,
+      "text": "\"integrity\": \"sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==\""
+    },
+    {
+      "key": "docs-site/package-lock.json:15686",
+      "path": "docs-site/package-lock.json",
+      "line": 15686,
+      "text": "\"integrity\": \"sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==\","
+    },
+    {
+      "key": "docs-site/pnpm-lock.yaml:1532",
+      "path": "docs-site/pnpm-lock.yaml",
+      "line": 1532,
+      "text": "resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}"
+    },
+    {
+      "key": "docs-site/pnpm-lock.yaml:4344",
+      "path": "docs-site/pnpm-lock.yaml",
+      "line": 4344,
+      "text": "resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}"
+    },
+    {
+      "key": "docs-site/build/assets/css/styles.f15b7e30.css:209",
+      "path": "docs-site/build/assets/css/styles.f15b7e30.css",
+      "line": 209,
+

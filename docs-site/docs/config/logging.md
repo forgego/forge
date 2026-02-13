@@ -6,7 +6,18 @@ image: /forge-social-card.svg
 
 # Logging Settings
 
-- Level, Format
-- Outputs (console, file, remote)
-- Development and production overrides
-- Sampling settings
+## Levels
+
+- trace, debug, info, warn, error, fatal
+
+## Formats
+
+- json, text, console
+
+## Outputs
+
+- console, file, remote
+
+## Production sampling
+
+Configure sampling to limit log volume in production.

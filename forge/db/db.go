@@ -3,6 +3,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"regexp"
 
@@ -17,6 +18,10 @@ type DB struct {
 
 // NewDBFromConfig creates a new database connection from config
 func NewDBFromConfig(cfg *config.Config) (*DB, error) {
+	if cfg == nil {
+		return nil, errors.New("database config is nil")
+	}
+
 	driver := cfg.GetDriver()
 	host := cfg.GetString("database.host", "localhost")
 	port := cfg.GetInt("database.port", 5432)

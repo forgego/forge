@@ -126,7 +126,6 @@ func BuildInsertSQL(instance interface{}, tableName string) (sql string, values 
 
 	// Iterate schema fields first, then get values only for those fields
 	schemaFields := schemaInstance.Fields()
-	fmt.Printf("DEBUG: BuildInsertSQL for table %s, fields: %d\n", tableName, len(schemaFields))
 
 	var insertColumns []string
 	var insertPlaceholders []string
@@ -140,7 +139,6 @@ func BuildInsertSQL(instance interface{}, tableName string) (sql string, values 
 			}
 			fieldValue, err := getFieldValueByName(instance, schemaField.Name)
 			if err != nil {
-				fmt.Printf("DEBUG: Field %s error: %v\n", schemaField.Name, err)
 				continue
 			}
 			fieldValueReflect := reflect.ValueOf(fieldValue)
@@ -187,8 +185,6 @@ func BuildInsertSQL(instance interface{}, tableName string) (sql string, values 
 			columnIndex++
 		}
 	}
-	fmt.Printf("DEBUG: Insert columns: %v\n", insertColumns)
-
 	if len(insertColumns) == 0 {
 		return "", nil, nil, fmt.Errorf("no fields to insert")
 	}
@@ -388,9 +384,15 @@ func BuildBulkInsertSQL(instances []interface{}, tableName string) (sql string, 
 
 	for _, instance := range instances {
 		// Get values for this instance
-		_, instanceValues, _, err := BuildInsertSQL(instance, tableName)
+		_, instanceValues, instanceColumns, err := BuildInsertSQL(instance, tableName)
 		if err != nil {
 			return "", nil, nil, fmt.Errorf("failed to build insert SQL for instance: %w", err)
+		}
+		if len(instanceColumns) != len(columns) || strings.Join(instanceColumns, ",") != strings.Join(columns, ",") {
+			return "", nil, nil, fmt.Errorf("bulk insert requires consistent columns across instances: expected [%s], got [%s]",
+				strings.Join(columns, ", "),
+				strings.Join(instanceColumns, ", "),
+			)
 		}
 
 		// Build placeholders for this row

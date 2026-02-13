@@ -1,0 +1,22 @@
+Implemented one focused production-readiness batch on admin/API auth + ecommerce parity.
+
+**What changed**
+- Hardened admin REST authentication in `forge/admin/api/rest/router.go:91`:
+  - Added bearer-token auth middleware for protected admin API routes.
+  - Kept `/api/login` public.
+  - Login now issues expiring session tokens via in-memory `adminSessionStore` (`forge/admin/api/rest/router.go:1112`).
+  - Added bearer parsing/validation helper (`forge/admin/api/rest/router.go:1166`).
+- Added framework auth route coverage in `forge/admin/api/rest/router_test.go:217`:
+  - `TestRegisterRoutes_RequiresAuthenticationForProtectedEndpoints`
+  - Verifies `401` without token, then success with login-issued token.
+- Added ecommerce authenticated admin flow coverage in `examples/ecommerce/main_test.go:247`:
+  - `TestBuildEcommerceRouter_AdminAPIAuthFlow`
+  - Verifies `/admin/api/login`, unauthorized admin create rejection (`401`), and authorized create success (`201`).
+- Updated run tracking:
+  - `ops/codex-24x7/STATUS.md:3`
+  - `ops/codex-24x7/HISTORY.md:351`
+
+**Tests run**
+- `go test ./admin/api/rest -count=1` (in `forge`) with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` - pass
+- `go test ./... -count=1` (in `examples/ecommerce`) with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` - pass
+

@@ -1,0 +1,21 @@
+Implemented one focused production-readiness batch on migrations status reliability and updated run tracking.
+
+### What changed
+- Hardened migration file parsing to ignore malformed non-numeric version prefixes in `getAllMigrations()`:
+  - `forge/db/migrate/execute/status.go:147`
+  - `forge/db/migrate/execute/status.go:164`
+- Added regression tests for malformed filename filtering and numeric sort behavior:
+  - `forge/db/migrate/execute/status_test.go:43`
+  - `forge/db/migrate/execute/status_test.go:57`
+  - `forge/db/migrate/execute/status_test.go:73`
+- Updated run docs:
+  - `ops/codex-24x7/STATUS.md:3`
+  - `ops/codex-24x7/HISTORY.md:722`
+
+### Tests run
+- `go test ./db/migrate/execute -count=1` (pass)
+- `go test ./cli/commands/migrations -count=1` (pass)
+- `go test ./... -count=1` in `examples/ecommerce` (pass)
+
+### Note
+- `git status` could not be executed due safe-directory ownership restriction on `H:/Coding/gogo/forgego/newforge` in this runner environment.

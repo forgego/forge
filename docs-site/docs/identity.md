@@ -15,6 +15,13 @@ forge includes a full identity system for user management and authentication.
 - Password policies, lockout, and rate limits
 - Middleware for auth requirements
 
+## Components
+
+- Repositories: user, session, token, permission, group
+- Services: user, auth, password, permission
+- Backends: password, token
+- Config: password policy, lockout, rate limits
+
 ## Setup example
 
 ```go

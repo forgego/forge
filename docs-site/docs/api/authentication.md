@@ -16,6 +16,14 @@ api.SetDefaultAuthentication(
 )
 ```
 
+## Built-in auth classes
+
+- TokenAuthentication
+- SessionAuthentication
+- JWTAuthentication
+- BasicAuthentication
+- APIKeyAuthentication
+
 ## Next steps
 
 - [Permissions](/docs/api/permissions/)

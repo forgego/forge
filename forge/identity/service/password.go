@@ -15,11 +15,17 @@ import (
 	"github.com/forgego/forge/identity/utils"
 )
 
+// PasswordResetNotifier is responsible for delivering password reset tokens.
+type PasswordResetNotifier interface {
+	SendPasswordReset(ctx context.Context, user *models.User, token string) error
+}
+
 // passwordService implements PasswordService interface
 type passwordService struct {
 	userRepo       repository.UserRepository
 	tokenRepo      repository.TokenRepository
 	passwordPolicy config.PasswordPolicy
+	notifier       PasswordResetNotifier
 }
 
 // NewPasswordService creates a new password service
@@ -32,6 +38,21 @@ func NewPasswordService(
 		userRepo:       userRepo,
 		tokenRepo:      tokenRepo,
 		passwordPolicy: policy,
+	}
+}
+
+// NewPasswordServiceWithNotifier creates a password service with reset token delivery support.
+func NewPasswordServiceWithNotifier(
+	userRepo repository.UserRepository,
+	tokenRepo repository.TokenRepository,
+	policy config.PasswordPolicy,
+	notifier PasswordResetNotifier,
+) PasswordService {
+	return &passwordService{
+		userRepo:       userRepo,
+		tokenRepo:      tokenRepo,
+		passwordPolicy: policy,
+		notifier:       notifier,
 	}
 }
 
@@ -104,9 +125,11 @@ func (s *passwordService) RequestPasswordReset(ctx context.Context, email string
 		return fmt.Errorf("failed to create reset token: %w", err)
 	}
 
-	// TODO: Send email with token
-	// For now, just return success
-	// In production, you would send an email with the token
+	if s.notifier != nil {
+		if err := s.notifier.SendPasswordReset(ctx, user, token); err != nil {
+			return fmt.Errorf("failed to send password reset token: %w", err)
+		}
+	}
 
 	return nil
 }
@@ -160,7 +183,7 @@ func (s *passwordService) ResetPassword(ctx context.Context, token string, newPa
 	resetToken.UsedAt = &now
 	// Note: TokenRepository would need an Update method for this
 	// For now, we'll delete it
-	_ = s.tokenRepo.DeletePasswordResetToken(ctx, token)
+	_ = s.tokenRepo.DeletePasswordResetToken(ctx, resetToken.Token)
 
 	return nil
 }

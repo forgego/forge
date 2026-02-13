@@ -8,6 +8,12 @@ image: /forge-social-card.svg
 
 API versioning supports URL path, query parameter, and header strategies.
 
+## Strategies
+
+- URLPathVersioning
+- QueryParameterVersioning
+- HeaderVersioning
+
 ## Next steps
 
 - [Renderers & Parsers](/docs/api/renderers-parsers/)

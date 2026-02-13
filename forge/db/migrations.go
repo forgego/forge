@@ -27,6 +27,10 @@ type MigrationRunner struct {
 
 // NewMigrationRunner creates a new migration runner (package-level function)
 func NewMigrationRunner(db *DB, migrationsPath string) (*MigrationRunner, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database connection is nil")
+	}
+
 	// Validate database connection is still open
 	if db.DB == nil {
 		return nil, fmt.Errorf("database connection is nil")
@@ -434,11 +438,7 @@ func (mr *MigrationRunner) GetDetailedStatus(ctx context.Context) (*DetailedMigr
 		if statusErr != nil {
 			return nil, fmt.Errorf("failed to get status: %w", statusErr)
 		}
-		return &DetailedMigrationStatus{
-			Current: fmt.Sprintf("%d", status.Version),
-			Status:  "OK",
-			Dirty:   status.Dirty,
-		}, nil
+		return fallbackDetailedMigrationStatus(status), nil
 	}
 
 	// Convert execute.DetailedStatus to db.DetailedMigrationStatus
@@ -464,6 +464,24 @@ func (mr *MigrationRunner) GetDetailedStatus(ctx context.Context) (*DetailedMigr
 	}
 
 	return result, nil
+}
+
+func fallbackDetailedMigrationStatus(status *MigrationStatus) *DetailedMigrationStatus {
+	fallbackStatus := "OK"
+	if status != nil && status.Dirty {
+		fallbackStatus = "DIRTY"
+	}
+
+	current := "0"
+	if status != nil {
+		current = fmt.Sprintf("%d", status.Version)
+	}
+
+	return &DetailedMigrationStatus{
+		Current: current,
+		Status:  fallbackStatus,
+		Dirty:   status != nil && status.Dirty,
+	}
 }
 
 // MigrationStatus represents the status of migrations

@@ -8,21 +8,19 @@ image: /forge-social-card.svg
 
 The ORM provides type-safe queries through `QuerySet` and `Manager` APIs, with support for filtering, relations, aggregation, and updates.
 
-## QuerySet API
+## QuerySet API (core)
 
-Core capabilities:
-
-- Filtering: `Filter`, `Exclude`
-- Ordering: `OrderBy`, `Reverse`
-- Limits: `Limit`, `Offset`, `Distinct`
-- Field selection: `Select`, `Only`, `Defer`
-- Relations: `SelectRelated`, `PrefetchRelated`
-- Aggregates: `Aggregate`, `Annotate`
-- Values: `Values`, `ValuesList`
-- Execution: `All`, `Get`, `First`, `Last`, `Count`, `Exists`
-- Updates: `Update`, `UpdateBuilder`, `BulkUpdate`
-- Deletes: `Delete`
-- Set operations: `Union`, `Intersection`, `Difference`
+- Filter, Exclude
+- OrderBy, Reverse
+- Limit, Offset, Distinct
+- Select, Only, Defer
+- SelectRelated, PrefetchRelated
+- Aggregate, Annotate
+- Values, ValuesList
+- All, Get, First, Last, Count, Exists
+- Update, UpdateBuilder, BulkUpdate
+- Delete
+- Union, Intersection, Difference
 
 ## Filtering
 
@@ -43,7 +41,7 @@ posts, err := PostObjects.
     All(ctx)
 ```
 
-## Aggregation and annotation
+## Aggregation
 
 ```go
 stats, err := PostObjects.

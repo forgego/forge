@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	apicore "github.com/forgego/forge/api/core"
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
@@ -379,7 +380,12 @@ func (a *Admin[T]) GetObject(ctx context.Context, id interface{}) (interface{}, 
 	if err != nil {
 		return nil, err
 	}
-	return a.manager.Get(ctx, intID)
+
+	instance, err := a.safeGetObjectByID(ctx, intID)
+	if err != nil {
+		return nil, err
+	}
+	return instance, nil
 }
 
 func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}) (interface{}, error) {
@@ -404,22 +410,33 @@ func (a *Admin[T]) UpdateObject(ctx context.Context, id interface{}, data map[st
 		return nil, err
 	}
 
-	// Fetch existing instance
-	instance, err := a.manager.Get(ctx, intID)
+	// Ensure object exists (and permission hooks receive a concrete object path).
+	instance, err := a.safeGetObjectByID(ctx, intID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Map data to instance fields
-	if err := a.decodeData(data, instance); err != nil {
-		return nil, fmt.Errorf("failed to decode data: %w", err)
+	// PATCH semantics: only update provided fields and avoid writing zero-values
+	// for fields omitted from request payload.
+	updates := orm.UpdateMap{}
+	for key, value := range data {
+		if strings.EqualFold(key, "id") {
+			continue
+		}
+		updates[key] = value
+	}
+	if len(updates) == 0 {
+		return instance, nil
+	}
+	if err := a.manager.UpdateFields(ctx, intID, updates); err != nil {
+		return nil, err
 	}
 
-	err = a.SaveModel(ctx, instance, false)
+	updated, err := a.safeGetObjectByID(ctx, intID)
 	if err != nil {
 		return nil, err
 	}
-	return instance, nil
+	return updated, nil
 }
 
 func (a *Admin[T]) DeleteObject(ctx context.Context, id interface{}) error {
@@ -428,7 +445,7 @@ func (a *Admin[T]) DeleteObject(ctx context.Context, id interface{}) error {
 		return err
 	}
 
-	instance, err := a.manager.Get(ctx, intID)
+	instance, err := a.safeGetObjectByID(ctx, intID)
 	if err != nil {
 		return err
 	}
@@ -436,6 +453,8 @@ func (a *Admin[T]) DeleteObject(ctx context.Context, id interface{}) error {
 }
 
 func (a *Admin[T]) ExecuteAction(ctx context.Context, actionName string, ids []interface{}, params map[string]interface{}) (interface{}, error) {
+	_ = params
+
 	// Find action
 	var selectedAction *Action[T]
 	for _, action := range a.config.Actions {
@@ -449,26 +468,54 @@ func (a *Admin[T]) ExecuteAction(ctx context.Context, actionName string, ids []i
 		return nil, fmt.Errorf("action %s not found", actionName)
 	}
 
+	user, _ := apicore.UserFromContext(ctx)
+
 	// Fetch instances
 	instances := make([]*T, 0, len(ids))
+	actionErrors := make([]BulkActionError, 0)
 	for _, id := range ids {
 		intID, err := toInt64(id)
 		if err != nil {
-			continue // Skip invalid IDs
+			actionErrors = append(actionErrors, BulkActionError{
+				ID:      0,
+				Code:    "invalid_id",
+				Message: fmt.Sprintf("invalid id %v", id),
+			})
+			continue
 		}
 
-		instance, err := a.manager.Get(ctx, intID)
-		if err == nil {
-			instances = append(instances, instance)
+		instance, err := a.safeGetObjectByID(ctx, intID)
+		if err != nil {
+			actionErrors = append(actionErrors, BulkActionError{
+				ID:      intID,
+				Code:    "not_found",
+				Message: "object not found",
+			})
+			continue
 		}
+
+		if !a.HasChangePermission(ctx, user, instance) {
+			actionErrors = append(actionErrors, BulkActionError{
+				ID:      intID,
+				Code:    "permission_denied",
+				Message: "permission denied",
+			})
+			continue
+		}
+
+		instances = append(instances, instance)
 	}
 
 	if len(instances) == 0 {
-		return &BulkActionResponse{
+		response := &BulkActionResponse{
 			Success:  false,
 			Affected: 0,
-			Message:  "No objects found for action",
-		}, nil
+			Message:  "No permitted objects found for action",
+		}
+		if len(actionErrors) > 0 {
+			response.Errors = actionErrors
+		}
+		return response, nil
 	}
 
 	// Execute handler
@@ -477,11 +524,67 @@ func (a *Admin[T]) ExecuteAction(ctx context.Context, actionName string, ids []i
 		return nil, err
 	}
 
-	return &BulkActionResponse{
-		Success:  true,
+	response := &BulkActionResponse{
+		Success:  len(actionErrors) == 0,
 		Affected: len(instances),
 		Message:  fmt.Sprintf("Successfully executed %s on %d objects", selectedAction.Label, len(instances)),
-	}, nil
+	}
+	if len(actionErrors) > 0 {
+		response.Errors = actionErrors
+		response.Message = fmt.Sprintf("Executed %s on %d objects; %d skipped", selectedAction.Label, len(instances), len(actionErrors))
+	}
+	return response, nil
+}
+
+func (a *Admin[T]) safeGetObjectByID(ctx context.Context, id int64) (*T, error) {
+	// Primary path: direct lookup by manager.
+	// Some model/config combinations can panic inside typed filter resolution.
+	var recovered any
+	var getErr error
+	var obj *T
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				recovered = r
+			}
+		}()
+		obj, getErr = a.manager.Get(ctx, id)
+	}()
+	if recovered == nil && getErr == nil && obj != nil {
+		return obj, nil
+	}
+
+	// Fallback path: scan all records and match by extracted ID.
+	// This is slower but keeps admin operations working while ORM lookup
+	// expression typing is being hardened.
+	all, listErr := a.manager.All(ctx)
+	if listErr != nil {
+		if getErr != nil {
+			return nil, getErr
+		}
+		if recovered != nil {
+			return nil, fmt.Errorf("failed to get object with id %d: recovered panic %v", id, recovered)
+		}
+		return nil, listErr
+	}
+	for _, candidate := range all {
+		candidateID := a.getObjectID(candidate)
+		parsedID, parseErr := toInt64(candidateID)
+		if parseErr != nil {
+			continue
+		}
+		if parsedID == id {
+			return candidate, nil
+		}
+	}
+
+	if getErr != nil {
+		return nil, getErr
+	}
+	if recovered != nil {
+		return nil, fmt.Errorf("object with id %d not found after recovered panic: %v", id, recovered)
+	}
+	return nil, fmt.Errorf("object with id %d not found", id)
 }
 
 // History methods

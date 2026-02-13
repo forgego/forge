@@ -1,6 +1,7 @@
 package orm
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -631,5 +632,61 @@ func TestFieldRef_AllMethods(t *testing.T) {
 				assert.NotEmpty(t, sql, "Method %s should generate non-empty SQL", tt.name)
 			})
 		}
+	})
+}
+
+func TestFieldResolve_RelationPaths(t *testing.T) {
+	t.Run("resolves valid nested relation field", func(t *testing.T) {
+		_, err := GetModelSchema[User]()
+		require.NoError(t, err)
+		postSchema, err := GetModelSchema[Post]()
+		require.NoError(t, err)
+
+		err = NewField[string]("User__email", "posts").Resolve(postSchema)
+		require.NoError(t, err)
+	})
+
+	t.Run("fails when traversing non-relation field", func(t *testing.T) {
+		schema := &ModelSchema{
+			Fields: []FieldInfo{
+				{Name: "name", Type: reflect.TypeOf("")},
+			},
+		}
+
+		err := NewField[string]("name__first", "").Resolve(schema)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot be traversed further")
+	})
+
+	t.Run("fails when relation target model is not registered", func(t *testing.T) {
+		schema := &ModelSchema{
+			Relations: []RelationInfo{
+				{Name: "author", TargetModel: "MissingModel"},
+			},
+		}
+
+		err := NewField[string]("author__email", "").Resolve(schema)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to resolve target model MissingModel")
+	})
+
+	t.Run("fails when nested field does not exist", func(t *testing.T) {
+		_, err := GetModelSchema[User]()
+		require.NoError(t, err)
+		postSchema, err := GetModelSchema[Post]()
+		require.NoError(t, err)
+
+		err = NewField[string]("User__missing", "").Resolve(postSchema)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "field User__missing not found in model")
+	})
+
+	t.Run("fails when path resolves to relation instead of field", func(t *testing.T) {
+		postSchema, err := GetModelSchema[Post]()
+		require.NoError(t, err)
+
+		err = NewField[string]("User", "").Resolve(postSchema)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "resolves to relation, not a field")
 	})
 }

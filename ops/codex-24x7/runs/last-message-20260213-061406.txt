@@ -1,0 +1,21 @@
+Implemented one focused high-impact batch for ecommerce admin/API parity in a non-order, non-payment model.
+
+Changed:
+- `examples/ecommerce/app/inventory/admin.go:84`  
+  Updated `Warehouse` object-level `HasChangePermission` to deny changes when `obj.IsPrimary` is `true`.
+- `examples/ecommerce/main_test.go:1197`  
+  Added `TestBuildEcommerceRouter_AdminAPIActionObjectSpecificWarehouseChangePermission`:
+  - Calls `POST /admin/api/warehouses/action/deactivate` with one primary + one non-primary warehouse.
+  - Asserts `207 Multi-Status`, one `permission_denied` error, one affected object.
+  - Verifies persisted state via follow-up detail GETs (primary stays active, secondary deactivates).
+- `ops/codex-24x7/STATUS.md:4`  
+  Updated `Completed this run`, `Remaining work`, and `Next run plan`.
+- `ops/codex-24x7/HISTORY.md:619`  
+  Appended this run’s concise batch log.
+
+Tests run:
+- `go test ./admin/api/rest -count=1` in `forge` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` (pass)
+- `go test ./... -count=1` in `examples/ecommerce` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` (pass)
+
+Remaining notable blocker:
+- Admin UI unit tests are still environment-blocked by `spawn EPERM` (`vitest`/Vite).

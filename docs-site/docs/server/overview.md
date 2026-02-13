@@ -8,6 +8,13 @@ image: /forge-social-card.svg
 
 The server package provides router, middleware, security, and operational endpoints.
 
+## What you can do
+
+- Register routes and middleware
+- Configure sessions and CSRF
+- Serve static files
+- Expose health and metrics endpoints
+
 ## Next steps
 
 - [Middleware](/docs/server/middleware/)

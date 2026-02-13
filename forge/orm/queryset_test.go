@@ -1,6 +1,7 @@
 package orm
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/forgego/forge/schema"
@@ -207,6 +208,24 @@ func TestQuerySet_Chaining(t *testing.T) {
 
 	assert.NotNil(t, chained)
 	assert.NotEqual(t, qs, chained)
+}
+
+func TestSetFieldValue_ConvertsNumericBytes(t *testing.T) {
+	var price float64
+	field := reflect.ValueOf(&price).Elem()
+
+	setFieldValue(field, []byte("19.99"))
+
+	assert.Equal(t, 19.99, price)
+}
+
+func TestSetFieldValue_ConvertsIntBytes(t *testing.T) {
+	var count int64
+	field := reflect.ValueOf(&count).Elem()
+
+	setFieldValue(field, []byte("42"))
+
+	assert.Equal(t, int64(42), count)
 }
 
 // Note: buildSQL and other build methods are not exported

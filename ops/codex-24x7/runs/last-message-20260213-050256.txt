@@ -1,0 +1,23 @@
+Implemented one focused high-impact batch on migration CLI reliability and updated run tracking.
+
+Changed files:
+- `forge/cli/commands/migrations/status.go`
+- `forge/cli/commands/migrations/status_test.go`
+- `ops/codex-24x7/STATUS.md`
+- `ops/codex-24x7/HISTORY.md`
+
+What I changed:
+- Reworked migration status CLI output to remove encoding-corrupted glyphs and use stable ASCII markers (`[WARN]`, `[x]`, `[ ]`, `[!]`) in `forge/cli/commands/migrations/status.go`.
+- Extracted rendering into a testable helper: `renderMigrationStatus(...)` in `forge/cli/commands/migrations/status.go`.
+- Added regression tests in `forge/cli/commands/migrations/status_test.go` for:
+  - dirty-state warning output,
+  - detailed applied/pending/out-of-order rendering,
+  - already-latest “next migration” messaging.
+- Updated run docs in `ops/codex-24x7/STATUS.md` and appended the run log in `ops/codex-24x7/HISTORY.md`.
+
+Verification run:
+- `go test ./cli/commands/migrations -count=1` (in `forge`) passed.
+- `go test ./... -count=1` (in `examples/ecommerce`) passed.
+
+Note:
+- `git status` could not be run due repository safe-directory ownership restrictions in this environment (`detected dubious ownership`).

@@ -6,40 +6,41 @@ import (
 
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	validate "github.com/forgego/forge/validate"
 )
 
 // SupportTicketGenerated struct definition
 type SupportTicketGenerated struct {
 	schema.BaseSchema
-	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	TicketNumber    string           `json:"ticket_number" bson:"ticket_number"`
-	CustomerID      primitive.ObjectID `json:"customer_id" bson:"customer_id"`
-	Type            string           `json:"type" bson:"type"`
-	Subject         string           `json:"subject" bson:"subject"`
-	Description     string           `json:"description" bson:"description"`
-	Priority        string           `json:"priority" bson:"priority"`
-	Status         string           `json:"status" bson:"status"`
-	AssignedTo      *primitive.ObjectID `json:"assigned_to,omitempty" bson:"assigned_to,omitempty"`
-	AssignedGroup   string           `json:"assigned_group" bson:"assigned_group"`
-	RelatedType     string           `json:"related_type" bson:"related_type"`
-	RelatedID      primitive.ObjectID `json:"related_id,omitempty" bson:"related_id,omitempty"`
-	Tags            []string         `json:"tags" bson:"tags"`
-	Resolution      string           `json:"resolution" bson:"resolution"`
-	ResolvedAt     *time.Time       `json:"resolved_at,omitempty" bson:"resolved_at,omitempty"`
-	CustomerSatisfaction *int        `json:"customer_satisfaction,omitempty" bson:"customer_satisfaction,omitempty"`
-	CustomerFeedback string         `json:"customer_feedback" bson:"customer_feedback"`
-	IsEscalated    bool             `json:"is_escalated" bson:"is_escalated"`
-	EscalatedAt    *time.Time       `json:"escalated_at,omitempty" bson:"escalated_at,omitempty"`
-	EscalationReason string         `json:"escalation_reason" bson:"escalation_reason"`
-	FirstResponseAt *time.Time      `json:"first_response_at,omitempty" bson:"first_response_at,omitempty"`
-	CreatedAt       time.Time       `json:"created_at" bson:"created_at"`
-	UpdatedAt       time.Time       `json:"updated_at" bson:"updated_at"`
+	Id                   int64     `json:"id" db:"id" validate:""`
+	TicketNumber         string    `json:"ticket_number" db:"ticket_number" validate:""`
+	CustomerId           int64     `json:"customer_id" db:"customer_id" validate:""`
+	Type                 string    `json:"type" db:"type" validate:""`
+	Subject              string    `json:"subject" db:"subject" validate:""`
+	Description          string    `json:"description" db:"description" validate:""`
+	Priority             string    `json:"priority" db:"priority" validate:""`
+	Status               string    `json:"status" db:"status" validate:""`
+	AssignedTo           int64     `json:"assigned_to" db:"assigned_to" validate:""`
+	AssignedGroup        string    `json:"assigned_group" db:"assigned_group" validate:""`
+	RelatedType          string    `json:"related_type" db:"related_type" validate:""`
+	RelatedId            int64     `json:"related_id" db:"related_id" validate:""`
+	Tags                 string    `json:"tags" db:"tags" validate:""`
+	Resolution           string    `json:"resolution" db:"resolution" validate:""`
+	ResolvedAt           time.Time `json:"resolved_at" db:"resolved_at" validate:""`
+	CustomerSatisfaction int32     `json:"customer_satisfaction" db:"customer_satisfaction" validate:""`
+	CustomerFeedback     string    `json:"customer_feedback" db:"customer_feedback" validate:""`
+	IsEscalated          bool      `json:"is_escalated" db:"is_escalated" validate:""`
+	EscalatedAt          time.Time `json:"escalated_at" db:"escalated_at" validate:""`
+	EscalationReason     string    `json:"escalation_reason" db:"escalation_reason" validate:""`
+	FirstResponseAt      time.Time `json:"first_response_at" db:"first_response_at" validate:""`
+	CreatedAt            time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt            time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the SupportTicket model
 func (m *SupportTicket) Validate() error {
-	return nil
+	validator := validate.NewValidator()
+	return validate.ValidateModel(validator, m)
 }
 
 // SupportTicketObjects provides type-safe operations for SupportTicket
@@ -47,77 +48,78 @@ var SupportTicketObjects, _ = orm.NewManager[SupportTicket]("support_tickets")
 
 // SupportTicketFields provides type-safe field access for SupportTicket
 type SupportTicketFields struct {
-	ID              orm.Field[primitive.ObjectID]
-	TicketNumber    orm.Field[string]
-	CustomerID      orm.Field[primitive.ObjectID]
-	Type            orm.Field[string]
-	Subject         orm.Field[string]
-	Description     orm.Field[string]
-	Priority        orm.Field[string]
-	Status         orm.Field[string]
-	AssignedTo      orm.Field[*primitive.ObjectID]
-	AssignedGroup   orm.Field[string]
-	RelatedType     orm.Field[string]
-	RelatedID      orm.Field[primitive.ObjectID]
-	Tags            orm.Field[[]string]
-	Resolution      orm.Field[string]
-	ResolvedAt     orm.Field[*time.Time]
-	CustomerSatisfaction orm.Field[*int]
-	CustomerFeedback orm.Field[string]
-	IsEscalated    orm.Field[bool]
-	EscalatedAt    orm.Field[*time.Time]
-	EscalationReason orm.Field[string]
-	FirstResponseAt orm.Field[*time.Time]
-	CreatedAt       orm.Field[time.Time]
-	UpdatedAt       orm.Field[time.Time]
+	Id                   orm.Field[int64]
+	TicketNumber         orm.Field[string]
+	CustomerId           orm.Field[int64]
+	Type                 orm.Field[string]
+	Subject              orm.Field[string]
+	Description          orm.Field[string]
+	Priority             orm.Field[string]
+	Status               orm.Field[string]
+	AssignedTo           orm.Field[int64]
+	AssignedGroup        orm.Field[string]
+	RelatedType          orm.Field[string]
+	RelatedId            orm.Field[int64]
+	Tags                 orm.Field[string]
+	Resolution           orm.Field[string]
+	ResolvedAt           orm.Field[time.Time]
+	CustomerSatisfaction orm.Field[int32]
+	CustomerFeedback     orm.Field[string]
+	IsEscalated          orm.Field[bool]
+	EscalatedAt          orm.Field[time.Time]
+	EscalationReason     orm.Field[string]
+	FirstResponseAt      orm.Field[time.Time]
+	CreatedAt            orm.Field[time.Time]
+	UpdatedAt            orm.Field[time.Time]
 }
 
 var SupportTicketFieldsInstance = SupportTicketFields{
-	ID:              orm.NewField[primitive.ObjectID]("id", "support_tickets"),
-	TicketNumber:    orm.NewField[string]("ticket_number", "support_tickets"),
-	CustomerID:      orm.NewField[primitive.ObjectID]("customer_id", "support_tickets"),
-	Type:            orm.NewField[string]("type", "support_tickets"),
-	Subject:         orm.NewField[string]("subject", "support_tickets"),
-	Description:     orm.NewField[string]("description", "support_tickets"),
-	Priority:        orm.NewField[string]("priority", "support_tickets"),
-	Status:         orm.NewField[string]("status", "support_tickets"),
-	AssignedTo:      orm.NewField[*primitive.ObjectID]("assigned_to", "support_tickets"),
-	AssignedGroup:   orm.NewField[string]("assigned_group", "support_tickets"),
-	RelatedType:     orm.NewField[string]("related_type", "support_tickets"),
-	RelatedID:      orm.NewField[primitive.ObjectID]("related_id", "support_tickets"),
-	Tags:            orm.NewField[[]string]("tags", "support_tickets"),
-	Resolution:      orm.NewField[string]("resolution", "support_tickets"),
-	ResolvedAt:     orm.NewField[*time.Time]("resolved_at", "support_tickets"),
-	CustomerSatisfaction: orm.NewField[*int]("customer_satisfaction", "support_tickets"),
-	CustomerFeedback: orm.NewField[string]("customer_feedback", "support_tickets"),
-	IsEscalated:    orm.NewField[bool]("is_escalated", "support_tickets"),
-	EscalatedAt:    orm.NewField[*time.Time]("escalated_at", "support_tickets"),
-	EscalationReason: orm.NewField[string]("escalation_reason", "support_tickets"),
-	FirstResponseAt: orm.NewField[*time.Time]("first_response_at", "support_tickets"),
-	CreatedAt:       orm.NewField[time.Time]("created_at", "support_tickets"),
-	UpdatedAt:       orm.NewField[time.Time]("updated_at", "support_tickets"),
+	Id:                   orm.NewField[int64]("id", "support_tickets"),
+	TicketNumber:         orm.NewField[string]("ticket_number", "support_tickets"),
+	CustomerId:           orm.NewField[int64]("customer_id", "support_tickets"),
+	Type:                 orm.NewField[string]("type", "support_tickets"),
+	Subject:              orm.NewField[string]("subject", "support_tickets"),
+	Description:          orm.NewField[string]("description", "support_tickets"),
+	Priority:             orm.NewField[string]("priority", "support_tickets"),
+	Status:               orm.NewField[string]("status", "support_tickets"),
+	AssignedTo:           orm.NewField[int64]("assigned_to", "support_tickets"),
+	AssignedGroup:        orm.NewField[string]("assigned_group", "support_tickets"),
+	RelatedType:          orm.NewField[string]("related_type", "support_tickets"),
+	RelatedId:            orm.NewField[int64]("related_id", "support_tickets"),
+	Tags:                 orm.NewField[string]("tags", "support_tickets"),
+	Resolution:           orm.NewField[string]("resolution", "support_tickets"),
+	ResolvedAt:           orm.NewField[time.Time]("resolved_at", "support_tickets"),
+	CustomerSatisfaction: orm.NewField[int32]("customer_satisfaction", "support_tickets"),
+	CustomerFeedback:     orm.NewField[string]("customer_feedback", "support_tickets"),
+	IsEscalated:          orm.NewField[bool]("is_escalated", "support_tickets"),
+	EscalatedAt:          orm.NewField[time.Time]("escalated_at", "support_tickets"),
+	EscalationReason:     orm.NewField[string]("escalation_reason", "support_tickets"),
+	FirstResponseAt:      orm.NewField[time.Time]("first_response_at", "support_tickets"),
+	CreatedAt:            orm.NewField[time.Time]("created_at", "support_tickets"),
+	UpdatedAt:            orm.NewField[time.Time]("updated_at", "support_tickets"),
 }
 
 // SupportMessageGenerated struct definition
 type SupportMessageGenerated struct {
 	schema.BaseSchema
-	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	TicketID        primitive.ObjectID `json:"ticket_id" bson:"ticket_id"`
-	SenderType      string           `json:"sender_type" bson:"sender_type"`
-	CustomerID      *primitive.ObjectID `json:"customer_id,omitempty" bson:"customer_id,omitempty"`
-	AgentID         *primitive.ObjectID `json:"agent_id,omitempty" bson:"agent_id,omitempty"`
-	Content         string           `json:"content" bson:"content"`
-	ContentType     string           `json:"content_type" bson:"content_type"`
-	Attachments     []Attachment     `json:"attachments" bson:"attachments"`
-	IsInternalNote  bool             `json:"is_internal_note" bson:"is_internal_note"`
-	IsAutomated     bool             `json:"is_automated" bson:"is_automated"`
-	AutomationRuleID string          `json:"automation_rule_id" bson:"automation_rule_id"`
-	CreatedAt       time.Time        `json:"created_at" bson:"created_at"`
+	Id               int64     `json:"id" db:"id" validate:""`
+	TicketId         int64     `json:"ticket_id" db:"ticket_id" validate:""`
+	SenderType       string    `json:"sender_type" db:"sender_type" validate:""`
+	CustomerId       int64     `json:"customer_id" db:"customer_id" validate:""`
+	AgentId          int64     `json:"agent_id" db:"agent_id" validate:""`
+	Content          string    `json:"content" db:"content" validate:""`
+	ContentType      string    `json:"content_type" db:"content_type" validate:""`
+	Attachments      string    `json:"attachments" db:"attachments" validate:""`
+	IsInternalNote   bool      `json:"is_internal_note" db:"is_internal_note" validate:""`
+	IsAutomated      bool      `json:"is_automated" db:"is_automated" validate:""`
+	AutomationRuleId string    `json:"automation_rule_id" db:"automation_rule_id" validate:""`
+	CreatedAt        time.Time `json:"created_at" db:"created_at" validate:""`
 }
 
 // Validate validates the SupportMessage model
 func (m *SupportMessage) Validate() error {
-	return nil
+	validator := validate.NewValidator()
+	return validate.ValidateModel(validator, m)
 }
 
 // SupportMessageObjects provides type-safe operations for SupportMessage
@@ -125,70 +127,71 @@ var SupportMessageObjects, _ = orm.NewManager[SupportMessage]("support_messages"
 
 // SupportMessageFields provides type-safe field access for SupportMessage
 type SupportMessageFields struct {
-	ID              orm.Field[primitive.ObjectID]
-	TicketID        orm.Field[primitive.ObjectID]
-	SenderType      orm.Field[string]
-	CustomerID      orm.Field[*primitive.ObjectID]
-	AgentID         orm.Field[*primitive.ObjectID]
-	Content         orm.Field[string]
-	ContentType     orm.Field[string]
-	Attachments     orm.Field[[]Attachment]
-	IsInternalNote  orm.Field[bool]
-	IsAutomated     orm.Field[bool]
-	AutomationRuleID orm.Field[string]
-	CreatedAt       orm.Field[time.Time]
+	Id               orm.Field[int64]
+	TicketId         orm.Field[int64]
+	SenderType       orm.Field[string]
+	CustomerId       orm.Field[int64]
+	AgentId          orm.Field[int64]
+	Content          orm.Field[string]
+	ContentType      orm.Field[string]
+	Attachments      orm.Field[string]
+	IsInternalNote   orm.Field[bool]
+	IsAutomated      orm.Field[bool]
+	AutomationRuleId orm.Field[string]
+	CreatedAt        orm.Field[time.Time]
 }
 
 var SupportMessageFieldsInstance = SupportMessageFields{
-	ID:              orm.NewField[primitive.ObjectID]("id", "support_messages"),
-	TicketID:        orm.NewField[primitive.ObjectID]("ticket_id", "support_messages"),
-	SenderType:      orm.NewField[string]("sender_type", "support_messages"),
-	CustomerID:      orm.NewField[*primitive.ObjectID]("customer_id", "support_messages"),
-	AgentID:         orm.NewField[*primitive.ObjectID]("agent_id", "support_messages"),
-	Content:         orm.NewField[string]("content", "support_messages"),
-	ContentType:     orm.NewField[string]("content_type", "support_messages"),
-	Attachments:     orm.NewField[[]Attachment]("attachments", "support_messages"),
-	IsInternalNote:  orm.NewField[bool]("is_internal_note", "support_messages"),
-	IsAutomated:     orm.NewField[bool]("is_automated", "support_messages"),
-	AutomationRuleID: orm.NewField[string]("automation_rule_id", "support_messages"),
-	CreatedAt:       orm.NewField[time.Time]("created_at", "support_messages"),
+	Id:               orm.NewField[int64]("id", "support_messages"),
+	TicketId:         orm.NewField[int64]("ticket_id", "support_messages"),
+	SenderType:       orm.NewField[string]("sender_type", "support_messages"),
+	CustomerId:       orm.NewField[int64]("customer_id", "support_messages"),
+	AgentId:          orm.NewField[int64]("agent_id", "support_messages"),
+	Content:          orm.NewField[string]("content", "support_messages"),
+	ContentType:      orm.NewField[string]("content_type", "support_messages"),
+	Attachments:      orm.NewField[string]("attachments", "support_messages"),
+	IsInternalNote:   orm.NewField[bool]("is_internal_note", "support_messages"),
+	IsAutomated:      orm.NewField[bool]("is_automated", "support_messages"),
+	AutomationRuleId: orm.NewField[string]("automation_rule_id", "support_messages"),
+	CreatedAt:        orm.NewField[time.Time]("created_at", "support_messages"),
 }
 
 // ReturnRequestGenerated struct definition
 type ReturnRequestGenerated struct {
 	schema.BaseSchema
-	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	ReturnNumber    string           `json:"return_number" bson:"return_number"`
-	OrderID         primitive.ObjectID `json:"order_id" bson:"order_id"`
-	CustomerID      primitive.ObjectID `json:"customer_id" bson:"customer_id"`
-	Reason          string           `json:"reason" bson:"reason"`
-	ReasonDetail    string           `json:"reason_detail" bson:"reason_detail"`
-	Items           []ReturnItem     `json:"items" bson:"items"`
-	ResolutionType  string           `json:"resolution_type" bson:"resolution_type"`
-	ResolutionDetail string          `json:"resolution_detail" bson:"resolution_detail"`
-	RefundAmount    float64          `json:"refund_amount" bson:"refund_amount"`
-	RefundMethod    string           `json:"refund_method" bson:"refund_method"`
-	RefundStatus    string           `json:"refund_status" bson:"refund_status"`
-	RefundProcessedAt *time.Time     `json:"refund_processed_at,omitempty" bson:"refund_processed_at,omitempty"`
-	ReturnShippingMethod string      `json:"return_shipping_method" bson:"return_shipping_method"`
-	ReturnShippingLabelURL string    `json:"return_shipping_label_url" bson:"return_shipping_label_url"`
-	ReturnTrackingNumber string     `json:"return_tracking_number" bson:"return_tracking_number"`
-	ReturnCarrier   string           `json:"return_carrier" bson:"return_carrier"`
-	Status          string           `json:"status" bson:"status"`
-	StatusHistory   []StatusChange   `json:"status_history" bson:"status_history"`
-	InspectedAt     *time.Time      `json:"inspected_at,omitempty" bson:"inspected_at,omitempty"`
-	InspectionNotes string          `json:"inspection_notes" bson:"inspection_notes"`
-	InspectionResult string         `json:"inspection_result" bson:"inspection_result"`
-	ApprovedAt      *time.Time       `json:"approved_at,omitempty" bson:"approved_at,omitempty"`
-	ReturnedAt      *time.Time      `json:"returned_at,omitempty" bson:"returned_at,omitempty"`
-	CompletedAt     *time.Time       `json:"completed_at,omitempty" bson:"completed_at,omitempty"`
-	CreatedAt       time.Time       `json:"created_at" bson:"created_at"`
-	UpdatedAt       time.Time       `json:"updated_at" bson:"updated_at"`
+	Id                     int64     `json:"id" db:"id" validate:""`
+	ReturnNumber           string    `json:"return_number" db:"return_number" validate:""`
+	OrderId                int64     `json:"order_id" db:"order_id" validate:""`
+	CustomerId             int64     `json:"customer_id" db:"customer_id" validate:""`
+	Reason                 string    `json:"reason" db:"reason" validate:""`
+	ReasonDetail           string    `json:"reason_detail" db:"reason_detail" validate:""`
+	Items                  string    `json:"items" db:"items" validate:""`
+	ResolutionType         string    `json:"resolution_type" db:"resolution_type" validate:""`
+	ResolutionDetail       string    `json:"resolution_detail" db:"resolution_detail" validate:""`
+	RefundAmount           float64   `json:"refund_amount" db:"refund_amount" validate:""`
+	RefundMethod           string    `json:"refund_method" db:"refund_method" validate:""`
+	RefundStatus           string    `json:"refund_status" db:"refund_status" validate:""`
+	RefundProcessedAt      time.Time `json:"refund_processed_at" db:"refund_processed_at" validate:""`
+	ReturnShippingMethod   string    `json:"return_shipping_method" db:"return_shipping_method" validate:""`
+	ReturnShippingLabelUrl string    `json:"return_shipping_label_url" db:"return_shipping_label_url" validate:""`
+	ReturnTrackingNumber   string    `json:"return_tracking_number" db:"return_tracking_number" validate:""`
+	ReturnCarrier          string    `json:"return_carrier" db:"return_carrier" validate:""`
+	Status                 string    `json:"status" db:"status" validate:""`
+	StatusHistory          string    `json:"status_history" db:"status_history" validate:""`
+	InspectedAt            time.Time `json:"inspected_at" db:"inspected_at" validate:""`
+	InspectionNotes        string    `json:"inspection_notes" db:"inspection_notes" validate:""`
+	InspectionResult       string    `json:"inspection_result" db:"inspection_result" validate:""`
+	ApprovedAt             time.Time `json:"approved_at" db:"approved_at" validate:""`
+	ReturnedAt             time.Time `json:"returned_at" db:"returned_at" validate:""`
+	CompletedAt            time.Time `json:"completed_at" db:"completed_at" validate:""`
+	CreatedAt              time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt              time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the ReturnRequest model
 func (m *ReturnRequest) Validate() error {
-	return nil
+	validator := validate.NewValidator()
+	return validate.ValidateModel(validator, m)
 }
 
 // ReturnRequestObjects provides type-safe operations for ReturnRequest
@@ -196,93 +199,94 @@ var ReturnRequestObjects, _ = orm.NewManager[ReturnRequest]("return_requests")
 
 // ReturnRequestFields provides type-safe field access for ReturnRequest
 type ReturnRequestFields struct {
-	ID              orm.Field[primitive.ObjectID]
-	ReturnNumber    orm.Field[string]
-	OrderID         orm.Field[primitive.ObjectID]
-	CustomerID      orm.Field[primitive.ObjectID]
-	Reason          orm.Field[string]
-	ReasonDetail    orm.Field[string]
-	Items           orm.Field[[]ReturnItem]
-	ResolutionType  orm.Field[string]
-	ResolutionDetail orm.Field[string]
-	RefundAmount    orm.Field[float64]
-	RefundMethod    orm.Field[string]
-	RefundStatus    orm.Field[string]
-	RefundProcessedAt orm.Field[*time.Time]
-	ReturnShippingMethod orm.Field[string]
-	ReturnShippingLabelURL orm.Field[string]
-	ReturnTrackingNumber orm.Field[string]
-	ReturnCarrier   orm.Field[string]
-	Status          orm.Field[string]
-	StatusHistory   orm.Field[[]StatusChange]
-	InspectedAt     orm.Field[*time.Time]
-	InspectionNotes orm.Field[string]
-	InspectionResult orm.Field[string]
-	ApprovedAt      orm.Field[*time.Time]
-	ReturnedAt      orm.Field[*time.Time]
-	CompletedAt     orm.Field[*time.Time]
-	CreatedAt       orm.Field[time.Time]
-	UpdatedAt       orm.Field[time.Time]
+	Id                     orm.Field[int64]
+	ReturnNumber           orm.Field[string]
+	OrderId                orm.Field[int64]
+	CustomerId             orm.Field[int64]
+	Reason                 orm.Field[string]
+	ReasonDetail           orm.Field[string]
+	Items                  orm.Field[string]
+	ResolutionType         orm.Field[string]
+	ResolutionDetail       orm.Field[string]
+	RefundAmount           orm.Field[float64]
+	RefundMethod           orm.Field[string]
+	RefundStatus           orm.Field[string]
+	RefundProcessedAt      orm.Field[time.Time]
+	ReturnShippingMethod   orm.Field[string]
+	ReturnShippingLabelUrl orm.Field[string]
+	ReturnTrackingNumber   orm.Field[string]
+	ReturnCarrier          orm.Field[string]
+	Status                 orm.Field[string]
+	StatusHistory          orm.Field[string]
+	InspectedAt            orm.Field[time.Time]
+	InspectionNotes        orm.Field[string]
+	InspectionResult       orm.Field[string]
+	ApprovedAt             orm.Field[time.Time]
+	ReturnedAt             orm.Field[time.Time]
+	CompletedAt            orm.Field[time.Time]
+	CreatedAt              orm.Field[time.Time]
+	UpdatedAt              orm.Field[time.Time]
 }
 
 var ReturnRequestFieldsInstance = ReturnRequestFields{
-	ID:              orm.NewField[primitive.ObjectID]("id", "return_requests"),
-	ReturnNumber:    orm.NewField[string]("return_number", "return_requests"),
-	OrderID:         orm.NewField[primitive.ObjectID]("order_id", "return_requests"),
-	CustomerID:      orm.NewField[primitive.ObjectID]("customer_id", "return_requests"),
-	Reason:          orm.NewField[string]("reason", "return_requests"),
-	ReasonDetail:    orm.NewField[string]("reason_detail", "return_requests"),
-	Items:           orm.NewField[[]ReturnItem]("items", "return_requests"),
-	ResolutionType:  orm.NewField[string]("resolution_type", "return_requests"),
-	ResolutionDetail: orm.NewField[string]("resolution_detail", "return_requests"),
-	RefundAmount:    orm.NewField[float64]("refund_amount", "return_requests"),
-	RefundMethod:    orm.NewField[string]("refund_method", "return_requests"),
-	RefundStatus:    orm.NewField[string]("refund_status", "return_requests"),
-	RefundProcessedAt: orm.NewField[*time.Time]("refund_processed_at", "return_requests"),
-	ReturnShippingMethod: orm.NewField[string]("return_shipping_method", "return_requests"),
-	ReturnShippingLabelURL: orm.NewField[string]("return_shipping_label_url", "return_requests"),
-	ReturnTrackingNumber: orm.NewField[string]("return_tracking_number", "return_requests"),
-	ReturnCarrier:   orm.NewField[string]("return_carrier", "return_requests"),
-	Status:          orm.NewField[string]("status", "return_requests"),
-	StatusHistory:   orm.NewField[[]StatusChange]("status_history", "return_requests"),
-	InspectedAt:     orm.NewField[*time.Time]("inspected_at", "return_requests"),
-	InspectionNotes: orm.NewField[string]("inspection_notes", "return_requests"),
-	InspectionResult: orm.NewField[string]("inspection_result", "return_requests"),
-	ApprovedAt:      orm.NewField[*time.Time]("approved_at", "return_requests"),
-	ReturnedAt:      orm.NewField[*time.Time]("returned_at", "return_requests"),
-	CompletedAt:     orm.NewField[*time.Time]("completed_at", "return_requests"),
-	CreatedAt:       orm.NewField[time.Time]("created_at", "return_requests"),
-	UpdatedAt:       orm.NewField[time.Time]("updated_at", "return_requests"),
+	Id:                     orm.NewField[int64]("id", "return_requests"),
+	ReturnNumber:           orm.NewField[string]("return_number", "return_requests"),
+	OrderId:                orm.NewField[int64]("order_id", "return_requests"),
+	CustomerId:             orm.NewField[int64]("customer_id", "return_requests"),
+	Reason:                 orm.NewField[string]("reason", "return_requests"),
+	ReasonDetail:           orm.NewField[string]("reason_detail", "return_requests"),
+	Items:                  orm.NewField[string]("items", "return_requests"),
+	ResolutionType:         orm.NewField[string]("resolution_type", "return_requests"),
+	ResolutionDetail:       orm.NewField[string]("resolution_detail", "return_requests"),
+	RefundAmount:           orm.NewField[float64]("refund_amount", "return_requests"),
+	RefundMethod:           orm.NewField[string]("refund_method", "return_requests"),
+	RefundStatus:           orm.NewField[string]("refund_status", "return_requests"),
+	RefundProcessedAt:      orm.NewField[time.Time]("refund_processed_at", "return_requests"),
+	ReturnShippingMethod:   orm.NewField[string]("return_shipping_method", "return_requests"),
+	ReturnShippingLabelUrl: orm.NewField[string]("return_shipping_label_url", "return_requests"),
+	ReturnTrackingNumber:   orm.NewField[string]("return_tracking_number", "return_requests"),
+	ReturnCarrier:          orm.NewField[string]("return_carrier", "return_requests"),
+	Status:                 orm.NewField[string]("status", "return_requests"),
+	StatusHistory:          orm.NewField[string]("status_history", "return_requests"),
+	InspectedAt:            orm.NewField[time.Time]("inspected_at", "return_requests"),
+	InspectionNotes:        orm.NewField[string]("inspection_notes", "return_requests"),
+	InspectionResult:       orm.NewField[string]("inspection_result", "return_requests"),
+	ApprovedAt:             orm.NewField[time.Time]("approved_at", "return_requests"),
+	ReturnedAt:             orm.NewField[time.Time]("returned_at", "return_requests"),
+	CompletedAt:            orm.NewField[time.Time]("completed_at", "return_requests"),
+	CreatedAt:              orm.NewField[time.Time]("created_at", "return_requests"),
+	UpdatedAt:              orm.NewField[time.Time]("updated_at", "return_requests"),
 }
 
 // LiveChatSessionGenerated struct definition
 type LiveChatSessionGenerated struct {
 	schema.BaseSchema
-	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	SessionID       string           `json:"session_id" bson:"session_id"`
-	CustomerID      *primitive.ObjectID `json:"customer_id,omitempty" bson:"customer_id,omitempty"`
-	GuestName       string           `json:"guest_name" bson:"guest_name"`
-	GuestEmail      string           `json:"guest_email" bson:"guest_email"`
-	AgentID         *primitive.ObjectID `json:"agent_id,omitempty" bson:"agent_id,omitempty"`
-	AgentName       string           `json:"agent_name" bson:"agent_name"`
-	Status          string           `json:"status" bson:"status"`
-	Type            string           `json:"type" bson:"type"`
-	Subject         string           `json:"subject" bson:"subject"`
-	Messages        []ChatMessage    `json:"messages" bson:"messages"`
-	EndReason       string           `json:"end_reason" bson:"end_reason"`
-	EndNotes        string           `json:"end_notes" bson:"end_notes"`
-	CustomerSatisfaction *int         `json:"customer_satisfaction,omitempty" bson:"customer_satisfaction,omitempty"`
-	WaitTimeSeconds int              `json:"wait_time_seconds" bson:"wait_time_seconds"`
-	ChatDurationSeconds int          `json:"chat_duration_seconds" bson:"chat_duration_seconds"`
-	RelatedTicketID *primitive.ObjectID `json:"related_ticket_id,omitempty" bson:"related_ticket_id,omitempty"`
-	RelatedOrderID  *primitive.ObjectID `json:"related_order_id,omitempty" bson:"related_order_id,omitempty"`
-	StartedAt       time.Time        `json:"started_at" bson:"started_at"`
-	EndedAt         *time.Time       `json:"ended_at,omitempty" bson:"ended_at,omitempty"`
+	Id                   int64     `json:"id" db:"id" validate:""`
+	SessionId            string    `json:"session_id" db:"session_id" validate:""`
+	CustomerId           int64     `json:"customer_id" db:"customer_id" validate:""`
+	GuestName            string    `json:"guest_name" db:"guest_name" validate:""`
+	GuestEmail           string    `json:"guest_email" db:"guest_email" validate:""`
+	AgentId              int64     `json:"agent_id" db:"agent_id" validate:""`
+	AgentName            string    `json:"agent_name" db:"agent_name" validate:""`
+	Status               string    `json:"status" db:"status" validate:""`
+	Type                 string    `json:"type" db:"type" validate:""`
+	Subject              string    `json:"subject" db:"subject" validate:""`
+	Messages             string    `json:"messages" db:"messages" validate:""`
+	EndReason            string    `json:"end_reason" db:"end_reason" validate:""`
+	EndNotes             string    `json:"end_notes" db:"end_notes" validate:""`
+	CustomerSatisfaction int32     `json:"customer_satisfaction" db:"customer_satisfaction" validate:""`
+	WaitTimeSeconds      int32     `json:"wait_time_seconds" db:"wait_time_seconds" validate:""`
+	ChatDurationSeconds  int32     `json:"chat_duration_seconds" db:"chat_duration_seconds" validate:""`
+	RelatedTicketId      int64     `json:"related_ticket_id" db:"related_ticket_id" validate:""`
+	RelatedOrderId       int64     `json:"related_order_id" db:"related_order_id" validate:""`
+	StartedAt            time.Time `json:"started_at" db:"started_at" validate:""`
+	EndedAt              time.Time `json:"ended_at" db:"ended_at" validate:""`
 }
 
 // Validate validates the LiveChatSession model
 func (m *LiveChatSession) Validate() error {
-	return nil
+	validator := validate.NewValidator()
+	return validate.ValidateModel(validator, m)
 }
 
 // LiveChatSessionObjects provides type-safe operations for LiveChatSession
@@ -290,72 +294,73 @@ var LiveChatSessionObjects, _ = orm.NewManager[LiveChatSession]("live_chat_sessi
 
 // LiveChatSessionFields provides type-safe field access for LiveChatSession
 type LiveChatSessionFields struct {
-	ID              orm.Field[primitive.ObjectID]
-	SessionID       orm.Field[string]
-	CustomerID      orm.Field[*primitive.ObjectID]
-	GuestName       orm.Field[string]
-	GuestEmail      orm.Field[string]
-	AgentID         orm.Field[*primitive.ObjectID]
-	AgentName       orm.Field[string]
-	Status          orm.Field[string]
-	Type            orm.Field[string]
-	Subject         orm.Field[string]
-	Messages        orm.Field[[]ChatMessage]
-	EndReason       orm.Field[string]
-	EndNotes        orm.Field[string]
-	CustomerSatisfaction orm.Field[*int]
-	WaitTimeSeconds orm.Field[int]
-	ChatDurationSeconds orm.Field[int]
-	RelatedTicketID orm.Field[*primitive.ObjectID]
-	RelatedOrderID  orm.Field[*primitive.ObjectID]
-	StartedAt       orm.Field[time.Time]
-	EndedAt         orm.Field[*time.Time]
+	Id                   orm.Field[int64]
+	SessionId            orm.Field[string]
+	CustomerId           orm.Field[int64]
+	GuestName            orm.Field[string]
+	GuestEmail           orm.Field[string]
+	AgentId              orm.Field[int64]
+	AgentName            orm.Field[string]
+	Status               orm.Field[string]
+	Type                 orm.Field[string]
+	Subject              orm.Field[string]
+	Messages             orm.Field[string]
+	EndReason            orm.Field[string]
+	EndNotes             orm.Field[string]
+	CustomerSatisfaction orm.Field[int32]
+	WaitTimeSeconds      orm.Field[int32]
+	ChatDurationSeconds  orm.Field[int32]
+	RelatedTicketId      orm.Field[int64]
+	RelatedOrderId       orm.Field[int64]
+	StartedAt            orm.Field[time.Time]
+	EndedAt              orm.Field[time.Time]
 }
 
 var LiveChatSessionFieldsInstance = LiveChatSessionFields{
-	ID:              orm.NewField[primitive.ObjectID]("id", "live_chat_sessions"),
-	SessionID:       orm.NewField[string]("session_id", "live_chat_sessions"),
-	CustomerID:      orm.NewField[*primitive.ObjectID]("customer_id", "live_chat_sessions"),
-	GuestName:       orm.NewField[string]("guest_name", "live_chat_sessions"),
-	GuestEmail:      orm.NewField[string]("guest_email", "live_chat_sessions"),
-	AgentID:         orm.NewField[*primitive.ObjectID]("agent_id", "live_chat_sessions"),
-	AgentName:       orm.NewField[string]("agent_name", "live_chat_sessions"),
-	Status:          orm.NewField[string]("status", "live_chat_sessions"),
-	Type:            orm.NewField[string]("type", "live_chat_sessions"),
-	Subject:         orm.NewField[string]("subject", "live_chat_sessions"),
-	Messages:        orm.NewField[[]ChatMessage]("messages", "live_chat_sessions"),
-	EndReason:       orm.NewField[string]("end_reason", "live_chat_sessions"),
-	EndNotes:        orm.NewField[string]("end_notes", "live_chat_sessions"),
-	CustomerSatisfaction: orm.NewField[*int]("customer_satisfaction", "live_chat_sessions"),
-	WaitTimeSeconds: orm.NewField[int]("wait_time_seconds", "live_chat_sessions"),
-	ChatDurationSeconds: orm.NewField[int]("chat_duration_seconds", "live_chat_sessions"),
-	RelatedTicketID: orm.NewField[*primitive.ObjectID]("related_ticket_id", "live_chat_sessions"),
-	RelatedOrderID:  orm.NewField[*primitive.ObjectID]("related_order_id", "live_chat_sessions"),
-	StartedAt:       orm.NewField[time.Time]("started_at", "live_chat_sessions"),
-	EndedAt:         orm.NewField[*time.Time]("ended_at", "live_chat_sessions"),
+	Id:                   orm.NewField[int64]("id", "live_chat_sessions"),
+	SessionId:            orm.NewField[string]("session_id", "live_chat_sessions"),
+	CustomerId:           orm.NewField[int64]("customer_id", "live_chat_sessions"),
+	GuestName:            orm.NewField[string]("guest_name", "live_chat_sessions"),
+	GuestEmail:           orm.NewField[string]("guest_email", "live_chat_sessions"),
+	AgentId:              orm.NewField[int64]("agent_id", "live_chat_sessions"),
+	AgentName:            orm.NewField[string]("agent_name", "live_chat_sessions"),
+	Status:               orm.NewField[string]("status", "live_chat_sessions"),
+	Type:                 orm.NewField[string]("type", "live_chat_sessions"),
+	Subject:              orm.NewField[string]("subject", "live_chat_sessions"),
+	Messages:             orm.NewField[string]("messages", "live_chat_sessions"),
+	EndReason:            orm.NewField[string]("end_reason", "live_chat_sessions"),
+	EndNotes:             orm.NewField[string]("end_notes", "live_chat_sessions"),
+	CustomerSatisfaction: orm.NewField[int32]("customer_satisfaction", "live_chat_sessions"),
+	WaitTimeSeconds:      orm.NewField[int32]("wait_time_seconds", "live_chat_sessions"),
+	ChatDurationSeconds:  orm.NewField[int32]("chat_duration_seconds", "live_chat_sessions"),
+	RelatedTicketId:      orm.NewField[int64]("related_ticket_id", "live_chat_sessions"),
+	RelatedOrderId:       orm.NewField[int64]("related_order_id", "live_chat_sessions"),
+	StartedAt:            orm.NewField[time.Time]("started_at", "live_chat_sessions"),
+	EndedAt:              orm.NewField[time.Time]("ended_at", "live_chat_sessions"),
 }
 
 // FAQGenerated struct definition
 type FAQGenerated struct {
 	schema.BaseSchema
-	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Question        string           `json:"question" bson:"question"`
-	Answer          string           `json:"answer" bson:"answer"`
-	Category        string           `json:"category" bson:"category"`
-	Keywords        []string         `json:"keywords" bson:"keywords"`
-	DisplayOrder    int              `json:"display_order" bson:"display_order"`
-	IsVisible       bool              `json:"is_visible" bson:"is_visible"`
-	IsFeatured      bool              `json:"is_featured" bson:"is_featured"`
-	ViewCount       int              `json:"view_count" bson:"view_count"`
-	HelpfulCount    int              `json:"helpful_count" bson:"helpful_count"`
-	NotHelpfulCount int              `json:"not_helpful_count" bson:"not_helpful_count"`
-	CreatedAt       time.Time        `json:"created_at" bson:"created_at"`
-	UpdatedAt       time.Time        `json:"updated_at" bson:"updated_at"`
+	Id              int64     `json:"id" db:"id" validate:""`
+	Question        string    `json:"question" db:"question" validate:""`
+	Answer          string    `json:"answer" db:"answer" validate:""`
+	Category        string    `json:"category" db:"category" validate:""`
+	Keywords        string    `json:"keywords" db:"keywords" validate:""`
+	DisplayOrder    int32     `json:"display_order" db:"display_order" validate:""`
+	IsVisible       bool      `json:"is_visible" db:"is_visible" validate:""`
+	IsFeatured      bool      `json:"is_featured" db:"is_featured" validate:""`
+	ViewCount       int32     `json:"view_count" db:"view_count" validate:""`
+	HelpfulCount    int32     `json:"helpful_count" db:"helpful_count" validate:""`
+	NotHelpfulCount int32     `json:"not_helpful_count" db:"not_helpful_count" validate:""`
+	CreatedAt       time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt       time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the FAQ model
 func (m *FAQ) Validate() error {
-	return nil
+	validator := validate.NewValidator()
+	return validate.ValidateModel(validator, m)
 }
 
 // FAQObjects provides type-safe operations for FAQ
@@ -363,428 +368,33 @@ var FAQObjects, _ = orm.NewManager[FAQ]("faqs")
 
 // FAQFields provides type-safe field access for FAQ
 type FAQFields struct {
-	ID              orm.Field[primitive.ObjectID]
+	Id              orm.Field[int64]
 	Question        orm.Field[string]
 	Answer          orm.Field[string]
 	Category        orm.Field[string]
-	Keywords        orm.Field[[]string]
-	DisplayOrder    orm.Field[int]
+	Keywords        orm.Field[string]
+	DisplayOrder    orm.Field[int32]
 	IsVisible       orm.Field[bool]
 	IsFeatured      orm.Field[bool]
-	ViewCount       orm.Field[int]
-	HelpfulCount    orm.Field[int]
-	NotHelpfulCount orm.Field[int]
+	ViewCount       orm.Field[int32]
+	HelpfulCount    orm.Field[int32]
+	NotHelpfulCount orm.Field[int32]
 	CreatedAt       orm.Field[time.Time]
 	UpdatedAt       orm.Field[time.Time]
 }
 
 var FAQFieldsInstance = FAQFields{
-	ID:              orm.NewField[primitive.ObjectID]("id", "faqs"),
+	Id:              orm.NewField[int64]("id", "faqs"),
 	Question:        orm.NewField[string]("question", "faqs"),
 	Answer:          orm.NewField[string]("answer", "faqs"),
 	Category:        orm.NewField[string]("category", "faqs"),
-	Keywords:        orm.NewField[[]string]("keywords", "faqs"),
-	DisplayOrder:    orm.NewField[int]("display_order", "faqs"),
+	Keywords:        orm.NewField[string]("keywords", "faqs"),
+	DisplayOrder:    orm.NewField[int32]("display_order", "faqs"),
 	IsVisible:       orm.NewField[bool]("is_visible", "faqs"),
 	IsFeatured:      orm.NewField[bool]("is_featured", "faqs"),
-	ViewCount:       orm.NewField[int]("view_count", "faqs"),
-	HelpfulCount:    orm.NewField[int]("helpful_count", "faqs"),
-	NotHelpfulCount: orm.NewField[int]("not_helpful_count", "faqs"),
+	ViewCount:       orm.NewField[int32]("view_count", "faqs"),
+	HelpfulCount:    orm.NewField[int32]("helpful_count", "faqs"),
+	NotHelpfulCount: orm.NewField[int32]("not_helpful_count", "faqs"),
 	CreatedAt:       orm.NewField[time.Time]("created_at", "faqs"),
 	UpdatedAt:       orm.NewField[time.Time]("updated_at", "faqs"),
 }
-package support
-
-import (
-	"time"
-
-	"github.com/forgego/forge/orm"
-	"github.com/forgego/forge/schema"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-)
-
-// SupportTicketGenerated struct definition
-type SupportTicketGenerated struct {
-	schema.BaseSchema
-	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	TicketNumber    string           `json:"ticket_number" bson:"ticket_number"`
-	CustomerID      primitive.ObjectID `json:"customer_id" bson:"customer_id"`
-	Type            string           `json:"type" bson:"type"`
-	Subject         string           `json:"subject" bson:"subject"`
-	Description     string           `json:"description" bson:"description"`
-	Priority        string           `json:"priority" bson:"priority"`
-	Status         string           `json:"status" bson:"status"`
-	AssignedTo      *primitive.ObjectID `json:"assigned_to,omitempty" bson:"assigned_to,omitempty"`
-	AssignedGroup   string           `json:"assigned_group" bson:"assigned_group"`
-	RelatedType     string           `json:"related_type" bson:"related_type"`
-	RelatedID      primitive.ObjectID `json:"related_id,omitempty" bson:"related_id,omitempty"`
-	Tags            []string         `json:"tags" bson:"tags"`
-	Resolution      string           `json:"resolution" bson:"resolution"`
-	ResolvedAt     *time.Time       `json:"resolved_at,omitempty" bson:"resolved_at,omitempty"`
-	CustomerSatisfaction *int        `json:"customer_satisfaction,omitempty" bson:"customer_satisfaction,omitempty"`
-	CustomerFeedback string         `json:"customer_feedback" bson:"customer_feedback"`
-	IsEscalated    bool             `json:"is_escalated" bson:"is_escalated"`
-	EscalatedAt    *time.Time       `json:"escalated_at,omitempty" bson:"escalated_at,omitempty"`
-	EscalationReason string         `json:"escalation_reason" bson:"escalation_reason"`
-	FirstResponseAt *time.Time      `json:"first_response_at,omitempty" bson:"first_response_at,omitempty"`
-	CreatedAt       time.Time       `json:"created_at" bson:"created_at"`
-	UpdatedAt       time.Time       `json:"updated_at" bson:"updated_at"`
-}
-
-// Validate validates the SupportTicket model
-func (m *SupportTicket) Validate() error {
-	return nil
-}
-
-// SupportTicketObjects provides type-safe operations for SupportTicket
-var SupportTicketObjects, _ = orm.NewManager[SupportTicket]("support_tickets")
-
-// SupportTicketFields provides type-safe field access for SupportTicket
-type SupportTicketFields struct {
-	ID              orm.Field[primitive.ObjectID]
-	TicketNumber    orm.Field[string]
-	CustomerID      orm.Field[primitive.ObjectID]
-	Type            orm.Field[string]
-	Subject         orm.Field[string]
-	Description     orm.Field[string]
-	Priority        orm.Field[string]
-	Status         orm.Field[string]
-	AssignedTo      orm.Field[*primitive.ObjectID]
-	AssignedGroup   orm.Field[string]
-	RelatedType     orm.Field[string]
-	RelatedID      orm.Field[primitive.ObjectID]
-	Tags            orm.Field[[]string]
-	Resolution      orm.Field[string]
-	ResolvedAt     orm.Field[*time.Time]
-	CustomerSatisfaction orm.Field[*int]
-	CustomerFeedback orm.Field[string]
-	IsEscalated    orm.Field[bool]
-	EscalatedAt    orm.Field[*time.Time]
-	EscalationReason orm.Field[string]
-	FirstResponseAt orm.Field[*time.Time]
-	CreatedAt       orm.Field[time.Time]
-	UpdatedAt       orm.Field[time.Time]
-}
-
-var SupportTicketFieldsInstance = SupportTicketFields{
-	ID:              orm.NewField[primitive.ObjectID]("id", "support_tickets"),
-	TicketNumber:    orm.NewField[string]("ticket_number", "support_tickets"),
-	CustomerID:      orm.NewField[primitive.ObjectID]("customer_id", "support_tickets"),
-	Type:            orm.NewField[string]("type", "support_tickets"),
-	Subject:         orm.NewField[string]("subject", "support_tickets"),
-	Description:     orm.NewField[string]("description", "support_tickets"),
-	Priority:        orm.NewField[string]("priority", "support_tickets"),
-	Status:         orm.NewField[string]("status", "support_tickets"),
-	AssignedTo:      orm.NewField[*primitive.ObjectID]("assigned_to", "support_tickets"),
-	AssignedGroup:   orm.NewField[string]("assigned_group", "support_tickets"),
-	RelatedType:     orm.NewField[string]("related_type", "support_tickets"),
-	RelatedID:      orm.NewField[primitive.ObjectID]("related_id", "support_tickets"),
-	Tags:            orm.NewField[[]string]("tags", "support_tickets"),
-	Resolution:      orm.NewField[string]("resolution", "support_tickets"),
-	ResolvedAt:     orm.NewField[*time.Time]("resolved_at", "support_tickets"),
-	CustomerSatisfaction: orm.NewField[*int]("customer_satisfaction", "support_tickets"),
-	CustomerFeedback: orm.NewField[string]("customer_feedback", "support_tickets"),
-	IsEscalated:    orm.NewField[bool]("is_escalated", "support_tickets"),
-	EscalatedAt:    orm.NewField[*time.Time]("escalated_at", "support_tickets"),
-	EscalationReason: orm.NewField[string]("escalation_reason", "support_tickets"),
-	FirstResponseAt: orm.NewField[*time.Time]("first_response_at", "support_tickets"),
-	CreatedAt:       orm.NewField[time.Time]("created_at", "support_tickets"),
-	UpdatedAt:       orm.NewField[time.Time]("updated_at", "support_tickets"),
-}
-
-// SupportMessageGenerated struct definition
-type SupportMessageGenerated struct {
-	schema.BaseSchema
-	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	TicketID        primitive.ObjectID `json:"ticket_id" bson:"ticket_id"`
-	SenderType      string           `json:"sender_type" bson:"sender_type"`
-	CustomerID      *primitive.ObjectID `json:"customer_id,omitempty" bson:"customer_id,omitempty"`
-	AgentID         *primitive.ObjectID `json:"agent_id,omitempty" bson:"agent_id,omitempty"`
-	Content         string           `json:"content" bson:"content"`
-	ContentType     string           `json:"content_type" bson:"content_type"`
-	Attachments     []Attachment     `json:"attachments" bson:"attachments"`
-	IsInternalNote  bool             `json:"is_internal_note" bson:"is_internal_note"`
-	IsAutomated     bool             `json:"is_automated" bson:"is_automated"`
-	AutomationRuleID string          `json:"automation_rule_id" bson:"automation_rule_id"`
-	CreatedAt       time.Time        `json:"created_at" bson:"created_at"`
-}
-
-// Validate validates the SupportMessage model
-func (m *SupportMessage) Validate() error {
-	return nil
-}
-
-// SupportMessageObjects provides type-safe operations for SupportMessage
-var SupportMessageObjects, _ = orm.NewManager[SupportMessage]("support_messages")
-
-// SupportMessageFields provides type-safe field access for SupportMessage
-type SupportMessageFields struct {
-	ID              orm.Field[primitive.ObjectID]
-	TicketID        orm.Field[primitive.ObjectID]
-	SenderType      orm.Field[string]
-	CustomerID      orm.Field[*primitive.ObjectID]
-	AgentID         orm.Field[*primitive.ObjectID]
-	Content         orm.Field[string]
-	ContentType     orm.Field[string]
-	Attachments     orm.Field[[]Attachment]
-	IsInternalNote  orm.Field[bool]
-	IsAutomated     orm.Field[bool]
-	AutomationRuleID orm.Field[string]
-	CreatedAt       orm.Field[time.Time]
-}
-
-var SupportMessageFieldsInstance = SupportMessageFields{
-	ID:              orm.NewField[primitive.ObjectID]("id", "support_messages"),
-	TicketID:        orm.NewField[primitive.ObjectID]("ticket_id", "support_messages"),
-	SenderType:      orm.NewField[string]("sender_type", "support_messages"),
-	CustomerID:      orm.NewField[*primitive.ObjectID]("customer_id", "support_messages"),
-	AgentID:         orm.NewField[*primitive.ObjectID]("agent_id", "support_messages"),
-	Content:         orm.NewField[string]("content", "support_messages"),
-	ContentType:     orm.NewField[string]("content_type", "support_messages"),
-	Attachments:     orm.NewField[[]Attachment]("attachments", "support_messages"),
-	IsInternalNote:  orm.NewField[bool]("is_internal_note", "support_messages"),
-	IsAutomated:     orm.NewField[bool]("is_automated", "support_messages"),
-	AutomationRuleID: orm.NewField[string]("automation_rule_id", "support_messages"),
-	CreatedAt:       orm.NewField[time.Time]("created_at", "support_messages"),
-}
-
-// ReturnRequestGenerated struct definition
-type ReturnRequestGenerated struct {
-	schema.BaseSchema
-	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	ReturnNumber    string           `json:"return_number" bson:"return_number"`
-	OrderID         primitive.ObjectID `json:"order_id" bson:"order_id"`
-	CustomerID      primitive.ObjectID `json:"customer_id" bson:"customer_id"`
-	Reason          string           `json:"reason" bson:"reason"`
-	ReasonDetail    string           `json:"reason_detail" bson:"reason_detail"`
-	Items           []ReturnItem     `json:"items" bson:"items"`
-	ResolutionType  string           `json:"resolution_type" bson:"resolution_type"`
-	ResolutionDetail string          `json:"resolution_detail" bson:"resolution_detail"`
-	RefundAmount    float64          `json:"refund_amount" bson:"refund_amount"`
-	RefundMethod    string           `json:"refund_method" bson:"refund_method"`
-	RefundStatus    string           `json:"refund_status" bson:"refund_status"`
-	RefundProcessedAt *time.Time     `json:"refund_processed_at,omitempty" bson:"refund_processed_at,omitempty"`
-	ReturnShippingMethod string      `json:"return_shipping_method" bson:"return_shipping_method"`
-	ReturnShippingLabelURL string    `json:"return_shipping_label_url" bson:"return_shipping_label_url"`
-	ReturnTrackingNumber string     `json:"return_tracking_number" bson:"return_tracking_number"`
-	ReturnCarrier   string           `json:"return_carrier" bson:"return_carrier"`
-	Status          string           `json:"status" bson:"status"`
-	StatusHistory   []StatusChange   `json:"status_history" bson:"status_history"`
-	InspectedAt     *time.Time      `json:"inspected_at,omitempty" bson:"inspected_at,omitempty"`
-	InspectionNotes string          `json:"inspection_notes" bson:"inspection_notes"`
-	InspectionResult string         `json:"inspection_result" bson:"inspection_result"`
-	ApprovedAt      *time.Time       `json:"approved_at,omitempty" bson:"approved_at,omitempty"`
-	ReturnedAt      *time.Time      `json:"returned_at,omitempty" bson:"returned_at,omitempty"`
-	CompletedAt     *time.Time       `json:"completed_at,omitempty" bson:"completed_at,omitempty"`
-	CreatedAt       time.Time       `json:"created_at" bson:"created_at"`
-	UpdatedAt       time.Time       `json:"updated_at" bson:"updated_at"`
-}
-
-// Validate validates the ReturnRequest model
-func (m *ReturnRequest) Validate() error {
-	return nil
-}
-
-// ReturnRequestObjects provides type-safe operations for ReturnRequest
-var ReturnRequestObjects, _ = orm.NewManager[ReturnRequest]("return_requests")
-
-// ReturnRequestFields provides type-safe field access for ReturnRequest
-type ReturnRequestFields struct {
-	ID              orm.Field[primitive.ObjectID]
-	ReturnNumber    orm.Field[string]
-	OrderID         orm.Field[primitive.ObjectID]
-	CustomerID      orm.Field[primitive.ObjectID]
-	Reason          orm.Field[string]
-	ReasonDetail    orm.Field[string]
-	Items           orm.Field[[]ReturnItem]
-	ResolutionType  orm.Field[string]
-	ResolutionDetail orm.Field[string]
-	RefundAmount    orm.Field[float64]
-	RefundMethod    orm.Field[string]
-	RefundStatus    orm.Field[string]
-	RefundProcessedAt orm.Field[*time.Time]
-	ReturnShippingMethod orm.Field[string]
-	ReturnShippingLabelURL orm.Field[string]
-	ReturnTrackingNumber orm.Field[string]
-	ReturnCarrier   orm.Field[string]
-	Status          orm.Field[string]
-	StatusHistory   orm.Field[[]StatusChange]
-	InspectedAt     orm.Field[*time.Time]
-	InspectionNotes orm.Field[string]
-	InspectionResult orm.Field[string]
-	ApprovedAt      orm.Field[*time.Time]
-	ReturnedAt      orm.Field[*time.Time]
-	CompletedAt     orm.Field[*time.Time]
-	CreatedAt       orm.Field[time.Time]
-	UpdatedAt       orm.Field[time.Time]
-}
-
-var ReturnRequestFieldsInstance = ReturnRequestFields{
-	ID:              orm.NewField[primitive.ObjectID]("id", "return_requests"),
-	ReturnNumber:    orm.NewField[string]("return_number", "return_requests"),
-	OrderID:         orm.NewField[primitive.ObjectID]("order_id", "return_requests"),
-	CustomerID:      orm.NewField[primitive.ObjectID]("customer_id", "return_requests"),
-	Reason:          orm.NewField[string]("reason", "return_requests"),
-	ReasonDetail:    orm.NewField[string]("reason_detail", "return_requests"),
-	Items:           orm.NewField[[]ReturnItem]("items", "return_requests"),
-	ResolutionType:  orm.NewField[string]("resolution_type", "return_requests"),
-	ResolutionDetail: orm.NewField[string]("resolution_detail", "return_requests"),
-	RefundAmount:    orm.NewField[float64]("refund_amount", "return_requests"),
-	RefundMethod:    orm.NewField[string]("refund_method", "return_requests"),
-	RefundStatus:    orm.NewField[string]("refund_status", "return_requests"),
-	RefundProcessedAt: orm.NewField[*time.Time]("refund_processed_at", "return_requests"),
-	ReturnShippingMethod: orm.NewField[string]("return_shipping_method", "return_requests"),
-	ReturnShippingLabelURL: orm.NewField[string]("return_shipping_label_url", "return_requests"),
-	ReturnTrackingNumber: orm.NewField[string]("return_tracking_number", "return_requests"),
-	ReturnCarrier:   orm.NewField[string]("return_carrier", "return_requests"),
-	Status:          orm.NewField[string]("status", "return_requests"),
-	StatusHistory:   orm.NewField[[]StatusChange]("status_history", "return_requests"),
-	InspectedAt:     orm.NewField[*time.Time]("inspected_at", "return_requests"),
-	InspectionNotes: orm.NewField[string]("inspection_notes", "return_requests"),
-	InspectionResult: orm.NewField[string]("inspection_result", "return_requests"),
-	ApprovedAt:      orm.NewField[*time.Time]("approved_at", "return_requests"),
-	ReturnedAt:      orm.NewField[*time.Time]("returned_at", "return_requests"),
-	CompletedAt:     orm.NewField[*time.Time]("completed_at", "return_requests"),
-	CreatedAt:       orm.NewField[time.Time]("created_at", "return_requests"),
-	UpdatedAt:       orm.NewField[time.Time]("updated_at", "return_requests"),
-}
-
-// LiveChatSessionGenerated struct definition
-type LiveChatSessionGenerated struct {
-	schema.BaseSchema
-	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	SessionID       string           `json:"session_id" bson:"session_id"`
-	CustomerID      *primitive.ObjectID `json:"customer_id,omitempty" bson:"customer_id,omitempty"`
-	GuestName       string           `json:"guest_name" bson:"guest_name"`
-	GuestEmail      string           `json:"guest_email" bson:"guest_email"`
-	AgentID         *primitive.ObjectID `json:"agent_id,omitempty" bson:"agent_id,omitempty"`
-	AgentName       string           `json:"agent_name" bson:"agent_name"`
-	Status          string           `json:"status" bson:"status"`
-	Type            string           `json:"type" bson:"type"`
-	Subject         string           `json:"subject" bson:"subject"`
-	Messages        []ChatMessage    `json:"messages" bson:"messages"`
-	EndReason       string           `json:"end_reason" bson:"end_reason"`
-	EndNotes        string           `json:"end_notes" bson:"end_notes"`
-	CustomerSatisfaction *int         `json:"customer_satisfaction,omitempty" bson:"customer_satisfaction,omitempty"`
-	WaitTimeSeconds int              `json:"wait_time_seconds" bson:"wait_time_seconds"`
-	ChatDurationSeconds int          `json:"chat_duration_seconds" bson:"chat_duration_seconds"`
-	RelatedTicketID *primitive.ObjectID `json:"related_ticket_id,omitempty" bson:"related_ticket_id,omitempty"`
-	RelatedOrderID  *primitive.ObjectID `json:"related_order_id,omitempty" bson:"related_order_id,omitempty"`
-	StartedAt       time.Time        `json:"started_at" bson:"started_at"`
-	EndedAt         *time.Time       `json:"ended_at,omitempty" bson:"ended_at,omitempty"`
-}
-
-// Validate validates the LiveChatSession model
-func (m *LiveChatSession) Validate() error {
-	return nil
-}
-
-// LiveChatSessionObjects provides type-safe operations for LiveChatSession
-var LiveChatSessionObjects, _ = orm.NewManager[LiveChatSession]("live_chat_sessions")
-
-// LiveChatSessionFields provides type-safe field access for LiveChatSession
-type LiveChatSessionFields struct {
-	ID              orm.Field[primitive.ObjectID]
-	SessionID       orm.Field[string]
-	CustomerID      orm.Field[*primitive.ObjectID]
-	GuestName       orm.Field[string]
-	GuestEmail      orm.Field[string]
-	AgentID         orm.Field[*primitive.ObjectID]
-	AgentName       orm.Field[string]
-	Status          orm.Field[string]
-	Type            orm.Field[string]
-	Subject         orm.Field[string]
-	Messages        orm.Field[[]ChatMessage]
-	EndReason       orm.Field[string]
-	EndNotes        orm.Field[string]
-	CustomerSatisfaction orm.Field[*int]
-	WaitTimeSeconds orm.Field[int]
-	ChatDurationSeconds orm.Field[int]
-	RelatedTicketID orm.Field[*primitive.ObjectID]
-	RelatedOrderID  orm.Field[*primitive.ObjectID]
-	StartedAt       orm.Field[time.Time]
-	EndedAt         orm.Field[*time.Time]
-}
-
-var LiveChatSessionFieldsInstance = LiveChatSessionFields{
-	ID:              orm.NewField[primitive.ObjectID]("id", "live_chat_sessions"),
-	SessionID:       orm.NewField[string]("session_id", "live_chat_sessions"),
-	CustomerID:      orm.NewField[*primitive.ObjectID]("customer_id", "live_chat_sessions"),
-	GuestName:       orm.NewField[string]("guest_name", "live_chat_sessions"),
-	GuestEmail:      orm.NewField[string]("guest_email", "live_chat_sessions"),
-	AgentID:         orm.NewField[*primitive.ObjectID]("agent_id", "live_chat_sessions"),
-	AgentName:       orm.NewField[string]("agent_name", "live_chat_sessions"),
-	Status:          orm.NewField[string]("status", "live_chat_sessions"),
-	Type:            orm.NewField[string]("type", "live_chat_sessions"),
-	Subject:         orm.NewField[string]("subject", "live_chat_sessions"),
-	Messages:        orm.NewField[[]ChatMessage]("messages", "live_chat_sessions"),
-	EndReason:       orm.NewField[string]("end_reason", "live_chat_sessions"),
-	EndNotes:        orm.NewField[string]("end_notes", "live_chat_sessions"),
-	CustomerSatisfaction: orm.NewField[*int]("customer_satisfaction", "live_chat_sessions"),
-	WaitTimeSeconds: orm.NewField[int]("wait_time_seconds", "live_chat_sessions"),
-	ChatDurationSeconds: orm.NewField[int]("chat_duration_seconds", "live_chat_sessions"),
-	RelatedTicketID: orm.NewField[*primitive.ObjectID]("related_ticket_id", "live_chat_sessions"),
-	RelatedOrderID:  orm.NewField[*primitive.ObjectID]("related_order_id", "live_chat_sessions"),
-	StartedAt:       orm.NewField[time.Time]("started_at", "live_chat_sessions"),
-	EndedAt:         orm.NewField[*time.Time]("ended_at", "live_chat_sessions"),
-}
-
-// FAQGenerated struct definition
-type FAQGenerated struct {
-	schema.BaseSchema
-	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Question        string           `json:"question" bson:"question"`
-	Answer          string           `json:"answer" bson:"answer"`
-	Category        string           `json:"category" bson:"category"`
-	Keywords        []string         `json:"keywords" bson:"keywords"`
-	DisplayOrder    int              `json:"display_order" bson:"display_order"`
-	IsVisible       bool              `json:"is_visible" bson:"is_visible"`
-	IsFeatured      bool              `json:"is_featured" bson:"is_featured"`
-	ViewCount       int              `json:"view_count" bson:"view_count"`
-	HelpfulCount    int              `json:"helpful_count" bson:"helpful_count"`
-	NotHelpfulCount int              `json:"not_helpful_count" bson:"not_helpful_count"`
-	CreatedAt       time.Time        `json:"created_at" bson:"created_at"`
-	UpdatedAt       time.Time        `json:"updated_at" bson:"updated_at"`
-}
-
-// Validate validates the FAQ model
-func (m *FAQ) Validate() error {
-	return nil
-}
-
-// FAQObjects provides type-safe operations for FAQ
-var FAQObjects, _ = orm.NewManager[FAQ]("faqs")
-
-// FAQFields provides type-safe field access for FAQ
-type FAQFields struct {
-	ID              orm.Field[primitive.ObjectID]
-	Question        orm.Field[string]
-	Answer          orm.Field[string]
-	Category        orm.Field[string]
-	Keywords        orm.Field[[]string]
-	DisplayOrder    orm.Field[int]
-	IsVisible       orm.Field[bool]
-	IsFeatured      orm.Field[bool]
-	ViewCount       orm.Field[int]
-	HelpfulCount    orm.Field[int]
-	NotHelpfulCount orm.Field[int]
-	CreatedAt       orm.Field[time.Time]
-	UpdatedAt       orm.Field[time.Time]
-}
-
-var FAQFieldsInstance = FAQFields{
-	ID:              orm.NewField[primitive.ObjectID]("id", "faqs"),
-	Question:        orm.NewField[string]("question", "faqs"),
-	Answer:          orm.NewField[string]("answer", "faqs"),
-	Category:        orm.NewField[string]("category", "faqs"),
-	Keywords:        orm.NewField[[]string]("keywords", "faqs"),
-	DisplayOrder:    orm.NewField[int]("display_order", "faqs"),
-	IsVisible:       orm.NewField[bool]("is_visible", "faqs"),
-	IsFeatured:      orm.NewField[bool]("is_featured", "faqs"),
-	ViewCount:       orm.NewField[int]("view_count", "faqs"),
-	HelpfulCount:    orm.NewField[int]("helpful_count", "faqs"),
-	NotHelpfulCount: orm.NewField[int]("not_helpful_count", "faqs"),
-	CreatedAt:       orm.NewField[time.Time]("created_at", "faqs"),
-	UpdatedAt:       orm.NewField[time.Time]("updated_at", "faqs"),
-}
-

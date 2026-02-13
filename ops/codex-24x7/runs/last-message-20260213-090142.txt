@@ -1,0 +1,20 @@
+Implemented one focused high-impact batch on migrations reliability: nil-safe status reporting in the framework migration status reporter.
+
+**What changed**
+- Hardened `StatusReporter` to avoid nil dereference when migration engine is unavailable in `forge/db/migrate/execute/status.go:57`.
+- `GetDetailedStatus` now degrades gracefully with explicit metadata instead of panicking (`Current: Unknown (migration engine unavailable)`) in `forge/db/migrate/execute/status.go:65`.
+- Added nil-safe fallback handling in applied-version resolution paths in `forge/db/migrate/execute/status.go:195`.
+- Added regression tests:
+  - `forge/db/migrate/execute/status_test.go:74`
+  - `forge/db/migrate/execute/status_test.go:92`
+- Updated run tracking:
+  - `ops/codex-24x7/STATUS.md:4`
+  - `ops/codex-24x7/HISTORY.md:830`
+
+**Tests run**
+- `go test ./db/migrate/execute -count=1` (in `forge`) ✅
+- `go test ./... -count=1` (in `examples/ecommerce`) ✅
+
+**Notes**
+- `ops/codex-24x7/STATUS.md` and `ops/codex-24x7/HISTORY.md` are both updated for this run.
+- Remaining blockers are recorded in status/history (notably admin UI `vitest` spawn EPERM and support/engagement parity constraints).

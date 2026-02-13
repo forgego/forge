@@ -8,15 +8,20 @@ image: /forge-social-card.svg
 
 Define bulk actions that appear in list views.
 
-## Example
+## Built-in actions
+
+- Export CSV
+- Custom action handlers
+
+## Custom action
 
 ```go
 Actions: []admin.Action{
-    actions.ExportCSV(),
+    admin.NewAction("activate", "Activate", func(ctx context.Context, items []*Post) error {
+        return nil
+    }),
 }
 ```
-
-You can also register custom actions with a handler function.
 
 ## Next steps
 

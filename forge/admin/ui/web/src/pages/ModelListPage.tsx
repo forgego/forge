@@ -25,6 +25,7 @@ import {
   Plus,
   Search,
   Edit,
+  Eye,
   Trash2,
   Filter,
   CheckCircle,
@@ -633,6 +634,23 @@ export default function ModelListPage() {
                               <Edit className="h-3.5 w-3.5" />
                             </Button>
                           )}
+                          {!metadata.permissions.change &&
+                            metadata.permissions.view && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                data-testid={`view-${obj.id}`}
+                                className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                onClick={() =>
+                                  navigate({
+                                    to: "/$model/$id/view",
+                                    params: { model: modelName, id: obj.id },
+                                  })
+                                }
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
                           {metadata.permissions.delete && (
                             <Button
                               variant="ghost"

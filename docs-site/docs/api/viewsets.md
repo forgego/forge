@@ -6,13 +6,21 @@ image: /forge-social-card.svg
 
 # ViewSets
 
-ViewSets provide CRUD endpoints with built-in auth, permissions, and throttling hooks.
+ViewSets provide CRUD endpoints with built-in auth, permissions, throttling, pagination, and filters.
 
 ## Example
 
 ```go
 router.Register("posts", viewsets.NewModelViewSet(PostSerializer{}))
 ```
+
+## Enhanced viewset hooks
+
+- AuthenticationClasses
+- PermissionClasses
+- ThrottleClasses
+- ParserClasses
+- RendererClasses
 
 ## Next steps
 

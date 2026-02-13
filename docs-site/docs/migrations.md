@@ -1,18 +1,23 @@
 ---
-sidebar_position: 13
+sidebar_position: 12
 description: Generate and apply database migrations.
 image: /forge-social-card.svg
 ---
 
 # Migrations
 
-Use the CLI and migration engine to generate and apply schema changes.
+Forge provides generation, validation, and execution of migrations.
 
-## What you can do
+## Commands
 
-- Generate migrations from schema changes
-- Apply, rollback, and inspect migration status
-- Validate migrations (lint, safety, drift, checksums)
+- `forge makemigrations` (auto detect schema changes)
+- `forge migrate` (apply)
+- `forge migrate status`
+- `forge migrate rollback`
+- `forge migrate squash`
+- `forge migrate force`
+- `forge migrate fake`
+- `forge migrate lint`
 
 ## Create a migration
 
@@ -32,6 +37,15 @@ forge migrate
 forge migrate status
 forge migrate rollback
 ```
+
+## Validation
+
+The migration system includes:
+
+- checksum validation
+- safety checks
+- drift detection
+- SQL linting
 
 ## Next steps
 

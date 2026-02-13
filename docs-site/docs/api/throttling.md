@@ -17,6 +17,12 @@ api.SetDefaultThrottles(
 )
 ```
 
+## Classes
+
+- AnonRateThrottle
+- UserRateThrottle
+- Throttle cache backends
+
 ## Next steps
 
 - [Pagination](/docs/api/pagination/)

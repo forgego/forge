@@ -8,13 +8,15 @@ image: /forge-social-card.svg
 
 Filters control list views by field values or custom logic.
 
-## Example
+## Basic filters
 
 ```go
 Filters: []string{"published", "created_at"}
 ```
 
-Custom filter handlers can be defined for advanced logic.
+## Custom filter handlers
+
+Use filter handlers to apply custom QuerySet logic for sidebar filters.
 
 ## Next steps
 

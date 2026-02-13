@@ -1,0 +1,16 @@
+Implemented one focused production-readiness batch on ecommerce admin permission parity for multi-object updates.
+
+**What changed**
+- Added authenticated bulk object-permission integration coverage in `examples/ecommerce/main_test.go:608`:
+  - New test: `TestBuildEcommerceRouter_AdminAPIBulkUpdateObjectSpecificPaymentChangePermission`
+  - Verifies `POST /admin/api/payments/bulk-update` returns `207` with mixed outcomes:
+    - `completed` payment is denied (`permission_denied`)
+    - `pending` payment is updated
+  - Confirms persistence via follow-up detail `GET` checks.
+- Updated run tracking in:
+  - `ops/codex-24x7/STATUS.md:3`
+  - `ops/codex-24x7/HISTORY.md:484`
+
+**Tests run**
+- `go test ./admin/api/rest -count=1` (in `forge`) with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` -> pass
+- `go test ./... -count=1` (in `examples/ecommerce`) with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` -> pass

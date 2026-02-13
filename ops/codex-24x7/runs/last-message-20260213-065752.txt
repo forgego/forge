@@ -1,0 +1,20 @@
+Implemented one focused high-impact reliability batch on admin REST ID handling and updated run tracking.
+
+- Fixed single-object admin REST handlers to support both numeric and string IDs (parity with bulk handlers):
+  - `forge/admin/api/rest/router.go:434`
+  - `forge/admin/api/rest/router.go:494`
+  - `forge/admin/api/rest/router.go:541`
+  - `forge/admin/api/rest/router.go:591`
+  - Added shared helper: `forge/admin/api/rest/router.go:870`
+- Added regression tests for string-ID routes:
+  - `forge/admin/api/rest/router_test.go:365`
+  - `forge/admin/api/rest/router_test.go:382`
+  - `forge/admin/api/rest/router_test.go:403`
+  - `forge/admin/api/rest/router_test.go:490`
+- Updated run docs:
+  - `ops/codex-24x7/STATUS.md:3`
+  - `ops/codex-24x7/HISTORY.md:694`
+
+Tests run:
+1. `go test ./admin/api/rest -count=1` in `forge` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` (pass)
+2. `go test ./... -count=1` in `examples/ecommerce` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` (pass)

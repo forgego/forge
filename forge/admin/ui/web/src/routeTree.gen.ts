@@ -17,6 +17,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ModelIndexRouteImport } from './routes/$model/index'
 import { Route as ModelCreateRouteImport } from './routes/$model/create'
 import { Route as ModelIdRouteImport } from './routes/$model/$id'
+import { Route as ModelIdViewRouteImport } from './routes/$model/$id.view'
 import { Route as PluginsPluginIdPagesPageIdRouteImport } from './routes/plugins/$pluginId/pages/$pageId'
 
 const StyleGuideRoute = StyleGuideRouteImport.update({
@@ -59,6 +60,11 @@ const ModelIdRoute = ModelIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ModelRouteRoute,
 } as any)
+const ModelIdViewRoute = ModelIdViewRouteImport.update({
+  id: '/$id/view',
+  path: '/$id/view',
+  getParentRoute: () => ModelRouteRoute,
+} as any)
 const PluginsPluginIdPagesPageIdRoute =
   PluginsPluginIdPagesPageIdRouteImport.update({
     id: '/plugins/$pluginId/pages/$pageId',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/style-guide': typeof StyleGuideRoute
   '/$model/$id': typeof ModelIdRoute
+  '/$model/$id/view': typeof ModelIdViewRoute
   '/$model/create': typeof ModelCreateRoute
   '/$model/': typeof ModelIndexRoute
   '/plugins/$pluginId/pages/$pageId': typeof PluginsPluginIdPagesPageIdRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/style-guide': typeof StyleGuideRoute
   '/$model/$id': typeof ModelIdRoute
+  '/$model/$id/view': typeof ModelIdViewRoute
   '/$model/create': typeof ModelCreateRoute
   '/$model': typeof ModelIndexRoute
   '/plugins/$pluginId/pages/$pageId': typeof PluginsPluginIdPagesPageIdRoute
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/style-guide': typeof StyleGuideRoute
   '/$model/$id': typeof ModelIdRoute
+  '/$model/$id/view': typeof ModelIdViewRoute
   '/$model/create': typeof ModelCreateRoute
   '/$model/': typeof ModelIndexRoute
   '/plugins/$pluginId/pages/$pageId': typeof PluginsPluginIdPagesPageIdRoute
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/style-guide'
     | '/$model/$id'
+    | '/$model/$id/view'
     | '/$model/create'
     | '/$model/'
     | '/plugins/$pluginId/pages/$pageId'
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/style-guide'
     | '/$model/$id'
+    | '/$model/$id/view'
     | '/$model/create'
     | '/$model'
     | '/plugins/$pluginId/pages/$pageId'
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/style-guide'
     | '/$model/$id'
+    | '/$model/$id/view'
     | '/$model/create'
     | '/$model/'
     | '/plugins/$pluginId/pages/$pageId'
@@ -201,6 +213,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModelIdRouteImport
       parentRoute: typeof ModelRouteRoute
     }
+    '/$model/$id/view': {
+      id: '/$model/$id/view'
+      path: '/$id/view'
+      fullPath: '/$model/$id/view'
+      preLoaderRoute: typeof ModelIdViewRouteImport
+      parentRoute: typeof ModelRouteRoute
+    }
     '/plugins/$pluginId/pages/$pageId': {
       id: '/plugins/$pluginId/pages/$pageId'
       path: '/plugins/$pluginId/pages/$pageId'
@@ -213,12 +232,14 @@ declare module '@tanstack/react-router' {
 
 interface ModelRouteRouteChildren {
   ModelIdRoute: typeof ModelIdRoute
+  ModelIdViewRoute: typeof ModelIdViewRoute
   ModelCreateRoute: typeof ModelCreateRoute
   ModelIndexRoute: typeof ModelIndexRoute
 }
 
 const ModelRouteRouteChildren: ModelRouteRouteChildren = {
   ModelIdRoute: ModelIdRoute,
+  ModelIdViewRoute: ModelIdViewRoute,
   ModelCreateRoute: ModelCreateRoute,
   ModelIndexRoute: ModelIndexRoute,
 }

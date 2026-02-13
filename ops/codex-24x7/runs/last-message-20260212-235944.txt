@@ -1,0 +1,19 @@
+Implemented one focused reliability batch on identity DB-test isolation and updated run tracking files.
+
+Changed:
+- `forge/identity/testutils/db.go`
+- `forge/identity/testutils/db_test.go`
+- `ops/codex-24x7/STATUS.md`
+- `ops/codex-24x7/HISTORY.md`
+
+What I changed:
+- Hardened test DB naming to avoid cross-package collisions by using PID + timestamp + monotonic counter.
+- Added duplicate-database retry logic (`42P04`) during test DB creation.
+- Switched create/drop DB SQL to quoted identifiers for safer cleanup.
+- Added unit tests for helper behavior (name uniqueness and duplicate-db error detection).
+- Updated 24x7 status/history with this run’s completed work, remaining work, and next plan.
+
+Tests run:
+- `go test ./identity/testutils ./identity/repository -count=1` (pass)
+- `go test ./identity/... -count=1` (pass)
+- `go test ./...` in `examples/ecommerce` (pass; no test files, compile-only parity)

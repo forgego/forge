@@ -1,0 +1,16 @@
+Implemented one focused reliability batch in admin metadata and updated run tracking.
+
+- Fixed relation filter metadata mapping in `forge/admin/core/metadata_builder.go:199` and `forge/admin/core/metadata_builder.go:249`.
+- Replaced the prior FIXME path by setting `FilterMetadata.RelatedModel` from schema relations, including `_id` normalization (`category_id` -> `category`) in `forge/admin/core/metadata_builder.go:239`.
+- Added coverage in `forge/admin/core/metadata_builder_test.go:25` (`TestBuildFiltersMetadata_RelatedModelForRelationFilters`).
+
+Updated run docs:
+- `ops/codex-24x7/STATUS.md:3`
+- `ops/codex-24x7/HISTORY.md:87`
+
+Tests run:
+- `go test ./admin/core` in `forge` (pass)
+- `go test ./...` in `examples/ecommerce` (pass, no test files)
+
+Note:
+- `git status` could not be executed due repository safe-directory ownership mismatch on this machine (`dubious ownership`).

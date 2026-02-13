@@ -65,20 +65,64 @@ func (f Field[T]) Resolve(schema *ModelSchema) error {
 		return fmt.Errorf("empty field path")
 	}
 
-	// Check first part exists
-	field := schema.GetField(parts[0])
-	if field == nil {
-		return fmt.Errorf("field %s not found in model", parts[0])
+	var field *FieldInfo
+	var err error
+	if len(parts) == 1 {
+		field = schema.GetField(parts[0])
+		if field == nil {
+			if schema.GetRelation(parts[0]) != nil {
+				return fmt.Errorf("path %s resolves to relation, not a field", f.fieldPath)
+			}
+			return fmt.Errorf("field %s not found in model", parts[0])
+		}
+	} else {
+		field, err = resolveNestedFieldPath(schema, parts)
+		if err != nil {
+			return err
+		}
 	}
 
-	// Validate type matches
-	if field.Type != f.fieldType {
-		return fmt.Errorf("field %s has type %v, expected %v", parts[0], field.Type, f.fieldType)
+	// Validate type matches.
+	// FieldRef-based dynamic expressions intentionally use an unset fieldType.
+	// In that case, skip strict type validation and validate only field existence.
+	if f.fieldType != nil && field.Type != f.fieldType {
+		return fmt.Errorf("field %s has type %v, expected %v", f.fieldPath, field.Type, f.fieldType)
 	}
-
-	// TODO: Validate relation paths for nested fields
 
 	return nil
+}
+
+func resolveNestedFieldPath(schema *ModelSchema, parts []string) (*FieldInfo, error) {
+	currentSchema := schema
+
+	for i := 0; i < len(parts)-1; i++ {
+		part := parts[i]
+
+		rel := currentSchema.GetRelation(part)
+		if rel == nil {
+			if currentSchema.GetField(part) != nil {
+				return nil, fmt.Errorf("field %s cannot be traversed further", strings.Join(parts[:i+1], "__"))
+			}
+			return nil, fmt.Errorf("relation %s not found in model", strings.Join(parts[:i+1], "__"))
+		}
+
+		nextSchema, err := GetModelSchemaByName(rel.TargetModel)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve target model %s for relation %s: %w", rel.TargetModel, strings.Join(parts[:i+1], "__"), err)
+		}
+		currentSchema = nextSchema
+	}
+
+	lastPart := parts[len(parts)-1]
+	field := currentSchema.GetField(lastPart)
+	if field == nil {
+		if currentSchema.GetRelation(lastPart) != nil {
+			return nil, fmt.Errorf("path %s resolves to relation, not a field", strings.Join(parts, "__"))
+		}
+		return nil, fmt.Errorf("field %s not found in model", strings.Join(parts, "__"))
+	}
+
+	return field, nil
 }
 
 // Arithmetic operations
@@ -337,7 +381,7 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 
 	// Build SQL based on operator
 	var sql string
-	
+
 	// Handle operators that share the same string value using if-else
 	if c.Op == OpContains {
 		// LIKE '%value%'

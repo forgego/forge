@@ -31,33 +31,33 @@ func RegisterAdmin(ctx context.Context) {
 		},
 		Fieldsets: []admin.Fieldset[Coupon]{
 			{
-				Name: "Basic Information",
+				Name:   "Basic Information",
 				Fields: []string{"code", "name", "description"},
 			},
 			{
-				Name: "Discount Rules",
+				Name:   "Discount Rules",
 				Fields: []string{"discount_type", "discount_value", "minimum_purchase_amount", "maximum_discount_amount"},
 			},
 			{
-				Name: "Usage Limits",
+				Name:   "Usage Limits",
 				Fields: []string{"usage_limit", "usage_limit_per_customer", "usage_count"},
 			},
 			{
-				Name: "Applicability",
-				Fields: []string{"applies_to_all_products", "product_ids", "category_ids", "excluded_product_ids"},
+				Name:      "Applicability",
+				Fields:    []string{"applies_to_all_products", "product_ids", "category_ids", "excluded_product_ids"},
 				Collapsed: true,
 			},
 			{
-				Name: "Customer Restrictions",
-				Fields: []string{"applies_to_all_customers", "customer_group_ids", "customer_email_list"},
+				Name:      "Customer Restrictions",
+				Fields:    []string{"applies_to_all_customers", "customer_group_ids", "customer_email_list"},
 				Collapsed: true,
 			},
 			{
-				Name: "Validity",
+				Name:   "Validity",
 				Fields: []string{"valid_from", "valid_until"},
 			},
 			{
-				Name:  "Status",
+				Name:   "Status",
 				Fields: []string{"is_active", "is_public", "priority"},
 			},
 		},
@@ -69,7 +69,11 @@ func RegisterAdmin(ctx context.Context) {
 			return true
 		},
 		HasChangePermission: func(ctx context.Context, admin *admin.Admin[Coupon], user interface{}, obj *Coupon) bool {
-			return true
+			if obj == nil {
+				return true
+			}
+			// Preserve historical pricing integrity: used coupons are immutable.
+			return obj.UsageCount == 0
 		},
 		HasDeletePermission: func(ctx context.Context, admin *admin.Admin[Coupon], user interface{}, obj *Coupon) bool {
 			return true
@@ -139,11 +143,11 @@ func RegisterAdmin(ctx context.Context) {
 		},
 		Fieldsets: []admin.Fieldset[CouponUsage]{
 			{
-				Name: "Usage Details",
+				Name:   "Usage Details",
 				Fields: []string{"coupon_id", "order_id", "customer_id", "discount_amount"},
 			},
 			{
-				Name:  "Timestamp",
+				Name:   "Timestamp",
 				Fields: []string{"created_at"},
 			},
 		},
@@ -193,29 +197,29 @@ func RegisterAdmin(ctx context.Context) {
 		},
 		Fieldsets: []admin.Fieldset[Review]{
 			{
-				Name: "Review Content",
+				Name:   "Review Content",
 				Fields: []string{"product_id", "customer_id", "order_id", "title", "content", "rating"},
 			},
 			{
-				Name: "Verification",
+				Name:   "Verification",
 				Fields: []string{"is_verified_purchase"},
 			},
 			{
-				Name: "Moderation",
+				Name:   "Moderation",
 				Fields: []string{"status", "is_featured"},
 			},
 			{
-				Name: "Helpfulness",
-				Fields: []string{"helpful_count", "not_helpful_count"},
+				Name:      "Helpfulness",
+				Fields:    []string{"helpful_count", "not_helpful_count"},
 				Collapsed: true,
 			},
 			{
-				Name: "Merchant Response",
-				Fields: []string{"merchant_response", "merchant_response_at"},
+				Name:      "Merchant Response",
+				Fields:    []string{"merchant_response", "merchant_response_at"},
 				Collapsed: true,
 			},
 			{
-				Name:  "Timestamps",
+				Name:   "Timestamps",
 				Fields: []string{"created_at", "updated_at", "approved_at"},
 			},
 		},
@@ -325,11 +329,11 @@ func RegisterAdmin(ctx context.Context) {
 		},
 		Fieldsets: []admin.Fieldset[ReviewImage]{
 			{
-				Name: "Image Information",
+				Name:   "Image Information",
 				Fields: []string{"review_id", "image_url", "thumbnail_url"},
 			},
 			{
-				Name:  "Display",
+				Name:   "Display",
 				Fields: []string{"alt_text", "sort_order"},
 			},
 		},
@@ -367,11 +371,11 @@ func RegisterAdmin(ctx context.Context) {
 		},
 		Fieldsets: []admin.Fieldset[ReviewHelpfulness]{
 			{
-				Name: "Vote Details",
+				Name:   "Vote Details",
 				Fields: []string{"review_id", "customer_id", "is_helpful"},
 			},
 			{
-				Name:  "Metadata",
+				Name:   "Metadata",
 				Fields: []string{"ip_address", "created_at"},
 			},
 		},
@@ -415,19 +419,19 @@ func RegisterAdmin(ctx context.Context) {
 		},
 		Fieldsets: []admin.Fieldset[ProductQuestion]{
 			{
-				Name: "Q&A",
+				Name:   "Q&A",
 				Fields: []string{"product_id", "customer_id", "question"},
 			},
 			{
-				Name: "Answer",
+				Name:   "Answer",
 				Fields: []string{"answer", "answered_at", "answered_by_user_id"},
 			},
 			{
-				Name: "Status",
+				Name:   "Status",
 				Fields: []string{"status", "is_public"},
 			},
 			{
-				Name:  "Timestamps",
+				Name:   "Timestamps",
 				Fields: []string{"created_at", "updated_at"},
 			},
 		},

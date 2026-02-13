@@ -6,19 +6,20 @@ image: /forge-social-card.svg
 
 # Admin UI
 
-Customize the admin UI with component overrides and custom pages.
+Customize the admin UI with component overrides and plugin pages.
 
 ## UI overrides
 
 ```go
 adminSite.UIOverrides = map[string]string{
     "sidebar.brand": "MyCustomLogo",
+    "form.footer": "CustomFooter",
 }
 ```
 
-## Custom pages
+## Dynamic pages
 
-Admin supports plugin pages and dynamic rendering driven by server metadata.
+Admin pages are generated from server-provided metadata. Adding a field to a model updates the UI automatically.
 
 ## Next steps
 

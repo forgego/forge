@@ -8,6 +8,7 @@ import (
 
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/identity/models"
+	"github.com/forgego/forge/identity/utils"
 )
 
 // tokenRepository implements TokenRepository interface
@@ -146,13 +147,55 @@ func (r *tokenRepository) GetPasswordResetToken(ctx context.Context, token strin
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("token not found")
+		// Backward-compatible fallback:
+		// password reset tokens are stored hashed, so plaintext lookup requires
+		// scanning valid rows and verifying with bcrypt comparison.
+		return r.getPasswordResetTokenByHash(ctx, token)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get password reset token: %w", err)
 	}
 
 	return resetToken, nil
+}
+
+func (r *tokenRepository) getPasswordResetTokenByHash(ctx context.Context, token string) (*models.PasswordResetToken, error) {
+	query := `
+		SELECT id, user_id, token, created_at, expires_at, used_at
+		FROM password_reset_tokens
+		WHERE used_at IS NULL
+		  AND expires_at > NOW()
+	`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query password reset tokens: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		resetToken := &models.PasswordResetToken{}
+		if scanErr := rows.Scan(
+			&resetToken.ID,
+			&resetToken.UserID,
+			&resetToken.Token,
+			&resetToken.CreatedAt,
+			&resetToken.ExpiresAt,
+			&resetToken.UsedAt,
+		); scanErr != nil {
+			return nil, fmt.Errorf("failed to scan password reset token: %w", scanErr)
+		}
+
+		if utils.CheckPassword(token, resetToken.Token) {
+			return resetToken, nil
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate password reset tokens: %w", err)
+	}
+
+	return nil, fmt.Errorf("token not found")
 }
 
 // DeletePasswordResetToken deletes a password reset token

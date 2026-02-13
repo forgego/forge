@@ -33,20 +33,20 @@ func RegisterAdmin(ctx context.Context) {
 		// Fieldsets
 		Fieldsets: []admin.Fieldset[Warehouse]{
 			{
-				Name: "Basic Information",
+				Name:   "Basic Information",
 				Fields: []string{"name", "code", "contact_name", "contact_email", "contact_phone"},
 			},
 			{
-				Name: "Address",
+				Name:   "Address",
 				Fields: []string{"address_line1", "address_line2", "city", "state", "postal_code", "country_code", "country_name"},
 			},
 			{
-				Name: "Geolocation",
-				Fields: []string{"latitude", "longitude"},
+				Name:      "Geolocation",
+				Fields:    []string{"latitude", "longitude"},
 				Collapsed: true,
 			},
 			{
-				Name: "Settings",
+				Name:   "Settings",
 				Fields: []string{"is_active", "is_primary", "priority", "total_capacity"},
 			},
 		},
@@ -82,7 +82,11 @@ func RegisterAdmin(ctx context.Context) {
 			return true
 		},
 		HasChangePermission: func(ctx context.Context, admin *admin.Admin[Warehouse], user interface{}, obj *Warehouse) bool {
-			return true
+			if obj == nil {
+				return true
+			}
+			// Keep primary warehouse mutable only via explicit primary-management flows.
+			return !obj.IsPrimary
 		},
 		HasDeletePermission: func(ctx context.Context, admin *admin.Admin[Warehouse], user interface{}, obj *Warehouse) bool {
 			return true
@@ -180,20 +184,20 @@ func RegisterAdmin(ctx context.Context) {
 		// Fieldsets
 		Fieldsets: []admin.Fieldset[Stock]{
 			{
-				Name: "Stock Levels",
+				Name:   "Stock Levels",
 				Fields: []string{"product_variant_id", "warehouse_id", "quantity", "reserved_quantity", "available_quantity"},
 			},
 			{
-				Name: "Thresholds",
-				Fields: []string{"reorder_point", "reorder_quantity"},
+				Name:      "Thresholds",
+				Fields:    []string{"reorder_point", "reorder_quantity"},
 				Collapsed: true,
 			},
 			{
-				Name: "Location",
+				Name:   "Location",
 				Fields: []string{"bin_location"},
 			},
 			{
-				Name: "Status",
+				Name:   "Status",
 				Fields: []string{"is_active", "allow_backorder"},
 			},
 		},
@@ -345,25 +349,25 @@ func RegisterAdmin(ctx context.Context) {
 		// Fieldsets
 		Fieldsets: []admin.Fieldset[StockMovement]{
 			{
-				Name: "Movement Details",
+				Name:   "Movement Details",
 				Fields: []string{"product_variant_id", "warehouse_id", "type", "quantity", "quantity_before", "quantity_after"},
 			},
 			{
-				Name: "Reference",
+				Name:   "Reference",
 				Fields: []string{"reference_type", "reference_id", "reference_number", "from_warehouse_id", "to_warehouse_id"},
 			},
 			{
-				Name: "Additional Information",
-				Fields: []string{"reason", "notes", "user_id", "user_name"},
+				Name:      "Additional Information",
+				Fields:    []string{"reason", "notes", "user_id", "user_name"},
 				Collapsed: true,
 			},
 			{
-				Name: "Cost Information",
-				Fields: []string{"unit_cost", "total_cost"},
+				Name:      "Cost Information",
+				Fields:    []string{"unit_cost", "total_cost"},
 				Collapsed: true,
 			},
 			{
-				Name: "Date",
+				Name:   "Date",
 				Fields: []string{"movement_date", "created_at"},
 			},
 		},
@@ -488,25 +492,25 @@ func RegisterAdmin(ctx context.Context) {
 		// Fieldsets
 		Fieldsets: []admin.Fieldset[StockAlert]{
 			{
-				Name: "Alert Details",
+				Name:   "Alert Details",
 				Fields: []string{"product_variant_id", "warehouse_id", "alert_type", "current_quantity", "threshold"},
 			},
 			{
-				Name: "Status",
+				Name:   "Status",
 				Fields: []string{"status", "notification_sent"},
 			},
 			{
-				Name: "Resolution",
-				Fields: []string{"resolved_by_user_id", "resolved_by_user_name", "resolution_notes", "resolved_at"},
+				Name:      "Resolution",
+				Fields:    []string{"resolved_by_user_id", "resolved_by_user_name", "resolution_notes", "resolved_at"},
 				Collapsed: true,
 			},
 			{
-				Name: "Notification",
-				Fields: []string{"notification_sent_at"},
+				Name:      "Notification",
+				Fields:    []string{"notification_sent_at"},
 				Collapsed: true,
 			},
 			{
-				Name: "Timestamps",
+				Name:   "Timestamps",
 				Fields: []string{"created_at", "updated_at", "acknowledged_at"},
 			},
 		},
@@ -648,24 +652,24 @@ func RegisterAdmin(ctx context.Context) {
 		// Fieldsets
 		Fieldsets: []admin.Fieldset[StockTransfer]{
 			{
-				Name: "Transfer Details",
+				Name:   "Transfer Details",
 				Fields: []string{"transfer_number", "from_warehouse_id", "to_warehouse_id", "product_variant_id", "quantity"},
 			},
 			{
-				Name: "Status Tracking",
+				Name:   "Status Tracking",
 				Fields: []string{"status", "tracking_number", "carrier"},
 			},
 			{
-				Name: "Notes",
+				Name:   "Notes",
 				Fields: []string{"notes", "reason"},
 			},
 			{
-				Name: "User Tracking",
-				Fields: []string{"requested_by_user_id", "requested_by_user_name", "approved_by_user_id", "approved_by_user_name"},
+				Name:      "User Tracking",
+				Fields:    []string{"requested_by_user_id", "requested_by_user_name", "approved_by_user_id", "approved_by_user_name"},
 				Collapsed: true,
 			},
 			{
-				Name: "Timestamps",
+				Name:   "Timestamps",
 				Fields: []string{"created_at", "updated_at", "shipped_at", "completed_at", "cancelled_at"},
 			},
 		},

@@ -6,27 +6,29 @@ import (
 
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
+	validate "github.com/forgego/forge/validate"
 )
 
 // RecentlyViewedGenerated struct definition
 type RecentlyViewedGenerated struct {
 	schema.BaseSchema
-	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	CustomerID  *primitive.ObjectID `json:"customer_id,omitempty" bson:"customer_id,omitempty"`
-	GuestID     string             `json:"guest_id" bson:"guest_id"`
-	ProductID   primitive.ObjectID `json:"product_id" bson:"product_id"`
-	VariantID   *primitive.ObjectID `json:"variant_id,omitempty" bson:"variant_id,omitempty"`
-	ViewedAt    time.Time          `json:"viewed_at" bson:"viewed_at"`
-	SessionID   string             `json:"session_id" bson:"session_id"`
-	UserAgent   string             `json:"user_agent" bson:"user_agent"`
-	IPAddress   string             `json:"ip_address" bson:"ip_address"`
-	Source      string             `json:"source" bson:"source"`
-	RefererURL  string             `json:"referer_url" bson:"referer_url"`
+	Id         int64     `json:"id" db:"id" validate:""`
+	CustomerId int64     `json:"customer_id" db:"customer_id" validate:""`
+	GuestId    string    `json:"guest_id" db:"guest_id" validate:""`
+	ProductId  int64     `json:"product_id" db:"product_id" validate:""`
+	VariantId  int64     `json:"variant_id" db:"variant_id" validate:""`
+	ViewedAt   time.Time `json:"viewed_at" db:"viewed_at" validate:""`
+	SessionId  string    `json:"session_id" db:"session_id" validate:""`
+	UserAgent  string    `json:"user_agent" db:"user_agent" validate:""`
+	IpAddress  string    `json:"ip_address" db:"ip_address" validate:""`
+	Source     string    `json:"source" db:"source" validate:""`
+	RefererUrl string    `json:"referer_url" db:"referer_url" validate:""`
 }
 
 // Validate validates the RecentlyViewed model
 func (m *RecentlyViewed) Validate() error {
-	return nil
+	validator := validate.NewValidator()
+	return validate.ValidateModel(validator, m)
 }
 
 // RecentlyViewedObjects provides type-safe operations for RecentlyViewed
@@ -34,72 +36,52 @@ var RecentlyViewedObjects, _ = orm.NewManager[RecentlyViewed]("recently_viewed")
 
 // RecentlyViewedFields provides type-safe field access for RecentlyViewed
 type RecentlyViewedFields struct {
-	ID         orm.Field[primitive.ObjectID]
-	CustomerID orm.Field[*primitive.ObjectID]
-	GuestID    orm.Field[string]
-	ProductID  orm.Field[primitive.ObjectID]
-	VariantID  orm.Field[*primitive.ObjectID]
+	Id         orm.Field[int64]
+	CustomerId orm.Field[int64]
+	GuestId    orm.Field[string]
+	ProductId  orm.Field[int64]
+	VariantId  orm.Field[int64]
 	ViewedAt   orm.Field[time.Time]
-	SessionID  orm.Field[string]
+	SessionId  orm.Field[string]
 	UserAgent  orm.Field[string]
-	IPAddress  orm.Field[string]
+	IpAddress  orm.Field[string]
 	Source     orm.Field[string]
-	RefererURL orm.Field[string]
+	RefererUrl orm.Field[string]
 }
 
 var RecentlyViewedFieldsInstance = RecentlyViewedFields{
-	ID:         orm.NewField[primitive.ObjectID]("id", "recently_viewed"),
-	CustomerID: orm.NewField[*primitive.ObjectID]("customer_id", "recently_viewed"),
-	GuestID:    orm.NewField[string]("guest_id", "recently_viewed"),
-	ProductID:  orm.NewField[primitive.ObjectID]("product_id", "recently_viewed"),
-	VariantID:  orm.NewField[*primitive.ObjectID]("variant_id", "recently_viewed"),
+	Id:         orm.NewField[int64]("id", "recently_viewed"),
+	CustomerId: orm.NewField[int64]("customer_id", "recently_viewed"),
+	GuestId:    orm.NewField[string]("guest_id", "recently_viewed"),
+	ProductId:  orm.NewField[int64]("product_id", "recently_viewed"),
+	VariantId:  orm.NewField[int64]("variant_id", "recently_viewed"),
 	ViewedAt:   orm.NewField[time.Time]("viewed_at", "recently_viewed"),
-	SessionID:  orm.NewField[string]("session_id", "recently_viewed"),
+	SessionId:  orm.NewField[string]("session_id", "recently_viewed"),
 	UserAgent:  orm.NewField[string]("user_agent", "recently_viewed"),
-	IPAddress:  orm.NewField[string]("ip_address", "recently_viewed"),
+	IpAddress:  orm.NewField[string]("ip_address", "recently_viewed"),
 	Source:     orm.NewField[string]("source", "recently_viewed"),
-	RefererURL: orm.NewField[string]("referer_url", "recently_viewed"),
-}
-
-// RecentlyViewedSerializer provides serialization for RecentlyViewed
-type RecentlyViewedSerializer struct {
-	*api.BaseSerializer
-}
-
-func (s *RecentlyViewedSerializer) Serialize(ctx context.Context, obj *RecentlyViewed) map[string]interface{} {
-	return map[string]interface{}{
-		"id":          obj.ID,
-		"customer_id": obj.CustomerID,
-		"guest_id":    obj.GuestID,
-		"product_id":  obj.ProductID,
-		"variant_id":  obj.VariantID,
-		"viewed_at":   obj.ViewedAt,
-		"session_id":  obj.SessionID,
-		"user_agent": obj.UserAgent,
-		"ip_address": obj.IPAddress,
-		"source":      obj.Source,
-		"referer_url": obj.RefererURL,
-	}
+	RefererUrl: orm.NewField[string]("referer_url", "recently_viewed"),
 }
 
 // ProductComparisonGenerated struct definition
 type ProductComparisonGenerated struct {
 	schema.BaseSchema
-	ID         primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	CustomerID *primitive.ObjectID `json:"customer_id,omitempty" bson:"customer_id,omitempty"`
-	GuestID    string              `json:"guest_id" bson:"guest_id"`
-	Name       string              `json:"name" bson:"name"`
-	ProductIDs []primitive.ObjectID `json:"product_ids" bson:"product_ids"`
-	IsPublic   bool                `json:"is_public" bson:"is_public"`
-	ShareToken string              `json:"share_token" bson:"share_token"`
-	ViewCount  int                 `json:"view_count" bson:"view_count"`
-	CreatedAt  time.Time           `json:"created_at" bson:"created_at"`
-	UpdatedAt  time.Time           `json:"updated_at" bson:"updated_at"`
+	Id         int64     `json:"id" db:"id" validate:""`
+	CustomerId int64     `json:"customer_id" db:"customer_id" validate:""`
+	GuestId    string    `json:"guest_id" db:"guest_id" validate:""`
+	Name       string    `json:"name" db:"name" validate:""`
+	ProductIds string    `json:"product_ids" db:"product_ids" validate:""`
+	IsPublic   bool      `json:"is_public" db:"is_public" validate:""`
+	ShareToken string    `json:"share_token" db:"share_token" validate:""`
+	ViewCount  int32     `json:"view_count" db:"view_count" validate:""`
+	CreatedAt  time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt  time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the ProductComparison model
 func (m *ProductComparison) Validate() error {
-	return nil
+	validator := validate.NewValidator()
+	return validate.ValidateModel(validator, m)
 }
 
 // ProductComparisonObjects provides type-safe operations for ProductComparison
@@ -107,76 +89,57 @@ var ProductComparisonObjects, _ = orm.NewManager[ProductComparison]("product_com
 
 // ProductComparisonFields provides type-safe field access for ProductComparison
 type ProductComparisonFields struct {
-	ID         orm.Field[primitive.ObjectID]
-	CustomerID orm.Field[*primitive.ObjectID]
-	GuestID    orm.Field[string]
+	Id         orm.Field[int64]
+	CustomerId orm.Field[int64]
+	GuestId    orm.Field[string]
 	Name       orm.Field[string]
-	ProductIDs orm.Field[[]primitive.ObjectID]
+	ProductIds orm.Field[string]
 	IsPublic   orm.Field[bool]
 	ShareToken orm.Field[string]
-	ViewCount  orm.Field[int]
+	ViewCount  orm.Field[int32]
 	CreatedAt  orm.Field[time.Time]
 	UpdatedAt  orm.Field[time.Time]
 }
 
 var ProductComparisonFieldsInstance = ProductComparisonFields{
-	ID:         orm.NewField[primitive.ObjectID]("id", "product_comparisons"),
-	CustomerID: orm.NewField[*primitive.ObjectID]("customer_id", "product_comparisons"),
-	GuestID:    orm.NewField[string]("guest_id", "product_comparisons"),
+	Id:         orm.NewField[int64]("id", "product_comparisons"),
+	CustomerId: orm.NewField[int64]("customer_id", "product_comparisons"),
+	GuestId:    orm.NewField[string]("guest_id", "product_comparisons"),
 	Name:       orm.NewField[string]("name", "product_comparisons"),
-	ProductIDs: orm.NewField[[]primitive.ObjectID]("product_ids", "product_comparisons"),
+	ProductIds: orm.NewField[string]("product_ids", "product_comparisons"),
 	IsPublic:   orm.NewField[bool]("is_public", "product_comparisons"),
 	ShareToken: orm.NewField[string]("share_token", "product_comparisons"),
-	ViewCount:  orm.NewField[int]("view_count", "product_comparisons"),
+	ViewCount:  orm.NewField[int32]("view_count", "product_comparisons"),
 	CreatedAt:  orm.NewField[time.Time]("created_at", "product_comparisons"),
 	UpdatedAt:  orm.NewField[time.Time]("updated_at", "product_comparisons"),
-}
-
-// ProductComparisonSerializer provides serialization for ProductComparison
-type ProductComparisonSerializer struct {
-	*api.BaseSerializer
-}
-
-func (s *ProductComparisonSerializer) Serialize(ctx context.Context, obj *ProductComparison) map[string]interface{} {
-	return map[string]interface{}{
-		"id":          obj.ID,
-		"customer_id": obj.CustomerID,
-		"guest_id":    obj.GuestID,
-		"name":        obj.Name,
-		"product_ids": obj.ProductIDs,
-		"is_public":   obj.IsPublic,
-		"share_token": obj.ShareToken,
-		"view_count":  obj.ViewCount,
-		"created_at":  obj.CreatedAt,
-		"updated_at":  obj.UpdatedAt,
-	}
 }
 
 // NotificationGenerated struct definition
 type NotificationGenerated struct {
 	schema.BaseSchema
-	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	CustomerID    primitive.ObjectID `json:"customer_id" bson:"customer_id"`
-	Type          string             `json:"type" bson:"type"`
-	Title         string             `json:"title" bson:"title"`
-	Message       string             `json:"message" bson:"message"`
-	ActionURL     string             `json:"action_url" bson:"action_url"`
-	ActionText    string             `json:"action_text" bson:"action_text"`
-	RelatedType   string             `json:"related_type" bson:"related_type"`
-	RelatedID     *primitive.ObjectID `json:"related_id,omitempty" bson:"related_id,omitempty"`
-	IsRead        bool               `json:"is_read" bson:"is_read"`
-	ReadAt        *time.Time        `json:"read_at,omitempty" bson:"read_at,omitempty"`
-	PushEnabled   bool               `json:"push_enabled" bson:"push_enabled"`
-	EmailEnabled  bool               `json:"email_enabled" bson:"email_enabled"`
-	SMSEnabled    bool               `json:"sms_enabled" bson:"sms_enabled"`
-	ScheduledFor  *time.Time        `json:"scheduled_for,omitempty" bson:"scheduled_for,omitempty"`
-	SentAt        *time.Time        `json:"sent_at,omitempty" bson:"sent_at,omitempty"`
-	CreatedAt     time.Time          `json:"created_at" bson:"created_at"`
+	Id           int64     `json:"id" db:"id" validate:""`
+	CustomerId   int64     `json:"customer_id" db:"customer_id" validate:""`
+	Type         string    `json:"type" db:"type" validate:""`
+	Title        string    `json:"title" db:"title" validate:""`
+	Message      string    `json:"message" db:"message" validate:""`
+	ActionUrl    string    `json:"action_url" db:"action_url" validate:""`
+	ActionText   string    `json:"action_text" db:"action_text" validate:""`
+	RelatedType  string    `json:"related_type" db:"related_type" validate:""`
+	RelatedId    int64     `json:"related_id" db:"related_id" validate:""`
+	IsRead       bool      `json:"is_read" db:"is_read" validate:""`
+	ReadAt       time.Time `json:"read_at" db:"read_at" validate:""`
+	PushEnabled  bool      `json:"push_enabled" db:"push_enabled" validate:""`
+	EmailEnabled bool      `json:"email_enabled" db:"email_enabled" validate:""`
+	SmsEnabled   bool      `json:"sms_enabled" db:"sms_enabled" validate:""`
+	ScheduledFor time.Time `json:"scheduled_for" db:"scheduled_for" validate:""`
+	SentAt       time.Time `json:"sent_at" db:"sent_at" validate:""`
+	CreatedAt    time.Time `json:"created_at" db:"created_at" validate:""`
 }
 
 // Validate validates the Notification model
 func (m *Notification) Validate() error {
-	return nil
+	validator := validate.NewValidator()
+	return validate.ValidateModel(validator, m)
 }
 
 // NotificationObjects provides type-safe operations for Notification
@@ -184,90 +147,64 @@ var NotificationObjects, _ = orm.NewManager[Notification]("notifications")
 
 // NotificationFields provides type-safe field access for Notification
 type NotificationFields struct {
-	ID            orm.Field[primitive.ObjectID]
-	CustomerID    orm.Field[primitive.ObjectID]
-	Type          orm.Field[string]
-	Title         orm.Field[string]
-	Message       orm.Field[string]
-	ActionURL     orm.Field[string]
-	ActionText    orm.Field[string]
-	RelatedType   orm.Field[string]
-	RelatedID     orm.Field[*primitive.ObjectID]
-	IsRead        orm.Field[bool]
-	ReadAt        orm.Field[*time.Time]
-	PushEnabled   orm.Field[bool]
-	EmailEnabled  orm.Field[bool]
-	SMSEnabled    orm.Field[bool]
-	ScheduledFor  orm.Field[*time.Time]
-	SentAt        orm.Field[*time.Time]
-	CreatedAt     orm.Field[time.Time]
+	Id           orm.Field[int64]
+	CustomerId   orm.Field[int64]
+	Type         orm.Field[string]
+	Title        orm.Field[string]
+	Message      orm.Field[string]
+	ActionUrl    orm.Field[string]
+	ActionText   orm.Field[string]
+	RelatedType  orm.Field[string]
+	RelatedId    orm.Field[int64]
+	IsRead       orm.Field[bool]
+	ReadAt       orm.Field[time.Time]
+	PushEnabled  orm.Field[bool]
+	EmailEnabled orm.Field[bool]
+	SmsEnabled   orm.Field[bool]
+	ScheduledFor orm.Field[time.Time]
+	SentAt       orm.Field[time.Time]
+	CreatedAt    orm.Field[time.Time]
 }
 
 var NotificationFieldsInstance = NotificationFields{
-	ID:            orm.NewField[primitive.ObjectID]("id", "notifications"),
-	CustomerID:    orm.NewField[primitive.ObjectID]("customer_id", "notifications"),
-	Type:          orm.NewField[string]("type", "notifications"),
-	Title:         orm.NewField[string]("title", "notifications"),
-	Message:       orm.NewField[string]("message", "notifications"),
-	ActionURL:     orm.NewField[string]("action_url", "notifications"),
-	ActionText:    orm.NewField[string]("action_text", "notifications"),
-	RelatedType:   orm.NewField[string]("related_type", "notifications"),
-	RelatedID:     orm.NewField[*primitive.ObjectID]("related_id", "notifications"),
-	IsRead:        orm.NewField[bool]("is_read", "notifications"),
-	ReadAt:        orm.NewField[*time.Time]("read_at", "notifications"),
-	PushEnabled:   orm.NewField[bool]("push_enabled", "notifications"),
-	EmailEnabled:  orm.NewField[bool]("email_enabled", "notifications"),
-	SMSEnabled:    orm.NewField[bool]("sms_enabled", "notifications"),
-	ScheduledFor:  orm.NewField[*time.Time]("scheduled_for", "notifications"),
-	SentAt:        orm.NewField[*time.Time]("sent_at", "notifications"),
-	CreatedAt:     orm.NewField[time.Time]("created_at", "notifications"),
-}
-
-// NotificationSerializer provides serialization for Notification
-type NotificationSerializer struct {
-	*api.BaseSerializer
-}
-
-func (s *NotificationSerializer) Serialize(ctx context.Context, obj *Notification) map[string]interface{} {
-	return map[string]interface{}{
-		"id":             obj.ID,
-		"customer_id":    obj.CustomerID,
-		"type":           obj.Type,
-		"title":          obj.Title,
-		"message":        obj.Message,
-		"action_url":     obj.ActionURL,
-		"action_text":   obj.ActionText,
-		"related_type":  obj.RelatedType,
-		"related_id":    obj.RelatedID,
-		"is_read":       obj.IsRead,
-		"read_at":       obj.ReadAt,
-		"push_enabled":  obj.PushEnabled,
-		"email_enabled": obj.EmailEnabled,
-		"sms_enabled":   obj.SMSEnabled,
-		"scheduled_for": obj.ScheduledFor,
-		"sent_at":       obj.SentAt,
-		"created_at":     obj.CreatedAt,
-	}
+	Id:           orm.NewField[int64]("id", "notifications"),
+	CustomerId:   orm.NewField[int64]("customer_id", "notifications"),
+	Type:         orm.NewField[string]("type", "notifications"),
+	Title:        orm.NewField[string]("title", "notifications"),
+	Message:      orm.NewField[string]("message", "notifications"),
+	ActionUrl:    orm.NewField[string]("action_url", "notifications"),
+	ActionText:   orm.NewField[string]("action_text", "notifications"),
+	RelatedType:  orm.NewField[string]("related_type", "notifications"),
+	RelatedId:    orm.NewField[int64]("related_id", "notifications"),
+	IsRead:       orm.NewField[bool]("is_read", "notifications"),
+	ReadAt:       orm.NewField[time.Time]("read_at", "notifications"),
+	PushEnabled:  orm.NewField[bool]("push_enabled", "notifications"),
+	EmailEnabled: orm.NewField[bool]("email_enabled", "notifications"),
+	SmsEnabled:   orm.NewField[bool]("sms_enabled", "notifications"),
+	ScheduledFor: orm.NewField[time.Time]("scheduled_for", "notifications"),
+	SentAt:       orm.NewField[time.Time]("sent_at", "notifications"),
+	CreatedAt:    orm.NewField[time.Time]("created_at", "notifications"),
 }
 
 // CustomerActivityGenerated struct definition
 type CustomerActivityGenerated struct {
 	schema.BaseSchema
-	ID            primitive.ObjectID          `json:"id" bson:"_id,omitempty"`
-	CustomerID    primitive.ObjectID          `json:"customer_id" bson:"customer_id"`
-	ActivityType  string                      `json:"activity_type" bson:"activity_type"`
-	EntityType    string                      `json:"entity_type" bson:"entity_type"`
-	EntityID      *primitive.ObjectID         `json:"entity_id,omitempty" bson:"entity_id,omitempty"`
-	Data          map[string]interface{}      `json:"data" bson:"data"`
-	SessionID     string                      `json:"session_id" bson:"session_id"`
-	UserAgent     string                      `json:"user_agent" bson:"user_agent"`
-	IPAddress     string                      `json:"ip_address" bson:"ip_address"`
-	Timestamp     time.Time                   `json:"timestamp" bson:"timestamp"`
+	Id           int64     `json:"id" db:"id" validate:""`
+	CustomerId   int64     `json:"customer_id" db:"customer_id" validate:""`
+	ActivityType string    `json:"activity_type" db:"activity_type" validate:""`
+	EntityType   string    `json:"entity_type" db:"entity_type" validate:""`
+	EntityId     int64     `json:"entity_id" db:"entity_id" validate:""`
+	Data         string    `json:"data" db:"data" validate:""`
+	SessionId    string    `json:"session_id" db:"session_id" validate:""`
+	UserAgent    string    `json:"user_agent" db:"user_agent" validate:""`
+	IpAddress    string    `json:"ip_address" db:"ip_address" validate:""`
+	Timestamp    time.Time `json:"timestamp" db:"timestamp" validate:""`
 }
 
 // Validate validates the CustomerActivity model
 func (m *CustomerActivity) Validate() error {
-	return nil
+	validator := validate.NewValidator()
+	return validate.ValidateModel(validator, m)
 }
 
 // CustomerActivityObjects provides type-safe operations for CustomerActivity
@@ -275,71 +212,52 @@ var CustomerActivityObjects, _ = orm.NewManager[CustomerActivity]("customer_acti
 
 // CustomerActivityFields provides type-safe field access for CustomerActivity
 type CustomerActivityFields struct {
-	ID            orm.Field[primitive.ObjectID]
-	CustomerID    orm.Field[primitive.ObjectID]
-	ActivityType  orm.Field[string]
-	EntityType    orm.Field[string]
-	EntityID      orm.Field[*primitive.ObjectID]
-	Data          orm.Field[map[string]interface{}]
-	SessionID     orm.Field[string]
-	UserAgent     orm.Field[string]
-	IPAddress     orm.Field[string]
-	Timestamp     orm.Field[time.Time]
+	Id           orm.Field[int64]
+	CustomerId   orm.Field[int64]
+	ActivityType orm.Field[string]
+	EntityType   orm.Field[string]
+	EntityId     orm.Field[int64]
+	Data         orm.Field[string]
+	SessionId    orm.Field[string]
+	UserAgent    orm.Field[string]
+	IpAddress    orm.Field[string]
+	Timestamp    orm.Field[time.Time]
 }
 
 var CustomerActivityFieldsInstance = CustomerActivityFields{
-	ID:            orm.NewField[primitive.ObjectID]("id", "customer_activities"),
-	CustomerID:    orm.NewField[primitive.ObjectID]("customer_id", "customer_activities"),
-	ActivityType:  orm.NewField[string]("activity_type", "customer_activities"),
-	EntityType:    orm.NewField[string]("entity_type", "customer_activities"),
-	EntityID:      orm.NewField[*primitive.ObjectID]("entity_id", "customer_activities"),
-	Data:          orm.NewField[map[string]interface{}]("data", "customer_activities"),
-	SessionID:     orm.NewField[string]("session_id", "customer_activities"),
-	UserAgent:     orm.NewField[string]("user_agent", "customer_activities"),
-	IPAddress:     orm.NewField[string]("ip_address", "customer_activities"),
-	Timestamp:     orm.NewField[time.Time]("timestamp", "customer_activities"),
-}
-
-// CustomerActivitySerializer provides serialization for CustomerActivity
-type CustomerActivitySerializer struct {
-	*api.BaseSerializer
-}
-
-func (s *CustomerActivitySerializer) Serialize(ctx context.Context, obj *CustomerActivity) map[string]interface{} {
-	return map[string]interface{}{
-		"id":            obj.ID,
-		"customer_id":   obj.CustomerID,
-		"activity_type": obj.ActivityType,
-		"entity_type":   obj.EntityType,
-		"entity_id":     obj.EntityID,
-		"data":          obj.Data,
-		"session_id":    obj.SessionID,
-		"user_agent":   obj.UserAgent,
-		"ip_address":   obj.IPAddress,
-		"timestamp":    obj.Timestamp,
-	}
+	Id:           orm.NewField[int64]("id", "customer_activities"),
+	CustomerId:   orm.NewField[int64]("customer_id", "customer_activities"),
+	ActivityType: orm.NewField[string]("activity_type", "customer_activities"),
+	EntityType:   orm.NewField[string]("entity_type", "customer_activities"),
+	EntityId:     orm.NewField[int64]("entity_id", "customer_activities"),
+	Data:         orm.NewField[string]("data", "customer_activities"),
+	SessionId:    orm.NewField[string]("session_id", "customer_activities"),
+	UserAgent:    orm.NewField[string]("user_agent", "customer_activities"),
+	IpAddress:    orm.NewField[string]("ip_address", "customer_activities"),
+	Timestamp:    orm.NewField[time.Time]("timestamp", "customer_activities"),
 }
 
 // AbandonedCartReminderGenerated struct definition
 type AbandonedCartReminderGenerated struct {
 	schema.BaseSchema
-	ID                primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	CartID            primitive.ObjectID `json:"cart_id" bson:"cart_id"`
-	CustomerID        *primitive.ObjectID `json:"customer_id,omitempty" bson:"customer_id,omitempty"`
-	GuestEmail        string             `json:"guest_email" bson:"guest_email"`
-	ReminderNumber    int                `json:"reminder_number" bson:"reminder_number"`
-	ReminderSentAt    *time.Time        `json:"reminder_sent_at,omitempty" bson:"reminder_sent_at,omitempty"`
-	ReminderOpenedAt  *time.Time        `json:"reminder_opened_at,omitempty" bson:"reminder_opened_at,omitempty"`
-	ReminderClickedAt *time.Time        `json:"reminder_clicked_at,omitempty" bson:"reminder_clicked_at,omitempty"`
-	RecoveredAt       *time.Time        `json:"recovered_at,omitempty" bson:"recovered_at,omitempty"`
-	RecoveredOrderID  *primitive.ObjectID `json:"recovered_order_id,omitempty" bson:"recovered_order_id,omitempty"`
-	Status            string             `json:"status" bson:"status"`
-	CreatedAt         time.Time          `json:"created_at" bson:"created_at"`
+	Id                int64     `json:"id" db:"id" validate:""`
+	CartId            int64     `json:"cart_id" db:"cart_id" validate:""`
+	CustomerId        int64     `json:"customer_id" db:"customer_id" validate:""`
+	GuestEmail        string    `json:"guest_email" db:"guest_email" validate:""`
+	ReminderNumber    int32     `json:"reminder_number" db:"reminder_number" validate:""`
+	ReminderSentAt    time.Time `json:"reminder_sent_at" db:"reminder_sent_at" validate:""`
+	ReminderOpenedAt  time.Time `json:"reminder_opened_at" db:"reminder_opened_at" validate:""`
+	ReminderClickedAt time.Time `json:"reminder_clicked_at" db:"reminder_clicked_at" validate:""`
+	RecoveredAt       time.Time `json:"recovered_at" db:"recovered_at" validate:""`
+	RecoveredOrderId  int64     `json:"recovered_order_id" db:"recovered_order_id" validate:""`
+	Status            string    `json:"status" db:"status" validate:""`
+	CreatedAt         time.Time `json:"created_at" db:"created_at" validate:""`
 }
 
 // Validate validates the AbandonedCartReminder model
 func (m *AbandonedCartReminder) Validate() error {
-	return nil
+	validator := validate.NewValidator()
+	return validate.ValidateModel(validator, m)
 }
 
 // AbandonedCartReminderObjects provides type-safe operations for AbandonedCartReminder
@@ -347,76 +265,55 @@ var AbandonedCartReminderObjects, _ = orm.NewManager[AbandonedCartReminder]("aba
 
 // AbandonedCartReminderFields provides type-safe field access for AbandonedCartReminder
 type AbandonedCartReminderFields struct {
-	ID                orm.Field[primitive.ObjectID]
-	CartID            orm.Field[primitive.ObjectID]
-	CustomerID        orm.Field[*primitive.ObjectID]
+	Id                orm.Field[int64]
+	CartId            orm.Field[int64]
+	CustomerId        orm.Field[int64]
 	GuestEmail        orm.Field[string]
-	ReminderNumber    orm.Field[int]
-	ReminderSentAt    orm.Field[*time.Time]
-	ReminderOpenedAt  orm.Field[*time.Time]
-	ReminderClickedAt orm.Field[*time.Time]
-	RecoveredAt       orm.Field[*time.Time]
-	RecoveredOrderID  orm.Field[*primitive.ObjectID]
+	ReminderNumber    orm.Field[int32]
+	ReminderSentAt    orm.Field[time.Time]
+	ReminderOpenedAt  orm.Field[time.Time]
+	ReminderClickedAt orm.Field[time.Time]
+	RecoveredAt       orm.Field[time.Time]
+	RecoveredOrderId  orm.Field[int64]
 	Status            orm.Field[string]
 	CreatedAt         orm.Field[time.Time]
 }
 
 var AbandonedCartReminderFieldsInstance = AbandonedCartReminderFields{
-	ID:                orm.NewField[primitive.ObjectID]("id", "abandoned_cart_reminders"),
-	CartID:            orm.NewField[primitive.ObjectID]("cart_id", "abandoned_cart_reminders"),
-	CustomerID:        orm.NewField[*primitive.ObjectID]("customer_id", "abandoned_cart_reminders"),
+	Id:                orm.NewField[int64]("id", "abandoned_cart_reminders"),
+	CartId:            orm.NewField[int64]("cart_id", "abandoned_cart_reminders"),
+	CustomerId:        orm.NewField[int64]("customer_id", "abandoned_cart_reminders"),
 	GuestEmail:        orm.NewField[string]("guest_email", "abandoned_cart_reminders"),
-	ReminderNumber:    orm.NewField[int]("reminder_number", "abandoned_cart_reminders"),
-	ReminderSentAt:    orm.NewField[*time.Time]("reminder_sent_at", "abandoned_cart_reminders"),
-	ReminderOpenedAt:  orm.NewField[*time.Time]("reminder_opened_at", "abandoned_cart_reminders"),
-	ReminderClickedAt: orm.NewField[*time.Time]("reminder_clicked_at", "abandoned_cart_reminders"),
-	RecoveredAt:       orm.NewField[*time.Time]("recovered_at", "abandoned_cart_reminders"),
-	RecoveredOrderID:  orm.NewField[*primitive.ObjectID]("recovered_order_id", "abandoned_cart_reminders"),
+	ReminderNumber:    orm.NewField[int32]("reminder_number", "abandoned_cart_reminders"),
+	ReminderSentAt:    orm.NewField[time.Time]("reminder_sent_at", "abandoned_cart_reminders"),
+	ReminderOpenedAt:  orm.NewField[time.Time]("reminder_opened_at", "abandoned_cart_reminders"),
+	ReminderClickedAt: orm.NewField[time.Time]("reminder_clicked_at", "abandoned_cart_reminders"),
+	RecoveredAt:       orm.NewField[time.Time]("recovered_at", "abandoned_cart_reminders"),
+	RecoveredOrderId:  orm.NewField[int64]("recovered_order_id", "abandoned_cart_reminders"),
 	Status:            orm.NewField[string]("status", "abandoned_cart_reminders"),
 	CreatedAt:         orm.NewField[time.Time]("created_at", "abandoned_cart_reminders"),
-}
-
-// AbandonedCartReminderSerializer provides serialization for AbandonedCartReminder
-type AbandonedCartReminderSerializer struct {
-	*api.BaseSerializer
-}
-
-func (s *AbandonedCartReminderSerializer) Serialize(ctx context.Context, obj *AbandonedCartReminder) map[string]interface{} {
-	return map[string]interface{}{
-		"id":                 obj.ID,
-		"cart_id":           obj.CartID,
-		"customer_id":       obj.CustomerID,
-		"guest_email":       obj.GuestEmail,
-		"reminder_number":   obj.ReminderNumber,
-		"reminder_sent_at":  obj.ReminderSentAt,
-		"reminder_opened_at": obj.ReminderOpenedAt,
-		"reminder_clicked_at": obj.ReminderClickedAt,
-		"recovered_at":      obj.RecoveredAt,
-		"recovered_order_id": obj.RecoveredOrderID,
-		"status":            obj.Status,
-		"created_at":        obj.CreatedAt,
-	}
 }
 
 // UserSegmentGenerated struct definition
 type UserSegmentGenerated struct {
 	schema.BaseSchema
-	ID            primitive.ObjectID          `json:"id" bson:"_id,omitempty"`
-	Name          string                      `json:"name" bson:"name"`
-	Description   string                      `json:"description" bson:"description"`
-	Type          string                      `json:"type" bson:"type"`
-	Criteria      map[string]interface{}      `json:"criteria" bson:"criteria"`
-	Rules         []SegmentRule               `json:"rules" bson:"rules"`
-	CustomerIDs   []primitive.ObjectID        `json:"customer_ids" bson:"customer_ids"`
-	CustomerCount int                         `json:"customer_count" bson:"customer_count"`
-	IsActive      bool                         `json:"is_active" bson:"is_active"`
-	CreatedAt     time.Time                   `json:"created_at" bson:"created_at"`
-	UpdatedAt     time.Time                   `json:"updated_at" bson:"updated_at"`
+	Id            int64     `json:"id" db:"id" validate:""`
+	Name          string    `json:"name" db:"name" validate:""`
+	Description   string    `json:"description" db:"description" validate:""`
+	Type          string    `json:"type" db:"type" validate:""`
+	Criteria      string    `json:"criteria" db:"criteria" validate:""`
+	Rules         string    `json:"rules" db:"rules" validate:""`
+	CustomerIds   string    `json:"customer_ids" db:"customer_ids" validate:""`
+	CustomerCount int32     `json:"customer_count" db:"customer_count" validate:""`
+	IsActive      bool      `json:"is_active" db:"is_active" validate:""`
+	CreatedAt     time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt     time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the UserSegment model
 func (m *UserSegment) Validate() error {
-	return nil
+	validator := validate.NewValidator()
+	return validate.ValidateModel(validator, m)
 }
 
 // UserSegmentObjects provides type-safe operations for UserSegment
@@ -424,523 +321,29 @@ var UserSegmentObjects, _ = orm.NewManager[UserSegment]("user_segments")
 
 // UserSegmentFields provides type-safe field access for UserSegment
 type UserSegmentFields struct {
-	ID            orm.Field[primitive.ObjectID]
+	Id            orm.Field[int64]
 	Name          orm.Field[string]
 	Description   orm.Field[string]
 	Type          orm.Field[string]
-	Criteria      orm.Field[map[string]interface{}]
-	Rules         orm.Field[[]SegmentRule]
-	CustomerIDs   orm.Field[[]primitive.ObjectID]
-	CustomerCount orm.Field[int]
+	Criteria      orm.Field[string]
+	Rules         orm.Field[string]
+	CustomerIds   orm.Field[string]
+	CustomerCount orm.Field[int32]
 	IsActive      orm.Field[bool]
 	CreatedAt     orm.Field[time.Time]
 	UpdatedAt     orm.Field[time.Time]
 }
 
 var UserSegmentFieldsInstance = UserSegmentFields{
-	ID:            orm.NewField[primitive.ObjectID]("id", "user_segments"),
+	Id:            orm.NewField[int64]("id", "user_segments"),
 	Name:          orm.NewField[string]("name", "user_segments"),
 	Description:   orm.NewField[string]("description", "user_segments"),
 	Type:          orm.NewField[string]("type", "user_segments"),
-	Criteria:      orm.NewField[map[string]interface{}]("criteria", "user_segments"),
-	Rules:         orm.NewField[[]SegmentRule]("rules", "user_segments"),
-	CustomerIDs:   orm.NewField[[]primitive.ObjectID]("customer_ids", "user_segments"),
-	CustomerCount: orm.NewField[int]("customer_count", "user_segments"),
+	Criteria:      orm.NewField[string]("criteria", "user_segments"),
+	Rules:         orm.NewField[string]("rules", "user_segments"),
+	CustomerIds:   orm.NewField[string]("customer_ids", "user_segments"),
+	CustomerCount: orm.NewField[int32]("customer_count", "user_segments"),
 	IsActive:      orm.NewField[bool]("is_active", "user_segments"),
 	CreatedAt:     orm.NewField[time.Time]("created_at", "user_segments"),
 	UpdatedAt:     orm.NewField[time.Time]("updated_at", "user_segments"),
 }
-
-// UserSegmentSerializer provides serialization for UserSegment
-type UserSegmentSerializer struct {
-	*api.BaseSerializer
-}
-
-func (s *UserSegmentSerializer) Serialize(ctx context.Context, obj *UserSegment) map[string]interface{} {
-	return map[string]interface{}{
-		"id":             obj.ID,
-		"name":           obj.Name,
-		"description":    obj.Description,
-		"type":           obj.Type,
-		"criteria":       obj.Criteria,
-		"rules":          obj.Rules,
-		"customer_ids":   obj.CustomerIDs,
-		"customer_count": obj.CustomerCount,
-		"is_active":      obj.IsActive,
-		"created_at":    obj.CreatedAt,
-		"updated_at":    obj.UpdatedAt,
-	}
-}
-package engagement
-
-import (
-	"time"
-
-	"github.com/forgego/forge/orm"
-	"github.com/forgego/forge/schema"
-)
-
-// RecentlyViewedGenerated struct definition
-type RecentlyViewedGenerated struct {
-	schema.BaseSchema
-	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	CustomerID  *primitive.ObjectID `json:"customer_id,omitempty" bson:"customer_id,omitempty"`
-	GuestID     string             `json:"guest_id" bson:"guest_id"`
-	ProductID   primitive.ObjectID `json:"product_id" bson:"product_id"`
-	VariantID   *primitive.ObjectID `json:"variant_id,omitempty" bson:"variant_id,omitempty"`
-	ViewedAt    time.Time          `json:"viewed_at" bson:"viewed_at"`
-	SessionID   string             `json:"session_id" bson:"session_id"`
-	UserAgent   string             `json:"user_agent" bson:"user_agent"`
-	IPAddress   string             `json:"ip_address" bson:"ip_address"`
-	Source      string             `json:"source" bson:"source"`
-	RefererURL  string             `json:"referer_url" bson:"referer_url"`
-}
-
-// Validate validates the RecentlyViewed model
-func (m *RecentlyViewed) Validate() error {
-	return nil
-}
-
-// RecentlyViewedObjects provides type-safe operations for RecentlyViewed
-var RecentlyViewedObjects, _ = orm.NewManager[RecentlyViewed]("recently_viewed")
-
-// RecentlyViewedFields provides type-safe field access for RecentlyViewed
-type RecentlyViewedFields struct {
-	ID         orm.Field[primitive.ObjectID]
-	CustomerID orm.Field[*primitive.ObjectID]
-	GuestID    orm.Field[string]
-	ProductID  orm.Field[primitive.ObjectID]
-	VariantID  orm.Field[*primitive.ObjectID]
-	ViewedAt   orm.Field[time.Time]
-	SessionID  orm.Field[string]
-	UserAgent  orm.Field[string]
-	IPAddress  orm.Field[string]
-	Source     orm.Field[string]
-	RefererURL orm.Field[string]
-}
-
-var RecentlyViewedFieldsInstance = RecentlyViewedFields{
-	ID:         orm.NewField[primitive.ObjectID]("id", "recently_viewed"),
-	CustomerID: orm.NewField[*primitive.ObjectID]("customer_id", "recently_viewed"),
-	GuestID:    orm.NewField[string]("guest_id", "recently_viewed"),
-	ProductID:  orm.NewField[primitive.ObjectID]("product_id", "recently_viewed"),
-	VariantID:  orm.NewField[*primitive.ObjectID]("variant_id", "recently_viewed"),
-	ViewedAt:   orm.NewField[time.Time]("viewed_at", "recently_viewed"),
-	SessionID:  orm.NewField[string]("session_id", "recently_viewed"),
-	UserAgent:  orm.NewField[string]("user_agent", "recently_viewed"),
-	IPAddress:  orm.NewField[string]("ip_address", "recently_viewed"),
-	Source:     orm.NewField[string]("source", "recently_viewed"),
-	RefererURL: orm.NewField[string]("referer_url", "recently_viewed"),
-}
-
-// RecentlyViewedSerializer provides serialization for RecentlyViewed
-type RecentlyViewedSerializer struct {
-	*api.BaseSerializer
-}
-
-func (s *RecentlyViewedSerializer) Serialize(ctx context.Context, obj *RecentlyViewed) map[string]interface{} {
-	return map[string]interface{}{
-		"id":          obj.ID,
-		"customer_id": obj.CustomerID,
-		"guest_id":    obj.GuestID,
-		"product_id":  obj.ProductID,
-		"variant_id":  obj.VariantID,
-		"viewed_at":   obj.ViewedAt,
-		"session_id":  obj.SessionID,
-		"user_agent": obj.UserAgent,
-		"ip_address": obj.IPAddress,
-		"source":      obj.Source,
-		"referer_url": obj.RefererURL,
-	}
-}
-
-// ProductComparisonGenerated struct definition
-type ProductComparisonGenerated struct {
-	schema.BaseSchema
-	ID         primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	CustomerID *primitive.ObjectID `json:"customer_id,omitempty" bson:"customer_id,omitempty"`
-	GuestID    string              `json:"guest_id" bson:"guest_id"`
-	Name       string              `json:"name" bson:"name"`
-	ProductIDs []primitive.ObjectID `json:"product_ids" bson:"product_ids"`
-	IsPublic   bool                `json:"is_public" bson:"is_public"`
-	ShareToken string              `json:"share_token" bson:"share_token"`
-	ViewCount  int                 `json:"view_count" bson:"view_count"`
-	CreatedAt  time.Time           `json:"created_at" bson:"created_at"`
-	UpdatedAt  time.Time           `json:"updated_at" bson:"updated_at"`
-}
-
-// Validate validates the ProductComparison model
-func (m *ProductComparison) Validate() error {
-	return nil
-}
-
-// ProductComparisonObjects provides type-safe operations for ProductComparison
-var ProductComparisonObjects, _ = orm.NewManager[ProductComparison]("product_comparisons")
-
-// ProductComparisonFields provides type-safe field access for ProductComparison
-type ProductComparisonFields struct {
-	ID         orm.Field[primitive.ObjectID]
-	CustomerID orm.Field[*primitive.ObjectID]
-	GuestID    orm.Field[string]
-	Name       orm.Field[string]
-	ProductIDs orm.Field[[]primitive.ObjectID]
-	IsPublic   orm.Field[bool]
-	ShareToken orm.Field[string]
-	ViewCount  orm.Field[int]
-	CreatedAt  orm.Field[time.Time]
-	UpdatedAt  orm.Field[time.Time]
-}
-
-var ProductComparisonFieldsInstance = ProductComparisonFields{
-	ID:         orm.NewField[primitive.ObjectID]("id", "product_comparisons"),
-	CustomerID: orm.NewField[*primitive.ObjectID]("customer_id", "product_comparisons"),
-	GuestID:    orm.NewField[string]("guest_id", "product_comparisons"),
-	Name:       orm.NewField[string]("name", "product_comparisons"),
-	ProductIDs: orm.NewField[[]primitive.ObjectID]("product_ids", "product_comparisons"),
-	IsPublic:   orm.NewField[bool]("is_public", "product_comparisons"),
-	ShareToken: orm.NewField[string]("share_token", "product_comparisons"),
-	ViewCount:  orm.NewField[int]("view_count", "product_comparisons"),
-	CreatedAt:  orm.NewField[time.Time]("created_at", "product_comparisons"),
-	UpdatedAt:  orm.NewField[time.Time]("updated_at", "product_comparisons"),
-}
-
-// ProductComparisonSerializer provides serialization for ProductComparison
-type ProductComparisonSerializer struct {
-	*api.BaseSerializer
-}
-
-func (s *ProductComparisonSerializer) Serialize(ctx context.Context, obj *ProductComparison) map[string]interface{} {
-	return map[string]interface{}{
-		"id":          obj.ID,
-		"customer_id": obj.CustomerID,
-		"guest_id":    obj.GuestID,
-		"name":        obj.Name,
-		"product_ids": obj.ProductIDs,
-		"is_public":   obj.IsPublic,
-		"share_token": obj.ShareToken,
-		"view_count":  obj.ViewCount,
-		"created_at":  obj.CreatedAt,
-		"updated_at":  obj.UpdatedAt,
-	}
-}
-
-// NotificationGenerated struct definition
-type NotificationGenerated struct {
-	schema.BaseSchema
-	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	CustomerID    primitive.ObjectID `json:"customer_id" bson:"customer_id"`
-	Type          string             `json:"type" bson:"type"`
-	Title         string             `json:"title" bson:"title"`
-	Message       string             `json:"message" bson:"message"`
-	ActionURL     string             `json:"action_url" bson:"action_url"`
-	ActionText    string             `json:"action_text" bson:"action_text"`
-	RelatedType   string             `json:"related_type" bson:"related_type"`
-	RelatedID     *primitive.ObjectID `json:"related_id,omitempty" bson:"related_id,omitempty"`
-	IsRead        bool               `json:"is_read" bson:"is_read"`
-	ReadAt        *time.Time        `json:"read_at,omitempty" bson:"read_at,omitempty"`
-	PushEnabled   bool               `json:"push_enabled" bson:"push_enabled"`
-	EmailEnabled  bool               `json:"email_enabled" bson:"email_enabled"`
-	SMSEnabled    bool               `json:"sms_enabled" bson:"sms_enabled"`
-	ScheduledFor  *time.Time        `json:"scheduled_for,omitempty" bson:"scheduled_for,omitempty"`
-	SentAt        *time.Time        `json:"sent_at,omitempty" bson:"sent_at,omitempty"`
-	CreatedAt     time.Time          `json:"created_at" bson:"created_at"`
-}
-
-// Validate validates the Notification model
-func (m *Notification) Validate() error {
-	return nil
-}
-
-// NotificationObjects provides type-safe operations for Notification
-var NotificationObjects, _ = orm.NewManager[Notification]("notifications")
-
-// NotificationFields provides type-safe field access for Notification
-type NotificationFields struct {
-	ID            orm.Field[primitive.ObjectID]
-	CustomerID    orm.Field[primitive.ObjectID]
-	Type          orm.Field[string]
-	Title         orm.Field[string]
-	Message       orm.Field[string]
-	ActionURL     orm.Field[string]
-	ActionText    orm.Field[string]
-	RelatedType   orm.Field[string]
-	RelatedID     orm.Field[*primitive.ObjectID]
-	IsRead        orm.Field[bool]
-	ReadAt        orm.Field[*time.Time]
-	PushEnabled   orm.Field[bool]
-	EmailEnabled  orm.Field[bool]
-	SMSEnabled    orm.Field[bool]
-	ScheduledFor  orm.Field[*time.Time]
-	SentAt        orm.Field[*time.Time]
-	CreatedAt     orm.Field[time.Time]
-}
-
-var NotificationFieldsInstance = NotificationFields{
-	ID:            orm.NewField[primitive.ObjectID]("id", "notifications"),
-	CustomerID:    orm.NewField[primitive.ObjectID]("customer_id", "notifications"),
-	Type:          orm.NewField[string]("type", "notifications"),
-	Title:         orm.NewField[string]("title", "notifications"),
-	Message:       orm.NewField[string]("message", "notifications"),
-	ActionURL:     orm.NewField[string]("action_url", "notifications"),
-	ActionText:    orm.NewField[string]("action_text", "notifications"),
-	RelatedType:   orm.NewField[string]("related_type", "notifications"),
-	RelatedID:     orm.NewField[*primitive.ObjectID]("related_id", "notifications"),
-	IsRead:        orm.NewField[bool]("is_read", "notifications"),
-	ReadAt:        orm.NewField[*time.Time]("read_at", "notifications"),
-	PushEnabled:   orm.NewField[bool]("push_enabled", "notifications"),
-	EmailEnabled:  orm.NewField[bool]("email_enabled", "notifications"),
-	SMSEnabled:    orm.NewField[bool]("sms_enabled", "notifications"),
-	ScheduledFor:  orm.NewField[*time.Time]("scheduled_for", "notifications"),
-	SentAt:        orm.NewField[*time.Time]("sent_at", "notifications"),
-	CreatedAt:     orm.NewField[time.Time]("created_at", "notifications"),
-}
-
-// NotificationSerializer provides serialization for Notification
-type NotificationSerializer struct {
-	*api.BaseSerializer
-}
-
-func (s *NotificationSerializer) Serialize(ctx context.Context, obj *Notification) map[string]interface{} {
-	return map[string]interface{}{
-		"id":             obj.ID,
-		"customer_id":    obj.CustomerID,
-		"type":           obj.Type,
-		"title":          obj.Title,
-		"message":        obj.Message,
-		"action_url":     obj.ActionURL,
-		"action_text":   obj.ActionText,
-		"related_type":  obj.RelatedType,
-		"related_id":    obj.RelatedID,
-		"is_read":       obj.IsRead,
-		"read_at":       obj.ReadAt,
-		"push_enabled":  obj.PushEnabled,
-		"email_enabled": obj.EmailEnabled,
-		"sms_enabled":   obj.SMSEnabled,
-		"scheduled_for": obj.ScheduledFor,
-		"sent_at":       obj.SentAt,
-		"created_at":     obj.CreatedAt,
-	}
-}
-
-// CustomerActivityGenerated struct definition
-type CustomerActivityGenerated struct {
-	schema.BaseSchema
-	ID            primitive.ObjectID          `json:"id" bson:"_id,omitempty"`
-	CustomerID    primitive.ObjectID          `json:"customer_id" bson:"customer_id"`
-	ActivityType  string                      `json:"activity_type" bson:"activity_type"`
-	EntityType    string                      `json:"entity_type" bson:"entity_type"`
-	EntityID      *primitive.ObjectID         `json:"entity_id,omitempty" bson:"entity_id,omitempty"`
-	Data          map[string]interface{}      `json:"data" bson:"data"`
-	SessionID     string                      `json:"session_id" bson:"session_id"`
-	UserAgent     string                      `json:"user_agent" bson:"user_agent"`
-	IPAddress     string                      `json:"ip_address" bson:"ip_address"`
-	Timestamp     time.Time                   `json:"timestamp" bson:"timestamp"`
-}
-
-// Validate validates the CustomerActivity model
-func (m *CustomerActivity) Validate() error {
-	return nil
-}
-
-// CustomerActivityObjects provides type-safe operations for CustomerActivity
-var CustomerActivityObjects, _ = orm.NewManager[CustomerActivity]("customer_activities")
-
-// CustomerActivityFields provides type-safe field access for CustomerActivity
-type CustomerActivityFields struct {
-	ID            orm.Field[primitive.ObjectID]
-	CustomerID    orm.Field[primitive.ObjectID]
-	ActivityType  orm.Field[string]
-	EntityType    orm.Field[string]
-	EntityID      orm.Field[*primitive.ObjectID]
-	Data          orm.Field[map[string]interface{}]
-	SessionID     orm.Field[string]
-	UserAgent     orm.Field[string]
-	IPAddress     orm.Field[string]
-	Timestamp     orm.Field[time.Time]
-}
-
-var CustomerActivityFieldsInstance = CustomerActivityFields{
-	ID:            orm.NewField[primitive.ObjectID]("id", "customer_activities"),
-	CustomerID:    orm.NewField[primitive.ObjectID]("customer_id", "customer_activities"),
-	ActivityType:  orm.NewField[string]("activity_type", "customer_activities"),
-	EntityType:    orm.NewField[string]("entity_type", "customer_activities"),
-	EntityID:      orm.NewField[*primitive.ObjectID]("entity_id", "customer_activities"),
-	Data:          orm.NewField[map[string]interface{}]("data", "customer_activities"),
-	SessionID:     orm.NewField[string]("session_id", "customer_activities"),
-	UserAgent:     orm.NewField[string]("user_agent", "customer_activities"),
-	IPAddress:     orm.NewField[string]("ip_address", "customer_activities"),
-	Timestamp:     orm.NewField[time.Time]("timestamp", "customer_activities"),
-}
-
-// CustomerActivitySerializer provides serialization for CustomerActivity
-type CustomerActivitySerializer struct {
-	*api.BaseSerializer
-}
-
-func (s *CustomerActivitySerializer) Serialize(ctx context.Context, obj *CustomerActivity) map[string]interface{} {
-	return map[string]interface{}{
-		"id":            obj.ID,
-		"customer_id":   obj.CustomerID,
-		"activity_type": obj.ActivityType,
-		"entity_type":   obj.EntityType,
-		"entity_id":     obj.EntityID,
-		"data":          obj.Data,
-		"session_id":    obj.SessionID,
-		"user_agent":   obj.UserAgent,
-		"ip_address":   obj.IPAddress,
-		"timestamp":    obj.Timestamp,
-	}
-}
-
-// AbandonedCartReminderGenerated struct definition
-type AbandonedCartReminderGenerated struct {
-	schema.BaseSchema
-	ID                primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	CartID            primitive.ObjectID `json:"cart_id" bson:"cart_id"`
-	CustomerID        *primitive.ObjectID `json:"customer_id,omitempty" bson:"customer_id,omitempty"`
-	GuestEmail        string             `json:"guest_email" bson:"guest_email"`
-	ReminderNumber    int                `json:"reminder_number" bson:"reminder_number"`
-	ReminderSentAt    *time.Time        `json:"reminder_sent_at,omitempty" bson:"reminder_sent_at,omitempty"`
-	ReminderOpenedAt  *time.Time        `json:"reminder_opened_at,omitempty" bson:"reminder_opened_at,omitempty"`
-	ReminderClickedAt *time.Time        `json:"reminder_clicked_at,omitempty" bson:"reminder_clicked_at,omitempty"`
-	RecoveredAt       *time.Time        `json:"recovered_at,omitempty" bson:"recovered_at,omitempty"`
-	RecoveredOrderID  *primitive.ObjectID `json:"recovered_order_id,omitempty" bson:"recovered_order_id,omitempty"`
-	Status            string             `json:"status" bson:"status"`
-	CreatedAt         time.Time          `json:"created_at" bson:"created_at"`
-}
-
-// Validate validates the AbandonedCartReminder model
-func (m *AbandonedCartReminder) Validate() error {
-	return nil
-}
-
-// AbandonedCartReminderObjects provides type-safe operations for AbandonedCartReminder
-var AbandonedCartReminderObjects, _ = orm.NewManager[AbandonedCartReminder]("abandoned_cart_reminders")
-
-// AbandonedCartReminderFields provides type-safe field access for AbandonedCartReminder
-type AbandonedCartReminderFields struct {
-	ID                orm.Field[primitive.ObjectID]
-	CartID            orm.Field[primitive.ObjectID]
-	CustomerID        orm.Field[*primitive.ObjectID]
-	GuestEmail        orm.Field[string]
-	ReminderNumber    orm.Field[int]
-	ReminderSentAt    orm.Field[*time.Time]
-	ReminderOpenedAt  orm.Field[*time.Time]
-	ReminderClickedAt orm.Field[*time.Time]
-	RecoveredAt       orm.Field[*time.Time]
-	RecoveredOrderID  orm.Field[*primitive.ObjectID]
-	Status            orm.Field[string]
-	CreatedAt         orm.Field[time.Time]
-}
-
-var AbandonedCartReminderFieldsInstance = AbandonedCartReminderFields{
-	ID:                orm.NewField[primitive.ObjectID]("id", "abandoned_cart_reminders"),
-	CartID:            orm.NewField[primitive.ObjectID]("cart_id", "abandoned_cart_reminders"),
-	CustomerID:        orm.NewField[*primitive.ObjectID]("customer_id", "abandoned_cart_reminders"),
-	GuestEmail:        orm.NewField[string]("guest_email", "abandoned_cart_reminders"),
-	ReminderNumber:    orm.NewField[int]("reminder_number", "abandoned_cart_reminders"),
-	ReminderSentAt:    orm.NewField[*time.Time]("reminder_sent_at", "abandoned_cart_reminders"),
-	ReminderOpenedAt:  orm.NewField[*time.Time]("reminder_opened_at", "abandoned_cart_reminders"),
-	ReminderClickedAt: orm.NewField[*time.Time]("reminder_clicked_at", "abandoned_cart_reminders"),
-	RecoveredAt:       orm.NewField[*time.Time]("recovered_at", "abandoned_cart_reminders"),
-	RecoveredOrderID:  orm.NewField[*primitive.ObjectID]("recovered_order_id", "abandoned_cart_reminders"),
-	Status:            orm.NewField[string]("status", "abandoned_cart_reminders"),
-	CreatedAt:         orm.NewField[time.Time]("created_at", "abandoned_cart_reminders"),
-}
-
-// AbandonedCartReminderSerializer provides serialization for AbandonedCartReminder
-type AbandonedCartReminderSerializer struct {
-	*api.BaseSerializer
-}
-
-func (s *AbandonedCartReminderSerializer) Serialize(ctx context.Context, obj *AbandonedCartReminder) map[string]interface{} {
-	return map[string]interface{}{
-		"id":                 obj.ID,
-		"cart_id":           obj.CartID,
-		"customer_id":       obj.CustomerID,
-		"guest_email":       obj.GuestEmail,
-		"reminder_number":   obj.ReminderNumber,
-		"reminder_sent_at":  obj.ReminderSentAt,
-		"reminder_opened_at": obj.ReminderOpenedAt,
-		"reminder_clicked_at": obj.ReminderClickedAt,
-		"recovered_at":      obj.RecoveredAt,
-		"recovered_order_id": obj.RecoveredOrderID,
-		"status":            obj.Status,
-		"created_at":        obj.CreatedAt,
-	}
-}
-
-// UserSegmentGenerated struct definition
-type UserSegmentGenerated struct {
-	schema.BaseSchema
-	ID            primitive.ObjectID          `json:"id" bson:"_id,omitempty"`
-	Name          string                      `json:"name" bson:"name"`
-	Description   string                      `json:"description" bson:"description"`
-	Type          string                      `json:"type" bson:"type"`
-	Criteria      map[string]interface{}      `json:"criteria" bson:"criteria"`
-	Rules         []SegmentRule               `json:"rules" bson:"rules"`
-	CustomerIDs   []primitive.ObjectID        `json:"customer_ids" bson:"customer_ids"`
-	CustomerCount int                         `json:"customer_count" bson:"customer_count"`
-	IsActive      bool                         `json:"is_active" bson:"is_active"`
-	CreatedAt     time.Time                   `json:"created_at" bson:"created_at"`
-	UpdatedAt     time.Time                   `json:"updated_at" bson:"updated_at"`
-}
-
-// Validate validates the UserSegment model
-func (m *UserSegment) Validate() error {
-	return nil
-}
-
-// UserSegmentObjects provides type-safe operations for UserSegment
-var UserSegmentObjects, _ = orm.NewManager[UserSegment]("user_segments")
-
-// UserSegmentFields provides type-safe field access for UserSegment
-type UserSegmentFields struct {
-	ID            orm.Field[primitive.ObjectID]
-	Name          orm.Field[string]
-	Description   orm.Field[string]
-	Type          orm.Field[string]
-	Criteria      orm.Field[map[string]interface{}]
-	Rules         orm.Field[[]SegmentRule]
-	CustomerIDs   orm.Field[[]primitive.ObjectID]
-	CustomerCount orm.Field[int]
-	IsActive      orm.Field[bool]
-	CreatedAt     orm.Field[time.Time]
-	UpdatedAt     orm.Field[time.Time]
-}
-
-var UserSegmentFieldsInstance = UserSegmentFields{
-	ID:            orm.NewField[primitive.ObjectID]("id", "user_segments"),
-	Name:          orm.NewField[string]("name", "user_segments"),
-	Description:   orm.NewField[string]("description", "user_segments"),
-	Type:          orm.NewField[string]("type", "user_segments"),
-	Criteria:      orm.NewField[map[string]interface{}]("criteria", "user_segments"),
-	Rules:         orm.NewField[[]SegmentRule]("rules", "user_segments"),
-	CustomerIDs:   orm.NewField[[]primitive.ObjectID]("customer_ids", "user_segments"),
-	CustomerCount: orm.NewField[int]("customer_count", "user_segments"),
-	IsActive:      orm.NewField[bool]("is_active", "user_segments"),
-	CreatedAt:     orm.NewField[time.Time]("created_at", "user_segments"),
-	UpdatedAt:     orm.NewField[time.Time]("updated_at", "user_segments"),
-}
-
-// UserSegmentSerializer provides serialization for UserSegment
-type UserSegmentSerializer struct {
-	*api.BaseSerializer
-}
-
-func (s *UserSegmentSerializer) Serialize(ctx context.Context, obj *UserSegment) map[string]interface{} {
-	return map[string]interface{}{
-		"id":             obj.ID,
-		"name":           obj.Name,
-		"description":    obj.Description,
-		"type":           obj.Type,
-		"criteria":       obj.Criteria,
-		"rules":          obj.Rules,
-		"customer_ids":   obj.CustomerIDs,
-		"customer_count": obj.CustomerCount,
-		"is_active":      obj.IsActive,
-		"created_at":    obj.CreatedAt,
-		"updated_at":    obj.UpdatedAt,
-	}
-}
-

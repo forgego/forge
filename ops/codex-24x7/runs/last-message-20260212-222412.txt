@@ -1,0 +1,33 @@
+Implemented one focused high-impact batch on admin REST reliability and updated run tracking files.
+
+### What I changed
+- `forge/admin/api/rest/router.go`
+  - Replaced hardcoded model count in `handleMetaList` with dynamic count from `admin.ListObjects(...)` (`PageSize: 1`) via `modelCountFromList(...)`.
+  - Added safe fallback to `0` if list/count retrieval fails, so meta endpoint remains resilient.
+  - Replaced hardcoded config environment with `adminEnvironment()` that resolves in order:
+    - `FORGE_ENV`
+    - `APP_ENV`
+    - `GO_ENV`
+    - `ENV`
+    - default: `"development"`
+
+- `forge/admin/api/rest/router_test.go`
+  - Added tests for:
+    - count sourced from `ListObjects` response
+    - fallback count `0` when list fails
+    - config environment sourced from env vars
+
+- `ops/codex-24x7/STATUS.md`
+  - Updated `Completed this run`, `Remaining work`, and `Next run plan`.
+
+- `ops/codex-24x7/HISTORY.md`
+  - Appended a concise run log entry for this batch.
+
+### Tests run
+- Framework:
+  - `go test ./admin/api/rest` (pass)
+- Ecommerce parity check:
+  - `go test ./...` in `examples/ecommerce` (pass; no test files present)
+
+### Note
+- `git status` could not be executed due repo safe-directory ownership restrictions in this environment.

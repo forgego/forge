@@ -6,18 +6,16 @@ image: /forge-social-card.svg
 
 # Models
 
-Models are defined by implementing the `schema.Schema` interface. You describe fields, relations, metadata, and hooks, and forge generates type-safe ORM accessors.
+Models implement the `schema.Schema` interface. You define fields, relations, meta options, and hooks. Forge generates type-safe ORM accessors and field expressions.
 
-## Schema interface
-
-A model implements these methods:
+## Interface
 
 - `Fields() []schema.Field`
 - `Relations() []schema.Relation`
 - `Meta() schema.Meta`
 - `Hooks() *schema.ModelHooks`
 
-You can embed `schema.BaseSchema` to get empty defaults.
+Embed `schema.BaseSchema` for defaults.
 
 ## Basic model
 
@@ -32,13 +30,12 @@ func (Post) Fields() []schema.Field {
         schema.StringField("title", schema.Required(), schema.MaxLength(200)),
         schema.TextField("content", schema.Required()),
         schema.BoolField("published", schema.Default(false)),
+        schema.TimeField("created_at", schema.AutoNowAdd()),
     }
 }
 ```
 
 ## Field types
-
-Built-in field types include:
 
 - Int64, Int32
 - String, Text
@@ -49,9 +46,9 @@ Built-in field types include:
 - JSON, Bytes
 - ForeignKey, OneToOne, ManyToMany
 
-## Field options
+## Field options (selected)
 
-Common field options supported by `schema.Field`:
+Validation and database options live on `schema.Field`:
 
 - Required, Unique, Blank
 - MinLength, MaxLength
@@ -66,14 +63,6 @@ Common field options supported by `schema.Field`:
 
 ## Relations
 
-Use relations to connect models:
-
-- ForeignKey
-- OneToOne
-- ManyToMany
-
-Relations support cascade behaviors and constraint configuration.
-
 ```go
 func (Post) Relations() []schema.Relation {
     return []schema.Relation{
@@ -82,9 +71,17 @@ func (Post) Relations() []schema.Relation {
 }
 ```
 
+Supported relation types:
+
+- ForeignKey
+- OneToOne
+- ManyToMany
+
+Relation options include cascade behavior, constraint config, related names, and through tables.
+
 ## Meta options
 
-`schema.Meta` supports table naming and advanced database options, including:
+`schema.Meta` supports:
 
 - TableName, VerboseName, VerboseNamePlural
 - AppLabel, DefaultManager, BaseManager
@@ -96,8 +93,6 @@ func (Post) Relations() []schema.Relation {
 
 ## Hooks
 
-Use hooks to run logic around create, update, save, and delete.
-
 ```go
 func (Post) Hooks() *schema.ModelHooks {
     return schema.NewModelHooks().
@@ -106,7 +101,7 @@ func (Post) Hooks() *schema.ModelHooks {
 }
 ```
 
-Supported hook points:
+Hook points:
 
 - BeforeCreate / AfterCreate
 - BeforeUpdate / AfterUpdate
@@ -114,10 +109,6 @@ Supported hook points:
 - BeforeDelete / AfterDelete
 - Clean (validation)
 - Save / Delete (override)
-
-## Validation
-
-Validation can be expressed through field options and validators. Forge also includes typed validators in the validation package for custom checks.
 
 ## Code generation
 

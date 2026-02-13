@@ -162,6 +162,7 @@ type BulkActionResponse struct {
 // BulkActionError represents an error for a specific item in bulk action
 type BulkActionError struct {
 	ID      int64  `json:"id"`
+	Code    string `json:"code,omitempty"`
 	Message string `json:"message"`
 }
 

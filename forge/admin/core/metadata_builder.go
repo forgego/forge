@@ -202,6 +202,7 @@ func buildFiltersMetadata[T any](s schema.Schema, config *Config[T]) []FilterMet
 	}
 
 	fields := s.Fields()
+	relations := s.Relations()
 	fieldMap := make(map[string]schema.Field)
 	for _, field := range fields {
 		fieldMap[field.Name] = field
@@ -234,11 +235,8 @@ func buildFiltersMetadata[T any](s schema.Schema, config *Config[T]) []FilterMet
 		}
 
 		// Add related model for relations
-		// Note: Field struct doesn't have RelatedModel directly? Need to check.
-		// Assuming Relation handling is separate or Field has it.
-		// For now simplifying to avoid error if RelatedModel field absent
 		if field.Type == schema.TypeForeignKey || field.Type == schema.TypeManyToMany {
-			// filterMeta.RelatedModel = field.RelatedModel // FIXME: Check field struct
+			filterMeta.RelatedModel = findRelatedModelForFilter(filterName, relations)
 			filterMeta.Multiple = field.Type == schema.TypeManyToMany
 		}
 
@@ -246,6 +244,20 @@ func buildFiltersMetadata[T any](s schema.Schema, config *Config[T]) []FilterMet
 	}
 
 	return result
+}
+
+func findRelatedModelForFilter(filterName string, relations []schema.Relation) string {
+	if filterName == "" || len(relations) == 0 {
+		return ""
+	}
+
+	baseName := strings.TrimSuffix(filterName, "_id")
+	for _, rel := range relations {
+		if rel.Name == filterName || rel.Name == baseName {
+			return rel.To
+		}
+	}
+	return ""
 }
 
 // buildValidatorsMetadata builds validator metadata from field

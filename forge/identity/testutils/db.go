@@ -3,14 +3,47 @@ package testutils
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"os"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/forgego/forge/db"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 )
+
+var testDBCounter uint64
+
+func generateTestDBName() string {
+	seq := atomic.AddUint64(&testDBCounter, 1)
+	return fmt.Sprintf("test_identity_%d_%d_%d", os.Getpid(), time.Now().UnixNano(), seq)
+}
+
+func isDuplicateDatabaseError(err error) bool {
+	var pqErr *pq.Error
+	return errors.As(err, &pqErr) && pqErr.Code == "42P04"
+}
+
+func createTestDatabase(ctx context.Context, defaultDB *sql.DB) (string, error) {
+	const maxAttempts = 5
+
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		dbName := generateTestDBName()
+		query := fmt.Sprintf("CREATE DATABASE %s", pq.QuoteIdentifier(dbName))
+		if _, err := defaultDB.ExecContext(ctx, query); err != nil {
+			if isDuplicateDatabaseError(err) {
+				continue
+			}
+			return "", err
+		}
+		return dbName, nil
+	}
+
+	return "", fmt.Errorf("failed to create unique test database after %d attempts", maxAttempts)
+}
 
 // SetupTestDB creates a Postgres database for testing
 func SetupTestDB(t *testing.T) *db.DB {
@@ -19,10 +52,6 @@ func SetupTestDB(t *testing.T) *db.DB {
 	port := "5432"
 	user := "postgres"
 	password := "123"
-	
-	// Generate a unique DB name
-	// Use timestamp and a simplified test name to avoid invalid characters
-	dbName := fmt.Sprintf("test_identity_%d", time.Now().UnixNano())
 
 	// Connect to default DB to create test DB
 	defaultDSN := fmt.Sprintf("postgres://%s:%s@%s:%s/postgres?sslmode=disable",
@@ -36,8 +65,8 @@ func SetupTestDB(t *testing.T) *db.DB {
 		t.Skipf("PostgreSQL not available: %v. Skipping identity DB tests.", err)
 	}
 
-	// Create database
-	_, err = defaultDB.ExecContext(context.Background(), fmt.Sprintf("CREATE DATABASE %s", dbName))
+	// Create a unique database (retrying if a name collision occurs under parallel test startup)
+	dbName, err := createTestDatabase(context.Background(), defaultDB)
 	require.NoError(t, err)
 
 	// Connect to test DB
@@ -141,7 +170,8 @@ func SetupTestDB(t *testing.T) *db.DB {
 		}
 		defer cleanupDB.Close()
 		// Use WITH (FORCE) to drop even if connections remain
-		_, _ = cleanupDB.ExecContext(context.Background(), fmt.Sprintf("DROP DATABASE IF EXISTS %s WITH (FORCE)", dbName))
+		query := fmt.Sprintf("DROP DATABASE IF EXISTS %s WITH (FORCE)", pq.QuoteIdentifier(dbName))
+		_, _ = cleanupDB.ExecContext(context.Background(), query)
 	})
 
 	return testDB

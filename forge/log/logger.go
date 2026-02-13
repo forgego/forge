@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	logexporters "github.com/forgego/forge/log/exporters"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -110,9 +111,13 @@ func createConsoleCore(encoder zapcore.Encoder, level zapcore.Level) zapcore.Cor
 
 // createFileCore creates a file core with rotation
 func createFileCore(encoder zapcore.Encoder, level zapcore.Level, fileConfig FileOutputConfig) zapcore.Core {
-	// Import exporters package inline to avoid circular dependency issues
-	// This will be resolved when the package structure is finalized
-	fileExp := newFileExporter(fileConfig, level)
+	fileExp := logexporters.NewFileExporter(logexporters.FileConfig{
+		Path:       fileConfig.Path,
+		MaxSize:    fileConfig.Rotation.MaxSize,
+		MaxAge:     fileConfig.Rotation.MaxAge,
+		MaxBackups: fileConfig.Rotation.MaxBackups,
+		Compress:   fileConfig.Rotation.Compress,
+	}, level)
 	writer := fileExp.GetWriter()
 	return zapcore.NewCore(encoder, writer, level)
 }
@@ -122,34 +127,6 @@ func createRemoteCore(encoder zapcore.Encoder, level zapcore.Level, remoteConfig
 	remoteExp := newRemoteExporter(remoteConfig, level)
 	writer := remoteExp.GetWriter()
 	return zapcore.NewCore(encoder, writer, level)
-}
-
-// fileExporter wraps file exporter functionality
-type fileExporter struct {
-	writer zapcore.WriteSyncer
-	level  zapcore.Level
-}
-
-func newFileExporter(config FileOutputConfig, level zapcore.Level) *fileExporter {
-	// Note: lumberjack import will be added to go.mod
-	// For now, we'll use a simple file writer
-	// The full implementation with rotation will be in the exporters package
-	file, err := os.OpenFile(config.Path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		// Fallback to stderr if file can't be opened
-		return &fileExporter{
-			writer: zapcore.AddSync(os.Stderr),
-			level:  level,
-		}
-	}
-	return &fileExporter{
-		writer: zapcore.AddSync(file),
-		level:  level,
-	}
-}
-
-func (e *fileExporter) GetWriter() zapcore.WriteSyncer {
-	return e.writer
 }
 
 // remoteExporter wraps remote exporter functionality

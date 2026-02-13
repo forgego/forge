@@ -1,0 +1,23 @@
+Implemented one focused high-impact batch on admin action reliability + ecommerce parity.
+
+### What changed
+- Added structured action error codes in framework core:
+  - `forge/admin/core/metadata.go:163`  
+    - `BulkActionError` now includes `Code`.
+  - `forge/admin/core/admin.go:481`  
+    - `ExecuteAction` now emits per-item codes: `invalid_id`, `not_found`, `permission_denied`.
+- Expanded ecommerce mixed-outcome action parity (non-order/non-payment/warehouse):
+  - `examples/ecommerce/app/marketing/admin.go:71`  
+    - Coupon object-level `HasChangePermission` now denies edits when `usage_count > 0`.
+  - `examples/ecommerce/main_test.go:1327`  
+    - Added `TestBuildEcommerceRouter_AdminAPIActionObjectSpecificCouponChangePermission` for `POST /admin/api/coupons/action/deactivate` mixed outcomes (`207`, one denied, one updated).
+- Added framework regression assertion:
+  - `forge/admin/api/rest/router_test.go:684`  
+    - Action partial-failure test now asserts serialized error `code`.
+- Updated run tracking:
+  - `ops/codex-24x7/STATUS.md:3`
+  - `ops/codex-24x7/HISTORY.md:641`
+
+### Tests run
+- `go test ./admin/... -count=1` in `forge` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` (pass)
+- `go test ./... -count=1` in `examples/ecommerce` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` (pass)

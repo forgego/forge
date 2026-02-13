@@ -1,0 +1,23 @@
+Implemented one focused high-impact batch on framework codegen reliability by closing the hooks-extraction TODO and adding coverage.
+
+Changed:
+- Implemented `Hooks()` AST extraction in `forge/codegen/ast_parser.go:1039`:
+  - Parses `&schema.ModelHooks{...}` / `schema.ModelHooks{...}`
+  - Parses `schema.NewModelHooks().With...(...)` chains
+  - Handles simple assigned-variable returns (`hooks := ...; return hooks`)
+  - Extracts hook refs for identifiers, selectors, and inline funcs (`<inline>`)
+- Added tests in `forge/codegen/ast_parser_test.go:9`:
+  - `TestParseFile_ExtractsHooksFromStructLiteral`
+  - `TestParseFile_ExtractsHooksFromBuilderChain`
+  - `TestParseFile_ExtractsHooksFromAssignedVariable`
+  - `TestParseFile_HandlesNilHooks`
+- Updated run tracking:
+  - `ops/codex-24x7/STATUS.md:3`
+  - `ops/codex-24x7/HISTORY.md:186`
+
+Verification run:
+- `go test ./codegen -count=1` in `forge` (pass)
+- `go test ./... -count=1` in `examples/ecommerce` (pass)
+
+Note:
+- `git status` could not be executed due Git safe-directory ownership configuration on this machine (`dubious ownership`).

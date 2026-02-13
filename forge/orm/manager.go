@@ -296,17 +296,22 @@ func (m *Manager[T]) UpdateFields(ctx context.Context, id int64, updates UpdateM
 		}
 	}
 
-	fa, err := m.FieldAccessor()
-	if err != nil {
-		return err
+	// Resolve primary key field without relying on typed FieldFor, which can
+	// panic when models don't expose the expected "ID" Go field name.
+	idFieldName := m.schema.PrimaryKey
+	if idFieldName == "" {
+		for _, candidate := range []string{"id", "ID", "Id"} {
+			if m.schema.GetField(candidate) != nil {
+				idFieldName = candidate
+				break
+			}
+		}
+	}
+	if idFieldName == "" {
+		return fmt.Errorf("primary key field not found for %s", m.tableName)
 	}
 
-	idField := FieldFor[T, int64](fa, "ID")
-	if idField.Path() == "" {
-		idField = FieldFor[T, int64](fa, "id")
-	}
-
-	qs, err := m.Filter(idField.Eq(id))
+	qs, err := m.Filter(F(idFieldName).Eq(id))
 	if err != nil {
 		return err
 	}
@@ -330,12 +335,12 @@ func (m *Manager[T]) getID(instance *T) (int64, error) {
 	if modelWithID, ok := any(instance).(ModelWithID); ok {
 		return modelWithID.GetID(), nil
 	}
-	
+
 	idValue, err := GetIDValue(instance, "id")
 	if err != nil {
 		return 0, fmt.Errorf("failed to get ID: %w", err)
 	}
-	
+
 	if id, ok := idValue.(int64); ok {
 		return id, nil
 	}
@@ -433,7 +438,7 @@ func (m *Manager[T]) runHooks(ctx context.Context, instance *T, hookType string)
 			err = h.AfterDelete(ctx)
 		}
 	}
-	
+
 	if err != nil {
 		return fmt.Errorf("%s hook failed: %w", hookType, err)
 	}

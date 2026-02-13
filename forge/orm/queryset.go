@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/forgego/forge/utils"
@@ -105,12 +106,13 @@ func Desc(field string) OrderField {
 //
 // Deprecated: Use Asc(field) or Desc(field) instead for clarity. NewOrderField will be removed in v3.0.
 // Migration:
-//   // Old
-//   order := orm.NewOrderField("created_at", true)
-//   order := orm.NewOrderField("created_at", false)
-//   // New
-//   order := orm.Asc("created_at")
-//   order := orm.Desc("created_at")
+//
+//	// Old
+//	order := orm.NewOrderField("created_at", true)
+//	order := orm.NewOrderField("created_at", false)
+//	// New
+//	order := orm.Asc("created_at")
+//	order := orm.Desc("created_at")
 func NewOrderField(field string, ascending bool) OrderField {
 	if ascending {
 		return Asc(field)
@@ -475,7 +477,7 @@ func (qs *BaseQuerySet[T]) buildSQL() (string, []interface{}, error) {
 	fromClause := fmt.Sprintf("FROM %s", EscapeIdentifier(qs.table))
 
 	// Build WHERE clause
-	whereClause, whereArgs := qs.buildWhereClause(builder)
+	whereClause, _ := qs.buildWhereClause(builder)
 
 	// Build ORDER BY clause
 	orderByClause := qs.buildOrderByClause(builder)
@@ -504,7 +506,6 @@ func (qs *BaseQuerySet[T]) buildSQL() (string, []interface{}, error) {
 
 	sql := strings.Join(parts, " ")
 	args := builder.Args()
-	args = append(args, whereArgs...)
 
 	return sql, args, nil
 }
@@ -541,7 +542,7 @@ func (qs *BaseQuerySet[T]) buildJoinClause(builder *SQLBuilder) {
 		// 1. Look for field with DBColumn = rel.Name + "_id" (lowercase)
 		// 2. Look for field with Name = rel.Name + "ID"
 		fkColumn := ""
-		
+
 		// Try to find field that corresponds to this relation
 		for _, f := range qs.schema.Fields {
 			// Check common naming conventions
@@ -567,7 +568,7 @@ func (qs *BaseQuerySet[T]) buildJoinClause(builder *SQLBuilder) {
 				fkColumn = f.DBColumn
 			}
 		}
-		
+
 		if fkColumn == "" {
 			continue // Could not determine join condition
 		}
@@ -577,7 +578,7 @@ func (qs *BaseQuerySet[T]) buildJoinClause(builder *SQLBuilder) {
 			joinTable, alias,
 			mainTable, EscapeIdentifier(fkColumn),
 			alias, EscapeIdentifier(targetSchema.PrimaryKey))
-		
+
 		qs.joins = append(qs.joins, joinSQL)
 		qs.joinMap[path] = true
 	}
@@ -944,14 +945,83 @@ func setFieldValue(field reflect.Value, value interface{}) {
 	val := reflect.ValueOf(value)
 	if val.Type().ConvertibleTo(field.Type()) {
 		field.Set(val.Convert(field.Type()))
-	} else {
-		// Handle []byte to string
-		if b, ok := value.([]byte); ok && field.Kind() == reflect.String {
-			field.SetString(string(b))
-			return
+		return
+	}
+
+	raw := value
+	if b, ok := value.([]byte); ok {
+		raw = string(b)
+	}
+
+	switch field.Kind() {
+	case reflect.String:
+		if s, ok := raw.(string); ok {
+			field.SetString(s)
 		}
-		// Handle int64/float64 mismatch if needed
-		// For now rely on basic conversion or driver compatibility
+	case reflect.Bool:
+		switch v := raw.(type) {
+		case string:
+			if parsed, err := strconv.ParseBool(v); err == nil {
+				field.SetBool(parsed)
+			}
+		case int64:
+			field.SetBool(v != 0)
+		case int32:
+			field.SetBool(v != 0)
+		case int:
+			field.SetBool(v != 0)
+		case float64:
+			field.SetBool(v != 0)
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		switch v := raw.(type) {
+		case string:
+			if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
+				field.SetInt(parsed)
+			}
+		case float64:
+			field.SetInt(int64(v))
+		case int:
+			field.SetInt(int64(v))
+		case int32:
+			field.SetInt(int64(v))
+		case int64:
+			field.SetInt(v)
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		switch v := raw.(type) {
+		case string:
+			if parsed, err := strconv.ParseUint(v, 10, 64); err == nil {
+				field.SetUint(parsed)
+			}
+		case float64:
+			field.SetUint(uint64(v))
+		case int:
+			if v >= 0 {
+				field.SetUint(uint64(v))
+			}
+		case int64:
+			if v >= 0 {
+				field.SetUint(uint64(v))
+			}
+		case uint64:
+			field.SetUint(v)
+		}
+	case reflect.Float32, reflect.Float64:
+		switch v := raw.(type) {
+		case string:
+			if parsed, err := strconv.ParseFloat(v, 64); err == nil {
+				field.SetFloat(parsed)
+			}
+		case float64:
+			field.SetFloat(v)
+		case float32:
+			field.SetFloat(float64(v))
+		case int:
+			field.SetFloat(float64(v))
+		case int64:
+			field.SetFloat(float64(v))
+		}
 	}
 }
 
@@ -965,8 +1035,9 @@ func setFieldValue(field reflect.Value, value interface{}) {
 // when no instances are found. Get() requires exactly one match.
 //
 // Example:
-//   user, err := qs.Filter(User.Email.Eq("john@example.com")).Get(ctx)
-//   // Returns error if 0 or >1 users found
+//
+//	user, err := qs.Filter(User.Email.Eq("john@example.com")).Get(ctx)
+//	// Returns error if 0 or >1 users found
 func (qs *BaseQuerySet[T]) Get(ctx context.Context) (*T, error) {
 	results, err := qs.Limit(2).All(ctx)
 	if err != nil {
@@ -994,8 +1065,9 @@ func (qs *BaseQuerySet[T]) Get(ctx context.Context) (*T, error) {
 // Use First() if you want the first of potentially many results.
 //
 // Example:
-//   user, err := qs.Filter(User.Age.Gt(18)).OrderBy(User.CreatedAt.Desc()).First(ctx)
-//   // Returns first user over 18, ordered by creation date (newest first)
+//
+//	user, err := qs.Filter(User.Age.Gt(18)).OrderBy(User.CreatedAt.Desc()).First(ctx)
+//	// Returns first user over 18, ordered by creation date (newest first)
 func (qs *BaseQuerySet[T]) First(ctx context.Context) (*T, error) {
 	results, err := qs.Limit(1).All(ctx)
 	if err != nil {
@@ -1132,7 +1204,7 @@ func (qs *BaseQuerySet[T]) Delete(ctx context.Context) (int64, error) {
 	builder := NewSQLBuilder()
 
 	// Build WHERE clause
-	whereClause, whereArgs := qs.buildWhereClause(builder)
+	whereClause, _ := qs.buildWhereClause(builder)
 
 	// Build SQL
 	deleteSQL := fmt.Sprintf("DELETE FROM %s", EscapeIdentifier(qs.table))
@@ -1141,7 +1213,6 @@ func (qs *BaseQuerySet[T]) Delete(ctx context.Context) (int64, error) {
 	}
 
 	args := builder.Args()
-	args = append(args, whereArgs...)
 
 	// Execute
 	result, err := db.ExecContext(ctx, deleteSQL, args...)

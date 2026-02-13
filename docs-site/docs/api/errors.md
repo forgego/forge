@@ -8,11 +8,21 @@ image: /forge-social-card.svg
 
 The API layer provides exception types and error codes with problem details.
 
-## What you get
+## Exception types
 
-- Exception types (auth, permission, throttled, not found, validation)
-- Error code registry
-- Problem Details responses
+- AuthenticationFailed
+- NotAuthenticated
+- PermissionDenied
+- Throttled
+- NotFound
+- MethodNotAllowed
+- ParseError
+- UnsupportedMediaType
+- Validation
+
+## Error codes
+
+Error codes are registered and can be documented via the error registry.
 
 ## Next steps
 

@@ -1039,8 +1039,167 @@ func (p *ASTParser) extractBoolFromExpr(expr ast.Expr) *bool {
 func (p *ASTParser) extractHooks(method *ast.FuncDecl) (HooksDefinition, error) {
 	hooks := HooksDefinition{}
 
-	// TODO: Implement hooks extraction
-	// Extract hook function names or references
+	if method == nil || method.Body == nil {
+		return hooks, nil
+	}
+
+	assignedExprs := make(map[string]ast.Expr)
+
+	for _, stmt := range method.Body.List {
+		switch s := stmt.(type) {
+		case *ast.AssignStmt:
+			if len(s.Lhs) == 1 && len(s.Rhs) == 1 {
+				if ident, ok := s.Lhs[0].(*ast.Ident); ok {
+					assignedExprs[ident.Name] = s.Rhs[0]
+				}
+			}
+		case *ast.DeclStmt:
+			gen, ok := s.Decl.(*ast.GenDecl)
+			if !ok || gen.Tok != token.VAR {
+				continue
+			}
+			for _, spec := range gen.Specs {
+				valSpec, ok := spec.(*ast.ValueSpec)
+				if !ok || len(valSpec.Names) != 1 || len(valSpec.Values) != 1 {
+					continue
+				}
+				assignedExprs[valSpec.Names[0].Name] = valSpec.Values[0]
+			}
+		case *ast.ReturnStmt:
+			for _, result := range s.Results {
+				p.extractHooksFromExpr(p.resolveAssignedExpr(result, assignedExprs), &hooks)
+			}
+		}
+	}
 
 	return hooks, nil
+}
+
+func (p *ASTParser) resolveAssignedExpr(expr ast.Expr, assignedExprs map[string]ast.Expr) ast.Expr {
+	ident, ok := expr.(*ast.Ident)
+	if !ok {
+		return expr
+	}
+
+	resolved, ok := assignedExprs[ident.Name]
+	if !ok {
+		return expr
+	}
+	return resolved
+}
+
+func (p *ASTParser) extractHooksFromExpr(expr ast.Expr, hooks *HooksDefinition) {
+	switch x := expr.(type) {
+	case *ast.UnaryExpr:
+		if x.Op == token.AND {
+			p.extractHooksFromExpr(x.X, hooks)
+		}
+	case *ast.CompositeLit:
+		p.extractHooksFromCompositeLiteral(x, hooks)
+	case *ast.CallExpr:
+		p.extractHooksFromCallChain(x, hooks)
+	case *ast.ParenExpr:
+		p.extractHooksFromExpr(x.X, hooks)
+	}
+}
+
+func (p *ASTParser) extractHooksFromCompositeLiteral(compLit *ast.CompositeLit, hooks *HooksDefinition) {
+	for _, elt := range compLit.Elts {
+		kv, ok := elt.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		keyIdent, ok := kv.Key.(*ast.Ident)
+		if !ok {
+			continue
+		}
+		p.setHookValue(hooks, keyIdent.Name, p.extractHookReference(kv.Value))
+	}
+}
+
+func (p *ASTParser) extractHooksFromCallChain(call *ast.CallExpr, hooks *HooksDefinition) {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return
+	}
+
+	p.setHookFromBuilderMethod(hooks, sel.Sel.Name, call)
+	p.extractHooksFromExpr(sel.X, hooks)
+}
+
+func (p *ASTParser) setHookFromBuilderMethod(hooks *HooksDefinition, methodName string, call *ast.CallExpr) {
+	if len(call.Args) == 0 {
+		return
+	}
+
+	switch methodName {
+	case "WithBeforeCreate":
+		hooks.BeforeCreate = p.extractHookReference(call.Args[0])
+	case "WithAfterCreate":
+		hooks.AfterCreate = p.extractHookReference(call.Args[0])
+	case "WithBeforeUpdate":
+		hooks.BeforeUpdate = p.extractHookReference(call.Args[0])
+	case "WithAfterUpdate":
+		hooks.AfterUpdate = p.extractHookReference(call.Args[0])
+	case "WithBeforeSave":
+		hooks.BeforeSave = p.extractHookReference(call.Args[0])
+	case "WithAfterSave":
+		hooks.AfterSave = p.extractHookReference(call.Args[0])
+	case "WithBeforeDelete":
+		hooks.BeforeDelete = p.extractHookReference(call.Args[0])
+	case "WithAfterDelete":
+		hooks.AfterDelete = p.extractHookReference(call.Args[0])
+	case "WithClean":
+		hooks.Clean = p.extractHookReference(call.Args[0])
+	}
+}
+
+func (p *ASTParser) setHookValue(hooks *HooksDefinition, hookName, value string) {
+	switch hookName {
+	case "BeforeCreate":
+		hooks.BeforeCreate = value
+	case "AfterCreate":
+		hooks.AfterCreate = value
+	case "BeforeUpdate":
+		hooks.BeforeUpdate = value
+	case "AfterUpdate":
+		hooks.AfterUpdate = value
+	case "BeforeSave":
+		hooks.BeforeSave = value
+	case "AfterSave":
+		hooks.AfterSave = value
+	case "BeforeDelete":
+		hooks.BeforeDelete = value
+	case "AfterDelete":
+		hooks.AfterDelete = value
+	case "Clean":
+		hooks.Clean = value
+	}
+}
+
+func (p *ASTParser) extractHookReference(expr ast.Expr) string {
+	switch x := expr.(type) {
+	case *ast.Ident:
+		if x.Name == "nil" {
+			return ""
+		}
+		return x.Name
+	case *ast.SelectorExpr:
+		return p.formatSelectorExpr(x)
+	case *ast.FuncLit:
+		return "<inline>"
+	case *ast.UnaryExpr:
+		return p.extractHookReference(x.X)
+	}
+	return ""
+}
+
+func (p *ASTParser) formatSelectorExpr(sel *ast.SelectorExpr) string {
+	if prefix, ok := sel.X.(*ast.Ident); ok {
+		return prefix.Name + "." + sel.Sel.Name
+	}
+	if nested, ok := sel.X.(*ast.SelectorExpr); ok {
+		return p.formatSelectorExpr(nested) + "." + sel.Sel.Name
+	}
+	return sel.Sel.Name
 }

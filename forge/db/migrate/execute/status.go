@@ -54,24 +54,32 @@ func (r *StatusReporter) GetDetailedStatus(ctx context.Context) (*DetailedStatus
 		Applied:    []MigrationInfo{},
 		Pending:    []MigrationInfo{},
 		OutOfOrder: []MigrationInfo{},
+		Status:     "PENDING",
 	}
 
 	// Get current version
-	version, dirty, err := r.migrate.Version()
-	if err != nil && err != migrate.ErrNilVersion {
-		return nil, fmt.Errorf("failed to get migration version: %w", err)
-	}
-
-	if err == migrate.ErrNilVersion {
-		status.Current = "No migration applied yet"
-		status.Status = "PENDING"
+	var version uint
+	var dirty bool
+	var err error
+	if r.migrate == nil {
+		status.Current = "Unknown (migration engine unavailable)"
+		status.Error = "Migration engine unavailable - detailed DB version status could not be determined"
 	} else {
-		status.Current = fmt.Sprintf("%d", version)
-		if dirty {
-			status.Status = "DIRTY"
-			status.Error = "Migration is in a dirty state - manual intervention required"
+		version, dirty, err = r.migrate.Version()
+		if err != nil && err != migrate.ErrNilVersion {
+			return nil, fmt.Errorf("failed to get migration version: %w", err)
+		}
+
+		if err == migrate.ErrNilVersion {
+			status.Current = "No migration applied yet"
 		} else {
-			status.Status = "OK"
+			status.Current = fmt.Sprintf("%d", version)
+			if dirty {
+				status.Status = "DIRTY"
+				status.Error = "Migration is in a dirty state - manual intervention required"
+			} else {
+				status.Status = "OK"
+			}
 		}
 	}
 
@@ -87,6 +95,7 @@ func (r *StatusReporter) GetDetailedStatus(ctx context.Context) (*DetailedStatus
 		// If we can't get applied versions, assume none are applied
 		appliedVersions = make(map[uint]bool)
 	}
+	appliedVersions = mergeAppliedVersions(version, dirty, appliedVersions)
 
 	// Categorize migrations
 	for _, mig := range allMigrations {
@@ -102,8 +111,8 @@ func (r *StatusReporter) GetDetailedStatus(ctx context.Context) (*DetailedStatus
 		if isApplied {
 			status.Applied = append(status.Applied, info)
 		} else {
-			// Check if this migration is out of order
-			if len(status.Applied) > 0 && migVersion < version {
+			// Any unapplied migration lower than the current DB version is out-of-order.
+			if isOutOfOrderMigration(migVersion, version, isApplied) {
 				status.OutOfOrder = append(status.OutOfOrder, info)
 			} else {
 				status.Pending = append(status.Pending, info)
@@ -159,6 +168,10 @@ func (r *StatusReporter) getAllMigrations() ([]MigrationFile, error) {
 			continue
 		}
 		version := parts[0]
+		if _, err := parseVersion(version); err != nil {
+			// Ignore malformed migration files with non-numeric version prefixes.
+			continue
+		}
 		name := strings.TrimSuffix(strings.Join(parts[1:], "_"), ".up.sql")
 
 		migrations = append(migrations, MigrationFile{
@@ -184,6 +197,9 @@ func (r *StatusReporter) getAppliedVersions(ctx context.Context) (map[uint]bool,
 
 	// If no database connection, fall back to core.Version()
 	if r.db == nil {
+		if r.migrate == nil {
+			return applied, nil
+		}
 		version, _, err := r.migrate.Version()
 		if err == nil {
 			applied[version] = true
@@ -197,6 +213,9 @@ func (r *StatusReporter) getAppliedVersions(ctx context.Context) (map[uint]bool,
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
 		// If table doesn't exist or query fails, fall back to core.Version()
+		if r.migrate == nil {
+			return applied, nil
+		}
 		version, _, err := r.migrate.Version()
 		if err == nil {
 			applied[version] = true
@@ -227,4 +246,43 @@ func parseVersion(versionStr string) (uint, error) {
 		return 0, err
 	}
 	return uint(version), nil
+}
+
+// mergeAppliedVersions merges explicit applied versions with inferred history from current version.
+// golang-migrate stores only the current version in schema_migrations, so older applied versions must
+// be inferred for accurate status output.
+func mergeAppliedVersions(currentVersion uint, dirty bool, explicit map[uint]bool) map[uint]bool {
+	merged := make(map[uint]bool, len(explicit))
+	for version := range explicit {
+		if dirty && version == currentVersion {
+			// A dirty current version is not successfully applied yet.
+			continue
+		}
+		merged[version] = true
+	}
+
+	if currentVersion == 0 {
+		return merged
+	}
+
+	maxApplied := currentVersion
+	if dirty && maxApplied > 0 {
+		maxApplied--
+	}
+
+	for v := uint(1); v <= maxApplied; v++ {
+		merged[v] = true
+	}
+
+	return merged
+}
+
+func isOutOfOrderMigration(migrationVersion, currentVersion uint, applied bool) bool {
+	if applied {
+		return false
+	}
+	if currentVersion == 0 {
+		return false
+	}
+	return migrationVersion < currentVersion
 }

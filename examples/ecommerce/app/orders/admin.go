@@ -33,23 +33,23 @@ func RegisterAdmin(ctx context.Context) {
 		},
 		Fieldsets: []admin.Fieldset[Cart]{
 			{
-				Name: "Cart Information",
+				Name:   "Cart Information",
 				Fields: []string{"customer_id", "session_id", "guest_email"},
 			},
 			{
-				Name: "Pricing",
+				Name:   "Pricing",
 				Fields: []string{"subtotal", "discount_amount", "tax_amount", "shipping_amount", "total"},
 			},
 			{
-				Name: "Coupon",
+				Name:   "Coupon",
 				Fields: []string{"coupon_id", "coupon_code"},
 			},
 			{
-				Name: "Status",
+				Name:   "Status",
 				Fields: []string{"status", "is_abandoned"},
 			},
 			{
-				Name: "Timestamps",
+				Name:   "Timestamps",
 				Fields: []string{"created_at", "updated_at", "last_activity_at", "converted_at"},
 			},
 		},
@@ -156,19 +156,19 @@ func RegisterAdmin(ctx context.Context) {
 		},
 		Fieldsets: []admin.Fieldset[CartItem]{
 			{
-				Name: "Item",
+				Name:   "Item",
 				Fields: []string{"cart_id", "product_id", "variant_id"},
 			},
 			{
-				Name: "Product Snapshot",
+				Name:   "Product Snapshot",
 				Fields: []string{"product_name", "variant_name", "image_url"},
 			},
 			{
-				Name: "Pricing",
+				Name:   "Pricing",
 				Fields: []string{"quantity", "unit_price", "discount_amount", "tax_amount", "total"},
 			},
 			{
-				Name:  "Timestamps",
+				Name:   "Timestamps",
 				Fields: []string{"created_at", "updated_at"},
 			},
 		},
@@ -240,47 +240,47 @@ func RegisterAdmin(ctx context.Context) {
 		},
 		Fieldsets: []admin.Fieldset[Order]{
 			{
-				Name: "Order Information",
+				Name:   "Order Information",
 				Fields: []string{"order_number", "customer_id", "customer_email", "customer_first_name", "customer_last_name", "customer_phone"},
 			},
 			{
-				Name: "Pricing",
+				Name:   "Pricing",
 				Fields: []string{"subtotal", "discount_amount", "tax_amount", "shipping_amount", "total"},
 			},
 			{
-				Name: "Coupon",
+				Name:   "Coupon",
 				Fields: []string{"coupon_id", "coupon_code", "coupon_discount"},
 			},
 			{
-				Name: "Status",
+				Name:   "Status",
 				Fields: []string{"status", "payment_status", "fulfillment_status"},
 			},
 			{
-				Name: "Shipping Address",
+				Name:   "Shipping Address",
 				Fields: []string{"shipping_first_name", "shipping_last_name", "shipping_company", "shipping_address_line1", "shipping_address_line2", "shipping_city", "shipping_state", "shipping_postal_code", "shipping_country_code", "shipping_phone"},
 			},
 			{
-				Name: "Billing Address",
+				Name:   "Billing Address",
 				Fields: []string{"billing_first_name", "billing_last_name", "billing_company", "billing_address_line1", "billing_address_line2", "billing_city", "billing_state", "billing_postal_code", "billing_country_code"},
 			},
 			{
-				Name: "Payment",
+				Name:   "Payment",
 				Fields: []string{"payment_method", "payment_transaction_id"},
 			},
 			{
-				Name: "Shipping",
+				Name:   "Shipping",
 				Fields: []string{"shipping_method", "tracking_number", "carrier"},
 			},
 			{
-				Name: "Notes",
+				Name:   "Notes",
 				Fields: []string{"customer_notes", "admin_notes"},
 			},
 			{
-				Name: "Technical",
+				Name:   "Technical",
 				Fields: []string{"ip_address", "user_agent"},
 			},
 			{
-				Name: "Timestamps",
+				Name:   "Timestamps",
 				Fields: []string{"created_at", "updated_at", "paid_at", "shipped_at", "delivered_at", "cancelled_at", "expires_at"},
 			},
 		},
@@ -326,7 +326,11 @@ func RegisterAdmin(ctx context.Context) {
 			return true
 		},
 		HasChangePermission: func(ctx context.Context, admin *admin.Admin[Order], user interface{}, obj *Order) bool {
-			return true
+			if obj == nil {
+				return true
+			}
+			// Finalized orders are immutable in admin; only non-finalized orders can be edited.
+			return obj.Status != "delivered" && obj.Status != "cancelled"
 		},
 		HasDeletePermission: func(ctx context.Context, admin *admin.Admin[Order], user interface{}, obj *Order) bool {
 			return false // Orders should not be deleted, only cancelled
@@ -515,27 +519,27 @@ func RegisterAdmin(ctx context.Context) {
 		},
 		Fieldsets: []admin.Fieldset[OrderItem]{
 			{
-				Name: "Order Reference",
+				Name:   "Order Reference",
 				Fields: []string{"order_id"},
 			},
 			{
-				Name: "Product Information",
+				Name:   "Product Information",
 				Fields: []string{"product_id", "variant_id", "product_name", "product_sku", "variant_name", "variant_sku", "image_url"},
 			},
 			{
-				Name: "Pricing",
+				Name:   "Pricing",
 				Fields: []string{"quantity", "unit_price", "discount_amount", "tax_amount", "total"},
 			},
 			{
-				Name: "Fulfillment",
+				Name:   "Fulfillment",
 				Fields: []string{"quantity_fulfilled", "quantity_refunded", "fulfillment_status"},
 			},
 			{
-				Name:  "Shipping",
+				Name:   "Shipping",
 				Fields: []string{"weight"},
 			},
 			{
-				Name:  "Timestamps",
+				Name:   "Timestamps",
 				Fields: []string{"created_at", "updated_at"},
 			},
 		},
@@ -630,27 +634,27 @@ func RegisterAdmin(ctx context.Context) {
 		},
 		Fieldsets: []admin.Fieldset[Payment]{
 			{
-				Name: "Transaction",
+				Name:   "Transaction",
 				Fields: []string{"order_id", "transaction_id"},
 			},
 			{
-				Name: "Amount",
+				Name:   "Amount",
 				Fields: []string{"amount", "currency"},
 			},
 			{
-				Name: "Payment Method",
+				Name:   "Payment Method",
 				Fields: []string{"payment_method", "payment_gateway", "card_last4", "card_brand"},
 			},
 			{
-				Name: "Status",
+				Name:   "Status",
 				Fields: []string{"status"},
 			},
 			{
-				Name: "Gateway Response",
+				Name:   "Gateway Response",
 				Fields: []string{"gateway_response", "failure_reason"},
 			},
 			{
-				Name: "Timestamps",
+				Name:   "Timestamps",
 				Fields: []string{"created_at", "updated_at", "completed_at", "failed_at", "refunded_at"},
 			},
 		},
@@ -662,7 +666,11 @@ func RegisterAdmin(ctx context.Context) {
 			return true
 		},
 		HasChangePermission: func(ctx context.Context, admin *admin.Admin[Payment], user interface{}, obj *Payment) bool {
-			return true
+			if obj == nil {
+				return true
+			}
+			// Finalized payments are immutable in admin; only pending/failed can be edited.
+			return obj.Status != "completed" && obj.Status != "refunded"
 		},
 		HasDeletePermission: func(ctx context.Context, admin *admin.Admin[Payment], user interface{}, obj *Payment) bool {
 			return false // Payments should not be deleted
@@ -764,23 +772,23 @@ func RegisterAdmin(ctx context.Context) {
 		},
 		Fieldsets: []admin.Fieldset[Shipment]{
 			{
-				Name: "Shipment Details",
+				Name:   "Shipment Details",
 				Fields: []string{"order_id", "tracking_number", "carrier"},
 			},
 			{
-				Name: "Status",
+				Name:   "Status",
 				Fields: []string{"status"},
 			},
 			{
-				Name: "Address",
+				Name:   "Address",
 				Fields: []string{"recipient_name", "recipient_company", "address_line1", "address_line2", "city", "state", "postal_code", "country_code"},
 			},
 			{
-				Name: "Dates",
+				Name:   "Dates",
 				Fields: []string{"shipped_at", "delivered_at", "estimated_delivery_at"},
 			},
 			{
-				Name:  "Notes",
+				Name:   "Notes",
 				Fields: []string{"notes"},
 			},
 		},

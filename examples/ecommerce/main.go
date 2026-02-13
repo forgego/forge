@@ -15,8 +15,8 @@ import (
 	"github.com/forgego/forge/config"
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/server"
-	"github.com/go-chi/cors"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 
@@ -31,12 +31,10 @@ import (
 
 func main() {
 	ctx := context.Background()
-	fmt.Println("🛒 Forge Ecommerce System")
+	fmt.Println("Forge Ecommerce System")
 	fmt.Println("=" + string(make([]byte, 50)))
 
 	cfg := config.NewConfig()
-	adminPath := normalizePath(cfg.GetString("admin.path", "/admin"), "/admin")
-	apiPath := normalizePath(cfg.GetString("api.path", "/api/v1"), "/api/v1")
 	dbHost := cfg.GetString("database.host", "localhost")
 	dbPort := cfg.GetInt("database.port", 5432)
 	dbUser := cfg.GetString("database.user", "postgres")
@@ -47,8 +45,7 @@ func main() {
 		dbName = cfg.GetString("database.dbname", "forge_ecommerce")
 	}
 
-	// 1. Initialize Database
-	// Ensure Postgres is running and database exists; fall back to SQLite if needed.
+	// Initialize Database. If postgres is unavailable, fall back to sqlite.
 	driver := cfg.GetDriver()
 	sqlitePath := cfg.GetString("database.sqlite_path", filepath.Join(".", "ecommerce.sqlite"))
 	defaultDSN := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=%s",
@@ -58,10 +55,10 @@ func main() {
 			defer defaultDB.Close()
 			var exists bool
 			if err := defaultDB.QueryRow("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = $1)", dbName).Scan(&exists); err != nil {
-				log.Printf("Warning: Failed to check database existence: %v", err)
+				log.Printf("Warning: failed to check database existence: %v", err)
 			} else if !exists {
 				if _, err := defaultDB.Exec("CREATE DATABASE " + pq.QuoteIdentifier(dbName)); err != nil {
-					log.Printf("Warning: Failed to create database: %v", err)
+					log.Printf("Warning: failed to create database: %v", err)
 				} else {
 					log.Printf("Created database %s", dbName)
 				}
@@ -89,41 +86,62 @@ func main() {
 	database.SetConnMaxLifetime(time.Duration(cfg.GetInt("database.conn_max_lifetime", 0)) * time.Second)
 	defer database.Close()
 
-	// 2. Setup Schema
+	r := buildEcommerceRouter(ctx, cfg, database)
+
+	adminPath := normalizePath(cfg.GetString("admin.path", "/admin"), "/admin")
+	serverHost := cfg.GetString("server.host", "localhost")
+	serverPort := cfg.GetString("server.port", "8000")
+	listenAddr := fmt.Sprintf("%s:%s", serverHost, serverPort)
+	readTimeout := time.Duration(cfg.GetInt("server.read_timeout", 30)) * time.Second
+	writeTimeout := time.Duration(cfg.GetInt("server.write_timeout", 30)) * time.Second
+	idleTimeout := time.Duration(cfg.GetInt("server.idle_timeout", 120)) * time.Second
+	maxHeaderBytes := cfg.GetInt("server.max_header_bytes", 1048576)
+
+	fmt.Printf("\nForge Ecommerce is alive\n")
+	fmt.Printf("------------------------------\n")
+	fmt.Printf("Homepage: http://%s\n", listenAddr)
+	fmt.Printf("Admin: http://%s%s/\n", listenAddr, adminPath)
+	fmt.Printf("------------------------------\n\n")
+
+	httpServer := &http.Server{
+		Addr:           listenAddr,
+		Handler:        r,
+		ReadTimeout:    readTimeout,
+		WriteTimeout:   writeTimeout,
+		IdleTimeout:    idleTimeout,
+		MaxHeaderBytes: maxHeaderBytes,
+	}
+	log.Fatal(httpServer.ListenAndServe())
+}
+
+func buildEcommerceRouter(ctx context.Context, cfg *config.Config, database *db.DB) *server.Router {
+	adminPath := normalizePath(cfg.GetString("admin.path", "/admin"), "/admin")
+	apiPath := normalizePath(cfg.GetString("api.path", "/api/v1"), "/api/v1")
+
 	SetupSchema(database)
 
-	// 3. Initialize Apps
 	catalog.Init(database)
 	customers.Init(database)
 	inventory.Init(database)
 	marketing.Init(database)
 	orders.Init(database)
 
-	// 4. Initialize Admin Site
 	adminSite := admin.DefaultSite
 	adminSite.Title = "Forge Ecommerce Admin"
-
-	// Set UI Prefix
 	uiConfig := adminSite.GetUIConfig()
 	uiConfig.Prefix = adminPath
 	adminSite.WithUIConfig(uiConfig)
-
 	adminSite.SetDB(database)
 
-	// Register application admins
 	catalog.RegisterAdmin(ctx)
 	customers.RegisterAdmin(ctx)
 	inventory.RegisterAdmin(ctx)
 	marketing.RegisterAdmin(ctx)
 	orders.RegisterAdmin(ctx)
 
-	// Register Plugins
-	adminSite.RegisterPlugin(ctx, &ReportsPlugin{})
-
-	// Setup Dashboard
+	_ = adminSite.RegisterPlugin(ctx, &ReportsPlugin{})
 	SetupDashboard()
 
-	// 6. Create Server Router
 	r := server.NewRouter()
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   cfg.GetStringSlice("cors.allowed_origins"),
@@ -137,7 +155,6 @@ func main() {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	// 5. Initialize API
 	if cfg.GetBool("api.enabled", true) {
 		api.Initialize()
 		apiRouter := api.NewRouter(apiPath)
@@ -149,16 +166,13 @@ func main() {
 		apiRouter.RegisterRoutes(r)
 	}
 
-	// Admin handler (handles both REST API and UI)
 	r.Mount(adminPath, adminSite.Handler())
 
-	// Health check
 	r.Get("/health", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, `{"status":"healthy","message":"Forge Ecommerce Example is running"}`)
 	})
 
-	// Homepage
 	r.Get("/", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		fmt.Fprintf(w, `
@@ -175,7 +189,7 @@ func main() {
 	</style>
 </head>
 <body>
-	<h1>🛒 Forge Ecommerce</h1>
+	<h1>Forge Ecommerce</h1>
 	<p>Example application showcasing the Forge Framework.</p>
     <p>
         <a href="%s/" class="btn">Admin Panel</a>
@@ -185,28 +199,7 @@ func main() {
 `, adminPath)
 	})
 
-	serverHost := cfg.GetString("server.host", "localhost")
-	serverPort := cfg.GetString("server.port", "8000")
-	listenAddr := fmt.Sprintf("%s:%s", serverHost, serverPort)
-	readTimeout := time.Duration(cfg.GetInt("server.read_timeout", 30)) * time.Second
-	writeTimeout := time.Duration(cfg.GetInt("server.write_timeout", 30)) * time.Second
-	idleTimeout := time.Duration(cfg.GetInt("server.idle_timeout", 120)) * time.Second
-	maxHeaderBytes := cfg.GetInt("server.max_header_bytes", 1048576)
-	fmt.Printf("\n✨ Forge Ecommerce is Alive ✨\n")
-	fmt.Printf("------------------------------\n")
-	fmt.Printf("🏠 Homepage: http://%s\n", listenAddr)
-	fmt.Printf("🛠️  Premium Admin: http://%s%s/\n", listenAddr, adminPath)
-	fmt.Printf("------------------------------\n\n")
-
-	server := &http.Server{
-		Addr:           listenAddr,
-		Handler:        r,
-		ReadTimeout:    readTimeout,
-		WriteTimeout:   writeTimeout,
-		IdleTimeout:    idleTimeout,
-		MaxHeaderBytes: maxHeaderBytes,
-	}
-	log.Fatal(server.ListenAndServe())
+	return r
 }
 
 func normalizePath(value string, fallback string) string {
