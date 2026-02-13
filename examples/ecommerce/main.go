@@ -21,10 +21,14 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	"examples/ecommerce/app/catalog"
+	"examples/ecommerce/app/commerce"
 	"examples/ecommerce/app/customers"
+	"examples/ecommerce/app/engagement"
 	"examples/ecommerce/app/inventory"
 	"examples/ecommerce/app/marketing"
 	"examples/ecommerce/app/orders"
+	"examples/ecommerce/app/promotions"
+	"examples/ecommerce/app/support"
 )
 
 //go:generate forge generate
@@ -120,11 +124,16 @@ func buildEcommerceRouter(ctx context.Context, cfg *config.Config, database *db.
 
 	SetupSchema(database)
 
+	// Initialize all modules
 	catalog.Init(database)
+	commerce.Init(database)
 	customers.Init(database)
+	engagement.Init(database)
 	inventory.Init(database)
 	marketing.Init(database)
 	orders.Init(database)
+	promotions.Init(database)
+	support.Init(database)
 
 	adminSite := admin.DefaultSite
 	adminSite.Title = "Forge Ecommerce Admin"
@@ -133,11 +142,16 @@ func buildEcommerceRouter(ctx context.Context, cfg *config.Config, database *db.
 	adminSite.WithUIConfig(uiConfig)
 	adminSite.SetDB(database)
 
+	// Register all models with admin
 	catalog.RegisterAdmin(ctx)
+	commerce.RegisterAdmin(ctx)
 	customers.RegisterAdmin(ctx)
+	engagement.RegisterAdmin(ctx)
 	inventory.RegisterAdmin(ctx)
 	marketing.RegisterAdmin(ctx)
 	orders.RegisterAdmin(ctx)
+	promotions.RegisterAdmin(ctx)
+	support.RegisterAdmin(ctx)
 
 	_ = adminSite.RegisterPlugin(ctx, &ReportsPlugin{})
 	SetupDashboard()
@@ -158,11 +172,16 @@ func buildEcommerceRouter(ctx context.Context, cfg *config.Config, database *db.
 	if cfg.GetBool("api.enabled", true) {
 		api.Initialize()
 		apiRouter := api.NewRouter(apiPath)
+		// Register all API endpoints
 		catalog.RegisterAPI(ctx, apiRouter, database)
+		commerce.RegisterAPI(ctx, apiRouter, database)
 		customers.RegisterAPI(ctx, apiRouter, database)
+		engagement.RegisterAPI(ctx, apiRouter, database)
 		inventory.RegisterAPI(ctx, apiRouter, database)
 		marketing.RegisterAPI(ctx, apiRouter, database)
 		orders.RegisterAPI(ctx, apiRouter, database)
+		promotions.RegisterAPI(ctx, apiRouter, database)
+		support.RegisterAPI(ctx, apiRouter, database)
 		apiRouter.RegisterRoutes(r)
 	}
 
