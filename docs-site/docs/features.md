@@ -1,97 +1,392 @@
 ---
 sidebar_position: 40
-description: Complete feature list for forge.
+description: Complete feature overview for Forge framework.
 image: /forge-social-card.svg
 ---
 
 # Features
 
-This is the full feature list, grouped by area. Each item is shipped.
+Forge provides a comprehensive toolkit for building web applications in Go. This page outlines all the major features organized by category.
 
-## Core
+## Core Framework
 
-- Schema system: fields, relations, metadata, hooks
-- Schema meta options: indexes, constraints, permissions, ordering
-- Field types: int/string/bool/time/date/datetime/float/decimal/text/email/url/uuid/json/bytes
-- Validation: validators, tags, error messages
-- Code generation: models, managers, field expressions
-- Type-safe ORM: QuerySet, Manager CRUD, expressions
-- Database layer: connections, transactions, migrations
+### Schema System
+- Define models with fields, relations, metadata, and lifecycle hooks
+- Field types: integers, strings, booleans, dates, times, floats, decimals, text, email, URL, UUID, JSON, and binary data
+- Field options: required, unique, indexed, default values, auto-increment
+- Schema metadata: table names, indexes, constraints, permissions, ordering
+- Lifecycle hooks: pre-save, post-save, pre-delete, post-delete
 
-## ORM
+### Code Generation
+- Auto-generate type-safe managers for each model
+- Generate field expressions for compile-time query validation
+- Create admin interfaces automatically
+- Build boilerplate for APIs and handlers
+- CLI commands: `forge generate`, `forge add model`, `forge add api`
 
-- Filtering, ordering, distinct, limits/offsets
-- Select/only/defer
-- SelectRelated and PrefetchRelated
-- Aggregates and annotations
-- Values and ValuesList
-- Bulk updates and update builder
+### Type-Safe ORM
+- QuerySet API for filtering, ordering, and aggregating data
+- Manager for CRUD operations with full type safety
+- Generated field expressions for compile-time validation
+- IDE autocomplete for all queries and field access
+- Prevent SQL injection and runtime errors
 
-## Filters
+### Database Layer
+- PostgreSQL support with advanced features
+- Connection pooling and transaction management
+- Automatic schema migrations
+- Query optimization and lazy loading
+- Support for custom SQL when needed
 
-- FilterSet and filter builder
-- Query param parsing to AST
+## ORM & Queries
+
+### Filtering & Querying
+- `Filter()` - Add WHERE conditions
+- `Exclude()` - Add NOT conditions
+- `OrderBy()` - Sort results
+- `Distinct()` - Remove duplicates
+- `Limit()` / `Offset()` - Pagination
+- `Count()` - Count without fetching
+
+### Field Operations
+- `Select()` - Choose specific fields
+- `Only()` - Defer expensive fields
+- `Defer()` - Exclude specific fields
+- `Values()` - Get map of values
+- `ValuesList()` - Get slice of values
+
+### Relations
+- `SelectRelated()` - Eager load foreign keys (JOIN)
+- `PrefetchRelated()` - Prefetch many-to-many and reverse relations
+- Foreign key relationships with cascade options
+- Many-to-many relationships with through tables
+- Reverse relation queries
+
+### Aggregations
+- `Aggregate()` - Compute aggregate values
+- `Annotate()` - Add computed fields
+- Built-in aggregates: Count, Sum, Avg, Min, Max
+- Custom aggregate functions
+- Group by support
+
+### Bulk Operations
+- `BulkCreate()` - Insert multiple records
+- `BulkUpdate()` - Update multiple records
+- `UpdateBuilder()` - Build complex updates
+- Batch operations for performance
+
+## Advanced Filtering
+
+### FilterSet System
+- Declarative filter definitions
+- Query parameter parsing to AST
 - AST to ORM expression conversion
-- Security config and optimizer
-- Filter widgets (autosuggest, SQL preview)
+- Security controls and field validation
+- Automatic query optimization
 
-## Admin
+### Filter Features
+- Text search with operators (contains, starts with, ends with)
+- Numeric comparisons (equals, greater than, less than, between)
+- Date and time filters
+- Boolean filters
+- Null/not null checks
+- In/not in for sets
 
-- Admin registry and model config
-- List views, form views, detail views
-- Search, filters, ordering
-- Actions, exports, history
-- Widgets and templates
-- UI overrides and plugin pages
+### Filter Widgets
+- Auto-suggest for text fields
+- SQL preview before execution
+- Filter validation and sanitization
+- Custom filter implementations
 
-## API
+## Admin Interface
 
-- Serializers (typed, enhanced)
-- ViewSets and routers
-- Authentication: token, session, JWT, basic, API key
-- Permissions: allow-any, auth, admin, owner
-- Throttling: anon/user rate limits
-- Pagination and ordering/search filters
-- Versioning: header, query param, URL path
+### Admin Registry
+- Register models with admin site
+- Configure list views and detail views
+- Define which fields to display
+- Set up search and filter options
+
+### List Views
+- Customizable column display
+- Sortable columns
+- Inline editing
+- Bulk actions (delete, export, custom)
+- Pagination controls
+
+### Form Views
+- Auto-generated forms from models
+- Field widgets (text, select, date picker, etc.)
+- Form validation
+- Custom form layouts
+- Related object selection
+
+### Admin Features
+- Full-text search across fields
+- Advanced filtering sidebar
+- Action menu for bulk operations
+- Export to CSV/JSON
+- Change history tracking
+- Permission-based access control
+
+### Customization
+- Override templates
+- Add custom views and pages
+- Register custom actions
+- Plugin system for extensions
+- Theme customization
+
+## REST API Framework
+
+### Serializers
+- Typed serializers for models
+- Enhanced serializers with relations
+- Nested serializers
+- Read-only and write-only fields
+- Custom field serialization
+- Validation rules
+
+### ViewSets & Routers
+- Generic viewsets for CRUD operations
+- Automatic URL routing
+- Custom action methods
+- Bulk operations
+- Filtering and search
+- Pagination support
+
+### Authentication
+- Token authentication
+- Session authentication
+- JWT authentication
+- Basic authentication
+- API key authentication
+- Custom auth backends
+- Multi-auth support
+
+### Permissions
+- Allow any access
+- Authenticated users only
+- Admin users only
+- Owner-based permissions
+- Object-level permissions
+- Custom permission classes
+
+### Throttling
+- Per-user rate limits
+- Anonymous user limits
+- Custom throttle rules
+- Scope-based throttling
+- Burst protection
+
+### API Features
+- Pagination: limit/offset, cursor, page number
+- Ordering by fields
+- Search across fields
+- Filtering with query params
 - Content negotiation
-- Parsers: JSON, form, multipart, XML
-- Renderers: JSON, HTML, XML, CSV, YAML
-- Caching backends
-- Exceptions and problem details
-- OpenAPI docs
+- API versioning (header, query, path)
 
-## Identity
+### Data Formats
+- **Parsers**: JSON, form data, multipart, XML
+- **Renderers**: JSON, HTML, XML, CSV, YAML
+- Custom parsers and renderers
+- Accept header handling
 
-- User, session, token, group, permission models
-- Auth backends (password, token)
-- Services: user, auth, password, permission
-- Password policy, lockout, rate limits
-- Identity middleware
+### OpenAPI
+- Auto-generated OpenAPI/Swagger docs
+- Interactive API explorer
+- Schema definitions
+- Request/response examples
 
-## Server
+## Identity & Auth
 
-- Router and middleware stack
-- Request ID, logging, recoverer, timeout
-- CORS and compression
+### User Management
+- User model with authentication
+- Session management
+- Token generation and validation
+- Groups and permissions
+- Custom user models
+
+### Auth Services
+- User service for CRUD
+- Authentication service
+- Password hashing and verification
+- Permission checking
+- Token management
+
+### Security Features
+- Password policy enforcement
+- Account lockout after failed attempts
+- Rate limiting for auth endpoints
+- Session timeout
+- CSRF protection
+
+## Server & Middleware
+
+### HTTP Server
+- Built on standard library
+- Customizable router
+- Middleware stack
+- Static file serving
+- Graceful shutdown
+
+### Middleware
+- Request ID tracking
+- Structured logging
+- Panic recovery
+- Request timeout
+- CORS support
+- Compression (gzip)
 - Security headers
-- CSRF protection and sessions
-- Static files
-- Health, readiness, liveness, metrics
-- Profiling hook
+- CSRF protection
+- Session management
 
-## Logging & Errors
+### Monitoring
+- Health check endpoints
+- Readiness probes
+- Liveness probes
+- Metrics collection
+- Request logging
+- Performance profiling
 
-- Logging config: levels, formats, outputs
-- Console/file/remote exporters
-- Sampling and stacktrace controls
-- Error codes and problem details
-- Idempotency and sanitization
-- Request ID support
+## Logging & Error Handling
 
-## CLI
+### Logging
+- Structured logging with levels (debug, info, warn, error)
+- Multiple output formats (console, JSON)
+- Multiple destinations (console, file, remote)
+- Sampling for high-volume logs
+- Stacktrace control
+- Request ID correlation
 
-- new, generate, runserver, version
-- makemigrations, migrate (up/down/status/rollback/squash)
-- createsuperuser, auth
-- add: app, api, handler, group, model, service
-- dev: shell, test, check
+### Error Handling
+- Standardized error codes
+- Problem details format (RFC 7807)
+- Error sanitization for security
+- Idempotency keys
+- User-friendly error messages
+- Developer debug info
+
+## CLI Tools
+
+### Project Management
+- `forge new` - Create new project
+- `forge generate` - Generate code from models
+- `forge runserver` - Start development server
+- `forge version` - Show version info
+
+### Database Migrations
+- `forge makemigrations` - Generate migrations
+- `forge migrate` - Apply migrations
+- `forge migrate up` - Run specific migration
+- `forge migrate down` - Rollback migration
+- `forge migrate status` - Check migration state
+- `forge migrate rollback` - Rollback last migration
+- `forge migrate squash` - Combine migrations
+
+### User Management
+- `forge createsuperuser` - Create admin user
+- `forge auth` - Auth utilities
+
+### Code Scaffolding
+- `forge add app` - Create new app
+- `forge add api` - Generate API viewset
+- `forge add handler` - Create request handler
+- `forge add model` - Add new model
+- `forge add service` - Create service layer
+
+### Development Tools
+- `forge shell` - Interactive Go shell
+- `forge test` - Run tests
+- `forge check` - Validate configuration
+
+## Configuration
+
+### Database Config
+- Connection settings (host, port, database, user, password)
+- Connection pooling (max connections, idle connections, lifetime)
+- SSL/TLS settings
+- Query logging
+- Timezone settings
+
+### Server Config
+- Host and port binding
+- Debug mode
+- Secret key management
+- Allowed hosts
+- CORS settings
+- Static files configuration
+
+### Security Config
+- CSRF protection
+- Session settings
+- Cookie configuration
+- Security headers
+- Rate limiting
+
+### Logging Config
+- Log levels per module
+- Output formats
+- Destinations
+- Rotation settings
+- Sampling rules
+
+## What Makes Forge Different
+
+### Developer Experience
+- Familiar patterns from Django/Rails
+- Less boilerplate than typical Go frameworks
+- Fast prototyping to production
+- Comprehensive documentation
+- CLI for common tasks
+
+### Type Safety
+- Compile-time query validation
+- IDE autocomplete everywhere
+- Refactoring support
+- No string-based queries
+- Generated code for consistency
+
+### Batteries Included
+- Don't choose between 10 ORMs
+- Authentication works out of the box
+- Admin interface ready to use
+- Security built-in, not bolted on
+- One framework, one workflow
+
+### Production Ready
+- Battle-tested patterns
+- Security by default
+- Performance optimizations
+- Monitoring and metrics
+- Error handling and logging
+
+## Extensibility
+
+### Plugin System
+- Register custom plugins
+- Hook into framework lifecycle
+- Extend core functionality
+- Share plugins across projects
+
+### Extension Points
+- Custom field types
+- Custom validators
+- Custom middleware
+- Custom serializers
+- Custom admin actions
+- Custom filters
+
+### Integration
+- Works with standard library
+- Compatible with popular Go packages
+- Doesn't fight the language
+- Use existing tools when needed
+
+## Learn More
+
+- [Quick Start](/docs/quickstart) - Get started in 5 minutes
+- [Models Guide](/docs/models) - Define your data
+- [ORM Guide](/docs/orm) - Query your database
+- [Admin Guide](/docs/admin/overview) - Customize admin interface
+- [API Guide](/docs/api/overview) - Build REST APIs
+- [API Reference](/docs/api-reference) - Complete API documentation

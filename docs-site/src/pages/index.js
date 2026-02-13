@@ -5,123 +5,228 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import SEOHead from '@site/src/components/SEOHead';
 import styles from './index.module.css';
 
-const quickStart = [
-  'go install github.com/forgego/forge/cli/cmd@latest',
-  'forge new myapp',
-  'forge runserver',
+const features = [
+  {
+    title: 'Type-Safe ORM',
+    icon: '🔒',
+    description: 'Write queries with full Go type safety. No more runtime surprises or string-based queries.',
+  },
+  {
+    title: 'Auto Admin',
+    icon: '⚡',
+    description: 'Get a fully functional admin panel out of the box. Manage your data without writing boilerplate.',
+  },
+  {
+    title: 'REST APIs',
+    icon: '🚀',
+    description: 'Build production-ready REST APIs with serializers, authentication, and pagination included.',
+  },
+  {
+    title: 'Migrations',
+    icon: '🔄',
+    description: 'Track schema changes automatically. Generate and apply migrations like Django or Rails.',
+  },
+  {
+    title: 'Code Generation',
+    icon: '✨',
+    description: 'Define schemas once, generate type-safe models, queries, and admin interfaces automatically.',
+  },
+  {
+    title: 'Extensible',
+    icon: '🔌',
+    description: 'Plugin system and hooks let you customize everything. Works with your existing Go tools.',
+  },
 ];
 
-const coreLinks = [
-  {
-    title: 'Quick Start',
-    description: 'Get a working app in minutes.',
-    to: '/docs/quickstart',
-  },
-  {
-    title: 'Installation',
-    description: 'Prerequisites and setup.',
-    to: '/docs/installation',
-  },
-  {
-    title: 'Models',
-    description: 'Define schemas and query data.',
-    to: '/docs/models',
-  },
-  {
-    title: 'Admin UI',
-    description: 'Configure the auto-generated admin.',
-    to: '/docs/admin',
-  },
-  {
-    title: 'REST API',
-    description: 'Build APIs with serializers and auth.',
-    to: '/docs/rest-api',
-  },
-  {
-    title: 'Features',
-    description: 'Full feature list by area.',
-    to: '/docs/features',
-  },
-];
+const codeExample = `package models
+
+import "github.com/forgego/forge/schema"
+
+type Article struct {
+    schema.BaseSchema
+}
+
+func (Article) Fields() []schema.Field {
+    return []schema.Field{
+        schema.Int64Field("id", schema.Primary()),
+        schema.StringField("title", schema.MaxLength(200)),
+        schema.TextField("content"),
+        schema.TimeField("published_at", schema.AutoNow()),
+    }
+}`;
+
+const queryExample = `// Type-safe queries
+articles := models.ArticleManager.
+    Filter(models.ArticleExpr.Title.Contains("Go")).
+    OrderBy("-published_at").
+    Limit(10)
+
+// Relations work seamlessly
+article := models.ArticleManager.
+    SelectRelated("author").
+    Get(ctx, 1)`;
 
 export default function Home() {
   const {siteConfig} = useDocusaurusContext();
+  
   return (
     <>
       <SEOHead
-        title="forge - Django-like Go Framework"
-        description="Build web applications in Go with Django's developer experience. Type-safe ORM, auto-generated admin, REST API framework, and code generation."
+        title="Forge - Go Web Framework"
+        description="Build web apps in Go with Django-inspired productivity. Type-safe ORM, auto-generated admin, REST APIs, and migrations."
         keywords={[
           'go framework',
-          'golang framework',
-          'django go',
-          'type-safe orm',
-          'go web framework',
+          'golang web framework',
+          'go orm',
+          'type-safe go',
+          'go rest api',
           'forge framework',
         ]}
         url="/"
       />
       <Layout
-        title={`${siteConfig.title}`}
-        description="Django-inspired productivity for Go with type safety.">
+        title="Go Web Framework"
+        description="Django-inspired productivity for Go">
+        
+        {/* Hero Section */}
         <header className={styles.hero}>
-          <div className={styles.container}>
-            <p className={styles.eyebrow}>forge v1.0.0</p>
-            <h1 className={styles.title}>Django-inspired productivity for Go</h1>
-            <p className={styles.subtitle}>
-              forge gives Go teams a type-safe ORM, admin UI, REST API layer, migrations, and code generation
-              in a single workflow.
+          <div className={styles.heroContent}>
+            <div className={styles.badge}>v1.0.0 • MIT License</div>
+            <h1 className={styles.heroTitle}>
+              Build web apps fast<br/>with Go's type safety
+            </h1>
+            <p className={styles.heroSubtitle}>
+              Forge brings Django's rapid development to Go. Get a type-safe ORM, 
+              auto-generated admin panel, REST API framework, and migrations—all in one toolkit.
             </p>
-            <div className={styles.actions}>
-              <Link className={styles.primaryButton} to="/docs/quickstart">
-                Get Started
+            <div className={styles.heroActions}>
+              <Link className={styles.btnPrimary} to="/docs/quickstart">
+                Get Started →
               </Link>
-              <Link className={styles.secondaryButton} href="https://github.com/hamidrabedi/foreit" target="_blank">
-                GitHub
+              <Link className={styles.btnSecondary} href="https://github.com/hamidrabedi/foreit" target="_blank">
+                View on GitHub
               </Link>
+            </div>
+            <div className={styles.heroCommand}>
+              <code>go install github.com/forgego/forge/cli/cmd@latest</code>
             </div>
           </div>
         </header>
 
         <main>
-          <section className={styles.section}>
+          {/* Features Grid */}
+          <section className={styles.features}>
             <div className={styles.container}>
-              <h2>Quick start</h2>
-              <p className={styles.sectionIntro}>Three commands to a running app.</p>
-              <div className={styles.codeBlock}>
-                {quickStart.map((line) => (
-                  <div key={line} className={styles.codeLine}>
-                    <span className={styles.codePrompt}>$</span> {line}
+              <div className={styles.sectionHeader}>
+                <h2>Everything you need to ship</h2>
+                <p>From database to API, all the tools you need are included</p>
+              </div>
+              <div className={styles.featuresGrid}>
+                {features.map((feature) => (
+                  <div key={feature.title} className={styles.featureCard}>
+                    <div className={styles.featureIcon}>{feature.icon}</div>
+                    <h3>{feature.title}</h3>
+                    <p>{feature.description}</p>
                   </div>
                 ))}
               </div>
             </div>
           </section>
 
-          <section className={styles.sectionAlt}>
+          {/* Code Examples */}
+          <section className={styles.codeSection}>
             <div className={styles.container}>
-              <h2>Core documentation</h2>
-              <p className={styles.sectionIntro}>Start here, then follow the build docs.</p>
-              <div className={styles.cardGrid}>
-                {coreLinks.map((item) => (
-                  <Link key={item.title} className={styles.card} to={item.to}>
-                    <h3>{item.title}</h3>
-                    <p>{item.description}</p>
-                  </Link>
-                ))}
+              <div className={styles.sectionHeader}>
+                <h2>Write less, build more</h2>
+                <p>Define your models once, get everything else generated</p>
+              </div>
+              <div className={styles.codeExamples}>
+                <div className={styles.codeBlock}>
+                  <div className={styles.codeHeader}>
+                    <span className={styles.codeLabel}>Define Schema</span>
+                    <span className={styles.codeLang}>Go</span>
+                  </div>
+                  <pre><code>{codeExample}</code></pre>
+                </div>
+                <div className={styles.codeBlock}>
+                  <div className={styles.codeHeader}>
+                    <span className={styles.codeLabel}>Query Data</span>
+                    <span className={styles.codeLang}>Go</span>
+                  </div>
+                  <pre><code>{queryExample}</code></pre>
+                </div>
               </div>
             </div>
           </section>
 
-          <section className={styles.section}>
+          {/* Quick Start */}
+          <section className={styles.quickStart}>
             <div className={styles.container}>
-              <h2>What you get</h2>
-              <ul className={styles.list}>
-                <li>Type-safe schema and ORM with generated field expressions.</li>
-                <li>Admin UI with lists, filters, and CRUD workflows.</li>
-                <li>REST API layer with serializers and authentication.</li>
-                <li>CLI-driven migrations and code generation.</li>
-              </ul>
+              <div className={styles.quickStartContent}>
+                <div className={styles.quickStartText}>
+                  <h2>Ready in 3 commands</h2>
+                  <p>Create a new project and start building in under a minute</p>
+                </div>
+                <div className={styles.quickStartSteps}>
+                  <div className={styles.step}>
+                    <span className={styles.stepNumber}>1</span>
+                    <code>forge new myapp</code>
+                  </div>
+                  <div className={styles.step}>
+                    <span className={styles.stepNumber}>2</span>
+                    <code>forge migrate</code>
+                  </div>
+                  <div className={styles.step}>
+                    <span className={styles.stepNumber}>3</span>
+                    <code>forge runserver</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Why Forge */}
+          <section className={styles.why}>
+            <div className={styles.container}>
+              <div className={styles.sectionHeader}>
+                <h2>Why teams choose Forge</h2>
+              </div>
+              <div className={styles.whyGrid}>
+                <div className={styles.whyCard}>
+                  <h3>Familiar patterns</h3>
+                  <p>If you know Django or Rails, you already know Forge. Same concepts, Go's performance.</p>
+                </div>
+                <div className={styles.whyCard}>
+                  <h3>Type safety</h3>
+                  <p>Catch errors at compile time, not production. Full IDE autocomplete for queries and fields.</p>
+                </div>
+                <div className={styles.whyCard}>
+                  <h3>Less boilerplate</h3>
+                  <p>Code generation handles the repetitive work. Focus on your business logic.</p>
+                </div>
+                <div className={styles.whyCard}>
+                  <h3>Production ready</h3>
+                  <p>Built-in security, authentication, validation, and logging. Deploy with confidence.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* CTA Section */}
+          <section className={styles.cta}>
+            <div className={styles.container}>
+              <div className={styles.ctaContent}>
+                <h2>Start building today</h2>
+                <p>Join developers shipping production apps with Forge</p>
+                <div className={styles.ctaActions}>
+                  <Link className={styles.btnPrimary} to="/docs/quickstart">
+                    Read the Docs
+                  </Link>
+                  <Link className={styles.btnOutline} to="/docs/installation">
+                    Installation Guide
+                  </Link>
+                </div>
+              </div>
             </div>
           </section>
         </main>
