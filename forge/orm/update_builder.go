@@ -15,6 +15,7 @@ type UpdateBuilder[T any] struct {
 	qs      updatableQuerySet[T]
 	schema  *ModelSchema
 	updates map[string]interface{}
+	err     error // Deferred error from Set/SetExpr/etc. (checked at Execute time)
 }
 
 // updatableQuerySet is an interface for QuerySets that support updates
@@ -36,13 +37,16 @@ func NewUpdateBuilder[T any](qs updatableQuerySet[T]) (*UpdateBuilder[T], error)
 	}, nil
 }
 
-// Set sets a field value with type checking (dynamic API)
-// Use SetField for type-safe setting
+// Set sets a field value with type checking (dynamic API).
+// Validation errors are deferred and returned when Execute() is called.
 func (ub *UpdateBuilder[T]) Set(fieldName string, value interface{}) *UpdateBuilder[T] {
 	// Validate field exists and type matches
 	fieldInfo := ub.schema.GetField(fieldName)
 	if fieldInfo == nil {
-		panic(fmt.Sprintf("field %s not found on model", fieldName))
+		if ub.err == nil {
+			ub.err = fmt.Errorf("field %s not found on model", fieldName)
+		}
+		return ub
 	}
 
 	expectedType := fieldInfo.Type
@@ -50,21 +54,27 @@ func (ub *UpdateBuilder[T]) Set(fieldName string, value interface{}) *UpdateBuil
 
 	// Check if types are assignable
 	if !actualType.AssignableTo(expectedType) {
-		panic(fmt.Sprintf("field %s expects %v, got %v", fieldName, expectedType, actualType))
+		if ub.err == nil {
+			ub.err = fmt.Errorf("field %s expects %v, got %v", fieldName, expectedType, actualType)
+		}
+		return ub
 	}
 
 	ub.updates[fieldName] = value
 	return ub
 }
 
-// SetFieldValue sets a field value using a type-safe FieldExpression (type-safe API)
-// This provides compile-time type checking
+// SetFieldValue sets a field value using a type-safe FieldExpression (type-safe API).
+// This provides compile-time type checking.
 // Usage: SetFieldValue(ub, User.Fields.Email, "new@example.com")
 func SetFieldValue[T any, V any](ub *UpdateBuilder[T], field FieldExpression[V], value V) *UpdateBuilder[T] {
 	// Validate field exists in schema
 	fieldInfo := ub.schema.GetField(field.Path())
 	if fieldInfo == nil {
-		panic(fmt.Sprintf("field %s not found on model", field.Path()))
+		if ub.err == nil {
+			ub.err = fmt.Errorf("field %s not found on model", field.Path())
+		}
+		return ub
 	}
 
 	// Type is already validated by FieldExpression[V] generic constraint
@@ -72,42 +82,61 @@ func SetFieldValue[T any, V any](ub *UpdateBuilder[T], field FieldExpression[V],
 	return ub
 }
 
-// SetExpr sets a field to an expression value
+// SetExpr sets a field to an expression value.
+// Validation errors are deferred and returned when Execute() is called.
 func (ub *UpdateBuilder[T]) SetExpr(fieldName string, expr Expression) *UpdateBuilder[T] {
 	// Validate field exists
 	fieldInfo := ub.schema.GetField(fieldName)
 	if fieldInfo == nil {
-		panic(fmt.Sprintf("field %s not found on model", fieldName))
+		if ub.err == nil {
+			ub.err = fmt.Errorf("field %s not found on model", fieldName)
+		}
+		return ub
 	}
 
 	// Validate expression against schema
 	if err := expr.Resolve(ub.schema); err != nil {
-		panic(fmt.Sprintf("invalid expression for field %s: %v", fieldName, err))
+		if ub.err == nil {
+			ub.err = fmt.Errorf("invalid expression for field %s: %w", fieldName, err)
+		}
+		return ub
 	}
 
 	ub.updates[fieldName] = expr
 	return ub
 }
 
-// SetField sets a field to another field's value
+// SetField sets a field to another field's value.
+// Validation errors are deferred and returned when Execute() is called.
 func (ub *UpdateBuilder[T]) SetField(fieldName string, sourceField Expression) *UpdateBuilder[T] {
 	// Validate field exists
 	fieldInfo := ub.schema.GetField(fieldName)
 	if fieldInfo == nil {
-		panic(fmt.Sprintf("field %s not found on model", fieldName))
+		if ub.err == nil {
+			ub.err = fmt.Errorf("field %s not found on model", fieldName)
+		}
+		return ub
 	}
 
 	// Validate source field
 	if err := sourceField.Resolve(ub.schema); err != nil {
-		panic(fmt.Sprintf("invalid source field: %v", err))
+		if ub.err == nil {
+			ub.err = fmt.Errorf("invalid source field: %w", err)
+		}
+		return ub
 	}
 
 	ub.updates[fieldName] = sourceField
 	return ub
 }
 
-// Execute executes the update
+// Execute executes the update.
+// Returns any deferred validation errors from Set/SetExpr/SetField calls.
 func (ub *UpdateBuilder[T]) Execute(ctx context.Context) (int64, error) {
+	if ub.err != nil {
+		return 0, ub.err
+	}
+
 	// Convert updates map to the format expected by QuerySet.Update
 	// Handle expressions specially
 	updateMap := make(map[string]interface{})
@@ -127,11 +156,15 @@ func (ub *UpdateBuilder[T]) Execute(ctx context.Context) (int64, error) {
 	return ub.qs.Update(ctx, updateMap)
 }
 
-// Increment increments a numeric field
+// Increment increments a numeric field.
+// Validation errors are deferred and returned when Execute() is called.
 func (ub *UpdateBuilder[T]) Increment(fieldName string, amount interface{}) *UpdateBuilder[T] {
 	fieldInfo := ub.schema.GetField(fieldName)
 	if fieldInfo == nil {
-		panic(fmt.Sprintf("field %s not found on model", fieldName))
+		if ub.err == nil {
+			ub.err = fmt.Errorf("field %s not found on model", fieldName)
+		}
+		return ub
 	}
 
 	// Create a raw SQL expression for field + value
@@ -177,11 +210,15 @@ func (r *RawExpression) Resolve(schema *ModelSchema) error {
 	return nil
 }
 
-// Decrement decrements a numeric field
+// Decrement decrements a numeric field.
+// Validation errors are deferred and returned when Execute() is called.
 func (ub *UpdateBuilder[T]) Decrement(fieldName string, amount interface{}) *UpdateBuilder[T] {
 	fieldInfo := ub.schema.GetField(fieldName)
 	if fieldInfo == nil {
-		panic(fmt.Sprintf("field %s not found on model", fieldName))
+		if ub.err == nil {
+			ub.err = fmt.Errorf("field %s not found on model", fieldName)
+		}
+		return ub
 	}
 
 	// Create a raw SQL expression for field - value

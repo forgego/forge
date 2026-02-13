@@ -363,13 +363,21 @@ func (ms *ModelSchema) ResolvePath(path string) (*FieldInfo, *ModelSchema, error
 		return nil, nil, fmt.Errorf("field or relation %s not found", parts[0])
 	}
 
-	// For now, return error for relation traversal
-	// Full implementation would resolve the target model schema
-	if len(parts) > 1 {
-		return nil, nil, fmt.Errorf("relation traversal not yet fully implemented for path %s", path)
+	// If path ends at a relation (no further parts), it's an error
+	if len(parts) == 1 {
+		return nil, nil, fmt.Errorf("path %s resolves to a relation, not a field", path)
 	}
 
-	return nil, nil, fmt.Errorf("path %s resolves to a relation, not a field", path)
+	// Traverse the relation to resolve the remaining path.
+	// Look up the target model schema and recurse.
+	targetSchema, err := GetModelSchemaByName(relation.TargetModel)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to resolve target model %s for relation %s: %w",
+			relation.TargetModel, parts[0], err)
+	}
+
+	remainingPath := strings.Join(parts[1:], "__")
+	return targetSchema.ResolvePath(remainingPath)
 }
 
 // GetPathType returns the type information for a field path
