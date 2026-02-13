@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/db/dialect"
 	"github.com/forgego/forge/schema"
 )
 
@@ -30,5 +31,16 @@ func GetSQLDB(conn interface{}) (*sql.DB, error) {
 		return v, nil
 	default:
 		return nil, fmt.Errorf("unsupported database connection type: %T", conn)
+	}
+}
+
+// GetDialect extracts the SQL dialect from a database connection.
+// Returns the dialect for generating database-agnostic SQL queries.
+func GetDialect(conn interface{}) (dialect.Dialect, error) {
+	switch v := conn.(type) {
+	case *db.DB:
+		return v.Dialect(), nil
+	default:
+		return nil, fmt.Errorf("unsupported database connection type for dialect: %T", conn)
 	}
 }

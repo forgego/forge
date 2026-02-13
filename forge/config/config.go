@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/spf13/viper"
 )
 
@@ -34,10 +36,11 @@ func NewConfig() *Config {
 	v.SetDefault("database.password", "")
 	v.SetDefault("database.name", "forge")
 	v.SetDefault("database.sslmode", "disable")
+	// Database connection pool defaults
 	v.SetDefault("database.max_open_conns", 25)
-	v.SetDefault("database.max_idle_conns", 5)
-	v.SetDefault("database.conn_max_lifetime", 300)
-	v.SetDefault("database.conn_max_idle_time", 600)
+	v.SetDefault("database.max_idle_conns", 10)
+	v.SetDefault("database.conn_max_lifetime", "5m")
+	v.SetDefault("database.conn_max_idle_time", "2m")
 	v.SetDefault("security.secret_key", "change-me-in-production")
 	v.SetDefault("security.csrf_secret_key", "change-me-in-production")
 	v.SetDefault("security.session_secret", "change-me-in-production")
@@ -88,4 +91,32 @@ func (c *Config) GetInt64(key string, defaultValue int64) int64 {
 // GetDriver returns the database driver name
 func (c *Config) GetDriver() string {
 	return c.GetString("database.driver", "postgres")
+}
+
+// GetDuration gets a duration value with a default
+func (c *Config) GetDuration(key string, defaultValue time.Duration) time.Duration {
+	if c.Viper.IsSet(key) {
+		return c.Viper.GetDuration(key)
+	}
+	return defaultValue
+}
+
+// PoolConfig represents database connection pool configuration.
+// This is a copy to avoid import cycles with the db package.
+type PoolConfig struct {
+	MaxOpenConns    int
+	MaxIdleConns    int
+	ConnMaxLifetime time.Duration
+	ConnMaxIdleTime time.Duration
+}
+
+// GetPoolConfig returns the database connection pool configuration.
+// This provides a convenient way to get all pool settings at once.
+func (c *Config) GetPoolConfig() PoolConfig {
+	return PoolConfig{
+		MaxOpenConns:    c.GetInt("database.max_open_conns", 25),
+		MaxIdleConns:    c.GetInt("database.max_idle_conns", 10),
+		ConnMaxLifetime: c.GetDuration("database.conn_max_lifetime", 5*time.Minute),
+		ConnMaxIdleTime: c.GetDuration("database.conn_max_idle_time", 2*time.Minute),
+	}
 }

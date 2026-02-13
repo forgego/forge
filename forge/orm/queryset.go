@@ -181,6 +181,16 @@ func (qs *BaseQuerySet[T]) getDB(ctx context.Context) (*sql.DB, error) {
 	return nil, fmt.Errorf("database connection not set on QuerySet")
 }
 
+// getDialect retrieves the SQL dialect from the database connection
+func (qs *BaseQuerySet[T]) getDialect() (interface {
+	BuildPlaceholders(n int) string
+}, error) {
+	if qs.db != nil {
+		return GetDialect(qs.db)
+	}
+	return nil, fmt.Errorf("database connection not set on QuerySet")
+}
+
 // clone creates a deep copy
 func (qs *BaseQuerySet[T]) clone() *BaseQuerySet[T] {
 	clone := &BaseQuerySet[T]{

@@ -9,6 +9,7 @@ import (
 type SecurityConfig struct {
 	AllowedFields   map[string][]string // Per-model, per-role
 	AllowedLookups  map[string][]string // Per-field allowed lookups
+	AllowAllFields  bool                // If true, all fields are allowed (use only in development)
 	MaxJoinDepth    int
 	MaxConditions   int
 	MaxORBranches   int
@@ -16,17 +17,42 @@ type SecurityConfig struct {
 	CostThreshold   int
 }
 
-// NewSecurityConfig creates a new security config with defaults
-func NewSecurityConfig() *SecurityConfig {
+// DefaultSecurityConfig returns a security config with safe defaults that denies access by default.
+// This is the recommended configuration for production use.
+func DefaultSecurityConfig() *SecurityConfig {
 	return &SecurityConfig{
 		AllowedFields:   make(map[string][]string),
 		AllowedLookups:  make(map[string][]string),
+		AllowAllFields:  false, // Deny by default - no fields allowed unless explicitly configured
 		MaxJoinDepth:    3,
 		MaxConditions:   50,
 		MaxORBranches:   20,
 		TimeoutDuration: 30 * time.Second,
 		CostThreshold:   100,
 	}
+}
+
+// AllowAllSecurity returns a security config that allows all field access.
+// WARNING: Use only in development or trusted environments. This configuration
+// bypasses field access validation and should never be used in production.
+func AllowAllSecurity() *SecurityConfig {
+	return &SecurityConfig{
+		AllowedFields:   make(map[string][]string),
+		AllowedLookups:  make(map[string][]string),
+		AllowAllFields:  true, // Allow all fields - development mode only!
+		MaxJoinDepth:    10,
+		MaxConditions:   100,
+		MaxORBranches:   50,
+		TimeoutDuration: 60 * time.Second,
+		CostThreshold:   500,
+	}
+}
+
+// NewSecurityConfig creates a new security config with defaults.
+// Deprecated: Use DefaultSecurityConfig() for secure-by-default configuration
+// or AllowAllSecurity() for backward-compatible development mode.
+func NewSecurityConfig() *SecurityConfig {
+	return DefaultSecurityConfig()
 }
 
 // ValidateComplexity validates filter complexity against security config

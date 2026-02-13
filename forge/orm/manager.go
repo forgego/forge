@@ -34,6 +34,22 @@ func NewManager[T any](tableName string) (*Manager[T], error) {
 	}, nil
 }
 
+// NewManagerWithDB creates a new manager with a database connection.
+// Returns a ConfigurationError if the database connection is nil.
+func NewManagerWithDB[T any](tableName string, db *db.DB) (*Manager[T], error) {
+	if db == nil {
+		return nil, errors.NewConfigurationError("database connection is required", "db")
+	}
+
+	manager, err := NewManager[T](tableName)
+	if err != nil {
+		return nil, err
+	}
+
+	manager.SetDB(db)
+	return manager, nil
+}
+
 // SetDB sets the database connection
 func (m *Manager[T]) SetDB(database *db.DB) {
 	m.db = database
@@ -67,7 +83,7 @@ func (m *Manager[T]) Filter(expr Expression) (QuerySet[T], error) {
 // Get retrieves a single model instance by its primary key ID.
 func (m *Manager[T]) Get(ctx context.Context, id int64) (*T, error) {
 	if m.db == nil {
-		return nil, errors.NewNotImplementedError("Manager.Get() - database connection not set")
+		return nil, errors.NewConfigurationError("database connection not set", "db")
 	}
 
 	// Prefer schema primary key if available.
@@ -110,7 +126,7 @@ func (m *Manager[T]) All(ctx context.Context) ([]*T, error) {
 // Create creates a new model instance
 func (m *Manager[T]) Create(ctx context.Context, instance *T) error {
 	if m.db == nil {
-		return errors.NewNotImplementedError("Manager.Create() - database connection not set")
+		return errors.NewConfigurationError("database connection not set", "db")
 	}
 
 	if err := m.runHooks(ctx, instance, "BeforeCreate"); err != nil {
@@ -145,7 +161,7 @@ func (m *Manager[T]) Create(ctx context.Context, instance *T) error {
 // BulkCreate creates multiple model instances efficiently using a single INSERT statement
 func (m *Manager[T]) BulkCreate(ctx context.Context, instances []*T) error {
 	if m.db == nil {
-		return errors.NewNotImplementedError("Manager.BulkCreate() - database connection not set")
+		return errors.NewConfigurationError("database connection not set", "db")
 	}
 
 	if len(instances) == 0 {
@@ -205,7 +221,7 @@ func (m *Manager[T]) BulkCreate(ctx context.Context, instances []*T) error {
 // Update updates an existing model instance
 func (m *Manager[T]) Update(ctx context.Context, instance *T) error {
 	if m.db == nil {
-		return errors.NewNotImplementedError("Manager.Update() - database connection not set")
+		return errors.NewConfigurationError("database connection not set", "db")
 	}
 
 	id, err := m.getID(instance)
@@ -259,7 +275,7 @@ func (m *Manager[T]) Save(ctx context.Context, instance *T) error {
 // Delete deletes a model instance
 func (m *Manager[T]) Delete(ctx context.Context, instance *T) error {
 	if m.db == nil {
-		return errors.NewNotImplementedError("Manager.Delete() - database connection not set")
+		return errors.NewConfigurationError("database connection not set", "db")
 	}
 
 	id, err := m.getID(instance)
@@ -521,7 +537,7 @@ func (m *Manager[T]) runHooks(ctx context.Context, instance *T, hookType string)
 				}
 			}
 			if schemaErr != nil {
-				return fmt.Errorf("%s schema hook failed: %w", hookType, schemaErr)
+				return fmt.Errorf("%s hook failed: %w", hookType, schemaErr)
 			}
 		}
 	}

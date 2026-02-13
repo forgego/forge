@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/forgego/forge/db/dialect"
 )
 
 // prefetch handles prefetching of related objects
@@ -146,6 +148,12 @@ func (qs *BaseQuerySet[T]) prefetchManyToMany(ctx context.Context, results []*T,
 		return err
 	}
 
+	// Get dialect for placeholder generation
+	d, err := qs.getDialect()
+	if err != nil {
+		return err
+	}
+
 	throughTable := rel.Through
 	if throughTable == "" {
 		// Infer through table name
@@ -178,7 +186,7 @@ func (qs *BaseQuerySet[T]) prefetchManyToMany(ctx context.Context, results []*T,
 		EscapeIdentifier(targetCol),
 		EscapeIdentifier(throughTable),
 		EscapeIdentifier(sourceCol),
-		buildPlaceholders(len(sourceIDs)),
+		d.BuildPlaceholders(len(sourceIDs)),
 	)
 
 	rows, err := db.QueryContext(ctx, query, sourceIDs...)
@@ -264,9 +272,15 @@ func (qs *BaseQuerySet[T]) fetchByIDs(ctx context.Context, schema *ModelSchema, 
 		return nil, err
 	}
 
+	// Get dialect for placeholder generation
+	d, err := qs.getDialect()
+	if err != nil {
+		return nil, err
+	}
+
 	// Build SQL
-	// Build placeholders manually because we are raw
-	placeholders := buildPlaceholders(len(ids))
+	// Build placeholders using dialect
+	placeholders := d.BuildPlaceholders(len(ids))
 
 	// We need to SELECT *
 	// We can reuse BaseQuerySet logic if we could instantiate it, but we can't easily.
@@ -332,15 +346,17 @@ func (qs *BaseQuerySet[T]) fetchByIDs(ctx context.Context, schema *ModelSchema, 
 	return results, nil
 }
 
-func buildPlaceholders(n int) string {
-	// For Postgres ($1, $2) vs SQLite (?)
-	// This needs to be dialect aware.
-	// For now, assuming $n for postgres or ? for others.
-	// qs.db has driver info?
-	// We can default to $n for now as we seem to use Postgres in tests mainly?
-	// But previous tests used sqlite3 and postgres.
-	// NewSQLBuilder uses $n.
+// buildPlaceholdersWithDialect generates placeholders using the provided dialect.
+// This is the preferred way to build placeholders for database-agnostic SQL.
+func buildPlaceholdersWithDialect(d dialect.Dialect, n int) string {
+	return d.BuildPlaceholders(n)
+}
 
+// buildPlaceholders generates PostgreSQL-style placeholders ($1, $2, etc.).
+//
+// Deprecated: Use buildPlaceholdersWithDialect or dialect.BuildPlaceholders() instead.
+// This function remains for backward compatibility but will be removed in v3.0.
+func buildPlaceholders(n int) string {
 	parts := make([]string, n)
 	for i := 0; i < n; i++ {
 		parts[i] = fmt.Sprintf("$%d", i+1)

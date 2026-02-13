@@ -35,22 +35,26 @@ func TestFieldAccessor_Field(t *testing.T) {
 
 	t.Run("get string field", func(t *testing.T) {
 		// Field method requires type parameter - use FieldFor helper instead
-		field := FieldFor[testModel, string](fa, "name")
+		field, err := FieldFor[testModel, string](fa, "name")
+		assert.NoError(t, err)
 		assert.NotNil(t, field)
 	})
 
 	t.Run("get float64 field", func(t *testing.T) {
-		field := FieldFor[testModel, float64](fa, "price")
+		field, err := FieldFor[testModel, float64](fa, "price")
+		assert.NoError(t, err)
 		assert.NotNil(t, field)
 	})
 
 	t.Run("get int64 field", func(t *testing.T) {
-		field := FieldFor[testModel, int64](fa, "id")
+		field, err := FieldFor[testModel, int64](fa, "id")
+		assert.NoError(t, err)
 		assert.NotNil(t, field)
 	})
 
 	t.Run("get bool field", func(t *testing.T) {
-		field := FieldFor[testModel, bool](fa, "available")
+		field, err := FieldFor[testModel, bool](fa, "available")
+		assert.NoError(t, err)
 		assert.NotNil(t, field)
 	})
 }
@@ -63,7 +67,8 @@ func TestFieldFor(t *testing.T) {
 	}
 
 	t.Run("get field with FieldFor helper", func(t *testing.T) {
-		field := FieldFor[testModel, string](fa, "name")
+		field, err := FieldFor[testModel, string](fa, "name")
+		assert.NoError(t, err)
 		assert.NotNil(t, field)
 	})
 }

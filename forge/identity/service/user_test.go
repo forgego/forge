@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/identity/models"
 	"github.com/forgego/forge/identity/repository"
 	"github.com/forgego/forge/identity/testutils"
 	"github.com/forgego/forge/identity/utils"
@@ -14,8 +16,10 @@ import (
 
 func setupUserServiceTest(t *testing.T) (UserService, *db.DB, context.Context) {
 	testDB := setupTestDB(t)
-	repo := repository.NewUserRepository(testDB)
-	service := NewUserService(repo)
+	userRepo := repository.NewUserRepository(testDB)
+	tokenRepo := repository.NewTokenRepository(testDB)
+	emailSender := &LogEmailSender{}
+	service := NewUserService(userRepo, tokenRepo, emailSender)
 	ctx := context.Background()
 	return service, testDB, ctx
 }
@@ -396,5 +400,209 @@ func TestUserService_UpdateUser_ChangeEmail(t *testing.T) {
 		}
 		_, err = service.UpdateUser(ctx, user2.ID, updateReq)
 		assert.Error(t, err)
+	})
+}
+
+// Email Verification Tests
+
+func TestUserService_CreateEmailVerificationToken(t *testing.T) {
+	service, testDB, ctx := setupUserServiceTest(t)
+	defer testDB.Close()
+
+	// Create test user
+	user, err := service.Register(ctx, &RegisterRequest{
+		Username: "testuser",
+		Email:    "test@example.com",
+		Password: "password123",
+	})
+	require.NoError(t, err)
+
+	t.Run("creates verification token successfully", func(t *testing.T) {
+		token, err := service.CreateEmailVerificationToken(ctx, user.ID, user.Email)
+		require.NoError(t, err)
+		assert.NotEmpty(t, token.Token)
+		assert.Equal(t, user.ID, token.UserID)
+		assert.Equal(t, user.Email, token.Email)
+		assert.False(t, token.ExpiresAt.IsZero())
+		assert.True(t, token.ExpiresAt.After(time.Now()))
+	})
+}
+
+func TestUserService_VerifyEmail(t *testing.T) {
+	service, testDB, ctx := setupUserServiceTest(t)
+	defer testDB.Close()
+
+	t.Run("verifies email with valid token", func(t *testing.T) {
+		// Create test user
+		user, err := service.Register(ctx, &RegisterRequest{
+			Username: "verifyuser",
+			Email:    "verify@example.com",
+			Password: "password123",
+		})
+		require.NoError(t, err)
+		assert.False(t, user.EmailVerified)
+
+		// Create verification token
+		token, err := service.CreateEmailVerificationToken(ctx, user.ID, user.Email)
+		require.NoError(t, err)
+
+		// Verify email
+		err = service.VerifyEmail(ctx, token.Token)
+		require.NoError(t, err)
+
+		// Check user is verified
+		updatedUser, err := service.GetUser(ctx, user.ID)
+		require.NoError(t, err)
+		assert.True(t, updatedUser.EmailVerified)
+		assert.NotNil(t, updatedUser.EmailVerifiedAt)
+	})
+
+	t.Run("fails with invalid token", func(t *testing.T) {
+		err := service.VerifyEmail(ctx, "invalid-token")
+		assert.Error(t, err)
+		assert.Equal(t, ErrInvalidToken, err)
+	})
+
+	t.Run("fails with already verified email", func(t *testing.T) {
+		// Create test user
+		user, err := service.Register(ctx, &RegisterRequest{
+			Username: "alreadyverified",
+			Email:    "alreadyverified@example.com",
+			Password: "password123",
+		})
+		require.NoError(t, err)
+
+		// Create and use first token
+		token, err := service.CreateEmailVerificationToken(ctx, user.ID, user.Email)
+		require.NoError(t, err)
+		err = service.VerifyEmail(ctx, token.Token)
+		require.NoError(t, err)
+
+		// Create second token and try to verify again
+		token2, err := service.CreateEmailVerificationToken(ctx, user.ID, user.Email)
+		require.NoError(t, err)
+		err = service.VerifyEmail(ctx, token2.Token)
+		assert.Error(t, err)
+		assert.Equal(t, ErrEmailAlreadyVerified, err)
+	})
+}
+
+func TestUserService_ResendVerificationEmail(t *testing.T) {
+	service, testDB, ctx := setupUserServiceTest(t)
+	defer testDB.Close()
+
+	t.Run("resends verification email successfully", func(t *testing.T) {
+		// Create test user
+		user, err := service.Register(ctx, &RegisterRequest{
+			Username: "resenduser",
+			Email:    "resend@example.com",
+			Password: "password123",
+		})
+		require.NoError(t, err)
+		assert.False(t, user.EmailVerified)
+
+		// Resend verification email
+		err = service.ResendVerificationEmail(ctx, user.Email)
+		require.NoError(t, err)
+	})
+
+	t.Run("returns no error for non-existent email (security)", func(t *testing.T) {
+		// Should not reveal if email exists
+		err := service.ResendVerificationEmail(ctx, "nonexistent@example.com")
+		assert.NoError(t, err)
+	})
+
+	t.Run("fails for already verified email", func(t *testing.T) {
+		// Create test user
+		user, err := service.Register(ctx, &RegisterRequest{
+			Username: "verifieduser",
+			Email:    "verifieduser@example.com",
+			Password: "password123",
+		})
+		require.NoError(t, err)
+
+		// Verify the user
+		token, err := service.CreateEmailVerificationToken(ctx, user.ID, user.Email)
+		require.NoError(t, err)
+		err = service.VerifyEmail(ctx, token.Token)
+		require.NoError(t, err)
+
+		// Try to resend verification email
+		err = service.ResendVerificationEmail(ctx, user.Email)
+		assert.Error(t, err)
+		assert.Equal(t, ErrEmailAlreadyVerified, err)
+	})
+}
+
+func TestEmailVerificationToken_Model(t *testing.T) {
+	t.Run("IsExpired returns true for expired token", func(t *testing.T) {
+		token := &models.EmailVerificationToken{
+			ExpiresAt: time.Now().Add(-1 * time.Hour),
+		}
+		assert.True(t, token.IsExpired())
+	})
+
+	t.Run("IsExpired returns false for valid token", func(t *testing.T) {
+		token := &models.EmailVerificationToken{
+			ExpiresAt: time.Now().Add(1 * time.Hour),
+		}
+		assert.False(t, token.IsExpired())
+	})
+
+	t.Run("IsUsed returns true for used token", func(t *testing.T) {
+		now := time.Now()
+		token := &models.EmailVerificationToken{
+			VerifiedAt: &now,
+		}
+		assert.True(t, token.IsUsed())
+	})
+
+	t.Run("IsUsed returns false for unused token", func(t *testing.T) {
+		token := &models.EmailVerificationToken{
+			VerifiedAt: nil,
+		}
+		assert.False(t, token.IsUsed())
+	})
+}
+
+// MockEmailSender for testing
+type MockEmailSender struct {
+	LastTo    string
+	LastToken string
+	Err       error
+}
+
+func (m *MockEmailSender) SendVerificationEmail(ctx context.Context, to, token string) error {
+	m.LastTo = to
+	m.LastToken = token
+	return m.Err
+}
+
+func TestUserService_WithMockEmailSender(t *testing.T) {
+	testDB := setupTestDB(t)
+	defer testDB.Close()
+
+	userRepo := repository.NewUserRepository(testDB)
+	tokenRepo := repository.NewTokenRepository(testDB)
+	mockSender := &MockEmailSender{}
+	service := NewUserService(userRepo, tokenRepo, mockSender)
+	ctx := context.Background()
+
+	t.Run("sends email when resending verification", func(t *testing.T) {
+		// Create test user
+		user, err := service.Register(ctx, &RegisterRequest{
+			Username: "emailtest",
+			Email:    "emailtest@example.com",
+			Password: "password123",
+		})
+		require.NoError(t, err)
+
+		// Resend verification email
+		err = service.ResendVerificationEmail(ctx, user.Email)
+		require.NoError(t, err)
+
+		// Check mock was called
+		assert.Equal(t, user.Email, mockSender.LastTo)
+		assert.NotEmpty(t, mockSender.LastToken)
 	})
 }

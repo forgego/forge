@@ -282,14 +282,15 @@ func NewFieldAccessor[T any]() (*FieldAccessor[T], error) {
 }
 
 // Field creates a field expression (use FieldFor for type safety)
-func (fa *FieldAccessor[T]) Field(name string) FieldExpression[interface{}] {
+// Returns an error if the field is not found
+func (fa *FieldAccessor[T]) Field(name string) (FieldExpression[interface{}], error) {
 	// Validate field exists
 	fieldInfo := fa.schema.GetField(name)
 	if fieldInfo == nil {
-		panic(fmt.Sprintf("field %s not found on model", name))
+		return FieldExpression[interface{}]{}, fmt.Errorf("field %s not found on model", name)
 	}
 
-	return NewField[interface{}](name, fa.table)
+	return NewField[interface{}](name, fa.table), nil
 }
 
 // AllFieldExpressions returns all field expressions as a map
@@ -303,16 +304,17 @@ func (fa *FieldAccessor[T]) AllFieldExpressions() map[string]FieldExpression[int
 
 // RelatedField creates a type-safe related field expression
 // Use RelatedFieldFor to specify related model and field types
-func (fa *FieldAccessor[T]) RelatedField(relationName, fieldName string) FieldExpression[interface{}] {
+// Returns an error if the relation is not found
+func (fa *FieldAccessor[T]) RelatedField(relationName, fieldName string) (FieldExpression[interface{}], error) {
 	// Validate relation exists
 	rel := fa.schema.GetRelation(relationName)
 	if rel == nil {
-		panic(fmt.Sprintf("relation %s not found", relationName))
+		return FieldExpression[interface{}]{}, fmt.Errorf("relation %s not found", relationName)
 	}
 
 	// Build field path
 	fieldPath := relationName + "__" + fieldName
-	return NewField[interface{}](fieldPath, fa.table)
+	return NewField[interface{}](fieldPath, fa.table), nil
 }
 
 // AllFields returns all field names

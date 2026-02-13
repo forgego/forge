@@ -42,12 +42,13 @@ func NewRelationField[T any, D Depth](
 
 // Fields returns the field expressions for the related model
 // This allows chaining: Post.Fields.Author.Fields.Email
-func (rf RelationField[T, D]) Fields() *FieldAccessor[T] {
+// Returns an error if the field accessor cannot be created
+func (rf RelationField[T, D]) Fields() (*FieldAccessor[T], error) {
 	accessor, err := NewFieldAccessor[T]()
 	if err != nil {
-		panic(fmt.Sprintf("failed to create field accessor for relation %s: %v", rf.relationName, err))
+		return nil, fmt.Errorf("failed to create field accessor for relation %s: %w", rf.relationName, err)
 	}
-	return accessor
+	return accessor, nil
 }
 
 // Path returns the relation path for SQL generation
@@ -62,17 +63,18 @@ func (rf RelationField[T, D]) Table() string {
 
 // TraverseField creates a field expression on the related model
 // This is used for queries like: Post.Fields.Author.Fields.Email.Eq("test@example.com")
-func TraverseField[T any, D Depth, V any](rf RelationField[T, D], fieldName string) FieldExpression[V] {
+// Returns an error if the field is not found on the related model
+func TraverseField[T any, D Depth, V any](rf RelationField[T, D], fieldName string) (FieldExpression[V], error) {
 	// Validate field exists on target model
 	fieldInfo := rf.targetSchema.GetField(fieldName)
 	if fieldInfo == nil {
-		panic(fmt.Sprintf("field %s not found on related model %s", fieldName, rf.targetSchema.TableName))
+		return FieldExpression[V]{}, fmt.Errorf("field %s not found on related model %s", fieldName, rf.targetSchema.TableName)
 	}
 
 	// Build relation path: "author__email"
 	path := fmt.Sprintf("%s__%s", rf.relationName, fieldName)
 
-	return NewField[V](path, rf.table)
+	return NewField[V](path, rf.table), nil
 }
 
 // Resolve validates the relation exists in the source schema

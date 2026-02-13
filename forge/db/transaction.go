@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"unicode"
 )
 
 // Tx wraps *sql.Tx with additional functionality
@@ -54,8 +56,37 @@ type Savepoint struct {
 	name string
 }
 
+// Error definitions for savepoint validation
+var (
+	// ErrEmptySavepointName is returned when savepoint name is empty
+	ErrEmptySavepointName = errors.New("savepoint name cannot be empty")
+	// ErrSavepointNameTooLong is returned when savepoint name exceeds maximum length
+	ErrSavepointNameTooLong = errors.New("savepoint name too long: maximum 128 characters")
+	// ErrInvalidSavepointName is returned when savepoint name contains invalid characters
+	ErrInvalidSavepointName = errors.New("invalid savepoint name: must contain only alphanumeric characters and underscores")
+)
+
+// validateSavepointName validates that a savepoint name is safe to use in SQL
+func validateSavepointName(name string) error {
+	if name == "" {
+		return ErrEmptySavepointName
+	}
+	if len(name) > 128 {
+		return ErrSavepointNameTooLong
+	}
+	for _, r := range name {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' {
+			return ErrInvalidSavepointName
+		}
+	}
+	return nil
+}
+
 // CreateSavepoint creates a savepoint
 func (tx *Tx) CreateSavepoint(name string) (*Savepoint, error) {
+	if err := validateSavepointName(name); err != nil {
+		return nil, err
+	}
 	_, err := tx.Exec("SAVEPOINT " + name)
 	if err != nil {
 		return nil, err

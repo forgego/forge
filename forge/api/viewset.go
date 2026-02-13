@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -27,6 +28,25 @@ type ViewSet interface {
 	Destroy(w http.ResponseWriter, r *http.Request)
 }
 
+// QuerySetInterface defines the common methods needed from QuerySet for viewset operations.
+// This interface allows type-safe operations without reflection when the QuerySet implements it.
+type QuerySetInterface interface {
+	Count(ctx context.Context) (int64, error)
+	All(ctx context.Context) (interface{}, error)
+	Filter(expr interface{}) interface{}
+	OrderBy(fields ...interface{}) interface{}
+	Limit(limit int) interface{}
+	Offset(offset int) interface{}
+}
+
+// ManagerInterface defines the common methods needed from Manager for viewset operations.
+type ManagerInterface interface {
+	Get(ctx context.Context, id int64) (interface{}, error)
+	Create(ctx context.Context, model interface{}) error
+	Update(ctx context.Context, model interface{}) error
+	Delete(ctx context.Context, model interface{}) error
+}
+
 // BaseViewSet provides common viewset functionality
 type BaseViewSet struct {
 	Serializer func() Serializer
@@ -48,7 +68,10 @@ func (vs *BaseViewSet) getManager() reflect.Value {
 	// If Queryset is set and looks like a manager (has Create method), use it
 	if vs.Queryset != nil {
 		qsValue := reflect.ValueOf(vs.Queryset)
-		if qsValue.MethodByName("Create").IsValid() {
+		qsType := qsValue.Type()
+		
+		// Use cached method lookup instead of MethodByName
+		if _, ok := globalCache.GetMethod(qsType, "Create"); ok {
 			return qsValue
 		}
 	}
@@ -84,69 +107,87 @@ func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 	// Apply ordering
 	qs = applyOrdering(qs, r)
 
-	// Get total count
-	countMethod := qs.MethodByName("Count")
+	// Get total count using cached method lookup
+	qsType := qs.Type()
+	countMethod, ok := globalCache.GetMethod(qsType, "Count")
+	if !ok {
+		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Count method not found")
+		return
+	}
+
 	var totalCount int64
-	if countMethod.IsValid() {
-		results := countMethod.Call([]reflect.Value{reflect.ValueOf(ctx)})
-		if len(results) > 0 && results[0].CanInterface() {
+	results := countMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(ctx)})
+	if len(results) >= 2 {
+		if !results[1].IsNil() {
+			if err, ok := results[1].Interface().(error); ok {
+				_ = forgehttp.SendError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+		if results[0].CanInterface() {
 			if count, ok := results[0].Interface().(int64); ok {
 				totalCount = count
 			}
 		}
 	}
 
-	// Apply pagination
+	// Apply pagination using cached method lookup
 	offset := (page - 1) * pageSize
-	offsetMethod := qs.MethodByName("Offset")
-	if offsetMethod.IsValid() {
-		results := offsetMethod.Call([]reflect.Value{reflect.ValueOf(offset)})
-		if len(results) > 0 {
-			if newQS, ok := results[0].Interface().(interface{}); ok {
+
+	offsetMethod, ok := globalCache.GetMethod(qsType, "Offset")
+	if ok {
+		offsetResults := offsetMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(offset)})
+		if len(offsetResults) > 0 {
+			if newQS, ok := offsetResults[0].Interface().(interface{}); ok {
 				qs = reflect.ValueOf(newQS)
+				qsType = qs.Type()
 			}
 		}
 	}
 
-	limitMethod := qs.MethodByName("Limit")
-	if limitMethod.IsValid() {
-		results := limitMethod.Call([]reflect.Value{reflect.ValueOf(pageSize)})
-		if len(results) > 0 {
-			if newQS, ok := results[0].Interface().(interface{}); ok {
+	limitMethod, ok := globalCache.GetMethod(qsType, "Limit")
+	if ok {
+		limitResults := limitMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(pageSize)})
+		if len(limitResults) > 0 {
+			if newQS, ok := limitResults[0].Interface().(interface{}); ok {
 				qs = reflect.ValueOf(newQS)
+				qsType = qs.Type()
 			}
 		}
 	}
 
-	// Execute query
-	allMethod := qs.MethodByName("All")
-	var results []interface{}
-	if allMethod.IsValid() {
-		allResults := allMethod.Call([]reflect.Value{reflect.ValueOf(ctx)})
-		if len(allResults) >= 2 {
-			// Check for error first
-			if errVal := allResults[1]; !errVal.IsNil() {
-				if err, ok := errVal.Interface().(error); ok {
-					_ = forgehttp.SendError(w, http.StatusInternalServerError, err.Error())
-					return
-				}
+	// Execute query using cached method lookup
+	allMethod, ok := globalCache.GetMethod(qsType, "All")
+	if !ok {
+		_ = forgehttp.SendError(w, http.StatusInternalServerError, "All method not found")
+		return
+	}
+
+	var resultList []interface{}
+	allResults := allMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(ctx)})
+	if len(allResults) >= 2 {
+		// Check for error first
+		if errVal := allResults[1]; !errVal.IsNil() {
+			if err, ok := errVal.Interface().(error); ok {
+				_ = forgehttp.SendError(w, http.StatusInternalServerError, err.Error())
+				return
 			}
-			if allResults[0].CanInterface() {
-				if objects, ok := allResults[0].Interface().([]interface{}); ok {
-					results = objects
-				} else if allResults[0].Kind() == reflect.Slice {
-					// Try to convert slice of pointers
-					sliceValue := allResults[0]
-					for i := 0; i < sliceValue.Len(); i++ {
-						results = append(results, sliceValue.Index(i).Interface())
-					}
+		}
+		if allResults[0].CanInterface() {
+			if objects, ok := allResults[0].Interface().([]interface{}); ok {
+				resultList = objects
+			} else if allResults[0].Kind() == reflect.Slice {
+				// Try to convert slice of pointers
+				sliceValue := allResults[0]
+				for i := 0; i < sliceValue.Len(); i++ {
+					resultList = append(resultList, sliceValue.Index(i).Interface())
 				}
 			}
 		}
 	}
 
 	// Serialize results
-	serialized := SerializeMany(results)
+	serialized := SerializeMany(resultList)
 
 	// Send paginated response
 	// nolint:errcheck // HTTP response errors can't be handled meaningfully
@@ -190,14 +231,16 @@ func (vs *BaseViewSet) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	createMethod := manager.MethodByName("Create")
-	if !createMethod.IsValid() {
+	managerType := manager.Type()
+	createMethod, ok := globalCache.GetMethod(managerType, "Create")
+	if !ok {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Create method not found")
 		return
 	}
 
-	results := createMethod.Call([]reflect.Value{
+	results := createMethod.Func.Call([]reflect.Value{
+		manager,
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(instance),
 	})
@@ -243,14 +286,16 @@ func (vs *BaseViewSet) Retrieve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	getMethod := manager.MethodByName("Get")
-	if !getMethod.IsValid() {
+	managerType := manager.Type()
+	getMethod, ok := globalCache.GetMethod(managerType, "Get")
+	if !ok {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Get method not found")
 		return
 	}
 
-	results := getMethod.Call([]reflect.Value{
+	results := getMethod.Func.Call([]reflect.Value{
+		manager,
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(id),
 	})
@@ -319,14 +364,16 @@ func (vs *BaseViewSet) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	getMethod := manager.MethodByName("Get")
-	if !getMethod.IsValid() {
+	managerType := manager.Type()
+	getMethod, ok := globalCache.GetMethod(managerType, "Get")
+	if !ok {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Get method not found")
 		return
 	}
 
-	getResults := getMethod.Call([]reflect.Value{
+	getResults := getMethod.Func.Call([]reflect.Value{
+		manager,
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(id),
 	})
@@ -345,14 +392,15 @@ func (vs *BaseViewSet) Update(w http.ResponseWriter, r *http.Request) {
 	populateFromMap(instance, data)
 
 	// Update
-	updateMethod := manager.MethodByName("Update")
-	if !updateMethod.IsValid() {
+	updateMethod, ok := globalCache.GetMethod(managerType, "Update")
+	if !ok {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Update method not found")
 		return
 	}
 
-	updateResults := updateMethod.Call([]reflect.Value{
+	updateResults := updateMethod.Func.Call([]reflect.Value{
+		manager,
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(instance),
 	})
@@ -401,14 +449,16 @@ func (vs *BaseViewSet) Destroy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	getMethod := manager.MethodByName("Get")
-	if !getMethod.IsValid() {
+	managerType := manager.Type()
+	getMethod, ok := globalCache.GetMethod(managerType, "Get")
+	if !ok {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Get method not found")
 		return
 	}
 
-	getResults := getMethod.Call([]reflect.Value{
+	getResults := getMethod.Func.Call([]reflect.Value{
+		manager,
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(id),
 	})
@@ -424,14 +474,15 @@ func (vs *BaseViewSet) Destroy(w http.ResponseWriter, r *http.Request) {
 	instance := getResults[0].Interface()
 
 	// Delete
-	deleteMethod := manager.MethodByName("Delete")
-	if !deleteMethod.IsValid() {
+	deleteMethod, ok := globalCache.GetMethod(managerType, "Delete")
+	if !ok {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Delete method not found")
 		return
 	}
 
-	deleteResults := deleteMethod.Call([]reflect.Value{
+	deleteResults := deleteMethod.Func.Call([]reflect.Value{
+		manager,
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(instance),
 	})
@@ -517,22 +568,28 @@ func (r *Router) RegisterRoutes(router *forgehttp.Router) {
 func applyFilters(qs reflect.Value, r *http.Request) reflect.Value {
 	// Get filter parameters from query string
 	query := r.URL.Query()
+	qsType := qs.Type()
+
+	// Get cached Filter method
+	filterMethod, hasFilter := globalCache.GetMethod(qsType, "Filter")
 
 	for key, values := range query {
 		if len(values) == 0 || key == "page" || key == "page_size" || key == "ordering" || key == "search" {
 			continue
 		}
 
-		filterMethod := qs.MethodByName("Filter")
-		if filterMethod.IsValid() {
+		if hasFilter {
 			value := values[0]
 
 			expr := buildFilterExpr(key, value)
 			if expr != nil {
-				results := filterMethod.Call([]reflect.Value{reflect.ValueOf(expr)})
+				results := filterMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(expr)})
 				if len(results) > 0 {
 					if newQS, ok := results[0].Interface().(interface{}); ok {
 						qs = reflect.ValueOf(newQS)
+						qsType = qs.Type()
+						// Update cached method for new queryset type
+						filterMethod, hasFilter = globalCache.GetMethod(qsType, "Filter")
 					}
 				}
 			}
@@ -624,25 +681,29 @@ func applyOrdering(qs reflect.Value, r *http.Request) reflect.Value {
 		return qs
 	}
 
-	orderByMethod := qs.MethodByName("OrderBy")
-	if orderByMethod.IsValid() {
-		rawFields := strings.Split(ordering, ",")
-		args := make([]reflect.Value, 0, len(rawFields))
-		for _, field := range rawFields {
-			field = strings.TrimSpace(field)
-			if field == "" {
-				continue
-			}
-			args = append(args, reflect.ValueOf(field))
+	qsType := qs.Type()
+	orderByMethod, ok := globalCache.GetMethod(qsType, "OrderBy")
+	if !ok {
+		return qs
+	}
+
+	rawFields := strings.Split(ordering, ",")
+	args := make([]reflect.Value, 0, len(rawFields)+1)
+	args = append(args, qs) // Add receiver
+	for _, field := range rawFields {
+		field = strings.TrimSpace(field)
+		if field == "" {
+			continue
 		}
-		if len(args) == 0 {
-			return qs
-		}
-		results := orderByMethod.Call(args)
-		if len(results) > 0 {
-			if newQS, ok := results[0].Interface().(interface{}); ok {
-				return reflect.ValueOf(newQS)
-			}
+		args = append(args, reflect.ValueOf(field))
+	}
+	if len(args) <= 1 { // Only receiver, no fields
+		return qs
+	}
+	results := orderByMethod.Func.Call(args)
+	if len(results) > 0 {
+		if newQS, ok := results[0].Interface().(interface{}); ok {
+			return reflect.ValueOf(newQS)
 		}
 	}
 

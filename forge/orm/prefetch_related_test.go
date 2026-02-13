@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/db/dialect"
 	"github.com/forgego/forge/internal/testutils"
 	"github.com/forgego/forge/schema"
 	"github.com/stretchr/testify/assert"
@@ -98,6 +99,9 @@ func TestPrefetchRelated_Integration(t *testing.T) {
 	defer sqlDB.Close()
 
 	database := &db.DB{DB: sqlDB, Driver: "postgres"}
+	// Set the dialect manually since we're creating DB directly
+	// In production, NewDB() would set this automatically
+	database.SetDialect(dialect.NewPostgreSQLDialect())
 
 	// Insert data
 	var userID int64

@@ -12,11 +12,36 @@ type Parser struct {
 	security *SecurityConfig
 }
 
-// NewParser creates a new query parameter parser
-func NewParser(security *SecurityConfig) *Parser {
-	return &Parser{
-		security: security,
+// ParserOption is a functional option for configuring the Parser
+type ParserOption func(*Parser)
+
+// WithSecurity sets a custom security configuration for the parser
+func WithSecurity(security *SecurityConfig) ParserOption {
+	return func(p *Parser) {
+		p.security = security
 	}
+}
+
+// WithAllowAllSecurity configures the parser to allow all field access.
+// WARNING: Use only in development or trusted environments.
+func WithAllowAllSecurity() ParserOption {
+	return func(p *Parser) {
+		p.security = AllowAllSecurity()
+	}
+}
+
+// NewParser creates a new query parameter parser with secure defaults.
+// By default, the parser uses DefaultSecurityConfig() which denies all field access
+// unless explicitly configured. Use WithSecurity() or WithAllowAllSecurity() options
+// to customize the security configuration.
+func NewParser(opts ...ParserOption) *Parser {
+	p := &Parser{
+		security: DefaultSecurityConfig(), // Always have a security config - secure by default
+	}
+	for _, opt := range opts {
+		opt(p)
+	}
+	return p
 }
 
 // ParseQueryParams parses query parameters from an HTTP request
@@ -182,16 +207,34 @@ func isReservedParam(param string) bool {
 
 // validateFieldAccess validates that a field path is allowed
 func (p *Parser) validateFieldAccess(fieldPath string, schema interface{}) error {
+	// Security config must always be present - deny by default
 	if p.security == nil {
+		return fmt.Errorf("field access denied: no security configuration provided for field %q", fieldPath)
+	}
+
+	// If AllowAllFields is true, skip field validation (development mode)
+	if p.security.AllowAllFields {
 		return nil
 	}
 
-	// Check if field is in whitelist
-	// This would need schema integration to check actual allowed fields
-	// For now, just check if security config has restrictions
-	if len(p.security.AllowedFields) > 0 {
-		// Would need to check against schema's GetAllowedFields
-		// This is a placeholder
+	// Check if field is in the allowed fields map
+	// The map is organized by model name, then by role
+	// For now, we check if any model has this field allowed
+	allowed := false
+	for _, fields := range p.security.AllowedFields {
+		for _, f := range fields {
+			if f == fieldPath || f == "*" {
+				allowed = true
+				break
+			}
+		}
+		if allowed {
+			break
+		}
+	}
+
+	if !allowed {
+		return fmt.Errorf("field access denied: field %q is not in the allowed fields list", fieldPath)
 	}
 
 	return nil

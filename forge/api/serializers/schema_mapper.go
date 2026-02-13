@@ -32,7 +32,11 @@ func FromSchema[T any](schemaInstance schema.Schema) *TypedSerializer[T] {
 		}
 
 		// Create field expression based on field type
-		typedField := createTypedFieldFromSchema[T](field, accessor)
+		typedField, err := createTypedFieldFromSchema[T](field, accessor)
+		if err != nil {
+			// Skip fields that can't be created
+			continue
+		}
 
 		// Apply schema constraints
 		if field.Required {
@@ -47,11 +51,15 @@ func FromSchema[T any](schemaInstance schema.Schema) *TypedSerializer[T] {
 }
 
 // createTypedFieldFromSchema creates a typed field from a schema field
-func createTypedFieldFromSchema[T any](schemaField schema.Field, accessor *orm.FieldAccessor[T]) TypedField[T] {
+// Returns an error if the field cannot be created
+func createTypedFieldFromSchema[T any](schemaField schema.Field, accessor *orm.FieldAccessor[T]) (TypedField[T], error) {
 	// Create field expression based on field type
 	// This is a simplified version - in practice, you'd map each schema field type
-	fieldExpr := orm.FieldFor[T, interface{}](accessor, schemaField.Name)
-	
+	fieldExpr, err := orm.FieldFor[T, interface{}](accessor, schemaField.Name)
+	if err != nil {
+		return TypedField[T]{}, err
+	}
+
 	typedField := Field[T, interface{}](fieldExpr)
 
 	// Apply schema options
@@ -59,7 +67,7 @@ func createTypedFieldFromSchema[T any](schemaField schema.Field, accessor *orm.F
 		typedField = typedField.Default(schemaField.Default)
 	}
 
-	return typedField
+	return typedField, nil
 }
 
 // Override allows customizing a specific field in a serializer
