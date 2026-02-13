@@ -1222,11 +1222,23 @@ func (qs *BaseQuerySet[T]) Update(ctx context.Context, updates UpdateMap) (int64
 	return rowsAffected, nil
 }
 
-// BulkUpdate performs bulk updates
-// Note: This is a planned feature. For now, use Update() in a loop or implement
-// custom bulk update logic using raw SQL if needed.
+// BulkUpdate performs bulk updates by applying each UpdateMap entry sequentially.
+// Each entry in the updates slice is applied as a separate UPDATE statement against
+// the current QuerySet filters. For true single-statement bulk updates with
+// different values per row, use raw SQL.
 func (qs *BaseQuerySet[T]) BulkUpdate(ctx context.Context, updates []UpdateMap) error {
-	return fmt.Errorf("BulkUpdate not yet implemented in QuerySet - use Update() in a loop or raw SQL for now")
+	if qs.err != nil {
+		return qs.err
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+	for i, update := range updates {
+		if _, err := qs.Update(ctx, update); err != nil {
+			return fmt.Errorf("BulkUpdate failed at index %d: %w", i, err)
+		}
+	}
+	return nil
 }
 
 // Delete performs a bulk delete

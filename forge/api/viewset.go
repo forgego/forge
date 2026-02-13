@@ -74,7 +74,6 @@ func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 	querysetValue := reflect.ValueOf(vs.Queryset)
 	if !querysetValue.IsValid() {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
-		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Queryset not set")
 		return
 	}

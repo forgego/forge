@@ -50,7 +50,7 @@ func (r *Router) RegisterRoutes(router chi.Router) {
 		sub.Use(middleware.Logger)
 		sub.Use(middleware.Recoverer)
 		sub.Use(cors.Handler(cors.Options{
-			AllowedOrigins:   []string{"http://localhost:*", "http://127.0.0.1:*"},
+			AllowedOrigins:   []string{"*"}, // Admin panel may be served from any origin; restrict via reverse proxy in production
 			AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 			AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 			ExposedHeaders:   []string{"Link"},

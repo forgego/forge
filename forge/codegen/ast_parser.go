@@ -252,6 +252,12 @@ func (p *ASTParser) extractFieldFromCall(call *ast.CallExpr) *FieldDefinition {
 	options := make(map[string]interface{})
 	p.extractOptionsFromChain(call, options)
 
+	// Also extract options from variadic arguments of the field builder call.
+	// The functional API passes options as variadic args:
+	//   schema.StringField("name", schema.Required(), schema.MaxLength(200))
+	// These are in fieldBuilderCall.Args[1:] (index 0 is the field name).
+	p.extractOptionsFromVariadicArgs(fieldBuilderCall, options)
+
 	// Build validation tag
 	validationTag := p.buildValidationTag(fieldType, options)
 
@@ -335,6 +341,37 @@ func (p *ASTParser) extractOptionsFromChain(expr ast.Expr, options map[string]in
 	case *ast.SelectorExpr:
 		// Continue traversing
 		p.extractOptionsFromChain(x.X, options)
+	}
+}
+
+// extractOptionsFromVariadicArgs extracts options from variadic arguments of
+// functional-style field builder calls like:
+//
+//	schema.StringField("name", schema.Required(), schema.MaxLength(200))
+//
+// The variadic args are call expressions passed as arguments at index 1+.
+func (p *ASTParser) extractOptionsFromVariadicArgs(fieldBuilderCall *ast.CallExpr, options map[string]interface{}) {
+	if fieldBuilderCall == nil {
+		return
+	}
+	// Skip argument 0 (the field name string); process remaining variadic option args
+	for i := 1; i < len(fieldBuilderCall.Args); i++ {
+		arg := fieldBuilderCall.Args[i]
+		optionCall, ok := arg.(*ast.CallExpr)
+		if !ok {
+			continue
+		}
+		// The option call is something like schema.Required() or schema.MaxLength(200)
+		var methodName string
+		switch fn := optionCall.Fun.(type) {
+		case *ast.SelectorExpr:
+			methodName = fn.Sel.Name
+		case *ast.Ident:
+			methodName = fn.Name
+		default:
+			continue
+		}
+		p.extractOptionFromMethod(methodName, optionCall, options)
 	}
 }
 
@@ -650,6 +687,40 @@ func (p *ASTParser) buildValidationTag(fieldType string, options map[string]inte
 	if minLen, ok := options["min_length"]; ok {
 		if minLenInt, ok := minLen.(int); ok && minLenInt > 0 {
 			tags = append(tags, fmt.Sprintf("min=%d", minLenInt))
+		}
+	}
+
+	// MaxValue (numeric)
+	if maxVal, ok := options["max_value"]; ok {
+		switch v := maxVal.(type) {
+		case float64:
+			tags = append(tags, fmt.Sprintf("lte=%g", v))
+		case int:
+			tags = append(tags, fmt.Sprintf("lte=%d", v))
+		}
+	}
+
+	// MinValue (numeric)
+	if minVal, ok := options["min_value"]; ok {
+		switch v := minVal.(type) {
+		case float64:
+			tags = append(tags, fmt.Sprintf("gte=%g", v))
+		case int:
+			tags = append(tags, fmt.Sprintf("gte=%d", v))
+		}
+	}
+
+	// MaxDigits (decimal)
+	if maxDigits, ok := options["max_digits"]; ok {
+		if maxDigitsInt, ok := maxDigits.(int); ok && maxDigitsInt > 0 {
+			tags = append(tags, fmt.Sprintf("decimal_max_digits=%d", maxDigitsInt))
+		}
+	}
+
+	// DecimalPlaces
+	if decPlaces, ok := options["decimal_places"]; ok {
+		if decPlacesInt, ok := decPlaces.(int); ok && decPlacesInt >= 0 {
+			tags = append(tags, fmt.Sprintf("decimal_places=%d", decPlacesInt))
 		}
 	}
 

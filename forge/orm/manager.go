@@ -412,11 +412,30 @@ func (m *Manager[T]) setID(instance *T, id int64) {
 }
 
 func (m *Manager[T]) validate(instance *T) error {
+	// 1. Run interface-based Clean method (defined directly on the struct)
 	if validatable, ok := any(instance).(interface{ Clean() error }); ok {
 		if err := validatable.Clean(); err != nil {
 			return fmt.Errorf("validation failed: %w", err)
 		}
 	}
+
+	// 2. Run schema-defined Clean hook (from Schema.Hooks())
+	if s, ok := any(instance).(schema.Schema); ok {
+		hooks := s.Hooks()
+		if hooks != nil && hooks.Clean != nil {
+			if err := hooks.Clean(instance); err != nil {
+				return fmt.Errorf("schema validation failed: %w", err)
+			}
+		}
+	}
+
+	// 3. Run Validate() if the model implements it (e.g. from generated code)
+	if validatable, ok := any(instance).(interface{ Validate() error }); ok {
+		if err := validatable.Validate(); err != nil {
+			return fmt.Errorf("model validation failed: %w", err)
+		}
+	}
+
 	return nil
 }
 
