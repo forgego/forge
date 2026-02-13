@@ -7,6 +7,7 @@ import (
 
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/errors"
+	"github.com/forgego/forge/schema"
 )
 
 // Manager provides type-safe CRUD operations
@@ -225,7 +226,8 @@ func (m *Manager[T]) Update(ctx context.Context, instance *T) error {
 		return err
 	}
 
-	sql, args, err := BuildUpdateSQL(instance, m.tableName, "id")
+	pkColumn := m.primaryKeyColumn()
+	sql, args, err := BuildUpdateSQL(instance, m.tableName, pkColumn)
 	if err != nil {
 		return fmt.Errorf("failed to build update SQL: %w", err)
 	}
@@ -272,7 +274,8 @@ func (m *Manager[T]) Delete(ctx context.Context, instance *T) error {
 		return err
 	}
 
-	sql, args := BuildDeleteSQL(m.tableName, "id", id)
+	pkColumn := m.primaryKeyColumn()
+	sql, args := BuildDeleteSQL(m.tableName, pkColumn, id)
 
 	rowsAffected, err := ExecuteDelete(ctx, m.db, sql, args)
 	if err != nil {
@@ -327,6 +330,21 @@ func (m *Manager[T]) UpdateFields(ctx context.Context, id int64, updates UpdateM
 
 	_, err = ub.Execute(ctx)
 	return err
+}
+
+// primaryKeyColumn returns the database column name for the primary key.
+// It uses the schema's PrimaryKey if set, otherwise falls back to common
+// ID field name variants.
+func (m *Manager[T]) primaryKeyColumn() string {
+	if m.schema.PrimaryKey != "" {
+		return m.schema.PrimaryKey
+	}
+	for _, candidate := range []string{"id", "ID", "Id"} {
+		if m.schema.GetField(candidate) != nil {
+			return candidate
+		}
+	}
+	return "id" // ultimate fallback
 }
 
 // Helper methods
@@ -403,6 +421,7 @@ func (m *Manager[T]) validate(instance *T) error {
 }
 
 func (m *Manager[T]) runHooks(ctx context.Context, instance *T, hookType string) error {
+	// 1. Run interface-based hooks (methods defined directly on the model struct)
 	var err error
 	switch hookType {
 	case "BeforeCreate":
@@ -442,5 +461,51 @@ func (m *Manager[T]) runHooks(ctx context.Context, instance *T, hookType string)
 	if err != nil {
 		return fmt.Errorf("%s hook failed: %w", hookType, err)
 	}
+
+	// 2. Run schema-defined hooks (functions returned by Schema.Hooks())
+	if s, ok := any(instance).(schema.Schema); ok {
+		hooks := s.Hooks()
+		if hooks != nil {
+			var schemaErr error
+			switch hookType {
+			case "BeforeCreate":
+				if hooks.BeforeCreate != nil {
+					schemaErr = hooks.BeforeCreate(ctx, instance)
+				}
+			case "AfterCreate":
+				if hooks.AfterCreate != nil {
+					schemaErr = hooks.AfterCreate(ctx, instance)
+				}
+			case "BeforeUpdate":
+				if hooks.BeforeUpdate != nil {
+					schemaErr = hooks.BeforeUpdate(ctx, instance)
+				}
+			case "AfterUpdate":
+				if hooks.AfterUpdate != nil {
+					schemaErr = hooks.AfterUpdate(ctx, instance)
+				}
+			case "BeforeSave":
+				if hooks.BeforeSave != nil {
+					schemaErr = hooks.BeforeSave(ctx, instance)
+				}
+			case "AfterSave":
+				if hooks.AfterSave != nil {
+					schemaErr = hooks.AfterSave(ctx, instance)
+				}
+			case "BeforeDelete":
+				if hooks.BeforeDelete != nil {
+					schemaErr = hooks.BeforeDelete(ctx, instance)
+				}
+			case "AfterDelete":
+				if hooks.AfterDelete != nil {
+					schemaErr = hooks.AfterDelete(ctx, instance)
+				}
+			}
+			if schemaErr != nil {
+				return fmt.Errorf("%s schema hook failed: %w", hookType, schemaErr)
+			}
+		}
+	}
+
 	return nil
 }

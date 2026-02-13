@@ -141,6 +141,7 @@ type BaseQuerySet[T any] struct {
 	aggregates      []Aggregate
 	annotations     []AnnotationExpr // Using existing AnnotationExpr type
 	db              interface{}      // *db.DB
+	err             error            // Deferred error from Filter/Exclude validation (checked at execution time)
 }
 
 // NewQuerySet creates a new QuerySet
@@ -202,6 +203,7 @@ func (qs *BaseQuerySet[T]) clone() *BaseQuerySet[T] {
 		aggregates:      append([]Aggregate{}, qs.aggregates...),
 		annotations:     append([]AnnotationExpr{}, qs.annotations...),
 		db:              qs.db,
+		err:             qs.err,
 	}
 	// Copy preloaded map
 	for k, v := range qs.preloaded {
@@ -214,16 +216,25 @@ func (qs *BaseQuerySet[T]) clone() *BaseQuerySet[T] {
 	return clone
 }
 
-// Filter adds a filter condition
+// Filter adds a filter condition.
+// Validation errors are deferred and returned when the QuerySet is executed
+// (e.g. via All, Get, Count). This avoids panics while preserving the
+// chainable API.
 func (qs *BaseQuerySet[T]) Filter(expr Expression) QuerySet[T] {
 	// Check for nil queryset or schema
 	if qs == nil || qs.schema == nil {
-		panic("cannot filter: queryset or schema is nil")
+		clone := qs.clone()
+		clone.err = fmt.Errorf("cannot filter: queryset or schema is nil")
+		return clone
 	}
 
-	// Validate expression
+	// Validate expression -- store error instead of panicking
 	if err := expr.Resolve(qs.schema); err != nil {
-		panic(fmt.Sprintf("invalid filter expression: %v", err))
+		clone := qs.clone()
+		if clone.err == nil {
+			clone.err = fmt.Errorf("invalid filter expression: %w", err)
+		}
+		return clone
 	}
 
 	clone := qs.clone()
@@ -231,11 +242,16 @@ func (qs *BaseQuerySet[T]) Filter(expr Expression) QuerySet[T] {
 	return clone
 }
 
-// Exclude adds an exclude condition
+// Exclude adds an exclude condition.
+// Validation errors are deferred and returned when the QuerySet is executed.
 func (qs *BaseQuerySet[T]) Exclude(expr Expression) QuerySet[T] {
-	// Validate expression
+	// Validate expression -- store error instead of panicking
 	if err := expr.Resolve(qs.schema); err != nil {
-		panic(fmt.Sprintf("invalid exclude expression: %v", err))
+		clone := qs.clone()
+		if clone.err == nil {
+			clone.err = fmt.Errorf("invalid exclude expression: %w", err)
+		}
+		return clone
 	}
 
 	clone := qs.clone()
@@ -434,6 +450,9 @@ func (qs *BaseQuerySet[T]) UpdateBuilder() (*UpdateBuilder[T], error) {
 
 // All executes the query and returns all results
 func (qs *BaseQuerySet[T]) All(ctx context.Context) ([]*T, error) {
+	if qs.err != nil {
+		return nil, qs.err
+	}
 	sql, args, err := qs.buildSQL()
 	if err != nil {
 		return nil, err
@@ -477,7 +496,10 @@ func (qs *BaseQuerySet[T]) buildSQL() (string, []interface{}, error) {
 	fromClause := fmt.Sprintf("FROM %s", EscapeIdentifier(qs.table))
 
 	// Build WHERE clause
-	whereClause, _ := qs.buildWhereClause(builder)
+	whereClause, _, whereErr := qs.buildWhereClause(builder)
+	if whereErr != nil {
+		return "", nil, whereErr
+	}
 
 	// Build ORDER BY clause
 	orderByClause := qs.buildOrderByClause(builder)
@@ -650,8 +672,9 @@ func (qs *BaseQuerySet[T]) buildSelectClause(builder *SQLBuilder) string {
 	return selectClause
 }
 
-// buildWhereClause builds the WHERE clause
-func (qs *BaseQuerySet[T]) buildWhereClause(builder *SQLBuilder) (string, []interface{}) {
+// buildWhereClause builds the WHERE clause.
+// Returns the SQL string, arguments, and any error encountered during SQL generation.
+func (qs *BaseQuerySet[T]) buildWhereClause(builder *SQLBuilder) (string, []interface{}, error) {
 	var parts []string
 	var allArgs []interface{}
 
@@ -659,7 +682,7 @@ func (qs *BaseQuerySet[T]) buildWhereClause(builder *SQLBuilder) (string, []inte
 	for _, cond := range qs.conditions {
 		sql, args, err := cond.ToSQL(builder)
 		if err != nil {
-			panic(fmt.Sprintf("failed to build condition SQL: %v", err))
+			return "", nil, fmt.Errorf("failed to build condition SQL: %w", err)
 		}
 		parts = append(parts, sql)
 		allArgs = append(allArgs, args...)
@@ -669,17 +692,17 @@ func (qs *BaseQuerySet[T]) buildWhereClause(builder *SQLBuilder) (string, []inte
 	for _, exclude := range qs.excludes {
 		sql, args, err := exclude.ToSQL(builder)
 		if err != nil {
-			panic(fmt.Sprintf("failed to build exclude SQL: %v", err))
+			return "", nil, fmt.Errorf("failed to build exclude SQL: %w", err)
 		}
 		parts = append(parts, fmt.Sprintf("NOT (%s)", sql))
 		allArgs = append(allArgs, args...)
 	}
 
 	if len(parts) == 0 {
-		return "", nil
+		return "", nil, nil
 	}
 
-	return "WHERE " + strings.Join(parts, " AND "), allArgs
+	return "WHERE " + strings.Join(parts, " AND "), allArgs, nil
 }
 
 // buildOrderByClause builds the ORDER BY clause
@@ -1098,6 +1121,9 @@ func (qs *BaseQuerySet[T]) Last(ctx context.Context) (*T, error) {
 
 // Count counts matching records
 func (qs *BaseQuerySet[T]) Count(ctx context.Context) (int64, error) {
+	if qs.err != nil {
+		return 0, qs.err
+	}
 	db, err := qs.getDB(ctx)
 	if err != nil {
 		return 0, err
@@ -1105,7 +1131,10 @@ func (qs *BaseQuerySet[T]) Count(ctx context.Context) (int64, error) {
 
 	builder := NewSQLBuilder()
 	selectClause := fmt.Sprintf("SELECT COUNT(*) FROM %s", EscapeIdentifier(qs.table))
-	whereClause, _ := qs.buildWhereClause(builder)
+	whereClause, _, whereErr := qs.buildWhereClause(builder)
+	if whereErr != nil {
+		return 0, whereErr
+	}
 
 	sql := selectClause
 	if whereClause != "" {
@@ -1129,6 +1158,9 @@ func (qs *BaseQuerySet[T]) Exists(ctx context.Context) (bool, error) {
 
 // Update performs a bulk update
 func (qs *BaseQuerySet[T]) Update(ctx context.Context, updates UpdateMap) (int64, error) {
+	if qs.err != nil {
+		return 0, qs.err
+	}
 	if len(updates) == 0 {
 		return 0, fmt.Errorf("no fields to update")
 	}
@@ -1162,7 +1194,10 @@ func (qs *BaseQuerySet[T]) Update(ctx context.Context, updates UpdateMap) (int64
 	}
 
 	// Build WHERE clause
-	whereClause, _ := qs.buildWhereClause(builder)
+	whereClause, _, whereErr := qs.buildWhereClause(builder)
+	if whereErr != nil {
+		return 0, whereErr
+	}
 
 	// Combine all args
 	allArgs := builder.Args()
@@ -1196,6 +1231,9 @@ func (qs *BaseQuerySet[T]) BulkUpdate(ctx context.Context, updates []UpdateMap) 
 
 // Delete performs a bulk delete
 func (qs *BaseQuerySet[T]) Delete(ctx context.Context) (int64, error) {
+	if qs.err != nil {
+		return 0, qs.err
+	}
 	db, err := qs.getDB(ctx)
 	if err != nil {
 		return 0, err
@@ -1204,7 +1242,10 @@ func (qs *BaseQuerySet[T]) Delete(ctx context.Context) (int64, error) {
 	builder := NewSQLBuilder()
 
 	// Build WHERE clause
-	whereClause, _ := qs.buildWhereClause(builder)
+	whereClause, _, whereErr := qs.buildWhereClause(builder)
+	if whereErr != nil {
+		return 0, whereErr
+	}
 
 	// Build SQL
 	deleteSQL := fmt.Sprintf("DELETE FROM %s", EscapeIdentifier(qs.table))
