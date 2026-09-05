@@ -140,7 +140,7 @@ func AssertMigrationStateWithRunner(ctx context.Context, t *testing.T, database 
 
 	if runner == nil {
 		// Ensure database connection is still valid
-		if err := database.Ping(); err != nil {
+		if err := database.Ping(ctx); err != nil {
 			t.Fatalf("database connection is closed or invalid: %v", err)
 		}
 
