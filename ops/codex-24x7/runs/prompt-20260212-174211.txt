@@ -1,0 +1,878 @@
+You are Codex in continuous 24x7 framework-maintenance mode for this repository.
+
+Timestamp: 2026-02-12 17:42:14 
+Repository: H:\Coding\gogo\forgego\newforge
+
+Follow these instructions:
+1) Read and follow `ops/codex-24x7/RULES.md`, `ops/codex-24x7/GOALS.md`, and `ops/codex-24x7/PLAN.md`.
+2) Execute one focused high-impact batch of work now.
+3) Prioritize production readiness: tests, reliability fixes, TODO/FIXME debt, and example parity.
+4) Run relevant tests for files you changed; include framework tests and ecommerce tests when applicable.
+5) Update both files before finishing:
+   - `ops/codex-24x7/STATUS.md` (Completed this run / Remaining work / Next run plan)
+   - `ops/codex-24x7/HISTORY.md` (append concise run log with what changed and what remains)
+6) If blocked on one task, move to the next highest-value unblocked task.
+7) Prefer using `helper-projects/meta-shell` patterns/assets when reworking UI/admin ergonomics.
+
+Coverage mandate for ongoing runs:
+- Admin features
+- ORM + schema + migrations
+- API + server behavior
+- Ecommerce feature parity and tests
+
+State from orchestrator:
+- Open TODO count: 132
+- New TODO count: 132
+- Resolved TODO count (since last run): 0
+
+Open TODO/FIXME items (truncated):
+.\ops\codex-24x7\state\last-prompt.md:9: 3) Prioritize production readiness: tests, reliability fixes, TODO/FIXME debt, and example parity.
+.\ops\codex-24x7\state\last-prompt.md:24: - Open TODO count: 0
+.\ops\codex-24x7\state\last-prompt.md:25: - New TODO count: 0
+.\ops\codex-24x7\state\last-prompt.md:26: - Resolved TODO count (since last run): 0
+.\ops\codex-24x7\state\last-prompt.md:28: Open TODO/FIXME items (truncated):
+.\ops\codex-24x7\state\last-prompt.md:29: No open TODO/FIXME lines found.
+.\ops\codex-24x7\state\last-prompt.md:31: New TODO/FIXME items (truncated):
+.\ops\codex-24x7\state\last-prompt.md:32: No newly discovered TODO/FIXME items.
+.\ops\codex-24x7\state\last-prompt.md:34: Recently resolved TODO/FIXME items (truncated):
+.\ops\codex-24x7\state\last-prompt.md:35: No TODO/FIXME items resolved since last run.
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:9: 3) Prioritize production readiness: tests, reliability fixes, TODO/FIXME debt, and example parity.
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:24: - Open TODO count: 0
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:25: - New TODO count: 0
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:26: - Resolved TODO count (since last run): 0
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:28: Open TODO/FIXME items (truncated):
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:29: No open TODO/FIXME lines found.
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:31: New TODO/FIXME items (truncated):
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:32: No newly discovered TODO/FIXME items.
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:34: Recently resolved TODO/FIXME items (truncated):
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:35: No TODO/FIXME items resolved since last run.
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:9: 3) Prioritize production readiness: tests, reliability fixes, TODO/FIXME debt, and example parity.
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:24: - Open TODO count: 0
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:25: - New TODO count: 0
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:26: - Resolved TODO count (since last run): 0
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:28: Open TODO/FIXME items (truncated):
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:29: No open TODO/FIXME lines found.
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:31: New TODO/FIXME items (truncated):
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:32: No newly discovered TODO/FIXME items.
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:34: Recently resolved TODO/FIXME items (truncated):
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:35: No TODO/FIXME items resolved since last run.
+.\ops\codex-24x7\RULES.md:5: 3. Prioritize reliability, tests, example parity, and TODO/FIXME debt.
+.\ops\codex-24x7\PLAN.md:4: - Enumerate TODO/FIXME and map to components.
+.\scripts\codex_24x7.py:24: 3. Prioritize reliability, tests, example parity, and TODO/FIXME debt.
+.\scripts\codex_24x7.py:65: - Enumerate TODO/FIXME and map to components.
+.\scripts\codex_24x7.py:214: "(TODO|FIXME|XXX|HACK|BUG)", ".",
+.\scripts\codex_24x7.py:282: "openTodoText": to_lines(todos, "No open TODO/FIXME lines found.", 250),
+.\scripts\codex_24x7.py:283: "newTodoText": to_lines(new_items, "No newly discovered TODO/FIXME items.", 80),
+.\scripts\codex_24x7.py:284: "resolvedTodoText": to_lines(resolved_items, "No TODO/FIXME items resolved since last run.", 80),
+.\scripts\codex_24x7.py:298: 3) Prioritize production readiness: tests, reliability fixes, TODO/FIXME debt, and example parity.
+.\scripts\codex_24x7.py:313: - Open TODO count: {ctx["openCount"]}
+.\scripts\codex_24x7.py:314: - New TODO count: {ctx["newCount"]}
+.\scripts\codex_24x7.py:315: - Resolved TODO count (since last run): {ctx["resolvedCount"]}
+.\scripts\codex_24x7.py:317: Open TODO/FIXME items (truncated):
+.\scripts\codex_24x7.py:320: New TODO/FIXME items (truncated):
+.\scripts\codex_24x7.py:323: Recently resolved TODO/FIXME items (truncated):
+.\scripts\codex_24x7.py:480: self.log("Refreshing TODO/plan snapshot for this tick.")
+.\scripts\codex_24x7.py:485: self.log(f"TODO snapshot updated: open={ctx['openCount']}, new={ctx['newCount']}, resolved={ctx['resolvedCount']}")
+.\scripts\codex_24x7.py:509: f"- TODO snapshot: open={ctx['openCount']}, new={ctx['newCount']}, resolved={ctx['resolvedCount']}\n"
+.\.kilocode\skills\skill-creator\scripts\init_skill.py:20: description: [TODO: Complete and informative explanation of what the skill does and when to use it. Include WHEN to use this skill - specific scenarios, file types, or tasks that trigger it.]
+.\.kilocode\skills\skill-creator\scripts\init_skill.py:27: [TODO: 1-2 sentences explaining what this skill enables]
+.\.kilocode\skills\skill-creator\scripts\init_skill.py:31: [TODO: Choose the structure that best fits this skill's purpose. Common patterns:
+.\.kilocode\skills\skill-creator\scripts\init_skill.py:57: ## [TODO: Replace with the first main section based on chosen structure]
+.\.kilocode\skills\skill-creator\scripts\init_skill.py:59: [TODO: Add content here. See examples in existing skills:
+.\.kilocode\skills\skill-creator\scripts\init_skill.py:119: # TODO: Add actual script logic here
+.\.kilocode\skills\skill-creator\scripts\init_skill.py:266: print("1. Edit SKILL.md to complete the TODO items and update the description")
+.\.kilocode\skills\skill-creator\SKILL.md:154: - Generates a SKILL.md template with proper frontmatter and TODO placeholders
+.\tests\testhelpers\docker_testhelper.go:187: fmt.Printf("[DEBUG] Using auto-assigned port: %s (from %s)\n", port, binding.HostIP)
+.\tests\testhelpers\docker_testhelper.go:196: fmt.Printf("[DEBUG] Using 127.0.0.1 port: %s (requires SSH forwarding)\n", port)
+.\tests\testhelpers\docker_testhelper.go:212: fmt.Printf("[DEBUG] Container ID: %s\n", resource.Container.ID)
+.\tests\testhelpers\docker_testhelper.go:213: fmt.Printf("[DEBUG] Container Name: %s\n", resource.Container.Name)
+.\tests\testhelpers\docker_testhelper.go:214: fmt.Printf("[DEBUG] Mapped port: %s\n", port)
+.\tests\testhelpers\docker_testhelper.go:216: fmt.Printf("[DEBUG] Port bindings: %+v\n", resource.Container.NetworkSettings.Ports)
+.\tests\testhelpers\docker_testhelper.go:228: fmt.Printf("[DEBUG] Remote Docker detected - using fixed port 9091 (ensure SSH tunnel: ssh -L 9091:127.0.0.1:9091 sadra50)\n")
+.\tests\testhelpers\docker_testhelper.go:231: fmt.Printf("[DEBUG] Local Docker - using port: %s\n", port)
+.\tests\testhelpers\docker_testhelper.go:236: fmt.Printf("[DEBUG] DSN: %s\n", dsn)
+.\tests\testhelpers\docker_testhelper.go:251: fmt.Printf("[DEBUG] Successfully connected to PostgreSQL after %d retries\n", retries)
+.\tests\testhelpers\docker_testhelper.go:261: fmt.Printf("[DEBUG] Retry %d/%d: %v\n", retries, maxRetries, lastErr)
+.\tests\testhelpers\docker_testhelper.go:269: fmt.Printf("[DEBUG] Container ID: %s\n", resource.Container.ID)
+.\tests\testhelpers\docker_testhelper.go:270: fmt.Printf("[DEBUG] Container Name: %s\n", resource.Container.Name)
+.\tests\testhelpers\docker_testhelper.go:271: fmt.Printf("[DEBUG] Container Status: %s\n", resource.Container.State.Status)
+.\tests\testhelpers\docker_testhelper.go:272: fmt.Printf("[DEBUG] Container Ports: %+v\n", resource.Container.NetworkSettings)
+.\tests\testhelpers\docker_testhelper.go:322: fmt.Printf("[DEBUG] Connecting directly to PostgreSQL at %s:%s\n", host, port)
+.\tests\testhelpers\docker_testhelper.go:345: fmt.Printf("[DEBUG] Database %s does not exist, creating it...\n", dbName)
+.\tests\testhelpers\docker_testhelper.go:350: fmt.Printf("[DEBUG] Database %s created successfully\n", dbName)
+.\tests\testhelpers\docker_testhelper.go:369: fmt.Printf("[DEBUG] Successfully connected to PostgreSQL after %d retries\n", retries)
+.\tests\testhelpers\docker_testhelper.go:374: fmt.Printf("[DEBUG] Retry %d/%d: %v\n", retries, maxRetries, err)
+.\tests\testhelpers\docker_testhelper.go:400: fmt.Printf("[DEBUG] Dropping database %s...\n", dbName)
+.\tests\testhelpers\docker_testhelper.go:405: fmt.Printf("[DEBUG] DROP WITH FORCE failed: %v. Retrying without FORCE...\n", err)
+.\tests\infra\docker\postgres.go:206: fmt.Printf("[DEBUG] Using auto-assigned port: %s (from %s)\n", port, binding.HostIP)
+.\tests\infra\docker\postgres.go:215: fmt.Printf("[DEBUG] Using 127.0.0.1 port: %s (requires SSH forwarding)\n", port)
+.\tests\infra\docker\postgres.go:231: fmt.Printf("[DEBUG] Container ID: %s\n", resource.Container.ID)
+.\tests\infra\docker\postgres.go:232: fmt.Printf("[DEBUG] Container Name: %s\n", resource.Container.Name)
+.\tests\infra\docker\postgres.go:233: fmt.Printf("[DEBUG] Mapped port: %s\n", port)
+.\tests\infra\docker\postgres.go:235: fmt.Printf("[DEBUG] Port bindings: %+v\n", resource.Container.NetworkSettings.Ports)
+.\tests\infra\docker\postgres.go:247: fmt.Printf("[DEBUG] Remote Docker detected - using fixed port 9091 (ensure SSH tunnel: ssh -L 9091:127.0.0.1:9091 sadra50)\n")
+.\tests\infra\docker\postgres.go:250: fmt.Printf("[DEBUG] Local Docker - using port: %s\n", port)
+.\tests\infra\docker\postgres.go:255: fmt.Printf("[DEBUG] DSN: %s\n", dsn)
+.\tests\infra\docker\postgres.go:270: fmt.Printf("[DEBUG] Successfully connected to PostgreSQL after %d retries\n", retries)
+.\tests\infra\docker\postgres.go:280: fmt.Printf("[DEBUG] Retry %d/%d: %v\n", retries, maxRetries, lastErr)
+.\tests\infra\docker\postgres.go:288: fmt.Printf("[DEBUG] Container ID: %s\n", resource.Container.ID)
+.\tests\infra\docker\postgres.go:289: fmt.Printf("[DEBUG] Container Name: %s\n", resource.Container.Name)
+.\tests\infra\docker\postgres.go:290: fmt.Printf("[DEBUG] Container Status: %s\n", resource.Container.State.Status)
+.\tests\infra\docker\postgres.go:291: fmt.Printf("[DEBUG] Container Ports: %+v\n", resource.Container.NetworkSettings)
+.\tests\infra\docker\postgres.go:341: fmt.Printf("[DEBUG] Connecting directly to PostgreSQL at %s:%s\n", host, port)
+.\tests\infra\docker\postgres.go:364: fmt.Printf("[DEBUG] Database %s does not exist, creating it...\n", dbName)
+.\tests\infra\docker\postgres.go:369: fmt.Printf("[DEBUG] Database %s created successfully\n", dbName)
+.\tests\infra\docker\postgres.go:388: fmt.Printf("[DEBUG] Successfully connected to PostgreSQL after %d retries\n", retries)
+.\tests\infra\docker\postgres.go:393: fmt.Printf("[DEBUG] Retry %d/%d: %v\n", retries, maxRetries, err)
+.\tests\infra\docker\postgres.go:419: fmt.Printf("[DEBUG] Dropping database %s...\n", dbName)
+.\tests\infra\docker\postgres.go:424: fmt.Printf("[DEBUG] DROP WITH FORCE failed: %v. Retrying without FORCE...\n", err)
+.\docs-site\package-lock.json:5264: "integrity": "sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA=="
+.\docs-site\package-lock.json:15686: "integrity": "sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==",
+.\docs-site\pnpm-lock.yaml:1532: resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
+.\docs-site\pnpm-lock.yaml:4344: resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
+.\tests\pkg_migrations\migration_integration_test.go:20: // TODO: Add support for specifying driver in migration generator
+.\forge\orm\query_expr.go:261: // TODO: Implement custom query expression registry
+.\forge\identity\service\password.go:107: // TODO: Send email with token
+.\forge\orm\expression.go:81: // TODO: Validate relation paths for nested fields
+.\forge\orm\annotations.go:21: // TODO: Implement annotation registry
+.\forge\orm\aggregates.go:88: // TODO: Implement aggregate registry
+.\forge\log\hooks\metrics.go:20: // TODO: Collect metrics based on log level, message, etc.
+.\forge\orm\manager_helpers.go:129: fmt.Printf("DEBUG: BuildInsertSQL for table %s, fields: %d\n", tableName, len(schemaFields))
+.\forge\orm\manager_helpers.go:143: fmt.Printf("DEBUG: Field %s error: %v\n", schemaField.Name, err)
+.\forge\orm\manager_helpers.go:190: fmt.Printf("DEBUG: Insert columns: %v\n", insertColumns)
+.\forge\log\exporters\file.go:29: // TODO: Once lumberjack.v2 is added to go.mod, uncomment:
+.\forge\log\encoder.go:219: case zapcore.DebugLevel - 1: // TRACE is one level below DEBUG
+.\forge\log\encoder.go:222: enc.AppendString("DEBUG")
+.\forge\log\encoder.go:242: return zapcore.DebugLevel - 1 // TRACE is below DEBUG
+.\forge\codegen\ast_parser.go:1042: // TODO: Implement hooks extraction
+.\forge\identity\middleware\auth.go:137: // TODO: Check permission using PermissionService
+.\forge\cli\commands\project\auth.go:161: // TODO: Add login/logout endpoints
+.\forge\cli\commands\project\auth.go:162: // TODO: Add JWT token generation
+.\forge\api\permissions\permission_test.go:124: // TODO: Fix reflection-based permission checks
+.\forge\api\permissions\permission_test.go:168: // TODO: Verify reflection-based owner checks work correctly
+.\forge\admin\core\metadata_builder.go:241: // filterMeta.RelatedModel = field.RelatedModel // FIXME: Check field struct
+.\forge\admin\ui\web\src\components\DynamicModelPage.tsx:40: // Detail view (TODO: implement ModelViewPage)
+.\forge\admin\api\rest\router.go:163: "environment": "development", // TODO: Get from global config
+.\forge\admin\api\rest\router.go:190: // TODO: Get count from manager
+.\forge\admin\api\rest\router.go:464: // TODO: Fetch object, parse request body, validate, replace object
+.\forge\admin\api\rest\router.go:515: // TODO: Parse request body, validate, create objects
+.\forge\admin\api\rest\router.go:536: // TODO: Parse request body, validate, update objects
+.\forge\admin\api\rest\router.go:556: // TODO: Parse request body, validate, delete objects
+
+New TODO/FIXME items (truncated):
+.\ops\codex-24x7\state\last-prompt.md:9: 3) Prioritize production readiness: tests, reliability fixes, TODO/FIXME debt, and example parity.
+.\ops\codex-24x7\state\last-prompt.md:24: - Open TODO count: 0
+.\ops\codex-24x7\state\last-prompt.md:25: - New TODO count: 0
+.\ops\codex-24x7\state\last-prompt.md:26: - Resolved TODO count (since last run): 0
+.\ops\codex-24x7\state\last-prompt.md:28: Open TODO/FIXME items (truncated):
+.\ops\codex-24x7\state\last-prompt.md:29: No open TODO/FIXME lines found.
+.\ops\codex-24x7\state\last-prompt.md:31: New TODO/FIXME items (truncated):
+.\ops\codex-24x7\state\last-prompt.md:32: No newly discovered TODO/FIXME items.
+.\ops\codex-24x7\state\last-prompt.md:34: Recently resolved TODO/FIXME items (truncated):
+.\ops\codex-24x7\state\last-prompt.md:35: No TODO/FIXME items resolved since last run.
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:9: 3) Prioritize production readiness: tests, reliability fixes, TODO/FIXME debt, and example parity.
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:24: - Open TODO count: 0
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:25: - New TODO count: 0
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:26: - Resolved TODO count (since last run): 0
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:28: Open TODO/FIXME items (truncated):
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:29: No open TODO/FIXME lines found.
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:31: New TODO/FIXME items (truncated):
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:32: No newly discovered TODO/FIXME items.
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:34: Recently resolved TODO/FIXME items (truncated):
+.\ops\codex-24x7\runs\prompt-20260212-173800.txt:35: No TODO/FIXME items resolved since last run.
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:9: 3) Prioritize production readiness: tests, reliability fixes, TODO/FIXME debt, and example parity.
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:24: - Open TODO count: 0
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:25: - New TODO count: 0
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:26: - Resolved TODO count (since last run): 0
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:28: Open TODO/FIXME items (truncated):
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:29: No open TODO/FIXME lines found.
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:31: New TODO/FIXME items (truncated):
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:32: No newly discovered TODO/FIXME items.
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:34: Recently resolved TODO/FIXME items (truncated):
+.\ops\codex-24x7\runs\prompt-20260212-173627.txt:35: No TODO/FIXME items resolved since last run.
+.\ops\codex-24x7\RULES.md:5: 3. Prioritize reliability, tests, example parity, and TODO/FIXME debt.
+.\ops\codex-24x7\PLAN.md:4: - Enumerate TODO/FIXME and map to components.
+.\scripts\codex_24x7.py:24: 3. Prioritize reliability, tests, example parity, and TODO/FIXME debt.
+.\scripts\codex_24x7.py:65: - Enumerate TODO/FIXME and map to components.
+.\scripts\codex_24x7.py:214: "(TODO|FIXME|XXX|HACK|BUG)", ".",
+.\scripts\codex_24x7.py:282: "openTodoText": to_lines(todos, "No open TODO/FIXME lines found.", 250),
+.\scripts\codex_24x7.py:283: "newTodoText": to_lines(new_items, "No newly discovered TODO/FIXME items.", 80),
+.\scripts\codex_24x7.py:284: "resolvedTodoText": to_lines(resolved_items, "No TODO/FIXME items resolved since last run.", 80),
+.\scripts\codex_24x7.py:298: 3) Prioritize production readiness: tests, reliability fixes, TODO/FIXME debt, and example parity.
+.\scripts\codex_24x7.py:313: - Open TODO count: {ctx["openCount"]}
+.\scripts\codex_24x7.py:314: - New TODO count: {ctx["newCount"]}
+.\scripts\codex_24x7.py:315: - Resolved TODO count (since last run): {ctx["resolvedCount"]}
+.\scripts\codex_24x7.py:317: Open TODO/FIXME items (truncated):
+.\scripts\codex_24x7.py:320: New TODO/FIXME items (truncated):
+.\scripts\codex_24x7.py:323: Recently resolved TODO/FIXME items (truncated):
+.\scripts\codex_24x7.py:480: self.log("Refreshing TODO/plan snapshot for this tick.")
+.\scripts\codex_24x7.py:485: self.log(f"TODO snapshot updated: open={ctx['openCount']}, new={ctx['newCount']}, resolved={ctx['resolvedCount']}")
+.\scripts\codex_24x7.py:509: f"- TODO snapshot: open={ctx['openCount']}, new={ctx['newCount']}, resolved={ctx['resolvedCount']}\n"
+.\.kilocode\skills\skill-creator\scripts\init_skill.py:20: description: [TODO: Complete and informative explanation of what the skill does and when to use it. Include WHEN to use this skill - specific scenarios, file types, or tasks that trigger it.]
+.\.kilocode\skills\skill-creator\scripts\init_skill.py:27: [TODO: 1-2 sentences explaining what this skill enables]
+.\.kilocode\skills\skill-creator\scripts\init_skill.py:31: [TODO: Choose the structure that best fits this skill's purpose. Common patterns:
+.\.kilocode\skills\skill-creator\scripts\init_skill.py:57: ## [TODO: Replace with the first main section based on chosen structure]
+.\.kilocode\skills\skill-creator\scripts\init_skill.py:59: [TODO: Add content here. See examples in existing skills:
+.\.kilocode\skills\skill-creator\scripts\init_skill.py:119: # TODO: Add actual script logic here
+.\.kilocode\skills\skill-creator\scripts\init_skill.py:266: print("1. Edit SKILL.md to complete the TODO items and update the description")
+.\.kilocode\skills\skill-creator\SKILL.md:154: - Generates a SKILL.md template with proper frontmatter and TODO placeholders
+.\tests\testhelpers\docker_testhelper.go:187: fmt.Printf("[DEBUG] Using auto-assigned port: %s (from %s)\n", port, binding.HostIP)
+.\tests\testhelpers\docker_testhelper.go:196: fmt.Printf("[DEBUG] Using 127.0.0.1 port: %s (requires SSH forwarding)\n", port)
+.\tests\testhelpers\docker_testhelper.go:212: fmt.Printf("[DEBUG] Container ID: %s\n", resource.Container.ID)
+.\tests\testhelpers\docker_testhelper.go:213: fmt.Printf("[DEBUG] Container Name: %s\n", resource.Container.Name)
+.\tests\testhelpers\docker_testhelper.go:214: fmt.Printf("[DEBUG] Mapped port: %s\n", port)
+.\tests\testhelpers\docker_testhelper.go:216: fmt.Printf("[DEBUG] Port bindings: %+v\n", resource.Container.NetworkSettings.Ports)
+.\tests\testhelpers\docker_testhelper.go:228: fmt.Printf("[DEBUG] Remote Docker detected - using fixed port 9091 (ensure SSH tunnel: ssh -L 9091:127.0.0.1:9091 sadra50)\n")
+.\tests\testhelpers\docker_testhelper.go:231: fmt.Printf("[DEBUG] Local Docker - using port: %s\n", port)
+.\tests\testhelpers\docker_testhelper.go:236: fmt.Printf("[DEBUG] DSN: %s\n", dsn)
+.\tests\testhelpers\docker_testhelper.go:251: fmt.Printf("[DEBUG] Successfully connected to PostgreSQL after %d retries\n", retries)
+.\tests\testhelpers\docker_testhelper.go:261: fmt.Printf("[DEBUG] Retry %d/%d: %v\n", retries, maxRetries, lastErr)
+.\tests\testhelpers\docker_testhelper.go:269: fmt.Printf("[DEBUG] Container ID: %s\n", resource.Container.ID)
+.\tests\testhelpers\docker_testhelper.go:270: fmt.Printf("[DEBUG] Container Name: %s\n", resource.Container.Name)
+.\tests\testhelpers\docker_testhelper.go:271: fmt.Printf("[DEBUG] Container Status: %s\n", resource.Container.State.Status)
+.\tests\testhelpers\docker_testhelper.go:272: fmt.Printf("[DEBUG] Container Ports: %+v\n", resource.Container.NetworkSettings)
+.\tests\testhelpers\docker_testhelper.go:322: fmt.Printf("[DEBUG] Connecting directly to PostgreSQL at %s:%s\n", host, port)
+.\tests\testhelpers\docker_testhelper.go:345: fmt.Printf("[DEBUG] Database %s does not exist, creating it...\n", dbName)
+.\tests\testhelpers\docker_testhelper.go:350: fmt.Printf("[DEBUG] Database %s created successfully\n", dbName)
+.\tests\testhelpers\docker_testhelper.go:369: fmt.Printf("[DEBUG] Successfully connected to PostgreSQL after %d retries\n", retries)
+.\tests\testhelpers\docker_testhelper.go:374: fmt.Printf("[DEBUG] Retry %d/%d: %v\n", retries, maxRetries, err)
+.\tests\testhelpers\docker_testhelper.go:400: fmt.Printf("[DEBUG] Dropping database %s...\n", dbName)
+.\tests\testhelpers\docker_testhelper.go:405: fmt.Printf("[DEBUG] DROP WITH FORCE failed: %v. Retrying without FORCE...\n", err)
+.\tests\infra\docker\postgres.go:206: fmt.Printf("[DEBUG] Using auto-assigned port: %s (from %s)\n", port, binding.HostIP)
+.\tests\infra\docker\postgres.go:215: fmt.Printf("[DEBUG] Using 127.0.0.1 port: %s (requires SSH forwarding)\n", port)
+
+Recently resolved TODO/FIXME items (truncated):
+No TODO/FIXME items resolved since last run.
+
+Plan/status/checklist file previews (truncated):
+### ops\codex-24x7\STATUS.md
+﻿# Codex 24x7 Status
+
+## Completed this run
+- (pending)
+
+## Remaining work
+- (pending)
+
+## Next run plan
+- (pending)
+
+### ops\codex-24x7\state\todo-history.jsonl
+{"generatedAt":"2026-02-12T17:20:35.7530035+03:30","openCount":0,"newCount":0,"resolvedCount":0,"newKeys":[],"resolvedKeys":[]}
+{"generatedAt":"2026-02-12T17:26:20.0195758+03:30","openCount":0,"newCount":0,"resolvedCount":0,"newKeys":[],"resolvedKeys":[]}
+{"generatedAt":"2026-02-12T17:26:45.2013944+03:30","openCount":0,"newCount":0,"resolvedCount":0,"newKeys":[],"resolvedKeys":[]}
+{"generatedAt":"2026-02-12T17:30:53.8714008+03:30","openCount":0,"newCount":0,"resolvedCount":0,"newKeys":[],"resolvedKeys":[]}
+{"generatedAt":"2026-02-12T17:31:21.3495410+03:30","openCount":0,"newCount":0,"resolvedCount":0,"newKeys":[],"resolvedKeys":[]}
+{"generatedAt":"2026-02-12T17:31:37.7096617+03:30","openCount":0,"newCount":0,"resolvedCount":0,"newKeys":[],"resolvedKeys":[]}
+{"generatedAt":"2026-02-12T17:36:27.3744477+03:30","openCount":0,"newCount":0,"resolvedCount":0,"newKeys":[],"resolvedKeys":[]}
+{"generatedAt":"2026-02-12T17:37:26.7754974+03:30","openCount":0,"newCount":0,"resolvedCount":0,"newKeys":[],"resolvedKeys":[]}
+{"generatedAt":"2026-02-12T17:38:00.9624048+03:30","openCount":0,"newCount":0,"resolvedCount":0,"newKeys":[],"resolvedKeys":[]}
+{"generatedAt": "2026-02-12T14:12:14.495424+00:00", "openCount": 132, "newCount": 132, "resolvedCount": 0, "newKeys": [".\\ops\\codex-24x7\\state\\last-prompt.md:9", ".\\ops\\codex-24x7\\state\\last-prompt.md:24", ".\\ops\\codex-24x7\\state\\last-prompt.md:25", ".\\ops\\codex-24x7\\state\\last-prompt.md:26", ".\\ops\\codex-24x7\\state\\last-prompt.md:28", ".\\ops\\codex-24x7\\state\\last-prompt.md:29", ".\\ops\\codex-24x7\\state\\last-prompt.md:31", ".\\ops\\codex-24x7\\state\\last-prompt.md:32", ".\\ops\\codex-24x7\\state\\last-prompt.md:34", ".\\ops\\codex-24x7\\state\\last-prompt.md:35", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173800.txt:9", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173800.txt:24", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173800.txt:25", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173800.txt:26", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173800.txt:28", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173800.txt:29", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173800.txt:31", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173800.txt:32", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173800.txt:34", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173800.txt:35", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173627.txt:9", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173627.txt:24", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173627.txt:25", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173627.txt:26", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173627.txt:28", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173627.txt:29", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173627.txt:31", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173627.txt:32", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173627.txt:34", ".\\ops\\codex-24x7\\runs\\prompt-20260212-173627.txt:35"], "resolvedKeys": []}
+
+### ops\codex-24x7\state\todo-current.json
+{
+  "generatedAt": "2026-02-12T14:12:14.494422+00:00",
+  "total": 132,
+  "entries": [
+    {
+      "key": ".\\ops\\codex-24x7\\state\\last-prompt.md:9",
+      "path": ".\\ops\\codex-24x7\\state\\last-prompt.md",
+      "line": 9,
+      "text": "3) Prioritize production readiness: tests, reliability fixes, TODO/FIXME debt, and example parity."
+    },
+    {
+      "key": ".\\ops\\codex-24x7\\state\\last-prompt.md:24",
+      "path": ".\\ops\\codex-24x7\\state\\last-prompt.md",
+      "line": 24,
+      "text": "- Open TODO count: 0"
+    },
+    {
+      "key": ".\\ops\\codex-24x7\\state\\last-prompt.md:25",
+      "path": ".\\ops\\codex-24x7\\state\\last-prompt.md",
+      "line": 25,
+      "text": "- New TODO count: 0"
+    },
+    {
+      "key": ".\\ops\\codex-24x7\\state\\last-prompt.md:26",
+      "path": ".\\ops\\codex-24x7\\state\\last-prompt.md",
+      "line": 26,
+      "text": "- Resolved TODO count (since last run): 0"
+    },
+    {
+      "key": ".\\ops\\codex-24x7\\state\\last-prompt.md:28",
+      "path": ".\\ops\\codex-24x7\\state\\last-prompt.md",
+      "line": 28,
+      "text": "Open TODO/FIXME items (truncated):"
+    },
+    {
+      "key": ".\\ops\\codex-24x7\\state\\last-prompt.md:29",
+      "path": ".\\ops\\codex-24x7\\state\\last-prompt.md",
+      "line": 29,
+      "text": "No open TODO/FIXME lines found."
+    },
+    {
+      "key": ".\\ops\\codex-24x7\\state\\last-prompt.md:31",
+      "path": ".\\ops\\codex-24x7\\state\\last-prompt.md",
+      "line": 31,
+      "text": "New TODO/FIXME items (truncated):"
+    },
+    {
+      "key": ".\\ops\\codex-24x7\\state\\last-prompt.md:32",
+      "path": ".\\ops\\codex-24x7\\state\\last-prompt.md",
+      "line": 32,
+      "text": "No newly discovered TODO/FIXME items."
+    },
+    {
+      "key": ".\\ops\\codex-24x7\\state\\last-prompt.md:34",
+      "path": ".\\ops\\codex-24x7\\state\\last-prompt.md",
+      "line": 34,
+      "text": "Recently resolved TODO/FIXME items (truncated):"
+    },
+    {
+      "key": ".\\ops\\codex-24x7\\state\\last-prompt.md:35",
+      "path": ".\\ops\\codex-24x7\\state\\last-prompt.md",
+      "line": 35,
+      "text": "No TODO/FIXME items resolved since last run."
+    },
+    {
+      "key": ".\\ops\\codex-24x7\\runs\\prompt-20260212-173800.txt:9",
+      "path": ".\\ops\\codex-24x7\\runs\\prompt-20260212-173800.txt",
+      "line": 9,
+      "text": "3) Prioritize production readiness: tests, reliability fixes, TODO/FIXME debt, and example parity."
+    },
+    {
+      "key": ".\\ops\\codex-24x7\\runs\\prompt-20260212-173800.txt:24",
+      "path": ".\\ops\\codex-24x7\\runs\\prompt-20260212-173800.txt",
+      "line": 24,
+      "text": "- Open TODO count: 0"
+    },
+    {
+      "key": ".\\ops\\codex-24x7\\runs\\prompt-20260212-173800.txt:25",
+      "path": ".\\ops\\codex-24x7\\runs\\prompt-20260212-173800.txt",
+      "line": 25,
+
+### ops\codex-24x7\PLAN.md
+# Codex 24x7 Plan
+
+## Phase 1: Inventory + Baseline
+- Enumerate TODO/FIXME and map to components.
+- Build current coverage map for admin, ORM, schema, migrations, API/server, ecommerce.
+- Identify highest-risk production blockers.
+
+## Phase 2: Reliability Core
+- Fix high-severity framework bugs first.
+- Add missing tests around bug fixes.
+- Keep migrations/schema/API compatibility stable.
+
+## Phase 3: Ecommerce Parity
+- Add missing framework feature usage to ecommerce example.
+- Add/expand ecommerce integration + UI tests for those features.
+
+## Phase 4: Production Readiness
+- Harden security paths, error behavior, and operability checks.
+- Reduce flaky tests and improve deterministic CI behavior.
+- Keep status/history current with remaining blocker list.
+
+### skills\forge-contributor\references\ci-checklist.md
+# Forge Contributor CI Checklist
+
+Use this as the authoritative "everything must happen" list. Run the checks that match your changes.
+
+## Versions and Tooling
+- Go versions in CI: 1.24 and 1.25 for unit tests.
+- Node version in CI: 22 for docs site and admin UI.
+- Docs site requires Node >= 20 (see `docs-site/package.json`).
+
+## Core Go (Forge framework)
+- `cd forge`
+- `go mod download`
+- `go test -v -race -coverprofile=coverage.out ./...`
+- `go build ./...`
+- `golangci-lint run --timeout=5m --config=../.golangci.yml`
+- `go install golang.org/x/vuln/cmd/govulncheck@latest`
+- `govulncheck ./...`
+
+## Integration Tests (Tests module)
+- Requires PostgreSQL on localhost.
+- Env vars: `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`.
+- `cd tests`
+- `go mod download`
+- `go test -v -timeout 15m ./integration/...`
+
+## CLI E2E Tests
+- `cd forge`
+- `go mod download`
+- `go build -o <bin>/forge ./cli/cmd`
+- Add `<bin>` to PATH for the test run.
+- `cd ..\\tests`
+- `$env:RUN_POSTGRES_TESTS="1"`
+- `go test -v ./e2e/cli/...`
+
+## Admin UI (forge/admin/ui/web)
+- `cd forge/admin/ui/web`
+- `npm ci`
+- `npm run build`
+- `npm run lint`
+- `npm run test -- --run`
+
+## Docs Site (docs-site)
+- `cd docs-site`
+- `npm ci`
+- `npm run build`
+- Optional fast check: `npm run build:fast`
+
+## Examples: Ecommerce (examples/ecommerce)
+- `cd examples/ecommerce`
+- `go mod download`
+- `go build -o ecommerce .`
+- `go test -v ./...`
+- Docker build: `docker build -t ecommerce-sample:<sha> -f Dockerfile .`
+- CI runs a full stack integration check (admin page reachable + health endpoint).
+
+## Security and CI-only Checks
+- PR security review: govulncheck, Semgrep, TruffleHog, dependency review, npm audit.
+- Scheduled security scan: Trivy (repo and docker), OSV scanner, Snyk, gosec, CodeQL.
+- If you change workflows or security-sensitive code, ensure these pass in CI or run locally where practical.
+
+## Docs and Test Updates
+- Update `docs-site/docs/contributing/development.md` when workflow changes.
+- Update `tests/README.md` and `tests/TESTING.md` when test strategy changes.
+
+### .codex\skills\forge-contributor\references\ci-checklist.md
+# Forge Contributor CI Checklist
+
+Use this as the authoritative "everything must happen" list. Run the checks that match your changes.
+
+## Versions and Tooling
+- Go versions in CI: 1.24 and 1.25 for unit tests.
+- Node version in CI: 22 for docs site and admin UI.
+- Docs site requires Node >= 20 (see `docs-site/package.json`).
+
+## Core Go (Forge framework)
+- `cd forge`
+- `go mod download`
+- `go test -v -race -coverprofile=coverage.out ./...`
+- `go build ./...`
+- `golangci-lint run --timeout=5m --config=../.golangci.yml`
+- `go install golang.org/x/vuln/cmd/govulncheck@latest`
+- `govulncheck ./...`
+
+## Integration Tests (Tests module)
+- Requires PostgreSQL on localhost.
+- Env vars: `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`.
+- `cd tests`
+- `go mod download`
+- `go test -v -timeout 15m ./integration/...`
+
+## CLI E2E Tests
+- `cd forge`
+- `go mod download`
+- `go build -o <bin>/forge ./cli/cmd`
+- Add `<bin>` to PATH for the test run.
+- `cd ..\\tests`
+- `$env:RUN_POSTGRES_TESTS="1"`
+- `go test -v ./e2e/cli/...`
+
+## Admin UI (forge/admin/ui/web)
+- `cd forge/admin/ui/web`
+- `npm ci`
+- `npm run build`
+- `npm run lint`
+- `npm run test -- --run`
+
+## Docs Site (docs-site)
+- `cd docs-site`
+- `npm ci`
+- `npm run build`
+- Optional fast check: `npm run build:fast`
+
+## Examples: Ecommerce (examples/ecommerce)
+- `cd examples/ecommerce`
+- `go mod download`
+- `go build -o ecommerce .`
+- `go test -v ./...`
+- Docker build: `docker build -t ecommerce-sample:<sha> -f Dockerfile .`
+- CI runs a full stack integration check (admin page reachable + health endpoint).
+
+## Security and CI-only Checks
+- PR security review: govulncheck, Semgrep, TruffleHog, dependency review, npm audit.
+- Scheduled security scan: Trivy (repo and docker), OSV scanner, Snyk, gosec, CodeQL.
+- If you change workflows or security-sensitive code, ensure these pass in CI or run locally where practical.
+
+## Docs and Test Updates
+- Update `docs-site/docs/contributing/development.md` when workflow changes.
+- Update `tests/README.md` and `tests/TESTING.md` when test strategy changes.
+
+### forge\db\migrate\execute\status.go
+package execute
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+
+	migrate "github.com/golang-migrate/migrate/v4"
+)
+
+// DetailedStatus provides detailed migration status information
+type DetailedStatus struct {
+	Current    string
+	Next       string
+	Applied    []MigrationInfo
+	Pending    []MigrationInfo
+	OutOfOrder []MigrationInfo
+	Status     string // "OK", "PENDING", "DIRTY"
+	Error      string
+}
+
+// MigrationInfo contains information about a single migration
+type MigrationInfo struct {
+	Version   string
+	Name      string
+	Applied   bool
+	Checksum  string
+	AppliedAt string
+}
+
+// StatusReporter collects detailed migration status
+type StatusReporter struct {
+	migrationsPath string
+	migrate        *migrate.Migrate
+	db             *sql.DB
+}
+
+// NewStatusReporter creates a new status reporter
+func NewStatusReporter(migrationsPath string, m *migrate.Migrate, db *sql.DB) *StatusReporter {
+	return &StatusReporter{
+		migrationsPath: migrationsPath,
+		migrate:        m,
+		db:             db,
+	}
+}
+
+// GetDetailedStatus returns detailed migration status
+func (r *StatusReporter) GetDetailedStatus(ctx context.Context) (*DetailedStatus, error) {
+	status := &DetailedStatus{
+		Applied:    []MigrationInfo{},
+		Pending:    []MigrationInfo{},
+		OutOfOrder: []MigrationInfo{},
+	}
+
+	// Get current version
+	version, dirty, err := r.migrate.Version()
+	if err != nil && err != migrate.ErrNilVersion {
+		return nil, fmt.Errorf("failed to get migration version: %w", err)
+	}
+
+	if err == migrate.ErrNilVersion {
+		status.Current = "No migration applied yet"
+		status.Status = "PENDING"
+	} else {
+		status.Current = fmt.Sprintf("%d", version)
+		if dirty {
+			status.Status = "DIRTY"
+			status.Error = "Migration is in a dirty state - manual intervention required"
+		} else {
+			status.Status = "OK"
+		}
+	}
+
+	// Get all migration files
+	allMigrations, err := r.getAllMigrations()
+	if err != nil {
+
+### forge\cli\commands\migrations\status.go
+package migrations
+
+import (
+	"context"
+	"fmt"
+	"path/filepath"
+
+	"github.com/forgego/forge/cli/core"
+	"github.com/forgego/forge/db"
+	"github.com/spf13/cobra"
+)
+
+// StatusCommand creates the migration status command
+type StatusCommand struct{}
+
+// NewStatusCommand creates a new instance of StatusCommand
+func NewStatusCommand() *StatusCommand {
+	return &StatusCommand{}
+}
+
+// Definition returns the cobra command definition
+func (c *StatusCommand) Definition() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "status",
+		Short: "Show migration status",
+		Long:  "Display the current migration status, including applied and pending migrations",
+	}
+	cmd.Flags().String("path", "./migrations", "Path to migrations directory")
+	return cmd
+}
+
+// Execute runs the command logic
+func (c *StatusCommand) Execute(ctx *core.Context, args []string) error {
+	// Get migrations path
+	migrationsPath, err := ctx.Cmd.Flags().GetString("path")
+	if err != nil {
+		return fmt.Errorf("failed to get migrations path flag: %w", err)
+	}
+	if migrationsPath == "" {
+		migrationsPath = "./migrations"
+	}
+
+	// List migration files first (works without DB)
+	pattern := filepath.Join(migrationsPath, "*_*.up.sql")
+	matches, err := filepath.Glob(pattern)
+	if err == nil && len(matches) > 0 {
+		fmt.Printf("Migration Files (%d):\n", len(matches))
+		for _, match := range matches {
+			fmt.Printf("  - %s\n", filepath.Base(match))
+		}
+		fmt.Println()
+	}
+
+	// Try to connect to database for detailed status
+	database, err := db.NewDBFromConfig(ctx.Config)
+	if err != nil {
+		fmt.Println("⚠️  Could not connect to database - showing file listing only")
+		fmt.Println("   To see database status, ensure database is configured and running")
+		return nil
+	}
+	defer database.Close()
+
+	// Create migration runner
+	runner, err := db.NewMigrationRunner(database, migrationsPath)
+	if err != nil {
+		fmt.Println("⚠️  Could not create migration runner - showing file listing only")
+		return nil
+	}
+	defer runner.Close()
+
+	// Get status
+	cmdCtx := context.Background()
+	status, err := runner.Status(cmdCtx)
+	if err != nil {
+		fmt.Println("⚠️  Could not get database status - showing file listing only")
+		return nil
+	}
+
+	// Display status
+	fmt.Println("Database Migration Status:")
+
+### docs-site\docs\status.md
+---
+sidebar_position: 21
+description: Implementation status of forge modules.
+image: /forge-social-card.svg
+---
+
+# Status
+
+forge covers the core ORM, admin, and API workflows. This is the current status.
+
+## Implemented
+
+### Core
+- Schema system (fields, relations, metadata, hooks)
+- Code generation (models, managers, field expressions)
+- Type-safe ORM (QuerySet, Manager CRUD, field expressions)
+- Database layer (connections, transactions, migrations)
+
+### Admin
+- Auto-generated admin CRUD
+- List views (search, filtering, ordering)
+- Form views with validation
+- Actions and exports
+
+### API
+- ViewSets (CRUD)
+- Serializers and validation
+- Authentication and permissions
+- Throttling and pagination
+- OpenAPI docs
+
+### Supporting
+- Filter system
+- Identity system
+- CLI tooling (new, generate, migrations, runserver)
+
+## Next steps
+
+- [Features](/docs/features/)
+- [API Reference](/docs/api-reference/)
+
+### docs-site\docs_old\status\implementation.md
+---
+sidebar_position: 0
+description: Current implementation status of forge framework features. See what's working right now.
+keywords:
+  - forge status
+  - implementation status
+  - forge features
+  - django go status
+  - framework progress
+image: /forge-social-card.svg
+---
+
+# Implementation Status
+
+This page is a quick, honest snapshot of what forge supports today.
+
+## Implemented
+
+### Core
+- Schema system (fields, relations, metadata, hooks)
+- Code generation (models, managers, field expressions)
+- Type-safe ORM (QuerySet, Manager CRUD, field expressions)
+- Database layer (connections, transactions, migrations)
+
+### Admin
+- Auto-generated admin CRUD
+- List views (search, filtering, ordering)
+- Form views with validation
+- Actions and exports
+
+### API
+- ViewSets (CRUD)
+- Serializers and validation
+- Authentication and permissions
+- Throttling and pagination
+- OpenAPI docs
+
+### Supporting
+- Filter system
+- Identity system
+- CLI tooling (new, generate, migrations, runserver)
+
+## Notes
+
+If a feature is not listed above, assume it is not shipped yet. Check the docs
+before relying on advanced behavior.
+
+## Getting Started
+
+1. **Install** - `go install github.com/forgego/forge/cli/cmd@latest`
+2. **Create** - `forge new myapp`
+3. **Define models** - write schema definitions
+4. **Generate** - `forge generate`
+5. **Run** - `forge runserver`
+
+### docs-site\docs\status\implementation.md
+---
+sidebar_position: 1
+---
+
+# Implementation Status
+
+This is the detailed status of forge subsystems.
+
+## Implemented
+
+### Core
+- Schema system (fields, relations, metadata, hooks)
+- Code generation (models, managers, field expressions)
+- Type-safe ORM (QuerySet, Manager CRUD, field expressions)
+- Database layer (connections, transactions, migrations)
+
+### Admin
+- Auto-generated admin CRUD
+- List views (search, filtering, ordering)
+- Form views with validation
+- Actions and exports
+
+### API
+- ViewSets (CRUD)
+- Serializers and validation
+- Authentication and permissions
+- Throttling and pagination
+- OpenAPI docs
+
+### Supporting
+- Filter system
+- Identity system
+- CLI tooling (new, generate, migrations, runserver)
+
+### examples\ecommerce\ADMIN_UI_CHECKLIST.md
+# Admin UI Verification Checklist (Ecommerce Example)
+
+This checklist is for manual verification of the ecommerce admin UI using the local SQLite runtime.
+
+## Setup (SQLite)
+1. Open a terminal in `examples/ecommerce`.
+2. Confirm `config/config.yaml` has `database.driver: sqlite` and a valid `sqlite_path`.
+3. Generate code (if needed):
+   - `./forge.exe generate`
+4. Create migrations (if none exist):
+   - `./forge.exe makemigrations init --auto`
+5. Apply migrations:
+   - `./forge.exe migrate`
+6. Create a superuser:
+   - `./forge.exe createsuperuser`
+7. Start the server:
+   - `./forge.exe runserver`
+8. Open the admin UI:
+   - `http://localhost:8000/admin/`
+
+## Login
+- Log in with the superuser account.
+- Expected: dashboard loads, no 500 errors, admin sidebar visible.
+
+## Catalog
+- Categories list view loads.
+  - Expected: filters for `is_active`, `parent_id`, `level`, search works.
+- Create a Category with a parent.
+  - Expected: hierarchy fields save and appear in list.
+- Products list view loads.
+  - Expected: filters for `is_active`, `is_featured`, `category_id`, `brand_id`.
+- Create a Product with at least one Variant and Image inline.
+  - Expected: inline rows save; product shows related variants/images.
+- Use bulk actions:
+  - Activate/Deactivate, Feature/Unfeature products.
+
+## Customers
+- Customers list view loads.
+  - Expected: filters for active/verified/marketing/group.
+- Create a Customer with Address and WishList inline.
+  - Expected: inline address and wishlist items save.
+
+## Orders
+- Orders list view loads.
+  - Expected: filters for status, payment, fulfillment.
+- Create an Order with OrderItems inline.
+  - Expected: totals and status fields persist.
+- Use `Mark Delivered` action.
+  - Expected: status updates and `delivered_at` timestamp set.
+
+## Inventory
+- Stock list view loads.
+  - Expected: filters for low stock, warehouse.
+- Create a Stock record and a StockMovement inline (if present).
+
+## Marketing / Promotions
+- Coupons list view loads.
+  - Expected: filters for active, date ranges.
+- Create a Coupon, ensure validation on required fields.
+
+## Support / Engagement
+- Support ticket list view loads (if configured).
+- Create a ticket and update status via actions.
+
+## Validation & Errors
+- Attempt saving a form without required fields.
+  - Expected: validation errors shown, no server crash.
+
+## Notes
+Record any failures with:
+- model name
+- action performed
+- expected vs actual result
+- console or server error output
+

@@ -6,7 +6,7 @@ import (
 
 	"github.com/forgego/forge/cli/core"
 	"github.com/forgego/forge/db/migrate/state"
-	"github.com/forgego/forge/migrate/verify"
+	"github.com/forgego/forge/db/migrate/verify"
 	"github.com/spf13/cobra"
 )
 

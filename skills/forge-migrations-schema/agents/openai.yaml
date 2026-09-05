@@ -1,0 +1,4 @@
+interface:
+  display_name: "Forge Migrations & Schema"
+  short_description: "Forge schema primitives and migration workflows."
+  default_prompt: "Help me work with Forge schema primitives or migrations."

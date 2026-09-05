@@ -1,10 +1,12 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/forgego/forge/orm"
 	forgehttp "github.com/forgego/forge/server"
@@ -26,6 +28,25 @@ type ViewSet interface {
 	Destroy(w http.ResponseWriter, r *http.Request)
 }
 
+// QuerySetInterface defines the common methods needed from QuerySet for viewset operations.
+// This interface allows type-safe operations without reflection when the QuerySet implements it.
+type QuerySetInterface interface {
+	Count(ctx context.Context) (int64, error)
+	All(ctx context.Context) (interface{}, error)
+	Filter(expr interface{}) interface{}
+	OrderBy(fields ...interface{}) interface{}
+	Limit(limit int) interface{}
+	Offset(offset int) interface{}
+}
+
+// ManagerInterface defines the common methods needed from Manager for viewset operations.
+type ManagerInterface interface {
+	Get(ctx context.Context, id int64) (interface{}, error)
+	Create(ctx context.Context, model interface{}) error
+	Update(ctx context.Context, model interface{}) error
+	Delete(ctx context.Context, model interface{}) error
+}
+
 // BaseViewSet provides common viewset functionality
 type BaseViewSet struct {
 	Serializer func() Serializer
@@ -42,6 +63,29 @@ func NewBaseViewSet(serializer func() Serializer, queryset, model interface{}) *
 	}
 }
 
+// getManager gets the manager for operations
+func (vs *BaseViewSet) getManager() reflect.Value {
+	// If Queryset is set and looks like a manager (has Create method), use it
+	if vs.Queryset != nil {
+		qsValue := reflect.ValueOf(vs.Queryset)
+		qsType := qsValue.Type()
+		
+		// Use cached method lookup instead of MethodByName
+		if _, ok := globalCache.GetMethod(qsType, "Create"); ok {
+			return qsValue
+		}
+	}
+	
+	// Fallback to finding manager from model instance
+	// This creates a new instance of the model type to search for manager
+	modelType := reflect.TypeOf(vs.Model)
+	if modelType.Kind() == reflect.Ptr {
+		modelType = modelType.Elem()
+	}
+	instance := reflect.New(modelType).Interface()
+	return getManagerFromModel(instance)
+}
+
 // List handles GET /resource/
 func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -53,7 +97,6 @@ func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 	querysetValue := reflect.ValueOf(vs.Queryset)
 	if !querysetValue.IsValid() {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
-		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Queryset not set")
 		return
 	}
@@ -64,69 +107,87 @@ func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 	// Apply ordering
 	qs = applyOrdering(qs, r)
 
-	// Get total count
-	countMethod := qs.MethodByName("Count")
+	// Get total count using cached method lookup
+	qsType := qs.Type()
+	countMethod, ok := globalCache.GetMethod(qsType, "Count")
+	if !ok {
+		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Count method not found")
+		return
+	}
+
 	var totalCount int64
-	if countMethod.IsValid() {
-		results := countMethod.Call([]reflect.Value{reflect.ValueOf(ctx)})
-		if len(results) > 0 && results[0].CanInterface() {
+	results := countMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(ctx)})
+	if len(results) >= 2 {
+		if !results[1].IsNil() {
+			if err, ok := results[1].Interface().(error); ok {
+				_ = forgehttp.SendError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+		if results[0].CanInterface() {
 			if count, ok := results[0].Interface().(int64); ok {
 				totalCount = count
 			}
 		}
 	}
 
-	// Apply pagination
+	// Apply pagination using cached method lookup
 	offset := (page - 1) * pageSize
-	offsetMethod := qs.MethodByName("Offset")
-	if offsetMethod.IsValid() {
-		results := offsetMethod.Call([]reflect.Value{reflect.ValueOf(offset)})
-		if len(results) > 0 {
-			if newQS, ok := results[0].Interface().(interface{}); ok {
+
+	offsetMethod, ok := globalCache.GetMethod(qsType, "Offset")
+	if ok {
+		offsetResults := offsetMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(offset)})
+		if len(offsetResults) > 0 {
+			if newQS, ok := offsetResults[0].Interface().(interface{}); ok {
 				qs = reflect.ValueOf(newQS)
+				qsType = qs.Type()
 			}
 		}
 	}
 
-	limitMethod := qs.MethodByName("Limit")
-	if limitMethod.IsValid() {
-		results := limitMethod.Call([]reflect.Value{reflect.ValueOf(pageSize)})
-		if len(results) > 0 {
-			if newQS, ok := results[0].Interface().(interface{}); ok {
+	limitMethod, ok := globalCache.GetMethod(qsType, "Limit")
+	if ok {
+		limitResults := limitMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(pageSize)})
+		if len(limitResults) > 0 {
+			if newQS, ok := limitResults[0].Interface().(interface{}); ok {
 				qs = reflect.ValueOf(newQS)
+				qsType = qs.Type()
 			}
 		}
 	}
 
-	// Execute query
-	allMethod := qs.MethodByName("All")
-	var results []interface{}
-	if allMethod.IsValid() {
-		allResults := allMethod.Call([]reflect.Value{reflect.ValueOf(ctx)})
-		if len(allResults) >= 2 {
-			// Check for error first
-			if errVal := allResults[1]; !errVal.IsNil() {
-				if err, ok := errVal.Interface().(error); ok {
-					_ = forgehttp.SendError(w, http.StatusInternalServerError, err.Error())
-					return
-				}
+	// Execute query using cached method lookup
+	allMethod, ok := globalCache.GetMethod(qsType, "All")
+	if !ok {
+		_ = forgehttp.SendError(w, http.StatusInternalServerError, "All method not found")
+		return
+	}
+
+	var resultList []interface{}
+	allResults := allMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(ctx)})
+	if len(allResults) >= 2 {
+		// Check for error first
+		if errVal := allResults[1]; !errVal.IsNil() {
+			if err, ok := errVal.Interface().(error); ok {
+				_ = forgehttp.SendError(w, http.StatusInternalServerError, err.Error())
+				return
 			}
-			if allResults[0].CanInterface() {
-				if objects, ok := allResults[0].Interface().([]interface{}); ok {
-					results = objects
-				} else if allResults[0].Kind() == reflect.Slice {
-					// Try to convert slice of pointers
-					sliceValue := allResults[0]
-					for i := 0; i < sliceValue.Len(); i++ {
-						results = append(results, sliceValue.Index(i).Interface())
-					}
+		}
+		if allResults[0].CanInterface() {
+			if objects, ok := allResults[0].Interface().([]interface{}); ok {
+				resultList = objects
+			} else if allResults[0].Kind() == reflect.Slice {
+				// Try to convert slice of pointers
+				sliceValue := allResults[0]
+				for i := 0; i < sliceValue.Len(); i++ {
+					resultList = append(resultList, sliceValue.Index(i).Interface())
 				}
 			}
 		}
 	}
 
 	// Serialize results
-	serialized := SerializeMany(results)
+	serialized := SerializeMany(resultList)
 
 	// Send paginated response
 	// nolint:errcheck // HTTP response errors can't be handled meaningfully
@@ -145,13 +206,7 @@ func (vs *BaseViewSet) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	serializer := vs.Serializer()
-	baseSerializer, ok := serializer.(*BaseSerializer)
-	if !ok {
-		// nolint:errcheck // HTTP response errors can't be handled meaningfully
-		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Invalid serializer type")
-		return
-	}
-	baseSerializer.data = data
+	serializer.SetData(data)
 
 	if err := serializer.Validate(); err != nil {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
@@ -169,21 +224,23 @@ func (vs *BaseViewSet) Create(w http.ResponseWriter, r *http.Request) {
 	populateFromMap(instance, data)
 
 	// Get manager and call Create
-	manager := getManagerFromModel(instance)
+	manager := vs.getManager()
 	if !manager.IsValid() {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Manager not found")
 		return
 	}
 
-	createMethod := manager.MethodByName("Create")
-	if !createMethod.IsValid() {
+	managerType := manager.Type()
+	createMethod, ok := globalCache.GetMethod(managerType, "Create")
+	if !ok {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Create method not found")
 		return
 	}
 
-	results := createMethod.Call([]reflect.Value{
+	results := createMethod.Func.Call([]reflect.Value{
+		manager,
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(instance),
 	})
@@ -222,24 +279,23 @@ func (vs *BaseViewSet) Retrieve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get manager and call Get
-	modelValue := reflect.New(reflect.TypeOf(vs.Model).Elem())
-	instance := modelValue.Interface()
-
-	manager := getManagerFromModel(instance)
+	manager := vs.getManager()
 	if !manager.IsValid() {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Manager not found")
 		return
 	}
 
-	getMethod := manager.MethodByName("Get")
-	if !getMethod.IsValid() {
+	managerType := manager.Type()
+	getMethod, ok := globalCache.GetMethod(managerType, "Get")
+	if !ok {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Get method not found")
 		return
 	}
 
-	results := getMethod.Call([]reflect.Value{
+	results := getMethod.Func.Call([]reflect.Value{
+		manager,
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(id),
 	})
@@ -258,7 +314,7 @@ func (vs *BaseViewSet) Retrieve(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	instance = results[0].Interface()
+	instance := results[0].Interface()
 	serialized := SerializeModel(instance)
 	// nolint:errcheck // HTTP response errors can't be handled meaningfully
 	_ = forgehttp.SendJSON(w, http.StatusOK, serialized)
@@ -290,13 +346,7 @@ func (vs *BaseViewSet) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	serializer := vs.Serializer()
-	baseSerializer, ok := serializer.(*BaseSerializer)
-	if !ok {
-		// nolint:errcheck // HTTP response errors can't be handled meaningfully
-		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Invalid serializer type")
-		return
-	}
-	baseSerializer.data = data
+	serializer.SetData(data)
 
 	if err := serializer.Validate(); err != nil {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
@@ -307,24 +357,23 @@ func (vs *BaseViewSet) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get existing instance
-	modelValue := reflect.New(reflect.TypeOf(vs.Model).Elem())
-	instance := modelValue.Interface()
-
-	manager := getManagerFromModel(instance)
+	manager := vs.getManager()
 	if !manager.IsValid() {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Manager not found")
 		return
 	}
 
-	getMethod := manager.MethodByName("Get")
-	if !getMethod.IsValid() {
+	managerType := manager.Type()
+	getMethod, ok := globalCache.GetMethod(managerType, "Get")
+	if !ok {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Get method not found")
 		return
 	}
 
-	getResults := getMethod.Call([]reflect.Value{
+	getResults := getMethod.Func.Call([]reflect.Value{
+		manager,
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(id),
 	})
@@ -337,20 +386,21 @@ func (vs *BaseViewSet) Update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	instance = getResults[0].Interface()
+	instance := getResults[0].Interface()
 
 	// Populate from data
 	populateFromMap(instance, data)
 
 	// Update
-	updateMethod := manager.MethodByName("Update")
-	if !updateMethod.IsValid() {
+	updateMethod, ok := globalCache.GetMethod(managerType, "Update")
+	if !ok {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Update method not found")
 		return
 	}
 
-	updateResults := updateMethod.Call([]reflect.Value{
+	updateResults := updateMethod.Func.Call([]reflect.Value{
+		manager,
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(instance),
 	})
@@ -392,24 +442,23 @@ func (vs *BaseViewSet) Destroy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get instance first
-	modelValue := reflect.New(reflect.TypeOf(vs.Model).Elem())
-	instance := modelValue.Interface()
-
-	manager := getManagerFromModel(instance)
+	manager := vs.getManager()
 	if !manager.IsValid() {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Manager not found")
 		return
 	}
 
-	getMethod := manager.MethodByName("Get")
-	if !getMethod.IsValid() {
+	managerType := manager.Type()
+	getMethod, ok := globalCache.GetMethod(managerType, "Get")
+	if !ok {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Get method not found")
 		return
 	}
 
-	getResults := getMethod.Call([]reflect.Value{
+	getResults := getMethod.Func.Call([]reflect.Value{
+		manager,
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(id),
 	})
@@ -422,17 +471,18 @@ func (vs *BaseViewSet) Destroy(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	instance = getResults[0].Interface()
+	instance := getResults[0].Interface()
 
 	// Delete
-	deleteMethod := manager.MethodByName("Delete")
-	if !deleteMethod.IsValid() {
+	deleteMethod, ok := globalCache.GetMethod(managerType, "Delete")
+	if !ok {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Delete method not found")
 		return
 	}
 
-	deleteResults := deleteMethod.Call([]reflect.Value{
+	deleteResults := deleteMethod.Func.Call([]reflect.Value{
+		manager,
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(instance),
 	})
@@ -482,21 +532,10 @@ type Router struct {
 
 // NewRouter creates a new API router
 func NewRouter(prefix string) *Router {
-	prefix = normalizePrefix(prefix)
 	return &Router{
 		prefix: prefix,
 		routes: make(map[string]ViewSet),
 	}
-}
-
-func normalizePrefix(prefix string) string {
-	if prefix == "" || prefix == "/" {
-		return ""
-	}
-	if !strings.HasPrefix(prefix, "/") {
-		prefix = "/" + prefix
-	}
-	return strings.TrimRight(prefix, "/")
 }
 
 // Register registers a viewset with a resource name
@@ -529,35 +568,28 @@ func (r *Router) RegisterRoutes(router *forgehttp.Router) {
 func applyFilters(qs reflect.Value, r *http.Request) reflect.Value {
 	// Get filter parameters from query string
 	query := r.URL.Query()
+	qsType := qs.Type()
 
-	// Import query package for QueryExpr
-	// We'll use dynamic filtering via query.NewFieldQueryExpr
+	// Get cached Filter method
+	filterMethod, hasFilter := globalCache.GetMethod(qsType, "Filter")
 
 	for key, values := range query {
 		if len(values) == 0 || key == "page" || key == "page_size" || key == "ordering" || key == "search" {
 			continue
 		}
 
-		// Try to apply filter using reflection
-		filterMethod := qs.MethodByName("Filter")
-		if filterMethod.IsValid() {
-			// Create a QueryExpr using query.NewFieldQueryExpr
-			// We need to import query package, but to avoid circular imports,
-			// we'll use reflection to call query.NewFieldQueryExpr
-
-			// For now, use dynamic query building
-			// Full implementation would use query.QueryExpr properly
+		if hasFilter {
 			value := values[0]
 
-			// Try to create a filter expression
-			// This is a simplified version - full implementation would parse operators
-			// For MVP, assume equality
-			filterExpr := createFilterExpr(key, value)
-			if filterExpr.IsValid() {
-				results := filterMethod.Call([]reflect.Value{filterExpr})
+			expr := buildFilterExpr(key, value)
+			if expr != nil {
+				results := filterMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(expr)})
 				if len(results) > 0 {
 					if newQS, ok := results[0].Interface().(interface{}); ok {
 						qs = reflect.ValueOf(newQS)
+						qsType = qs.Type()
+						// Update cached method for new queryset type
+						filterMethod, hasFilter = globalCache.GetMethod(qsType, "Filter")
 					}
 				}
 			}
@@ -567,75 +599,79 @@ func applyFilters(qs reflect.Value, r *http.Request) reflect.Value {
 	return qs
 }
 
-// createFilterExpr creates a QueryExpr from field name and value
-func createFilterExpr(field string, value string) reflect.Value {
-	if field == "" {
-		return reflect.Value{}
-	}
+func buildFilterExpr(rawKey string, rawValue string) orm.Expression {
+	field, lookup := parseLookup(rawKey)
+	parsed := parseFilterValue(rawValue)
 
-	op := orm.OpEquals
-	parts := strings.Split(field, "__")
-	if len(parts) > 1 {
-		field = strings.Join(parts[:len(parts)-1], "__")
-		lookup := parts[len(parts)-1]
-		switch lookup {
-		case "gt":
-			op = orm.OpGreater
-		case "gte":
-			op = orm.OpGreaterOrEqual
-		case "lt":
-			op = orm.OpLess
-		case "lte":
-			op = orm.OpLessOrEqual
-		case "in":
-			op = orm.OpIn
-		case "contains":
-			op = orm.OpContains
-		case "icontains":
-			op = orm.OpIContains
-		case "startswith":
-			op = orm.OpStartsWith
-		case "endswith":
-			op = orm.OpEndsWith
-		case "isnull":
-			op = orm.OpIsNull
+	f := orm.F(field)
+	switch lookup {
+	case "exact":
+		return f.Eq(parsed)
+	case "ne":
+		return f.Ne(parsed)
+	case "gt":
+		return f.Gt(parsed)
+	case "gte":
+		return f.Gte(parsed)
+	case "lt":
+		return f.Lt(parsed)
+	case "lte":
+		return f.Lte(parsed)
+	case "contains":
+		return f.Contains(rawValue)
+	case "icontains":
+		return f.IContains(rawValue)
+	case "startswith":
+		return f.StartsWith(rawValue)
+	case "endswith":
+		return f.EndsWith(rawValue)
+	case "in":
+		parts := strings.Split(rawValue, ",")
+		args := make([]interface{}, 0, len(parts))
+		for _, part := range parts {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+			args = append(args, parseFilterValue(part))
 		}
+		if len(args) == 0 {
+			return f.Eq(parsed)
+		}
+		return f.In(args...)
+	case "isnull":
+		lower := strings.ToLower(rawValue)
+		if lower == "true" || lower == "1" {
+			return f.IsNull()
+		}
+		return f.IsNotNull()
+	default:
+		return f.Eq(parsed)
 	}
-
-	parsed := parseFilterValue(value, op == orm.OpIn)
-	expr := orm.Where(field, op, parsed)
-	return reflect.ValueOf(expr)
 }
 
-func parseFilterValue(value string, isIn bool) interface{} {
-	if isIn {
-		raw := strings.Split(value, ",")
-		values := make([]interface{}, 0, len(raw))
-		for _, item := range raw {
-			values = append(values, parseScalarValue(strings.TrimSpace(item)))
-		}
-		return values
+func parseLookup(key string) (string, string) {
+	if strings.Contains(key, "__") {
+		parts := strings.SplitN(key, "__", 2)
+		return parts[0], parts[1]
 	}
-	return parseScalarValue(value)
+	return key, "exact"
 }
 
-func parseScalarValue(value string) interface{} {
-	if value == "" {
-		return ""
+func parseFilterValue(raw string) interface{} {
+	if raw == "" {
+		return raw
 	}
-	if strings.EqualFold(value, "true") {
-		return true
+	if boolVal, err := strconv.ParseBool(raw); err == nil {
+		return boolVal
 	}
-	if strings.EqualFold(value, "false") {
-		return false
+	if intVal, err := strconv.ParseInt(raw, 10, 64); err == nil {
+		return intVal
 	}
-	if i, err := strconv.ParseInt(value, 10, 64); err == nil {
-		return i
+	if floatVal, err := strconv.ParseFloat(raw, 64); err == nil {
+		return floatVal
 	}
-	if f, err := strconv.ParseFloat(value, 64); err == nil {
-		return f
-	}
-	return value
+	return raw
 }
 
 // applyOrdering applies ordering from query parameters
@@ -645,16 +681,29 @@ func applyOrdering(qs reflect.Value, r *http.Request) reflect.Value {
 		return qs
 	}
 
-	orderByMethod := qs.MethodByName("OrderBy")
-	if orderByMethod.IsValid() {
-		fields := []string{ordering}
-		results := orderByMethod.Call([]reflect.Value{
-			reflect.ValueOf(fields),
-		})
-		if len(results) > 0 {
-			if newQS, ok := results[0].Interface().(interface{}); ok {
-				return reflect.ValueOf(newQS)
-			}
+	qsType := qs.Type()
+	orderByMethod, ok := globalCache.GetMethod(qsType, "OrderBy")
+	if !ok {
+		return qs
+	}
+
+	rawFields := strings.Split(ordering, ",")
+	args := make([]reflect.Value, 0, len(rawFields)+1)
+	args = append(args, qs) // Add receiver
+	for _, field := range rawFields {
+		field = strings.TrimSpace(field)
+		if field == "" {
+			continue
+		}
+		args = append(args, reflect.ValueOf(field))
+	}
+	if len(args) <= 1 { // Only receiver, no fields
+		return qs
+	}
+	results := orderByMethod.Func.Call(args)
+	if len(results) > 0 {
+		if newQS, ok := results[0].Interface().(interface{}); ok {
+			return reflect.ValueOf(newQS)
 		}
 	}
 
@@ -670,8 +719,10 @@ func getManagerFromModel(instance interface{}) reflect.Value {
 		modelType = modelType.Elem()
 	}
 
-	manager := orm.GetManagerForType(modelType)
-	return manager
+	// Try to find package-level manager variable
+	// This requires the model to be in a package with a manager variable
+	// For MVP, return invalid value - full implementation needed
+	return reflect.Value{}
 }
 
 // populateFromMap populates a model instance from a map
@@ -681,27 +732,53 @@ func populateFromMap(instance interface{}, data map[string]interface{}) {
 		instanceValue = instanceValue.Elem()
 	}
 
-	typ := instanceValue.Type()
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
-		if !field.IsExported() {
-			continue
-		}
+	if instanceValue.Kind() != reflect.Struct {
+		return
+	}
 
-		// Get JSON tag
-		jsonTag := field.Tag.Get("json")
-		if jsonTag == "" || jsonTag == "-" {
-			continue
-		}
+	var applyToStruct func(target reflect.Value)
+	applyToStruct = func(target reflect.Value) {
+		targetType := target.Type()
+		for i := 0; i < targetType.NumField(); i++ {
+			field := targetType.Field(i)
+			if !field.IsExported() {
+				continue
+			}
+			fieldValue := target.Field(i)
 
-		key := jsonTag
-		if value, ok := data[key]; ok {
-			fieldValue := instanceValue.Field(i)
-			if fieldValue.CanSet() {
-				setFieldValue(fieldValue, value)
+			if field.Anonymous {
+				switch fieldValue.Kind() {
+				case reflect.Struct:
+					applyToStruct(fieldValue)
+				case reflect.Ptr:
+					if fieldValue.IsNil() {
+						continue
+					}
+					if fieldValue.Elem().Kind() == reflect.Struct {
+						applyToStruct(fieldValue.Elem())
+					}
+				}
+				continue
+			}
+
+			jsonTag := field.Tag.Get("json")
+			if jsonTag == "" || jsonTag == "-" {
+				continue
+			}
+			tagParts := strings.Split(jsonTag, ",")
+			key := tagParts[0]
+			if key == "" {
+				continue
+			}
+			if value, ok := data[key]; ok {
+				if fieldValue.CanSet() {
+					setFieldValue(fieldValue, value)
+				}
 			}
 		}
 	}
+
+	applyToStruct(instanceValue)
 }
 
 // setFieldValue sets a field value from interface{}
@@ -727,10 +804,26 @@ func setFieldValue(field reflect.Value, value interface{}) {
 		if valueValue.Kind() == reflect.Bool {
 			field.SetBool(valueValue.Bool())
 		}
+	case reflect.Struct:
+		if field.Type() == reflect.TypeOf(time.Time{}) {
+			if str, ok := value.(string); ok {
+				if str == "" {
+					field.Set(reflect.ValueOf(time.Time{}))
+					return
+				}
+				if parsed, err := time.Parse(time.RFC3339, str); err == nil {
+					field.Set(reflect.ValueOf(parsed))
+					return
+				}
+				if parsed, err := time.Parse("2006-01-02", str); err == nil {
+					field.Set(reflect.ValueOf(parsed))
+					return
+				}
+			}
+		}
 	default:
 		if valueValue.Type().AssignableTo(field.Type()) {
 			field.Set(valueValue)
 		}
 	}
 }
-

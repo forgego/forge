@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -13,6 +14,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type testPasswordResetNotifier struct {
+	lastUserID int64
+	lastToken  string
+	err        error
+	calls      int
+}
+
+func (n *testPasswordResetNotifier) SendPasswordReset(ctx context.Context, user *models.User, token string) error {
+	n.calls++
+	n.lastUserID = user.ID
+	n.lastToken = token
+	return n.err
+}
 
 func setupPasswordServiceTest(t *testing.T) (PasswordService, *db.DB, context.Context) {
 	testDB := setupTestDB(t)
@@ -45,7 +60,7 @@ func TestPasswordService_ChangePassword(t *testing.T) {
 	t.Run("changes password successfully", func(t *testing.T) {
 		req := &ChangePasswordRequest{
 			CurrentPassword: "oldpassword",
-			NewPassword:     "Newpassword123!",
+			NewPassword:     "NewPassword123!",
 		}
 
 		err := service.ChangePassword(ctx, user.ID, req)
@@ -54,14 +69,14 @@ func TestPasswordService_ChangePassword(t *testing.T) {
 		// Verify password was changed
 		updated, err := userRepo.GetByID(ctx, user.ID)
 		require.NoError(t, err)
-		assert.True(t, utils.CheckPassword("Newpassword123!", updated.Password))
+		assert.True(t, utils.CheckPassword("NewPassword123!", updated.Password))
 		assert.False(t, utils.CheckPassword("oldpassword", updated.Password))
 	})
 
 	t.Run("fails with incorrect current password", func(t *testing.T) {
 		req := &ChangePasswordRequest{
 			CurrentPassword: "wrongpassword",
-			NewPassword:     "Newpassword123!",
+			NewPassword:     "NewPassword123!",
 		}
 
 		err := service.ChangePassword(ctx, user.ID, req)
@@ -141,6 +156,7 @@ func TestPasswordService_RequestPasswordReset(t *testing.T) {
 
 	// Create test user
 	userRepo := repository.NewUserRepository(testDB)
+	tokenRepo := repository.NewTokenRepository(testDB)
 	hashedPassword, _ := utils.HashPassword("password123")
 	user := &models.User{
 		Username: "testuser",
@@ -155,14 +171,38 @@ func TestPasswordService_RequestPasswordReset(t *testing.T) {
 		err := service.RequestPasswordReset(ctx, "test@example.com")
 		require.NoError(t, err)
 
-		// Token should be created in database
-		// This would be verified by checking token repository
+		var total int
+		err = testDB.QueryRowContext(ctx, "SELECT COUNT(*) FROM password_reset_tokens").Scan(&total)
+		require.NoError(t, err)
+		assert.Equal(t, 1, total)
 	})
 
 	t.Run("handles non-existent email gracefully", func(t *testing.T) {
 		// Should not return error to prevent email enumeration
 		err := service.RequestPasswordReset(ctx, "nonexistent@example.com")
 		assert.NoError(t, err)
+	})
+
+	t.Run("sends token via notifier when configured", func(t *testing.T) {
+		notifier := &testPasswordResetNotifier{}
+		policy := config.DefaultIdentityConfig().PasswordPolicy
+		notifierService := NewPasswordServiceWithNotifier(userRepo, tokenRepo, policy, notifier)
+
+		err := notifierService.RequestPasswordReset(ctx, "test@example.com")
+		require.NoError(t, err)
+		assert.Equal(t, 1, notifier.calls)
+		assert.Equal(t, user.ID, notifier.lastUserID)
+		assert.NotEmpty(t, notifier.lastToken)
+	})
+
+	t.Run("returns error when notifier fails", func(t *testing.T) {
+		notifier := &testPasswordResetNotifier{err: errors.New("smtp unavailable")}
+		policy := config.DefaultIdentityConfig().PasswordPolicy
+		notifierService := NewPasswordServiceWithNotifier(userRepo, tokenRepo, policy, notifier)
+
+		err := notifierService.RequestPasswordReset(ctx, "test@example.com")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to send password reset token")
 	})
 }
 
@@ -195,17 +235,17 @@ func TestPasswordService_ResetPassword(t *testing.T) {
 		require.NoError(t, err)
 
 		// Reset password
-		err = service.ResetPassword(ctx, token.Token, "Newpassword123!")
+		err = service.ResetPassword(ctx, token.Token, "NewPassword123!")
 		require.NoError(t, err)
 
 		// Verify password was changed
 		updated, err := userRepo.GetByID(ctx, user.ID)
 		require.NoError(t, err)
-		assert.True(t, utils.CheckPassword("Newpassword123!", updated.Password))
+		assert.True(t, utils.CheckPassword("NewPassword123!", updated.Password))
 	})
 
 	t.Run("fails with invalid token", func(t *testing.T) {
-		err := service.ResetPassword(ctx, "invalid-token", "Newpassword123!")
+		err := service.ResetPassword(ctx, "invalid-token", "NewPassword123!")
 		assert.Error(t, err)
 	})
 
@@ -213,5 +253,31 @@ func TestPasswordService_ResetPassword(t *testing.T) {
 		// Create expired token (would need to manipulate expiry)
 		// This is a placeholder for when token expiry is implemented
 		t.Skip("Token expiry testing requires time manipulation")
+	})
+
+	t.Run("resets password when token is stored hashed", func(t *testing.T) {
+		rawToken := "raw-reset-token-for-hash-path"
+		hashedToken, hashErr := utils.HashPassword(rawToken)
+		require.NoError(t, hashErr)
+
+		token := &models.PasswordResetToken{
+			UserID:    user.ID,
+			Token:     hashedToken,
+			ExpiresAt: time.Now().Add(1 * time.Hour),
+		}
+		err := tokenRepo.CreatePasswordResetToken(ctx, token)
+		require.NoError(t, err)
+
+		err = service.ResetPassword(ctx, rawToken, "AnotherNewPassword123!")
+		require.NoError(t, err)
+
+		updated, err := userRepo.GetByID(ctx, user.ID)
+		require.NoError(t, err)
+		assert.True(t, utils.CheckPassword("AnotherNewPassword123!", updated.Password))
+
+		var remaining int
+		err = testDB.QueryRowContext(ctx, "SELECT COUNT(*) FROM password_reset_tokens WHERE id = $1", token.ID).Scan(&remaining)
+		require.NoError(t, err)
+		assert.Equal(t, 0, remaining)
 	})
 }

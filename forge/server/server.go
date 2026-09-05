@@ -10,7 +10,6 @@ import (
 
 	"github.com/forgego/forge/config"
 	"github.com/forgego/forge/log"
-	"github.com/forgego/forge/media"
 	"go.uber.org/zap"
 )
 
@@ -88,19 +87,9 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 	// Register server info endpoint
 	router.Get("/info", ServerInfoHandler(settings))
 
-	mediaEngine := media.New(media.Config{
-		StaticDir:     settings.Server.StaticFilesPath,
-		StaticURL:     settings.Server.StaticFilesURL,
-		UploadDir:     settings.Server.UploadsPath,
-		UploadURL:     settings.Server.UploadsURL,
-		MaxUploadSize: settings.Server.MaxRequestSize,
-	})
-
-	if staticHandler := mediaEngine.StaticHandler(); staticHandler != nil {
-		router.Mount(mediaEngine.NormalizeStaticURL(), staticHandler)
-	}
-	if uploadHandler := mediaEngine.MediaHandler(); uploadHandler != nil {
-		router.Mount(mediaEngine.UploadURL(), uploadHandler)
+	// Serve static files if configured
+	if settings.Server.StaticFilesPath != "" {
+		router.Mount("/static", StaticFiles("/static", settings.Server.StaticFilesPath))
 	}
 
 	// Enable profiling if configured (dev mode only)
@@ -124,28 +113,6 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 	}
 
 	return server, nil
-}
-
-func isCSRFExemptPath(path string, prefixes []string) bool {
-	if len(prefixes) == 0 {
-		return false
-	}
-	for _, prefix := range prefixes {
-		prefix = strings.TrimSpace(prefix)
-		if prefix == "" {
-			continue
-		}
-		if prefix == "/" {
-			return true
-		}
-		if !strings.HasPrefix(prefix, "/") {
-			prefix = "/" + prefix
-		}
-		if strings.HasPrefix(path, prefix) {
-			return true
-		}
-	}
-	return false
 }
 
 // RegisterRoutes registers routes on the server's router
@@ -238,3 +205,24 @@ func MetricsHandler() http.HandlerFunc {
 	}
 }
 
+func isCSRFExemptPath(path string, prefixes []string) bool {
+	if len(prefixes) == 0 {
+		return false
+	}
+	for _, prefix := range prefixes {
+		prefix = strings.TrimSpace(prefix)
+		if prefix == "" {
+			continue
+		}
+		if prefix == "/" {
+			return true
+		}
+		if !strings.HasPrefix(prefix, "/") {
+			prefix = "/" + prefix
+		}
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+	return false
+}

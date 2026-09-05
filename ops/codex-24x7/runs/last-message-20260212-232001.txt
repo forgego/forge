@@ -1,0 +1,19 @@
+Implemented one focused high-impact batch on API permission reliability and TODO debt.
+
+**What changed**
+- Fixed reflection helper behavior in `forge/api/permissions/helpers.go`:
+  - `getMethod` now correctly resolves pointer-receiver and value-receiver methods.
+  - Added nil-safety for reflective method/field access.
+- Replaced TODO placeholder assertions in `forge/api/permissions/permission_test.go`:
+  - `TestIsAdminUser_Admin` now asserts admin request/object permission behavior.
+  - `TestIsOwnerOrReadOnly_Owner` now asserts owner-match object permission behavior.
+- Updated run tracking:
+  - `ops/codex-24x7/STATUS.md`
+  - `ops/codex-24x7/HISTORY.md`
+
+**Tests run**
+- `go test ./api/permissions` in `forge` (pass)
+- `go test ./...` in `examples/ecommerce` (pass, no test files)
+
+**Note**
+- `git status` could not run due repository safe-directory ownership restrictions on this machine.

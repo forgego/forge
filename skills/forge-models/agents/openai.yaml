@@ -1,0 +1,4 @@
+interface:
+  display_name: "Forge Models"
+  short_description: "Define Forge models, fields, and relationships."
+  default_prompt: "Help me define or update Forge models, fields, relations, or hooks."

@@ -101,7 +101,7 @@ func (p *ASTParser) ParseFile(filename string) ([]*ModelDefinition, error) {
 	return definitions, nil
 }
 
-// embedsSchema checks if a struct embeds schema.Schema
+// embedsSchema checks if a struct embeds schema.Schema or a generated model base.
 func (p *ASTParser) embedsSchema(st *ast.StructType) bool {
 	for _, field := range st.Fields.List {
 		if len(field.Names) == 0 {
@@ -111,6 +111,11 @@ func (p *ASTParser) embedsSchema(st *ast.StructType) bool {
 					if sel.Sel.Name == "Schema" || sel.Sel.Name == "BaseSchema" {
 						return true
 					}
+				}
+			}
+			if ident, ok := field.Type.(*ast.Ident); ok {
+				if strings.HasSuffix(ident.Name, "Generated") {
+					return true
 				}
 			}
 		}
@@ -247,6 +252,12 @@ func (p *ASTParser) extractFieldFromCall(call *ast.CallExpr) *FieldDefinition {
 	options := make(map[string]interface{})
 	p.extractOptionsFromChain(call, options)
 
+	// Also extract options from variadic arguments of the field builder call.
+	// The functional API passes options as variadic args:
+	//   schema.StringField("name", schema.Required(), schema.MaxLength(200))
+	// These are in fieldBuilderCall.Args[1:] (index 0 is the field name).
+	p.extractOptionsFromVariadicArgs(fieldBuilderCall, options)
+
 	// Build validation tag
 	validationTag := p.buildValidationTag(fieldType, options)
 
@@ -261,9 +272,6 @@ func (p *ASTParser) extractFieldFromCall(call *ast.CallExpr) *FieldDefinition {
 		primaryKey = pk
 	} else if pk, ok := options["primary_key"].(bool); ok {
 		primaryKey = pk
-	}
-	if primaryKey {
-		required = true
 	}
 
 	autoIncrement := false
@@ -317,8 +325,9 @@ func (p *ASTParser) extractOptionsFromChain(expr ast.Expr, options map[string]in
 		if sel, ok := x.Fun.(*ast.SelectorExpr); ok {
 			methodName := sel.Sel.Name
 
+			// Skip Build() - it's just a finalizer
 			// Skip field builder methods (Int64, String, etc.) - we already handled those
-			if !p.isFieldBuilder(methodName) {
+			if methodName != "Build" && !p.isFieldBuilder(methodName) {
 				// Extract option from this method call
 				p.extractOptionFromMethod(methodName, x, options)
 			}
@@ -335,6 +344,37 @@ func (p *ASTParser) extractOptionsFromChain(expr ast.Expr, options map[string]in
 	}
 }
 
+// extractOptionsFromVariadicArgs extracts options from variadic arguments of
+// functional-style field builder calls like:
+//
+//	schema.StringField("name", schema.Required(), schema.MaxLength(200))
+//
+// The variadic args are call expressions passed as arguments at index 1+.
+func (p *ASTParser) extractOptionsFromVariadicArgs(fieldBuilderCall *ast.CallExpr, options map[string]interface{}) {
+	if fieldBuilderCall == nil {
+		return
+	}
+	// Skip argument 0 (the field name string); process remaining variadic option args
+	for i := 1; i < len(fieldBuilderCall.Args); i++ {
+		arg := fieldBuilderCall.Args[i]
+		optionCall, ok := arg.(*ast.CallExpr)
+		if !ok {
+			continue
+		}
+		// The option call is something like schema.Required() or schema.MaxLength(200)
+		var methodName string
+		switch fn := optionCall.Fun.(type) {
+		case *ast.SelectorExpr:
+			methodName = fn.Sel.Name
+		case *ast.Ident:
+			methodName = fn.Name
+		default:
+			continue
+		}
+		p.extractOptionFromMethod(methodName, optionCall, options)
+	}
+}
+
 // isFieldBuilder checks if a name is a field builder function
 func (p *ASTParser) isFieldBuilder(name string) bool {
 	builders := []string{
@@ -346,6 +386,16 @@ func (p *ASTParser) isFieldBuilder(name string) bool {
 		"JSON", "Bytes",
 		"Float64", "Decimal",
 		"ForeignKey", "OneToOne", "OneToMany", "ManyToMany",
+		// Functional variants
+		"Int64Field", "Int32Field", "IntField",
+		"StringField", "TextField",
+		"BoolField",
+		"TimeField", "DateField", "DateTimeField",
+		"EmailField", "URLField", "UUIDField",
+		"JSONField", "BytesField",
+		"Float64Field", "DecimalField",
+		"Float32Field",
+		"ForeignKeyField", "OneToOneField", "OneToManyField", "ManyToManyField",
 	}
 	for _, b := range builders {
 		if name == b {
@@ -371,26 +421,48 @@ func (p *ASTParser) extractStringArg(call *ast.CallExpr) string {
 // mapFieldTypeToGoType maps field builder type to Go type
 func (p *ASTParser) mapFieldTypeToGoType(fieldType string) string {
 	mapping := map[string]string{
-		"Int64":      "int64",
-		"Int32":      "int32",
-		"Int":        "int64", // Alias for Int64
-		"String":     "string",
-		"Text":       "string",
-		"Bool":       "bool",
-		"Time":       "time.Time",
-		"Date":       "time.Time",
-		"DateTime":   "time.Time",
-		"Email":      "string",
-		"URL":        "string",
-		"UUID":       "string",
-		"JSON":       "[]byte",
-		"Bytes":      "[]byte",
-		"Float64":    "float64",
-		"Decimal":    "float64",
-		"ForeignKey": "int64", // Foreign keys are typically int64
-		"OneToOne":   "int64",
-		"OneToMany":  "int64",
-		"ManyToMany": "int64",
+		"Int64":           "int64",
+		"Int64Field":      "int64",
+		"Int32":           "int32",
+		"Int32Field":      "int32",
+		"Int":             "int64", // Alias for Int64
+		"IntField":        "int64",
+		"String":          "string",
+		"StringField":     "string",
+		"Text":            "string",
+		"TextField":       "string",
+		"Bool":            "bool",
+		"BoolField":       "bool",
+		"Time":            "time.Time",
+		"TimeField":       "time.Time",
+		"Date":            "time.Time",
+		"DateField":       "time.Time",
+		"DateTime":        "time.Time",
+		"DateTimeField":   "time.Time",
+		"Email":           "string",
+		"EmailField":      "string",
+		"URL":             "string",
+		"URLField":        "string",
+		"UUID":            "string",
+		"UUIDField":       "string",
+		"JSON":            "[]byte",
+		"JSONField":       "[]byte",
+		"Bytes":           "[]byte",
+		"BytesField":      "[]byte",
+		"Float64":         "float64",
+		"Float64Field":    "float64",
+		"Float32":         "float32",
+		"Float32Field":    "float32",
+		"Decimal":         "float64",
+		"DecimalField":    "float64",
+		"ForeignKey":      "int64", // Foreign keys are typically int64
+		"ForeignKeyField": "int64",
+		"OneToOne":        "int64",
+		"OneToOneField":   "int64",
+		"OneToMany":       "int64",
+		"OneToManyField":  "int64",
+		"ManyToMany":      "int64",
+		"ManyToManyField": "int64",
 	}
 
 	if goType, ok := mapping[fieldType]; ok {
@@ -403,182 +475,96 @@ func (p *ASTParser) mapFieldTypeToGoType(fieldType string) string {
 // extractOptionFromMethod extracts option value from a method call
 func (p *ASTParser) extractOptionFromMethod(methodName string, call *ast.CallExpr, options map[string]interface{}) {
 	switch methodName {
-	case "WithPrimary":
+	case "Primary":
 		options["primary"] = true
 		options["primary_key"] = true
-	case "WithAutoIncrement":
+	case "AutoIncrement":
 		options["auto_increment"] = true
-	case "WithRequired":
+	case "Required":
 		options["required"] = true
-	case "WithOptional":
+	case "Optional":
 		options["required"] = false
-	case "WithUnique":
+	case "Unique":
 		options["unique"] = true
-	case "WithBlank":
+	case "Blank":
 		options["blank"] = true
-	case "WithDBIndex":
+	case "DBIndex":
 		options["db_index"] = true
-	case "WithDBColumn":
+	case "DBColumn":
 		if len(call.Args) > 0 {
 			if colName := p.extractStringArg(call); colName != "" {
 				options["db_column"] = colName
 			}
 		}
-	case "WithMaxLength":
+	case "MaxLength":
 		if len(call.Args) > 0 {
 			if maxLen := p.extractIntArg(call); maxLen != nil {
 				options["max_length"] = *maxLen
 			}
 		}
-	case "WithMinLength":
+	case "MinLength":
 		if len(call.Args) > 0 {
 			if minLen := p.extractIntArg(call); minLen != nil {
 				options["min_length"] = *minLen
 			}
 		}
-	case "WithMaxValue":
+	case "MaxValue":
 		if len(call.Args) > 0 {
 			if maxVal := p.extractFloatArg(call); maxVal != nil {
 				options["max_value"] = *maxVal
 			}
 		}
-	case "WithMinValue":
+	case "MinValue":
 		if len(call.Args) > 0 {
 			if minVal := p.extractFloatArg(call); minVal != nil {
 				options["min_value"] = *minVal
 			}
 		}
-	case "WithDefault":
+	case "Default":
 		if len(call.Args) > 0 {
 			if defaultValue := p.extractDefaultValue(call); defaultValue != nil {
 				options["default"] = defaultValue
 			}
 		}
-	case "WithDefaultUUID":
-		if len(call.Args) > 0 {
-			if defaultValue := p.extractDefaultValue(call); defaultValue != nil {
-				options["default"] = defaultValue
-			}
-		}
-	case "WithDefaultNewUUID":
-		options["default"] = "uuid.NewString()"
-	case "WithHelpText":
+	case "HelpText":
 		if len(call.Args) > 0 {
 			if helpText := p.extractStringArg(call); helpText != "" {
 				options["help_text"] = helpText
 			}
 		}
-	case "WithVerboseName":
+	case "VerboseName":
 		if len(call.Args) > 0 {
 			if verboseName := p.extractStringArg(call); verboseName != "" {
 				options["verbose_name"] = verboseName
 			}
 		}
-	case "WithAutoNow":
+	case "AutoNow":
 		options["auto_now"] = true
-	case "WithAutoNowAdd":
+	case "AutoNowAdd":
 		options["auto_now_add"] = true
-	case "WithWriteOnly":
+	case "WriteOnly":
 		options["write_only"] = true
-	case "WithEditable":
+	case "Editable":
 		if len(call.Args) > 0 {
 			if editable := p.extractBoolArg(call); editable != nil {
 				options["editable"] = *editable
 			}
 		}
-	case "WithSerialize":
-		if len(call.Args) > 0 {
-			if serialize := p.extractBoolArg(call); serialize != nil {
-				options["serialize"] = *serialize
-			}
-		}
-	case "WithValidators":
-		options["has_validators"] = true
-	case "WithChoices":
+	case "Choices":
 		// Choices is more complex, extract if needed
 		if len(call.Args) > 0 {
 			options["has_choices"] = true
 		}
-	case "WithChoicesFromPairs":
-		if len(call.Args) > 0 {
-			options["has_choices"] = true
-		}
-	case "WithMaxDigits":
+	case "MaxDigits":
 		if len(call.Args) > 0 {
 			if maxDigits := p.extractIntArg(call); maxDigits != nil {
 				options["max_digits"] = *maxDigits
 			}
 		}
-	case "WithDecimalPlaces":
+	case "DecimalPlaces":
 		if len(call.Args) > 0 {
 			if decimalPlaces := p.extractIntArg(call); decimalPlaces != nil {
 				options["decimal_places"] = *decimalPlaces
-			}
-		}
-	case "WithUniqueForDate":
-		if len(call.Args) > 0 {
-			if val := p.extractStringArg(call); val != "" {
-				options["unique_for_date"] = val
-			}
-		}
-	case "WithUniqueForMonth":
-		if len(call.Args) > 0 {
-			if val := p.extractStringArg(call); val != "" {
-				options["unique_for_month"] = val
-			}
-		}
-	case "WithUniqueForYear":
-		if len(call.Args) > 0 {
-			if val := p.extractStringArg(call); val != "" {
-				options["unique_for_year"] = val
-			}
-		}
-	case "WithDBType":
-		if len(call.Args) > 0 {
-			if val := p.extractStringArg(call); val != "" {
-				options["db_type"] = val
-			}
-		}
-	case "WithDBCollation":
-		if len(call.Args) > 0 {
-			if val := p.extractStringArg(call); val != "" {
-				options["db_collation"] = val
-			}
-		}
-	case "WithDBComment":
-		if len(call.Args) > 0 {
-			if val := p.extractStringArg(call); val != "" {
-				options["db_comment"] = val
-			}
-		}
-	case "WithDBTablespace":
-		if len(call.Args) > 0 {
-			if val := p.extractStringArg(call); val != "" {
-				options["db_tablespace"] = val
-			}
-		}
-	case "WithDBDefault":
-		if len(call.Args) > 0 {
-			if val := p.extractStringArg(call); val != "" {
-				options["db_default"] = val
-			}
-		}
-	case "WithGeneratedColumn":
-		options["generated"] = true
-		if len(call.Args) > 0 {
-			if val := p.extractStringArg(call); val != "" {
-				options["generated_expr"] = val
-			}
-		}
-		if len(call.Args) > 1 {
-			if stored := p.extractBoolArg(call); stored != nil {
-				options["generated_stored"] = *stored
-			}
-		}
-	case "WithValidationTag":
-		if len(call.Args) > 0 {
-			if val := p.extractStringArg(call); val != "" {
-				options["validation_tag"] = val
 			}
 		}
 	}
@@ -675,7 +661,7 @@ func (p *ASTParser) extractDefaultValue(call *ast.CallExpr) interface{} {
 func (p *ASTParser) buildValidationTag(fieldType string, options map[string]interface{}) string {
 	var tags []string
 
-	// Check if WithRequired() was called
+	// Check if Required() was called
 	if required, ok := options["required"].(bool); ok && required {
 		tags = append(tags, "required")
 	}
@@ -701,6 +687,40 @@ func (p *ASTParser) buildValidationTag(fieldType string, options map[string]inte
 	if minLen, ok := options["min_length"]; ok {
 		if minLenInt, ok := minLen.(int); ok && minLenInt > 0 {
 			tags = append(tags, fmt.Sprintf("min=%d", minLenInt))
+		}
+	}
+
+	// MaxValue (numeric)
+	if maxVal, ok := options["max_value"]; ok {
+		switch v := maxVal.(type) {
+		case float64:
+			tags = append(tags, fmt.Sprintf("lte=%g", v))
+		case int:
+			tags = append(tags, fmt.Sprintf("lte=%d", v))
+		}
+	}
+
+	// MinValue (numeric)
+	if minVal, ok := options["min_value"]; ok {
+		switch v := minVal.(type) {
+		case float64:
+			tags = append(tags, fmt.Sprintf("gte=%g", v))
+		case int:
+			tags = append(tags, fmt.Sprintf("gte=%d", v))
+		}
+	}
+
+	// MaxDigits (decimal)
+	if maxDigits, ok := options["max_digits"]; ok {
+		if maxDigitsInt, ok := maxDigits.(int); ok && maxDigitsInt > 0 {
+			tags = append(tags, fmt.Sprintf("decimal_max_digits=%d", maxDigitsInt))
+		}
+	}
+
+	// DecimalPlaces
+	if decPlaces, ok := options["decimal_places"]; ok {
+		if decPlacesInt, ok := decPlaces.(int); ok && decPlacesInt >= 0 {
+			tags = append(tags, fmt.Sprintf("decimal_places=%d", decPlacesInt))
 		}
 	}
 
@@ -771,11 +791,11 @@ func (p *ASTParser) extractRelationFromExpr(expr ast.Expr) *RelationDefinition {
 							relation.Options["related_name"] = val
 						}
 					case "OnDelete":
-						if val := p.extractCascadeValue(kv.Value); val != "" {
+						if val := p.extractStringFromExpr(kv.Value); val != "" {
 							relation.Options["on_delete"] = val
 						}
 					case "OnUpdate":
-						if val := p.extractCascadeValue(kv.Value); val != "" {
+						if val := p.extractStringFromExpr(kv.Value); val != "" {
 							relation.Options["on_update"] = val
 						}
 					case "Through":
@@ -840,7 +860,10 @@ func (p *ASTParser) extractRelationOptionsFromChain(expr ast.Expr, options map[s
 		if sel, ok := x.Fun.(*ast.SelectorExpr); ok {
 			methodName := sel.Sel.Name
 
-			p.extractRelationOptionFromMethod(methodName, x, options)
+			// Skip Build() - it's just a finalizer
+			if methodName != "Build" {
+				p.extractRelationOptionFromMethod(methodName, x, options)
+			}
 
 			// Continue traversing down the chain
 			p.extractRelationOptionsFromChain(sel.X, options)
@@ -855,56 +878,44 @@ func (p *ASTParser) extractRelationOptionsFromChain(expr ast.Expr, options map[s
 // extractRelationOptionFromMethod extracts option value from a relation method call
 func (p *ASTParser) extractRelationOptionFromMethod(methodName string, call *ast.CallExpr, options map[string]interface{}) {
 	switch methodName {
-	case "WithOnDelete":
+	case "OnDelete":
 		if len(call.Args) > 0 {
-			if val := p.extractCascadeValue(call.Args[0]); val != "" {
+			if sel, ok := call.Args[0].(*ast.SelectorExpr); ok {
+				// Handle schema.CascadeCASCADE, etc.
+				if pkgIdent, ok := sel.X.(*ast.Ident); ok && pkgIdent.Name == "schema" {
+					// Extract the constant name (e.g., "CascadeCASCADE")
+					options["on_delete"] = sel.Sel.Name
+				}
+			} else if val := p.extractStringFromExpr(call.Args[0]); val != "" {
 				options["on_delete"] = val
 			}
 		}
-	case "WithOnUpdate":
+	case "OnUpdate":
 		if len(call.Args) > 0 {
-			if val := p.extractCascadeValue(call.Args[0]); val != "" {
+			if sel, ok := call.Args[0].(*ast.SelectorExpr); ok {
+				// Handle schema.CascadeCASCADE, etc.
+				if pkgIdent, ok := sel.X.(*ast.Ident); ok && pkgIdent.Name == "schema" {
+					options["on_update"] = sel.Sel.Name
+				}
+			} else if val := p.extractStringFromExpr(call.Args[0]); val != "" {
 				options["on_update"] = val
 			}
 		}
-	case "WithRelatedName":
+	case "RelatedName":
 		if len(call.Args) > 0 {
 			if val := p.extractStringFromExpr(call.Args[0]); val != "" {
 				options["related_name"] = val
 			}
 		}
-	case "WithThrough", "WithThroughTable":
+	case "Through", "ThroughTable":
 		if len(call.Args) > 0 {
 			if val := p.extractStringFromExpr(call.Args[0]); val != "" {
 				options["through"] = val
 			}
 		}
-	case "WithCascadeOnDelete":
+	case "CascadeOnDelete":
 		options["on_delete"] = "CASCADE"
 	}
-}
-
-func (p *ASTParser) extractCascadeValue(expr ast.Expr) string {
-	switch value := expr.(type) {
-	case *ast.SelectorExpr:
-		if pkgIdent, ok := value.X.(*ast.Ident); ok && pkgIdent.Name == "schema" {
-			return normalizeCascadeName(value.Sel.Name)
-		}
-	case *ast.Ident:
-		return normalizeCascadeName(value.Name)
-	case *ast.BasicLit:
-		if value.Kind == token.STRING {
-			return p.extractStringFromExpr(value)
-		}
-	}
-	return ""
-}
-
-func normalizeCascadeName(name string) string {
-	if strings.HasPrefix(name, "Cascade") {
-		return strings.TrimPrefix(name, "Cascade")
-	}
-	return name
 }
 
 // extractStringFromExpr extracts a string value from an AST expression
@@ -1099,60 +1110,35 @@ func (p *ASTParser) extractBoolFromExpr(expr ast.Expr) *bool {
 func (p *ASTParser) extractHooks(method *ast.FuncDecl) (HooksDefinition, error) {
 	hooks := HooksDefinition{}
 
-	if method.Body == nil {
+	if method == nil || method.Body == nil {
 		return hooks, nil
 	}
 
+	assignedExprs := make(map[string]ast.Expr)
+
 	for _, stmt := range method.Body.List {
-		retStmt, ok := stmt.(*ast.ReturnStmt)
-		if !ok || len(retStmt.Results) == 0 {
-			continue
-		}
-
-		expr := retStmt.Results[0]
-		if unary, ok := expr.(*ast.UnaryExpr); ok && unary.Op == token.AND {
-			expr = unary.X
-		}
-
-		compLit, ok := expr.(*ast.CompositeLit)
-		if !ok {
-			continue
-		}
-
-		for _, elt := range compLit.Elts {
-			kv, ok := elt.(*ast.KeyValueExpr)
-			if !ok {
+		switch s := stmt.(type) {
+		case *ast.AssignStmt:
+			if len(s.Lhs) == 1 && len(s.Rhs) == 1 {
+				if ident, ok := s.Lhs[0].(*ast.Ident); ok {
+					assignedExprs[ident.Name] = s.Rhs[0]
+				}
+			}
+		case *ast.DeclStmt:
+			gen, ok := s.Decl.(*ast.GenDecl)
+			if !ok || gen.Tok != token.VAR {
 				continue
 			}
-			key, ok := kv.Key.(*ast.Ident)
-			if !ok {
-				continue
+			for _, spec := range gen.Specs {
+				valSpec, ok := spec.(*ast.ValueSpec)
+				if !ok || len(valSpec.Names) != 1 || len(valSpec.Values) != 1 {
+					continue
+				}
+				assignedExprs[valSpec.Names[0].Name] = valSpec.Values[0]
 			}
-
-			valueName := p.extractFuncRef(kv.Value)
-			if valueName == "" {
-				continue
-			}
-
-			switch key.Name {
-			case "BeforeCreate":
-				hooks.BeforeCreate = valueName
-			case "AfterCreate":
-				hooks.AfterCreate = valueName
-			case "BeforeUpdate":
-				hooks.BeforeUpdate = valueName
-			case "AfterUpdate":
-				hooks.AfterUpdate = valueName
-			case "BeforeSave":
-				hooks.BeforeSave = valueName
-			case "AfterSave":
-				hooks.AfterSave = valueName
-			case "BeforeDelete":
-				hooks.BeforeDelete = valueName
-			case "AfterDelete":
-				hooks.AfterDelete = valueName
-			case "Clean":
-				hooks.Clean = valueName
+		case *ast.ReturnStmt:
+			for _, result := range s.Results {
+				p.extractHooksFromExpr(p.resolveAssignedExpr(result, assignedExprs), &hooks)
 			}
 		}
 	}
@@ -1160,14 +1146,131 @@ func (p *ASTParser) extractHooks(method *ast.FuncDecl) (HooksDefinition, error) 
 	return hooks, nil
 }
 
-func (p *ASTParser) extractFuncRef(expr ast.Expr) string {
-	switch v := expr.(type) {
-	case *ast.Ident:
-		return v.Name
-	case *ast.SelectorExpr:
-		if ident, ok := v.X.(*ast.Ident); ok {
-			return ident.Name + "." + v.Sel.Name
+func (p *ASTParser) resolveAssignedExpr(expr ast.Expr, assignedExprs map[string]ast.Expr) ast.Expr {
+	ident, ok := expr.(*ast.Ident)
+	if !ok {
+		return expr
+	}
+
+	resolved, ok := assignedExprs[ident.Name]
+	if !ok {
+		return expr
+	}
+	return resolved
+}
+
+func (p *ASTParser) extractHooksFromExpr(expr ast.Expr, hooks *HooksDefinition) {
+	switch x := expr.(type) {
+	case *ast.UnaryExpr:
+		if x.Op == token.AND {
+			p.extractHooksFromExpr(x.X, hooks)
 		}
+	case *ast.CompositeLit:
+		p.extractHooksFromCompositeLiteral(x, hooks)
+	case *ast.CallExpr:
+		p.extractHooksFromCallChain(x, hooks)
+	case *ast.ParenExpr:
+		p.extractHooksFromExpr(x.X, hooks)
+	}
+}
+
+func (p *ASTParser) extractHooksFromCompositeLiteral(compLit *ast.CompositeLit, hooks *HooksDefinition) {
+	for _, elt := range compLit.Elts {
+		kv, ok := elt.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		keyIdent, ok := kv.Key.(*ast.Ident)
+		if !ok {
+			continue
+		}
+		p.setHookValue(hooks, keyIdent.Name, p.extractHookReference(kv.Value))
+	}
+}
+
+func (p *ASTParser) extractHooksFromCallChain(call *ast.CallExpr, hooks *HooksDefinition) {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return
+	}
+
+	p.setHookFromBuilderMethod(hooks, sel.Sel.Name, call)
+	p.extractHooksFromExpr(sel.X, hooks)
+}
+
+func (p *ASTParser) setHookFromBuilderMethod(hooks *HooksDefinition, methodName string, call *ast.CallExpr) {
+	if len(call.Args) == 0 {
+		return
+	}
+
+	switch methodName {
+	case "WithBeforeCreate":
+		hooks.BeforeCreate = p.extractHookReference(call.Args[0])
+	case "WithAfterCreate":
+		hooks.AfterCreate = p.extractHookReference(call.Args[0])
+	case "WithBeforeUpdate":
+		hooks.BeforeUpdate = p.extractHookReference(call.Args[0])
+	case "WithAfterUpdate":
+		hooks.AfterUpdate = p.extractHookReference(call.Args[0])
+	case "WithBeforeSave":
+		hooks.BeforeSave = p.extractHookReference(call.Args[0])
+	case "WithAfterSave":
+		hooks.AfterSave = p.extractHookReference(call.Args[0])
+	case "WithBeforeDelete":
+		hooks.BeforeDelete = p.extractHookReference(call.Args[0])
+	case "WithAfterDelete":
+		hooks.AfterDelete = p.extractHookReference(call.Args[0])
+	case "WithClean":
+		hooks.Clean = p.extractHookReference(call.Args[0])
+	}
+}
+
+func (p *ASTParser) setHookValue(hooks *HooksDefinition, hookName, value string) {
+	switch hookName {
+	case "BeforeCreate":
+		hooks.BeforeCreate = value
+	case "AfterCreate":
+		hooks.AfterCreate = value
+	case "BeforeUpdate":
+		hooks.BeforeUpdate = value
+	case "AfterUpdate":
+		hooks.AfterUpdate = value
+	case "BeforeSave":
+		hooks.BeforeSave = value
+	case "AfterSave":
+		hooks.AfterSave = value
+	case "BeforeDelete":
+		hooks.BeforeDelete = value
+	case "AfterDelete":
+		hooks.AfterDelete = value
+	case "Clean":
+		hooks.Clean = value
+	}
+}
+
+func (p *ASTParser) extractHookReference(expr ast.Expr) string {
+	switch x := expr.(type) {
+	case *ast.Ident:
+		if x.Name == "nil" {
+			return ""
+		}
+		return x.Name
+	case *ast.SelectorExpr:
+		return p.formatSelectorExpr(x)
+	case *ast.FuncLit:
+		return "<inline>"
+	case *ast.UnaryExpr:
+		return p.extractHookReference(x.X)
 	}
 	return ""
+}
+
+func (p *ASTParser) formatSelectorExpr(sel *ast.SelectorExpr) string {
+	if prefix, ok := sel.X.(*ast.Ident); ok {
+		return prefix.Name + "." + sel.Sel.Name
+	}
+	if nested, ok := sel.X.(*ast.SelectorExpr); ok {
+		return p.formatSelectorExpr(nested) + "." + sel.Sel.Name
+	}
+	return sel.Sel.Name
 }

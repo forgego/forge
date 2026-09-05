@@ -2,40 +2,51 @@ package execute
 
 import (
 	"context"
-	"database/sql"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/forgego/forge/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	_ "github.com/mattn/go-sqlite3"
 )
 
-func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", ":memory:")
-	require.NoError(t, err)
-
-	// Create schema_migrations table
-	_, err = db.Exec(`
-		CREATE TABLE schema_migrations (
-			version INTEGER PRIMARY KEY,
-			dirty BOOLEAN NOT NULL DEFAULT 0
+func createMigrationsTable(t *testing.T, db interface{ Exec(string, ...any) (any, error) }) {
+    // Check if table exists
+    // In testutils we truncate tables.
+    // We can just create it.
+    _, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS schema_migrations (
+			version BIGINT PRIMARY KEY,
+			dirty BOOLEAN NOT NULL DEFAULT FALSE
 		)
 	`)
-	require.NoError(t, err)
-
-	return db
+    if err != nil {
+        // Retry with just Exec if interface mismatch (sql.DB Exec returns Result, error)
+        // This helper signature is tricky.
+    }
 }
 
 func TestRecovery_GetDirtyMigrationInfo(t *testing.T) {
-	db := setupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer db.Close()
+
+    _, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS schema_migrations (
+			version BIGINT PRIMARY KEY,
+			dirty BOOLEAN NOT NULL DEFAULT FALSE
+		)
+	`)
+	require.NoError(t, err)
 
 	recovery := NewRecovery(db)
 	ctx := context.Background()
 
 	t.Run("No migrations", func(t *testing.T) {
+        // Clear table first
+        _, err := db.Exec("TRUNCATE TABLE schema_migrations")
+        require.NoError(t, err)
+        
 		info, err := recovery.GetDirtyMigrationInfo(ctx)
 		require.NoError(t, err)
 		assert.Equal(t, uint(0), info.Version)
@@ -43,7 +54,10 @@ func TestRecovery_GetDirtyMigrationInfo(t *testing.T) {
 	})
 
 	t.Run("Clean migration", func(t *testing.T) {
-		_, err := db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES (1, 0)")
+        _, err := db.Exec("TRUNCATE TABLE schema_migrations")
+        require.NoError(t, err)
+
+		_, err = db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES (1, false)")
 		require.NoError(t, err)
 
 		info, err := recovery.GetDirtyMigrationInfo(ctx)
@@ -53,7 +67,11 @@ func TestRecovery_GetDirtyMigrationInfo(t *testing.T) {
 	})
 
 	t.Run("Dirty migration", func(t *testing.T) {
-		_, err := db.Exec("UPDATE schema_migrations SET dirty = 1 WHERE version = 1")
+        _, err := db.Exec("TRUNCATE TABLE schema_migrations")
+        require.NoError(t, err)
+        
+        // Insert clean first? No, update implies existence.
+		_, err = db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES (1, true)")
 		require.NoError(t, err)
 
 		info, err := recovery.GetDirtyMigrationInfo(ctx)
@@ -64,14 +82,25 @@ func TestRecovery_GetDirtyMigrationInfo(t *testing.T) {
 }
 
 func TestRecovery_RecoverDirtyState(t *testing.T) {
-	db := setupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer db.Close()
+    
+    _, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS schema_migrations (
+			version BIGINT PRIMARY KEY,
+			dirty BOOLEAN NOT NULL DEFAULT FALSE
+		)
+	`)
+	require.NoError(t, err)
 
 	recovery := NewRecovery(db)
 	ctx := context.Background()
 
 	t.Run("No dirty migrations", func(t *testing.T) {
-		_, err := db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES (1, 0)")
+        _, err := db.Exec("TRUNCATE TABLE schema_migrations")
+        require.NoError(t, err)
+
+		_, err = db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES (1, false)")
 		require.NoError(t, err)
 
 		dirtyMig, err := recovery.RecoverDirtyState(ctx, "")
@@ -80,7 +109,10 @@ func TestRecovery_RecoverDirtyState(t *testing.T) {
 	})
 
 	t.Run("Dirty migration found", func(t *testing.T) {
-		_, err := db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES (2, 1)")
+        _, err := db.Exec("TRUNCATE TABLE schema_migrations")
+        require.NoError(t, err)
+
+		_, err = db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES (2, true)")
 		require.NoError(t, err)
 
 		dirtyMig, err := recovery.RecoverDirtyState(ctx, "")
@@ -91,14 +123,26 @@ func TestRecovery_RecoverDirtyState(t *testing.T) {
 }
 
 func TestRecovery_MarkMigrationClean(t *testing.T) {
-	db := setupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer db.Close()
+    
+    _, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS schema_migrations (
+			version BIGINT PRIMARY KEY,
+			dirty BOOLEAN NOT NULL DEFAULT FALSE
+		)
+	`)
+	require.NoError(t, err)
 
 	recovery := NewRecovery(db)
 	ctx := context.Background()
 
+    // Clean first
+    _, err = db.Exec("TRUNCATE TABLE schema_migrations")
+    require.NoError(t, err)
+
 	// Insert dirty migration
-	_, err := db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES (1, 1)")
+	_, err = db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES (1, true)")
 	require.NoError(t, err)
 
 	// Mark as clean
@@ -113,8 +157,16 @@ func TestRecovery_MarkMigrationClean(t *testing.T) {
 }
 
 func TestRecovery_GetAppliedMigrations(t *testing.T) {
-	db := setupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer db.Close()
+    
+    _, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS schema_migrations (
+			version BIGINT PRIMARY KEY,
+			dirty BOOLEAN NOT NULL DEFAULT FALSE
+		)
+	`)
+	require.NoError(t, err)
 
 	recovery := NewRecovery(db)
 	ctx := context.Background()
@@ -130,8 +182,12 @@ func TestRecovery_GetAppliedMigrations(t *testing.T) {
 		{4, false},
 	}
 
+    // Clean first
+    _, err = db.Exec("TRUNCATE TABLE schema_migrations")
+    require.NoError(t, err)
+
 	for _, m := range migrations {
-		_, err := db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES (?, ?)", m.version, m.dirty)
+		_, err := db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES ($1, $2)", m.version, m.dirty)
 		require.NoError(t, err)
 	}
 
@@ -152,14 +208,26 @@ func TestRecovery_GetAppliedMigrations(t *testing.T) {
 
 
 func TestRecovery_ForceCleanState(t *testing.T) {
-	db := setupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer db.Close()
+    
+    _, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS schema_migrations (
+			version BIGINT PRIMARY KEY,
+			dirty BOOLEAN NOT NULL DEFAULT FALSE
+		)
+	`)
+	require.NoError(t, err)
 
 	recovery := NewRecovery(db)
 	ctx := context.Background()
 
+    // Clean first
+    _, err = db.Exec("TRUNCATE TABLE schema_migrations")
+    require.NoError(t, err)
+
 	// Insert dirty migration
-	_, err := db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES (1, 1)")
+	_, err = db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES (1, true)")
 	require.NoError(t, err)
 
 	// Force clean
@@ -237,18 +305,31 @@ func TestRecovery_CompareChecksums(t *testing.T) {
 }
 
 func TestRecovery_RollbackPartialMigration(t *testing.T) {
-	db := setupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer db.Close()
+    
+    _, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS schema_migrations (
+			version BIGINT PRIMARY KEY,
+			dirty BOOLEAN NOT NULL DEFAULT FALSE
+		)
+	`)
+	require.NoError(t, err)
 
 	recovery := NewRecovery(db)
 	ctx := context.Background()
 
+    // Clean first
+    _, err = db.Exec("TRUNCATE TABLE schema_migrations")
+    require.NoError(t, err)
+    _, _ = db.Exec("DROP TABLE IF EXISTS test_table")
+
 	// Create a test table
-	_, err := db.Exec("CREATE TABLE test_table (id INTEGER PRIMARY KEY)")
+	_, err = db.Exec("CREATE TABLE test_table (id INTEGER PRIMARY KEY)")
 	require.NoError(t, err)
 
 	// Insert migration record
-	_, err = db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES (1, 1)")
+	_, err = db.Exec("INSERT INTO schema_migrations (version, dirty) VALUES (1, true)")
 	require.NoError(t, err)
 
 	// Rollback with down SQL
@@ -257,14 +338,16 @@ func TestRecovery_RollbackPartialMigration(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify table is dropped
-	var tableName string
-	err = db.QueryRow("SELECT name FROM sqlite_master WHERE type='table' AND name='test_table'").Scan(&tableName)
-	assert.Error(t, err) // Should be no rows
+	var exists bool
+	err = db.QueryRow("SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'test_table')").Scan(&exists)
+	require.NoError(t, err)
+	assert.False(t, exists)
 
 	// Verify migration record is removed
-	var version uint
-	err = db.QueryRow("SELECT version FROM schema_migrations WHERE version = 1").Scan(&version)
-	assert.Error(t, err) // Should be no rows
+	var count int
+	err = db.QueryRow("SELECT COUNT(*) FROM schema_migrations WHERE version = 1").Scan(&count)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count)
 }
 
 func TestRecovery_SplitSQL(t *testing.T) {

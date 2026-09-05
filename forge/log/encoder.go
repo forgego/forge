@@ -19,11 +19,13 @@ type ConsoleEncoder struct {
 	stacktrace bool
 }
 
+const traceZapLevel = zapcore.DebugLevel - 1
+
 // NewConsoleEncoder creates a new console encoder
 func NewConsoleEncoder(config DevelopmentConfig) *ConsoleEncoder {
 	encoderConfig := zap.NewDevelopmentEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("15:04:05.000")
-	encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	encoderConfig.EncodeLevel = TraceColorLevelEncoder
 	encoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
 
 	baseEncoder := zapcore.NewConsoleEncoder(encoderConfig)
@@ -103,9 +105,11 @@ func (e *ConsoleEncoder) encodeOneLine(entry zapcore.Entry, fields []zapcore.Fie
 
 // formatLevel formats the log level with optional color
 func (e *ConsoleEncoder) formatLevel(level zapcore.Level) string {
-	levelStr := level.CapitalString()
+	levelStr := traceLevelString(level)
 	if e.colored {
 		switch level {
+		case traceZapLevel:
+			return "\033[35m" + levelStr + "\033[0m" // Magenta
 		case zapcore.DebugLevel:
 			return "\033[36m" + levelStr + "\033[0m" // Cyan
 		case zapcore.InfoLevel:
@@ -183,7 +187,7 @@ type ProductionEncoder struct {
 func NewProductionEncoder(config ProductionConfig) *ProductionEncoder {
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	encoderConfig.EncodeLevel = zapcore.LowercaseLevelEncoder
+	encoderConfig.EncodeLevel = TraceLowercaseLevelEncoder
 	if config.Caller {
 		encoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
 	}
@@ -215,31 +219,43 @@ func (e *ProductionEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Fi
 
 // TraceLevelEncoder adds TRACE level support
 func TraceLevelEncoder(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
-	switch level {
-	case zapcore.DebugLevel - 1: // TRACE is one level below DEBUG
+	if level == traceZapLevel {
 		enc.AppendString("TRACE")
-	case zapcore.DebugLevel:
-		enc.AppendString("DEBUG")
-	case zapcore.InfoLevel:
-		enc.AppendString("INFO")
-	case zapcore.WarnLevel:
-		enc.AppendString("WARN")
-	case zapcore.ErrorLevel:
-		enc.AppendString("ERROR")
-	case zapcore.FatalLevel:
-		enc.AppendString("FATAL")
-	case zapcore.PanicLevel:
-		enc.AppendString("PANIC")
-	default:
-		enc.AppendString(level.CapitalString())
+		return
 	}
+	zapcore.CapitalLevelEncoder(level, enc)
+}
+
+// TraceLowercaseLevelEncoder adds trace support for lowercase level output.
+func TraceLowercaseLevelEncoder(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
+	if level == traceZapLevel {
+		enc.AppendString("trace")
+		return
+	}
+	zapcore.LowercaseLevelEncoder(level, enc)
+}
+
+// TraceColorLevelEncoder adds trace support for colorized level output.
+func TraceColorLevelEncoder(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
+	if level == traceZapLevel {
+		enc.AppendString("\033[35mTRACE\033[0m")
+		return
+	}
+	zapcore.CapitalColorLevelEncoder(level, enc)
+}
+
+func traceLevelString(level zapcore.Level) string {
+	if level == traceZapLevel {
+		return "TRACE"
+	}
+	return level.CapitalString()
 }
 
 // getZapLevel converts our Level to zapcore.Level
 func getZapLevel(level Level) zapcore.Level {
 	switch level {
 	case LevelTrace:
-		return zapcore.DebugLevel - 1 // TRACE is below DEBUG
+		return traceZapLevel // TRACE is below DEBUG
 	case LevelDebug:
 		return zapcore.DebugLevel
 	case LevelInfo:
@@ -265,10 +281,12 @@ func getZapFormat(format Format, config *LoggingConfig, development bool) zapcor
 		if format == FormatJSON {
 			encoderConfig := zap.NewDevelopmentEncoderConfig()
 			encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+			encoderConfig.EncodeLevel = TraceLevelEncoder
 			return zapcore.NewJSONEncoder(encoderConfig)
 		}
 		// Text format
 		encoderConfig := zap.NewDevelopmentEncoderConfig()
+		encoderConfig.EncodeLevel = TraceLevelEncoder
 		return zapcore.NewConsoleEncoder(encoderConfig)
 	}
 
@@ -280,6 +298,7 @@ func getZapFormat(format Format, config *LoggingConfig, development bool) zapcor
 	// Text format in production
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoderConfig.EncodeLevel = TraceLowercaseLevelEncoder
 	return zapcore.NewConsoleEncoder(encoderConfig)
 }
 

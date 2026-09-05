@@ -3,9 +3,9 @@ package identity
 import (
 	"net/http"
 
-	forgehttp "github.com/forgego/forge/server"
 	"github.com/forgego/forge/identity/handlers"
 	"github.com/forgego/forge/identity/middleware"
+	forgehttp "github.com/forgego/forge/server"
 )
 
 // RegisterRoutes registers all user system routes
@@ -13,7 +13,12 @@ func (us *IdentitySystem) RegisterRoutes(router *forgehttp.Router) {
 	// Create handlers
 	userHandler := handlers.NewUserHandler(us.UserService)
 	authHandler := handlers.NewAuthHandler(us.AuthService, us.UserService, us.BackendRegistry)
-	authMiddleware := middleware.NewAuthenticationMiddleware(us.BackendRegistry, us.SessionRepo, us.UserRepo)
+	authMiddleware := middleware.NewAuthenticationMiddlewareWithPermissionService(
+		us.BackendRegistry,
+		us.SessionRepo,
+		us.UserRepo,
+		us.PermissionService,
+	)
 
 	// Auth routes (public)
 	router.Route("/api/auth", func(sub *forgehttp.Router) {

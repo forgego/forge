@@ -26,7 +26,7 @@ type PostgresOpts struct {
 	DockerHost  string // Optional: Docker endpoint (e.g., "tcp://localhost:2375" or "unix:///var/run/docker.sock")
 
 	// Direct connection options (if set, skips container creation)
-	Host      string // Database host (e.g., "192.168.132.50")
+	Host      string // Database host (e.g., "127.0.0.1")
 	Port      string // Database port (e.g., "5432")
 	UseDirect bool   // If true, connect directly without creating container
 }
@@ -43,32 +43,13 @@ func DefaultPostgresOpts() PostgresOpts {
 func DefaultPostgresOptsWithTest(testName string) PostgresOpts {
 	opts := PostgresOpts{
 		Version:     "15",
-		User:        "testuser",
-		Password:    "testpass",
+		User:        "postgres",
+		Password:    "123",
 		DBName:      "testdb",
 		WaitTimeout: 30 * time.Second,
-	}
-
-	// Check for direct connection environment variables
-	host := os.Getenv("POSTGRES_HOST")
-	if host == "" {
-		// Default to localhost if not set
-		host = "localhost"
-	}
-
-	opts.UseDirect = true
-	opts.Host = host
-	opts.Port = os.Getenv("POSTGRES_PORT")
-	if opts.Port == "" {
-		opts.Port = "5432"
-	}
-	opts.User = os.Getenv("POSTGRES_USER")
-	if opts.User == "" {
-		opts.User = "postgres"
-	}
-	opts.Password = os.Getenv("POSTGRES_PASSWORD")
-	if opts.Password == "" {
-		opts.Password = "123" // Default to local password
+		UseDirect:   true,
+		Host:        "127.0.0.1",
+		Port:        "5432",
 	}
 
 	// Always generate unique DB name to avoid state pollution
@@ -330,7 +311,7 @@ func StartSQLiteMemory(dsn string) (*sql.DB, error) {
 func startDirectPostgresConnection(ctx context.Context, opts PostgresOpts) (*sql.DB, string, func() error, error) {
 	host := opts.Host
 	if host == "" {
-		host = "localhost"
+		host = "127.0.0.1"
 	}
 	port := opts.Port
 	if port == "" {
@@ -414,7 +395,30 @@ func startDirectPostgresConnection(ctx context.Context, opts PostgresOpts) (*sql
 	}
 
 	cleanup := func() error {
-		return db.Close()
+		// Close main connection first
+		if err := db.Close(); err != nil {
+			fmt.Printf("Error closing DB connection: %v\n", err)
+		}
+
+		// Connect to default DB to drop test DB
+		defaultDSN := fmt.Sprintf("postgres://%s:%s@%s:%s/postgres?sslmode=disable",
+			user, password, host, port)
+		defaultDB, err := sql.Open("postgres", defaultDSN)
+		if err != nil {
+			return fmt.Errorf("failed to open default database connection for cleanup: %w", err)
+		}
+		defer defaultDB.Close()
+
+		// Drop database
+		fmt.Printf("[DEBUG] Dropping database %s...\n", dbName)
+		// Try with FORCE (Postgres 13+)
+		_, err = defaultDB.ExecContext(context.Background(), fmt.Sprintf("DROP DATABASE IF EXISTS %s WITH (FORCE)", dbName))
+		if err != nil {
+			// Fallback for older versions or if FORCE syntax fails
+			fmt.Printf("[DEBUG] DROP WITH FORCE failed: %v. Retrying without FORCE...\n", err)
+			_, err = defaultDB.ExecContext(context.Background(), fmt.Sprintf("DROP DATABASE IF EXISTS %s", dbName))
+		}
+		return err
 	}
 
 	return db, dsn, cleanup, nil

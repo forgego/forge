@@ -63,20 +63,10 @@ func (tf TypedField[T]) Required() TypedField[T] {
 	return tf
 }
 
-// WithRequired is an alias for Required.
-func (tf TypedField[T]) WithRequired() TypedField[T] {
-	return tf.Required()
-}
-
 // ReadOnly marks a field as read-only
 func (tf TypedField[T]) ReadOnly() TypedField[T] {
 	tf.readOnly = true
 	return tf
-}
-
-// WithReadOnly is an alias for ReadOnly.
-func (tf TypedField[T]) WithReadOnly() TypedField[T] {
-	return tf.ReadOnly()
 }
 
 // WriteOnly marks a field as write-only
@@ -85,20 +75,10 @@ func (tf TypedField[T]) WriteOnly() TypedField[T] {
 	return tf
 }
 
-// WithWriteOnly is an alias for WriteOnly.
-func (tf TypedField[T]) WithWriteOnly() TypedField[T] {
-	return tf.WriteOnly()
-}
-
 // Default sets a default value
 func (tf TypedField[T]) Default(value interface{}) TypedField[T] {
 	tf.defaultValue = value
 	return tf
-}
-
-// WithDefault is an alias for Default.
-func (tf TypedField[T]) WithDefault(value interface{}) TypedField[T] {
-	return tf.Default(value)
 }
 
 // AddField adds a field to the serializer

@@ -7,10 +7,11 @@ import (
 	"strings"
 
 	"github.com/forgego/forge/api/core"
-	forgehttp "github.com/forgego/forge/server"
 	"github.com/forgego/forge/identity/backends"
 	"github.com/forgego/forge/identity/models"
 	"github.com/forgego/forge/identity/repository"
+	"github.com/forgego/forge/identity/service"
+	forgehttp "github.com/forgego/forge/server"
 )
 
 // AuthenticationMiddleware authenticates requests
@@ -18,6 +19,7 @@ type AuthenticationMiddleware struct {
 	backendRegistry backends.BackendRegistry
 	sessionRepo     repository.SessionRepository
 	userRepo        repository.UserRepository
+	permissionSvc   service.PermissionService
 }
 
 // NewAuthenticationMiddleware creates a new authentication middleware
@@ -26,10 +28,21 @@ func NewAuthenticationMiddleware(
 	sessionRepo repository.SessionRepository,
 	userRepo repository.UserRepository,
 ) *AuthenticationMiddleware {
+	return NewAuthenticationMiddlewareWithPermissionService(backendRegistry, sessionRepo, userRepo, nil)
+}
+
+// NewAuthenticationMiddlewareWithPermissionService creates a new authentication middleware
+func NewAuthenticationMiddlewareWithPermissionService(
+	backendRegistry backends.BackendRegistry,
+	sessionRepo repository.SessionRepository,
+	userRepo repository.UserRepository,
+	permissionSvc service.PermissionService,
+) *AuthenticationMiddleware {
 	return &AuthenticationMiddleware{
 		backendRegistry: backendRegistry,
 		sessionRepo:     sessionRepo,
 		userRepo:        userRepo,
+		permissionSvc:   permissionSvc,
 	}
 }
 
@@ -134,8 +147,26 @@ func (m *AuthenticationMiddleware) RequirePermission(permission string) func(htt
 				return
 			}
 
-			// TODO: Check permission using PermissionService
-			// For now, just check if user is staff
+			if !user.IsActive {
+				forgehttp.SendError(w, http.StatusForbidden, "Permission denied")
+				return
+			}
+
+			if m.permissionSvc != nil {
+				hasPermission, err := m.permissionSvc.CheckPermission(ctx, user.ID, permission)
+				if err != nil {
+					forgehttp.SendError(w, http.StatusInternalServerError, "Permission check failed")
+					return
+				}
+				if !hasPermission {
+					forgehttp.SendError(w, http.StatusForbidden, "Permission denied")
+					return
+				}
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// Backward-compatible fallback for setups that haven't wired PermissionService yet.
 			if !user.IsStaff {
 				forgehttp.SendError(w, http.StatusForbidden, "Permission denied")
 				return

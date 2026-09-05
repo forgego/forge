@@ -1,7 +1,7 @@
 package state
 
 import (
-	"github.com/forgego/forge/codegen"
+	generator "github.com/forgego/forge/codegen"
 )
 
 // ToModelDefinitions converts state back to ModelDefinitions (for comparison)

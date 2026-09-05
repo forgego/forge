@@ -414,7 +414,30 @@ func startDirectPostgresConnection(ctx context.Context, opts PostgresOpts) (*sql
 	}
 
 	cleanup := func() error {
-		return db.Close()
+		// Close main connection first
+		if err := db.Close(); err != nil {
+			fmt.Printf("Error closing DB connection: %v\n", err)
+		}
+
+		// Connect to default DB to drop test DB
+		defaultDSN := fmt.Sprintf("postgres://%s:%s@%s:%s/postgres?sslmode=disable",
+			user, password, host, port)
+		defaultDB, err := sql.Open("postgres", defaultDSN)
+		if err != nil {
+			return fmt.Errorf("failed to open default database connection for cleanup: %w", err)
+		}
+		defer defaultDB.Close()
+
+		// Drop database
+		fmt.Printf("[DEBUG] Dropping database %s...\n", dbName)
+		// Try with FORCE (Postgres 13+)
+		_, err = defaultDB.ExecContext(context.Background(), fmt.Sprintf("DROP DATABASE IF EXISTS %s WITH (FORCE)", dbName))
+		if err != nil {
+			// Fallback for older versions or if FORCE syntax fails
+			fmt.Printf("[DEBUG] DROP WITH FORCE failed: %v. Retrying without FORCE...\n", err)
+			_, err = defaultDB.ExecContext(context.Background(), fmt.Sprintf("DROP DATABASE IF EXISTS %s", dbName))
+		}
+		return err
 	}
 
 	return db, dsn, cleanup, nil

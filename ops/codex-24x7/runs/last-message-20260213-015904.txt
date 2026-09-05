@@ -1,0 +1,12 @@
+Implemented one focused high-impact batch in identity auth reliability and TODO debt:
+
+- Closed password-reset delivery TODO by adding notifier support in `forge/identity/service/password.go:19`, `forge/identity/service/password.go:45`, `forge/identity/service/password.go:129`.
+- Fixed broken hashed-token reset flow in `forge/identity/repository/token.go:132`, `forge/identity/repository/token.go:162`, `forge/identity/repository/token.go:189`.
+- Fixed token cleanup after reset to delete the persisted token value in `forge/identity/service/password.go:186`.
+- Added regression and behavior tests in `forge/identity/service/password_test.go:18`, `forge/identity/service/password_test.go:186`, `forge/identity/service/password_test.go:198`, `forge/identity/service/password_test.go:258`.
+- Updated run tracking in `ops/codex-24x7/STATUS.md:4` and appended history in `ops/codex-24x7/HISTORY.md`.
+
+Validation run:
+
+- `go test ./identity/... -count=1` in `forge` passed.
+- `go test ./... -count=1` in `examples/ecommerce` passed.

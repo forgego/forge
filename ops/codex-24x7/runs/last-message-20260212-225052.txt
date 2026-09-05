@@ -1,0 +1,34 @@
+Implemented one focused high-impact batch on admin REST bulk-create reliability.
+
+Changed files:
+- `forge/admin/api/rest/router.go:548`
+  - Replaced bulk-create TODO with full implementation:
+    - accepts `[]object` or `{ "objects": [] }`
+    - validates payload shape and non-empty batch
+    - validates each item is a non-empty object
+    - performs best-effort `CreateObject` calls
+    - returns `201` on full success, `207` on partial success, and terminal error responses when none are created
+- `forge/admin/api/rest/router.go:846`
+  - Added `bulkItemError` response struct for per-item failures
+- `forge/admin/api/rest/router_test.go:257`
+  - Added tests:
+    - `TestHandleBulkCreate_CreatesObjects`
+    - `TestHandleBulkCreate_ReturnsMultiStatusOnPartialFailures`
+    - `TestHandleBulkCreate_RejectsInvalidPayloadShape`
+    - `TestHandleBulkCreate_RejectsEmptyArray`
+    - `TestHandleBulkCreate_ReturnsServerErrorWhenAllCreatesFail`
+- `ops/codex-24x7/STATUS.md:3`
+  - Updated Completed this run / Remaining work / Next run plan
+- `ops/codex-24x7/HISTORY.md:47`
+  - Appended concise run log for this batch
+
+Tests run:
+- `go test ./admin/api/rest` in `forge` (pass)
+- `go test ./...` in `examples/ecommerce` (pass; no test files in ecommerce packages)
+
+Note:
+- `git status` could not be executed due repository safe-directory ownership mismatch (`dubious ownership`), but code/test/doc updates were completed successfully.
+
+Next logical steps:
+1. Implement `handleBulkUpdate` with the same validation/partial-failure rigor and tests.
+2. Add at least one executable ecommerce test (smoke/integration) to move beyond compile-only parity.

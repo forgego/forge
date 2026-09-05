@@ -9,9 +9,9 @@ type Author struct {
 
 func (Author) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("name").WithRequired().WithMaxLength(255),
-		schema.String("email").WithRequired().WithMaxLength(255).WithUnique(),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("name").Required().MaxLength(255).Build(),
+		schema.String("email").Required().MaxLength(255).Unique().Build(),
 	}
 }
 
@@ -32,10 +32,10 @@ type Article struct {
 
 func (Article) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("title").WithRequired().WithMaxLength(200),
-		schema.Text("body"),
-		schema.Int64("author_id").WithRequired(),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("title").Required().MaxLength(200).Build(),
+		schema.Text("body").Build(),
+		schema.Int64("author_id").Required().Build(),
 	}
 }
 
@@ -47,7 +47,7 @@ func (Article) Meta() schema.Meta {
 
 func (Article) Relations() []schema.Relation {
 	return []schema.Relation{
-		schema.ForeignKey("author_id", "Author").WithOnDelete("CASCADE"),
+		schema.ForeignKey("author_id", "Author").OnDelete("CASCADE").Build(),
 	}
 }
 
@@ -58,10 +58,10 @@ type Profile struct {
 
 func (Profile) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.Text("bio"),
-		schema.String("website").WithMaxLength(255),
-		schema.Int64("author_id").WithRequired().WithUnique(),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.Text("bio").Build(),
+		schema.String("website").MaxLength(255).Build(),
+		schema.Int64("author_id").Required().Unique().Build(),
 	}
 }
 
@@ -73,7 +73,7 @@ func (Profile) Meta() schema.Meta {
 
 func (Profile) Relations() []schema.Relation {
 	return []schema.Relation{
-		schema.OneToOne("author_id", "Author").WithOnDelete("CASCADE"),
+		schema.OneToOne("author_id", "Author").OnDelete("CASCADE").Build(),
 	}
 }
 
@@ -84,9 +84,9 @@ type Tag struct {
 
 func (Tag) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("name").WithRequired().WithMaxLength(100).WithUnique(),
-		schema.String("slug").WithRequired().WithMaxLength(100).WithUnique(),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("name").Required().MaxLength(100).Unique().Build(),
+		schema.String("slug").Required().MaxLength(100).Unique().Build(),
 	}
 }
 
@@ -107,9 +107,9 @@ type ArticleTag struct {
 
 func (ArticleTag) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.Int64("article_id").WithRequired(),
-		schema.Int64("tag_id").WithRequired(),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.Int64("article_id").Required().Build(),
+		schema.Int64("tag_id").Required().Build(),
 	}
 }
 
@@ -117,14 +117,14 @@ func (ArticleTag) Meta() schema.Meta {
 	return schema.Meta{
 		TableName: "article_tags",
 		Indexes: []schema.Index{
-			schema.Index("article_id", "tag_id").WithUnique(),
+			schema.Index("article_id", "tag_id").Unique().Build(),
 		},
 	}
 }
 
 func (ArticleTag) Relations() []schema.Relation {
 	return []schema.Relation{
-		schema.ForeignKey("article_id", "Article").WithOnDelete("CASCADE"),
-		schema.ForeignKey("tag_id", "Tag").WithOnDelete("CASCADE"),
+		schema.ForeignKey("article_id", "Article").OnDelete("CASCADE").Build(),
+		schema.ForeignKey("tag_id", "Tag").OnDelete("CASCADE").Build(),
 	}
 }

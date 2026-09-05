@@ -36,9 +36,9 @@ type User struct {
 
 func (User) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("username").WithRequired().WithMaxLength(150),
-		schema.String("email").WithRequired().WithMaxLength(254).WithUnique(),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("username").Required().MaxLength(150).Build(),
+		schema.String("email").Required().MaxLength(254).Unique().Build(),
 	}
 }
 

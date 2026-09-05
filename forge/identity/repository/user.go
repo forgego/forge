@@ -68,7 +68,7 @@ func (r *userRepository) Create(ctx context.Context, user *models.User) error {
 		user.UpdatedAt = now
 	}
 
-	err := r.db.QueryRowContext(ctx, r.db.RebindPlaceholders(query),
+	err := r.db.QueryRowContext(ctx, query,
 		normalizeUsername(user.Username),
 		normalizeEmail(user.Email),
 		user.Password,
@@ -120,7 +120,7 @@ func (r *userRepository) GetByID(ctx context.Context, id int64) (*models.User, e
 	var firstName, lastName, phoneNumber, timezone, locale, language sql.NullString
 	var bio, website, location, avatar, lockedReason sql.NullString
 
-	err := r.db.QueryRowContext(ctx, r.db.RebindPlaceholders(query), id).Scan(
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&user.ID, &user.Username, &user.Email, &user.Password,
 		&firstName, &lastName,
 		&user.IsActive, &user.IsStaff, &user.IsSuperuser, &user.IsLocked, &user.EmailVerified,
@@ -176,7 +176,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*models.
 	var firstName, lastName, phoneNumber, timezone, locale, language sql.NullString
 	var bio, website, location, avatar, lockedReason sql.NullString
 
-	err := r.db.QueryRowContext(ctx, r.db.RebindPlaceholders(query), normalizedEmail).Scan(
+	err := r.db.QueryRowContext(ctx, query, normalizedEmail).Scan(
 		&user.ID, &user.Username, &user.Email, &user.Password,
 		&firstName, &lastName,
 		&user.IsActive, &user.IsStaff, &user.IsSuperuser, &user.IsLocked, &user.EmailVerified,
@@ -232,7 +232,7 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string) (*m
 	var firstName, lastName, phoneNumber, timezone, locale, language sql.NullString
 	var bio, website, location, avatar, lockedReason sql.NullString
 
-	err := r.db.QueryRowContext(ctx, r.db.RebindPlaceholders(query), normalizedUsername).Scan(
+	err := r.db.QueryRowContext(ctx, query, normalizedUsername).Scan(
 		&user.ID, &user.Username, &user.Email, &user.Password,
 		&firstName, &lastName,
 		&user.IsActive, &user.IsStaff, &user.IsSuperuser, &user.IsLocked, &user.EmailVerified,
@@ -283,7 +283,7 @@ func (r *userRepository) Update(ctx context.Context, user *models.User) error {
 		WHERE id = $1 AND deleted_at IS NULL
 	`
 
-	result, err := r.db.ExecContext(ctx, r.db.RebindPlaceholders(query),
+	result, err := r.db.ExecContext(ctx, query,
 		user.ID,
 		normalizeUsername(user.Username),
 		normalizeEmail(user.Email),
@@ -337,7 +337,7 @@ func (r *userRepository) Delete(ctx context.Context, id int64) error {
 	query := `UPDATE users SET deleted_at = $1 WHERE id = $2 AND deleted_at IS NULL`
 
 	now := time.Now()
-	result, err := r.db.ExecContext(ctx, r.db.RebindPlaceholders(query), now, id)
+	result, err := r.db.ExecContext(ctx, query, now, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
 	}
@@ -443,7 +443,7 @@ func (r *userRepository) List(ctx context.Context, filters *UserFilters) ([]*mod
 		args = append(args, filters.Offset)
 	}
 
-	rows, err := r.db.QueryContext(ctx, r.db.RebindPlaceholders(query), args...)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list users: %w", err)
 	}
@@ -556,7 +556,7 @@ func (r *userRepository) Count(ctx context.Context, filters *UserFilters) (int64
 	query := "SELECT COUNT(*) FROM users WHERE " + strings.Join(conditions, " AND ")
 
 	var count int64
-	err := r.db.QueryRowContext(ctx, r.db.RebindPlaceholders(query), args...).Scan(&count)
+	err := r.db.QueryRowContext(ctx, query, args...).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count users: %w", err)
 	}
@@ -569,7 +569,7 @@ func (r *userRepository) Exists(ctx context.Context, email string) (bool, error)
 	query := `SELECT EXISTS(SELECT 1 FROM users WHERE email = $1 AND deleted_at IS NULL)`
 
 	var exists bool
-	err := r.db.QueryRowContext(ctx, r.db.RebindPlaceholders(query), normalizeEmail(email)).Scan(&exists)
+	err := r.db.QueryRowContext(ctx, query, normalizeEmail(email)).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("failed to check if user exists: %w", err)
 	}
@@ -582,7 +582,7 @@ func (r *userRepository) ExistsUsername(ctx context.Context, username string) (b
 	query := `SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 AND deleted_at IS NULL)`
 
 	var exists bool
-	err := r.db.QueryRowContext(ctx, r.db.RebindPlaceholders(query), normalizeUsername(username)).Scan(&exists)
+	err := r.db.QueryRowContext(ctx, query, normalizeUsername(username)).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("failed to check if username exists: %w", err)
 	}

@@ -17,26 +17,17 @@ type MockModel struct {
 
 func (MockModel) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("username").WithRequired().WithMaxLength(100),
-		schema.String("email").WithRequired().WithMaxLength(255),
-		schema.Bool("is_active").WithDefault(true),
+		schema.Int64Field("id", schema.Primary()),
+		schema.StringField("username"),
+		schema.StringField("email"),
+		schema.BoolField("is_active"),
 	}
-}
-
-func (MockModel) Relations() []schema.Relation {
-	return []schema.Relation{}
 }
 
 func (MockModel) Meta() schema.Meta {
-	return schema.Meta{
-		TableName: "mock_models",
-	}
+	return schema.Meta{TableName: "mock_models"}
 }
 
-func (MockModel) Hooks() *schema.ModelHooks {
-	return nil
-}
 
 func TestFilterSet_NewFilterSet(t *testing.T) {
 	fs, err := NewFilterSet[MockModel]()

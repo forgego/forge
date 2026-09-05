@@ -5,9 +5,9 @@ import (
 	"strconv"
 
 	"github.com/forgego/forge/api"
-	forgehttp "github.com/forgego/forge/server"
 	"github.com/forgego/forge/identity/serializers"
 	"github.com/forgego/forge/identity/service"
+	forgehttp "github.com/forgego/forge/server"
 )
 
 // UserHandler handles user management endpoints

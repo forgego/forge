@@ -1,0 +1,20 @@
+Implemented one focused high-impact batch on API/server auth reliability by closing the permission-check TODO in identity middleware.
+
+Changed files:
+- `forge/identity/middleware/auth.go:18`
+- `forge/identity/router.go:16`
+- `forge/identity/middleware/auth_test.go:1`
+- `ops/codex-24x7/STATUS.md:3`
+- `ops/codex-24x7/HISTORY.md:100`
+
+What changed:
+- Replaced `RequirePermission`’s staff-only TODO path with real `PermissionService.CheckPermission` enforcement in `forge/identity/middleware/auth.go:155`.
+- Added `NewAuthenticationMiddlewareWithPermissionService(...)` while keeping `NewAuthenticationMiddleware(...)` backward compatible in `forge/identity/middleware/auth.go:25`.
+- Wired identity route registration to pass `us.PermissionService` in `forge/identity/router.go:16`.
+- Added new middleware tests for allow/deny/error/superuser paths in `forge/identity/middleware/auth_test.go:47`.
+- Updated run tracking in `ops/codex-24x7/STATUS.md:3` and appended run log in `ops/codex-24x7/HISTORY.md:100`.
+
+Tests run:
+- `go test ./identity/middleware` (pass)
+- `go test ./...` in `examples/ecommerce` (pass, no test files)
+- `go test ./identity/...` (fails in existing `identity/repository` DB isolation with duplicate DB-name constraint; recorded in status/history)

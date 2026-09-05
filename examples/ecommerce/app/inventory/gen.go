@@ -2,15 +2,43 @@
 package inventory
 
 import (
-	"github.com/forgego/forge/orm"
-	"github.com/forgego/forge/validate"
 	"time"
+	"github.com/forgego/forge/orm"
+	"github.com/forgego/forge/schema"
+	validate "github.com/forgego/forge/validate"
 )
+
+
+// WarehouseGenerated struct definition
+type WarehouseGenerated struct {
+	schema.BaseSchema
+	Id int64 `json:"id" db:"id" validate:""`
+	Name string `json:"name" db:"name" validate:""`
+	Code string `json:"code" db:"code" validate:""`
+	ContactName string `json:"contact_name" db:"contact_name" validate:""`
+	ContactEmail string `json:"contact_email" db:"contact_email" validate:""`
+	ContactPhone string `json:"contact_phone" db:"contact_phone" validate:""`
+	AddressLine1 string `json:"address_line1" db:"address_line1" validate:""`
+	AddressLine2 string `json:"address_line2" db:"address_line2" validate:""`
+	City string `json:"city" db:"city" validate:""`
+	State string `json:"state" db:"state" validate:""`
+	PostalCode string `json:"postal_code" db:"postal_code" validate:""`
+	CountryCode string `json:"country_code" db:"country_code" validate:""`
+	CountryName string `json:"country_name" db:"country_name" validate:""`
+	Latitude float64 `json:"latitude" db:"latitude" validate:""`
+	Longitude float64 `json:"longitude" db:"longitude" validate:""`
+	IsActive bool `json:"is_active" db:"is_active" validate:""`
+	IsPrimary bool `json:"is_primary" db:"is_primary" validate:""`
+	Priority int32 `json:"priority" db:"priority" validate:""`
+	TotalCapacity int32 `json:"total_capacity" db:"total_capacity" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+}
 
 // Validate validates the Warehouse model
 func (m *Warehouse) Validate() error {
-	validator := validation.NewValidator()
-	return validation.ValidateModel(validator, m)
+	validator := validate.NewValidator()
+	return validate.ValidateModel(validator, m)
 }
 
 // WarehouseObjects provides type-safe operations for Warehouse
@@ -19,57 +47,79 @@ var WarehouseObjects, _ = orm.NewManager[Warehouse]("warehouses")
 
 // WarehouseFields provides type-safe field access for Warehouse
 type WarehouseFields struct {
-	Id            orm.FieldExpression[int64]
-	Name          orm.FieldExpression[string]
-	Code          orm.FieldExpression[string]
-	ContactName   orm.FieldExpression[string]
-	ContactEmail  orm.FieldExpression[string]
-	ContactPhone  orm.FieldExpression[string]
-	AddressLine1  orm.FieldExpression[string]
-	AddressLine2  orm.FieldExpression[string]
-	City          orm.FieldExpression[string]
-	State         orm.FieldExpression[string]
-	PostalCode    orm.FieldExpression[string]
-	CountryCode   orm.FieldExpression[string]
-	CountryName   orm.FieldExpression[string]
-	Latitude      orm.FieldExpression[float64]
-	Longitude     orm.FieldExpression[float64]
-	IsActive      orm.FieldExpression[bool]
-	IsPrimary     orm.FieldExpression[bool]
-	Priority      orm.FieldExpression[int32]
-	TotalCapacity orm.FieldExpression[int32]
-	CreatedAt     orm.FieldExpression[time.Time]
-	UpdatedAt     orm.FieldExpression[time.Time]
+	Id orm.Field[int64]
+	Name orm.Field[string]
+	Code orm.Field[string]
+	ContactName orm.Field[string]
+	ContactEmail orm.Field[string]
+	ContactPhone orm.Field[string]
+	AddressLine1 orm.Field[string]
+	AddressLine2 orm.Field[string]
+	City orm.Field[string]
+	State orm.Field[string]
+	PostalCode orm.Field[string]
+	CountryCode orm.Field[string]
+	CountryName orm.Field[string]
+	Latitude orm.Field[float64]
+	Longitude orm.Field[float64]
+	IsActive orm.Field[bool]
+	IsPrimary orm.Field[bool]
+	Priority orm.Field[int32]
+	TotalCapacity orm.Field[int32]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
 }
 
 var WarehouseFieldsInstance = WarehouseFields{
-	Id:            orm.NewField[int64]("id", "warehouses"),
-	Name:          orm.NewField[string]("name", "warehouses"),
-	Code:          orm.NewField[string]("code", "warehouses"),
-	ContactName:   orm.NewField[string]("contact_name", "warehouses"),
-	ContactEmail:  orm.NewField[string]("contact_email", "warehouses"),
-	ContactPhone:  orm.NewField[string]("contact_phone", "warehouses"),
-	AddressLine1:  orm.NewField[string]("address_line1", "warehouses"),
-	AddressLine2:  orm.NewField[string]("address_line2", "warehouses"),
-	City:          orm.NewField[string]("city", "warehouses"),
-	State:         orm.NewField[string]("state", "warehouses"),
-	PostalCode:    orm.NewField[string]("postal_code", "warehouses"),
-	CountryCode:   orm.NewField[string]("country_code", "warehouses"),
-	CountryName:   orm.NewField[string]("country_name", "warehouses"),
-	Latitude:      orm.NewField[float64]("latitude", "warehouses"),
-	Longitude:     orm.NewField[float64]("longitude", "warehouses"),
-	IsActive:      orm.NewField[bool]("is_active", "warehouses"),
-	IsPrimary:     orm.NewField[bool]("is_primary", "warehouses"),
-	Priority:      orm.NewField[int32]("priority", "warehouses"),
+	Id: orm.NewField[int64]("id", "warehouses"),
+	Name: orm.NewField[string]("name", "warehouses"),
+	Code: orm.NewField[string]("code", "warehouses"),
+	ContactName: orm.NewField[string]("contact_name", "warehouses"),
+	ContactEmail: orm.NewField[string]("contact_email", "warehouses"),
+	ContactPhone: orm.NewField[string]("contact_phone", "warehouses"),
+	AddressLine1: orm.NewField[string]("address_line1", "warehouses"),
+	AddressLine2: orm.NewField[string]("address_line2", "warehouses"),
+	City: orm.NewField[string]("city", "warehouses"),
+	State: orm.NewField[string]("state", "warehouses"),
+	PostalCode: orm.NewField[string]("postal_code", "warehouses"),
+	CountryCode: orm.NewField[string]("country_code", "warehouses"),
+	CountryName: orm.NewField[string]("country_name", "warehouses"),
+	Latitude: orm.NewField[float64]("latitude", "warehouses"),
+	Longitude: orm.NewField[float64]("longitude", "warehouses"),
+	IsActive: orm.NewField[bool]("is_active", "warehouses"),
+	IsPrimary: orm.NewField[bool]("is_primary", "warehouses"),
+	Priority: orm.NewField[int32]("priority", "warehouses"),
 	TotalCapacity: orm.NewField[int32]("total_capacity", "warehouses"),
-	CreatedAt:     orm.NewField[time.Time]("created_at", "warehouses"),
-	UpdatedAt:     orm.NewField[time.Time]("updated_at", "warehouses"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "warehouses"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "warehouses"),
+}
+
+
+
+
+// StockGenerated struct definition
+type StockGenerated struct {
+	schema.BaseSchema
+	Id int64 `json:"id" db:"id" validate:""`
+	ProductVariantId int64 `json:"product_variant_id" db:"product_variant_id" validate:""`
+	WarehouseId int64 `json:"warehouse_id" db:"warehouse_id" validate:""`
+	Quantity int32 `json:"quantity" db:"quantity" validate:""`
+	ReservedQuantity int32 `json:"reserved_quantity" db:"reserved_quantity" validate:""`
+	AvailableQuantity int32 `json:"available_quantity" db:"available_quantity" validate:""`
+	ReorderPoint int32 `json:"reorder_point" db:"reorder_point" validate:""`
+	ReorderQuantity int32 `json:"reorder_quantity" db:"reorder_quantity" validate:""`
+	BinLocation string `json:"bin_location" db:"bin_location" validate:""`
+	IsActive bool `json:"is_active" db:"is_active" validate:""`
+	AllowBackorder bool `json:"allow_backorder" db:"allow_backorder" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	LastCountedAt time.Time `json:"last_counted_at" db:"last_counted_at" validate:""`
 }
 
 // Validate validates the Stock model
 func (m *Stock) Validate() error {
-	validator := validation.NewValidator()
-	return validation.ValidateModel(validator, m)
+	validator := validate.NewValidator()
+	return validate.ValidateModel(validator, m)
 }
 
 // StockObjects provides type-safe operations for Stock
@@ -78,43 +128,72 @@ var StockObjects, _ = orm.NewManager[Stock]("stock")
 
 // StockFields provides type-safe field access for Stock
 type StockFields struct {
-	Id                orm.FieldExpression[int64]
-	ProductVariantId  orm.FieldExpression[int64]
-	WarehouseId       orm.FieldExpression[int64]
-	Quantity          orm.FieldExpression[int32]
-	ReservedQuantity  orm.FieldExpression[int32]
-	AvailableQuantity orm.FieldExpression[int32]
-	ReorderPoint      orm.FieldExpression[int32]
-	ReorderQuantity   orm.FieldExpression[int32]
-	BinLocation       orm.FieldExpression[string]
-	IsActive          orm.FieldExpression[bool]
-	AllowBackorder    orm.FieldExpression[bool]
-	CreatedAt         orm.FieldExpression[time.Time]
-	UpdatedAt         orm.FieldExpression[time.Time]
-	LastCountedAt     orm.FieldExpression[time.Time]
+	Id orm.Field[int64]
+	ProductVariantId orm.Field[int64]
+	WarehouseId orm.Field[int64]
+	Quantity orm.Field[int32]
+	ReservedQuantity orm.Field[int32]
+	AvailableQuantity orm.Field[int32]
+	ReorderPoint orm.Field[int32]
+	ReorderQuantity orm.Field[int32]
+	BinLocation orm.Field[string]
+	IsActive orm.Field[bool]
+	AllowBackorder orm.Field[bool]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
+	LastCountedAt orm.Field[time.Time]
 }
 
 var StockFieldsInstance = StockFields{
-	Id:                orm.NewField[int64]("id", "stock"),
-	ProductVariantId:  orm.NewField[int64]("product_variant_id", "stock"),
-	WarehouseId:       orm.NewField[int64]("warehouse_id", "stock"),
-	Quantity:          orm.NewField[int32]("quantity", "stock"),
-	ReservedQuantity:  orm.NewField[int32]("reserved_quantity", "stock"),
+	Id: orm.NewField[int64]("id", "stock"),
+	ProductVariantId: orm.NewField[int64]("product_variant_id", "stock"),
+	WarehouseId: orm.NewField[int64]("warehouse_id", "stock"),
+	Quantity: orm.NewField[int32]("quantity", "stock"),
+	ReservedQuantity: orm.NewField[int32]("reserved_quantity", "stock"),
 	AvailableQuantity: orm.NewField[int32]("available_quantity", "stock"),
-	ReorderPoint:      orm.NewField[int32]("reorder_point", "stock"),
-	ReorderQuantity:   orm.NewField[int32]("reorder_quantity", "stock"),
-	BinLocation:       orm.NewField[string]("bin_location", "stock"),
-	IsActive:          orm.NewField[bool]("is_active", "stock"),
-	AllowBackorder:    orm.NewField[bool]("allow_backorder", "stock"),
-	CreatedAt:         orm.NewField[time.Time]("created_at", "stock"),
-	UpdatedAt:         orm.NewField[time.Time]("updated_at", "stock"),
-	LastCountedAt:     orm.NewField[time.Time]("last_counted_at", "stock"),
+	ReorderPoint: orm.NewField[int32]("reorder_point", "stock"),
+	ReorderQuantity: orm.NewField[int32]("reorder_quantity", "stock"),
+	BinLocation: orm.NewField[string]("bin_location", "stock"),
+	IsActive: orm.NewField[bool]("is_active", "stock"),
+	AllowBackorder: orm.NewField[bool]("allow_backorder", "stock"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "stock"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "stock"),
+	LastCountedAt: orm.NewField[time.Time]("last_counted_at", "stock"),
+}
+
+
+
+
+// StockMovementGenerated struct definition
+type StockMovementGenerated struct {
+	schema.BaseSchema
+	Id int64 `json:"id" db:"id" validate:""`
+	StockId int64 `json:"stock_id" db:"stock_id" validate:""`
+	ProductVariantId int64 `json:"product_variant_id" db:"product_variant_id" validate:""`
+	WarehouseId int64 `json:"warehouse_id" db:"warehouse_id" validate:""`
+	Type string `json:"type" db:"type" validate:""`
+	Quantity int32 `json:"quantity" db:"quantity" validate:""`
+	QuantityBefore int32 `json:"quantity_before" db:"quantity_before" validate:""`
+	QuantityAfter int32 `json:"quantity_after" db:"quantity_after" validate:""`
+	ReferenceType string `json:"reference_type" db:"reference_type" validate:""`
+	ReferenceId int64 `json:"reference_id" db:"reference_id" validate:""`
+	ReferenceNumber string `json:"reference_number" db:"reference_number" validate:""`
+	FromWarehouseId int64 `json:"from_warehouse_id" db:"from_warehouse_id" validate:""`
+	ToWarehouseId int64 `json:"to_warehouse_id" db:"to_warehouse_id" validate:""`
+	Reason string `json:"reason" db:"reason" validate:""`
+	Notes string `json:"notes" db:"notes" validate:""`
+	UserId int64 `json:"user_id" db:"user_id" validate:""`
+	UserName string `json:"user_name" db:"user_name" validate:""`
+	UnitCost float64 `json:"unit_cost" db:"unit_cost" validate:""`
+	TotalCost float64 `json:"total_cost" db:"total_cost" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	MovementDate time.Time `json:"movement_date" db:"movement_date" validate:""`
 }
 
 // Validate validates the StockMovement model
 func (m *StockMovement) Validate() error {
-	validator := validation.NewValidator()
-	return validation.ValidateModel(validator, m)
+	validator := validate.NewValidator()
+	return validate.ValidateModel(validator, m)
 }
 
 // StockMovementObjects provides type-safe operations for StockMovement
@@ -123,57 +202,82 @@ var StockMovementObjects, _ = orm.NewManager[StockMovement]("stock_movements")
 
 // StockMovementFields provides type-safe field access for StockMovement
 type StockMovementFields struct {
-	Id               orm.FieldExpression[int64]
-	StockId          orm.FieldExpression[int64]
-	ProductVariantId orm.FieldExpression[int64]
-	WarehouseId      orm.FieldExpression[int64]
-	Type             orm.FieldExpression[string]
-	Quantity         orm.FieldExpression[int32]
-	QuantityBefore   orm.FieldExpression[int32]
-	QuantityAfter    orm.FieldExpression[int32]
-	ReferenceType    orm.FieldExpression[string]
-	ReferenceId      orm.FieldExpression[int64]
-	ReferenceNumber  orm.FieldExpression[string]
-	FromWarehouseId  orm.FieldExpression[int64]
-	ToWarehouseId    orm.FieldExpression[int64]
-	Reason           orm.FieldExpression[string]
-	Notes            orm.FieldExpression[string]
-	UserId           orm.FieldExpression[int64]
-	UserName         orm.FieldExpression[string]
-	UnitCost         orm.FieldExpression[float64]
-	TotalCost        orm.FieldExpression[float64]
-	CreatedAt        orm.FieldExpression[time.Time]
-	MovementDate     orm.FieldExpression[time.Time]
+	Id orm.Field[int64]
+	StockId orm.Field[int64]
+	ProductVariantId orm.Field[int64]
+	WarehouseId orm.Field[int64]
+	Type orm.Field[string]
+	Quantity orm.Field[int32]
+	QuantityBefore orm.Field[int32]
+	QuantityAfter orm.Field[int32]
+	ReferenceType orm.Field[string]
+	ReferenceId orm.Field[int64]
+	ReferenceNumber orm.Field[string]
+	FromWarehouseId orm.Field[int64]
+	ToWarehouseId orm.Field[int64]
+	Reason orm.Field[string]
+	Notes orm.Field[string]
+	UserId orm.Field[int64]
+	UserName orm.Field[string]
+	UnitCost orm.Field[float64]
+	TotalCost orm.Field[float64]
+	CreatedAt orm.Field[time.Time]
+	MovementDate orm.Field[time.Time]
 }
 
 var StockMovementFieldsInstance = StockMovementFields{
-	Id:               orm.NewField[int64]("id", "stock_movements"),
-	StockId:          orm.NewField[int64]("stock_id", "stock_movements"),
+	Id: orm.NewField[int64]("id", "stock_movements"),
+	StockId: orm.NewField[int64]("stock_id", "stock_movements"),
 	ProductVariantId: orm.NewField[int64]("product_variant_id", "stock_movements"),
-	WarehouseId:      orm.NewField[int64]("warehouse_id", "stock_movements"),
-	Type:             orm.NewField[string]("type", "stock_movements"),
-	Quantity:         orm.NewField[int32]("quantity", "stock_movements"),
-	QuantityBefore:   orm.NewField[int32]("quantity_before", "stock_movements"),
-	QuantityAfter:    orm.NewField[int32]("quantity_after", "stock_movements"),
-	ReferenceType:    orm.NewField[string]("reference_type", "stock_movements"),
-	ReferenceId:      orm.NewField[int64]("reference_id", "stock_movements"),
-	ReferenceNumber:  orm.NewField[string]("reference_number", "stock_movements"),
-	FromWarehouseId:  orm.NewField[int64]("from_warehouse_id", "stock_movements"),
-	ToWarehouseId:    orm.NewField[int64]("to_warehouse_id", "stock_movements"),
-	Reason:           orm.NewField[string]("reason", "stock_movements"),
-	Notes:            orm.NewField[string]("notes", "stock_movements"),
-	UserId:           orm.NewField[int64]("user_id", "stock_movements"),
-	UserName:         orm.NewField[string]("user_name", "stock_movements"),
-	UnitCost:         orm.NewField[float64]("unit_cost", "stock_movements"),
-	TotalCost:        orm.NewField[float64]("total_cost", "stock_movements"),
-	CreatedAt:        orm.NewField[time.Time]("created_at", "stock_movements"),
-	MovementDate:     orm.NewField[time.Time]("movement_date", "stock_movements"),
+	WarehouseId: orm.NewField[int64]("warehouse_id", "stock_movements"),
+	Type: orm.NewField[string]("type", "stock_movements"),
+	Quantity: orm.NewField[int32]("quantity", "stock_movements"),
+	QuantityBefore: orm.NewField[int32]("quantity_before", "stock_movements"),
+	QuantityAfter: orm.NewField[int32]("quantity_after", "stock_movements"),
+	ReferenceType: orm.NewField[string]("reference_type", "stock_movements"),
+	ReferenceId: orm.NewField[int64]("reference_id", "stock_movements"),
+	ReferenceNumber: orm.NewField[string]("reference_number", "stock_movements"),
+	FromWarehouseId: orm.NewField[int64]("from_warehouse_id", "stock_movements"),
+	ToWarehouseId: orm.NewField[int64]("to_warehouse_id", "stock_movements"),
+	Reason: orm.NewField[string]("reason", "stock_movements"),
+	Notes: orm.NewField[string]("notes", "stock_movements"),
+	UserId: orm.NewField[int64]("user_id", "stock_movements"),
+	UserName: orm.NewField[string]("user_name", "stock_movements"),
+	UnitCost: orm.NewField[float64]("unit_cost", "stock_movements"),
+	TotalCost: orm.NewField[float64]("total_cost", "stock_movements"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "stock_movements"),
+	MovementDate: orm.NewField[time.Time]("movement_date", "stock_movements"),
+}
+
+
+
+
+// StockAlertGenerated struct definition
+type StockAlertGenerated struct {
+	schema.BaseSchema
+	Id int64 `json:"id" db:"id" validate:""`
+	StockId int64 `json:"stock_id" db:"stock_id" validate:""`
+	ProductVariantId int64 `json:"product_variant_id" db:"product_variant_id" validate:""`
+	WarehouseId int64 `json:"warehouse_id" db:"warehouse_id" validate:""`
+	AlertType string `json:"alert_type" db:"alert_type" validate:""`
+	CurrentQuantity int32 `json:"current_quantity" db:"current_quantity" validate:""`
+	Threshold int32 `json:"threshold" db:"threshold" validate:""`
+	Status string `json:"status" db:"status" validate:""`
+	ResolvedByUserId int64 `json:"resolved_by_user_id" db:"resolved_by_user_id" validate:""`
+	ResolvedByUserName string `json:"resolved_by_user_name" db:"resolved_by_user_name" validate:""`
+	ResolutionNotes string `json:"resolution_notes" db:"resolution_notes" validate:""`
+	NotificationSent bool `json:"notification_sent" db:"notification_sent" validate:""`
+	NotificationSentAt time.Time `json:"notification_sent_at" db:"notification_sent_at" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	AcknowledgedAt time.Time `json:"acknowledged_at" db:"acknowledged_at" validate:""`
+	ResolvedAt time.Time `json:"resolved_at" db:"resolved_at" validate:""`
 }
 
 // Validate validates the StockAlert model
 func (m *StockAlert) Validate() error {
-	validator := validation.NewValidator()
-	return validation.ValidateModel(validator, m)
+	validator := validate.NewValidator()
+	return validate.ValidateModel(validator, m)
 }
 
 // StockAlertObjects provides type-safe operations for StockAlert
@@ -182,49 +286,77 @@ var StockAlertObjects, _ = orm.NewManager[StockAlert]("stock_alerts")
 
 // StockAlertFields provides type-safe field access for StockAlert
 type StockAlertFields struct {
-	Id                 orm.FieldExpression[int64]
-	StockId            orm.FieldExpression[int64]
-	ProductVariantId   orm.FieldExpression[int64]
-	WarehouseId        orm.FieldExpression[int64]
-	AlertType          orm.FieldExpression[string]
-	CurrentQuantity    orm.FieldExpression[int32]
-	Threshold          orm.FieldExpression[int32]
-	Status             orm.FieldExpression[string]
-	ResolvedByUserId   orm.FieldExpression[int64]
-	ResolvedByUserName orm.FieldExpression[string]
-	ResolutionNotes    orm.FieldExpression[string]
-	NotificationSent   orm.FieldExpression[bool]
-	NotificationSentAt orm.FieldExpression[time.Time]
-	CreatedAt          orm.FieldExpression[time.Time]
-	UpdatedAt          orm.FieldExpression[time.Time]
-	AcknowledgedAt     orm.FieldExpression[time.Time]
-	ResolvedAt         orm.FieldExpression[time.Time]
+	Id orm.Field[int64]
+	StockId orm.Field[int64]
+	ProductVariantId orm.Field[int64]
+	WarehouseId orm.Field[int64]
+	AlertType orm.Field[string]
+	CurrentQuantity orm.Field[int32]
+	Threshold orm.Field[int32]
+	Status orm.Field[string]
+	ResolvedByUserId orm.Field[int64]
+	ResolvedByUserName orm.Field[string]
+	ResolutionNotes orm.Field[string]
+	NotificationSent orm.Field[bool]
+	NotificationSentAt orm.Field[time.Time]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
+	AcknowledgedAt orm.Field[time.Time]
+	ResolvedAt orm.Field[time.Time]
 }
 
 var StockAlertFieldsInstance = StockAlertFields{
-	Id:                 orm.NewField[int64]("id", "stock_alerts"),
-	StockId:            orm.NewField[int64]("stock_id", "stock_alerts"),
-	ProductVariantId:   orm.NewField[int64]("product_variant_id", "stock_alerts"),
-	WarehouseId:        orm.NewField[int64]("warehouse_id", "stock_alerts"),
-	AlertType:          orm.NewField[string]("alert_type", "stock_alerts"),
-	CurrentQuantity:    orm.NewField[int32]("current_quantity", "stock_alerts"),
-	Threshold:          orm.NewField[int32]("threshold", "stock_alerts"),
-	Status:             orm.NewField[string]("status", "stock_alerts"),
-	ResolvedByUserId:   orm.NewField[int64]("resolved_by_user_id", "stock_alerts"),
+	Id: orm.NewField[int64]("id", "stock_alerts"),
+	StockId: orm.NewField[int64]("stock_id", "stock_alerts"),
+	ProductVariantId: orm.NewField[int64]("product_variant_id", "stock_alerts"),
+	WarehouseId: orm.NewField[int64]("warehouse_id", "stock_alerts"),
+	AlertType: orm.NewField[string]("alert_type", "stock_alerts"),
+	CurrentQuantity: orm.NewField[int32]("current_quantity", "stock_alerts"),
+	Threshold: orm.NewField[int32]("threshold", "stock_alerts"),
+	Status: orm.NewField[string]("status", "stock_alerts"),
+	ResolvedByUserId: orm.NewField[int64]("resolved_by_user_id", "stock_alerts"),
 	ResolvedByUserName: orm.NewField[string]("resolved_by_user_name", "stock_alerts"),
-	ResolutionNotes:    orm.NewField[string]("resolution_notes", "stock_alerts"),
-	NotificationSent:   orm.NewField[bool]("notification_sent", "stock_alerts"),
+	ResolutionNotes: orm.NewField[string]("resolution_notes", "stock_alerts"),
+	NotificationSent: orm.NewField[bool]("notification_sent", "stock_alerts"),
 	NotificationSentAt: orm.NewField[time.Time]("notification_sent_at", "stock_alerts"),
-	CreatedAt:          orm.NewField[time.Time]("created_at", "stock_alerts"),
-	UpdatedAt:          orm.NewField[time.Time]("updated_at", "stock_alerts"),
-	AcknowledgedAt:     orm.NewField[time.Time]("acknowledged_at", "stock_alerts"),
-	ResolvedAt:         orm.NewField[time.Time]("resolved_at", "stock_alerts"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "stock_alerts"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "stock_alerts"),
+	AcknowledgedAt: orm.NewField[time.Time]("acknowledged_at", "stock_alerts"),
+	ResolvedAt: orm.NewField[time.Time]("resolved_at", "stock_alerts"),
+}
+
+
+
+
+// StockTransferGenerated struct definition
+type StockTransferGenerated struct {
+	schema.BaseSchema
+	Id int64 `json:"id" db:"id" validate:""`
+	TransferNumber string `json:"transfer_number" db:"transfer_number" validate:""`
+	FromWarehouseId int64 `json:"from_warehouse_id" db:"from_warehouse_id" validate:""`
+	ToWarehouseId int64 `json:"to_warehouse_id" db:"to_warehouse_id" validate:""`
+	ProductVariantId int64 `json:"product_variant_id" db:"product_variant_id" validate:""`
+	Quantity int32 `json:"quantity" db:"quantity" validate:""`
+	Status string `json:"status" db:"status" validate:""`
+	TrackingNumber string `json:"tracking_number" db:"tracking_number" validate:""`
+	Carrier string `json:"carrier" db:"carrier" validate:""`
+	Notes string `json:"notes" db:"notes" validate:""`
+	Reason string `json:"reason" db:"reason" validate:""`
+	RequestedByUserId int64 `json:"requested_by_user_id" db:"requested_by_user_id" validate:""`
+	RequestedByUserName string `json:"requested_by_user_name" db:"requested_by_user_name" validate:""`
+	ApprovedByUserId int64 `json:"approved_by_user_id" db:"approved_by_user_id" validate:""`
+	ApprovedByUserName string `json:"approved_by_user_name" db:"approved_by_user_name" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	ShippedAt time.Time `json:"shipped_at" db:"shipped_at" validate:""`
+	CompletedAt time.Time `json:"completed_at" db:"completed_at" validate:""`
+	CancelledAt time.Time `json:"cancelled_at" db:"cancelled_at" validate:""`
 }
 
 // Validate validates the StockTransfer model
 func (m *StockTransfer) Validate() error {
-	validator := validation.NewValidator()
-	return validation.ValidateModel(validator, m)
+	validator := validate.NewValidator()
+	return validate.ValidateModel(validator, m)
 }
 
 // StockTransferObjects provides type-safe operations for StockTransfer
@@ -233,47 +365,51 @@ var StockTransferObjects, _ = orm.NewManager[StockTransfer]("stock_transfers")
 
 // StockTransferFields provides type-safe field access for StockTransfer
 type StockTransferFields struct {
-	Id                  orm.FieldExpression[int64]
-	TransferNumber      orm.FieldExpression[string]
-	FromWarehouseId     orm.FieldExpression[int64]
-	ToWarehouseId       orm.FieldExpression[int64]
-	ProductVariantId    orm.FieldExpression[int64]
-	Quantity            orm.FieldExpression[int32]
-	Status              orm.FieldExpression[string]
-	TrackingNumber      orm.FieldExpression[string]
-	Carrier             orm.FieldExpression[string]
-	Notes               orm.FieldExpression[string]
-	Reason              orm.FieldExpression[string]
-	RequestedByUserId   orm.FieldExpression[int64]
-	RequestedByUserName orm.FieldExpression[string]
-	ApprovedByUserId    orm.FieldExpression[int64]
-	ApprovedByUserName  orm.FieldExpression[string]
-	CreatedAt           orm.FieldExpression[time.Time]
-	UpdatedAt           orm.FieldExpression[time.Time]
-	ShippedAt           orm.FieldExpression[time.Time]
-	CompletedAt         orm.FieldExpression[time.Time]
-	CancelledAt         orm.FieldExpression[time.Time]
+	Id orm.Field[int64]
+	TransferNumber orm.Field[string]
+	FromWarehouseId orm.Field[int64]
+	ToWarehouseId orm.Field[int64]
+	ProductVariantId orm.Field[int64]
+	Quantity orm.Field[int32]
+	Status orm.Field[string]
+	TrackingNumber orm.Field[string]
+	Carrier orm.Field[string]
+	Notes orm.Field[string]
+	Reason orm.Field[string]
+	RequestedByUserId orm.Field[int64]
+	RequestedByUserName orm.Field[string]
+	ApprovedByUserId orm.Field[int64]
+	ApprovedByUserName orm.Field[string]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
+	ShippedAt orm.Field[time.Time]
+	CompletedAt orm.Field[time.Time]
+	CancelledAt orm.Field[time.Time]
 }
 
 var StockTransferFieldsInstance = StockTransferFields{
-	Id:                  orm.NewField[int64]("id", "stock_transfers"),
-	TransferNumber:      orm.NewField[string]("transfer_number", "stock_transfers"),
-	FromWarehouseId:     orm.NewField[int64]("from_warehouse_id", "stock_transfers"),
-	ToWarehouseId:       orm.NewField[int64]("to_warehouse_id", "stock_transfers"),
-	ProductVariantId:    orm.NewField[int64]("product_variant_id", "stock_transfers"),
-	Quantity:            orm.NewField[int32]("quantity", "stock_transfers"),
-	Status:              orm.NewField[string]("status", "stock_transfers"),
-	TrackingNumber:      orm.NewField[string]("tracking_number", "stock_transfers"),
-	Carrier:             orm.NewField[string]("carrier", "stock_transfers"),
-	Notes:               orm.NewField[string]("notes", "stock_transfers"),
-	Reason:              orm.NewField[string]("reason", "stock_transfers"),
-	RequestedByUserId:   orm.NewField[int64]("requested_by_user_id", "stock_transfers"),
+	Id: orm.NewField[int64]("id", "stock_transfers"),
+	TransferNumber: orm.NewField[string]("transfer_number", "stock_transfers"),
+	FromWarehouseId: orm.NewField[int64]("from_warehouse_id", "stock_transfers"),
+	ToWarehouseId: orm.NewField[int64]("to_warehouse_id", "stock_transfers"),
+	ProductVariantId: orm.NewField[int64]("product_variant_id", "stock_transfers"),
+	Quantity: orm.NewField[int32]("quantity", "stock_transfers"),
+	Status: orm.NewField[string]("status", "stock_transfers"),
+	TrackingNumber: orm.NewField[string]("tracking_number", "stock_transfers"),
+	Carrier: orm.NewField[string]("carrier", "stock_transfers"),
+	Notes: orm.NewField[string]("notes", "stock_transfers"),
+	Reason: orm.NewField[string]("reason", "stock_transfers"),
+	RequestedByUserId: orm.NewField[int64]("requested_by_user_id", "stock_transfers"),
 	RequestedByUserName: orm.NewField[string]("requested_by_user_name", "stock_transfers"),
-	ApprovedByUserId:    orm.NewField[int64]("approved_by_user_id", "stock_transfers"),
-	ApprovedByUserName:  orm.NewField[string]("approved_by_user_name", "stock_transfers"),
-	CreatedAt:           orm.NewField[time.Time]("created_at", "stock_transfers"),
-	UpdatedAt:           orm.NewField[time.Time]("updated_at", "stock_transfers"),
-	ShippedAt:           orm.NewField[time.Time]("shipped_at", "stock_transfers"),
-	CompletedAt:         orm.NewField[time.Time]("completed_at", "stock_transfers"),
-	CancelledAt:         orm.NewField[time.Time]("cancelled_at", "stock_transfers"),
+	ApprovedByUserId: orm.NewField[int64]("approved_by_user_id", "stock_transfers"),
+	ApprovedByUserName: orm.NewField[string]("approved_by_user_name", "stock_transfers"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "stock_transfers"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "stock_transfers"),
+	ShippedAt: orm.NewField[time.Time]("shipped_at", "stock_transfers"),
+	CompletedAt: orm.NewField[time.Time]("completed_at", "stock_transfers"),
+	CancelledAt: orm.NewField[time.Time]("cancelled_at", "stock_transfers"),
 }
+
+
+
+

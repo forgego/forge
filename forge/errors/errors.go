@@ -8,6 +8,7 @@ var (
 	ErrNotFound       = &NotFoundError{}
 	ErrInvalidInput   = &InvalidInputError{}
 	ErrDatabaseError  = &DatabaseError{}
+	ErrConfiguration  = &ConfigurationError{}
 )
 
 // NotImplementedError indicates a feature is not yet implemented
@@ -106,6 +107,23 @@ func NewDatabaseError(operation string, err error) *DatabaseError {
 	return &DatabaseError{Operation: operation, Err: err}
 }
 
+// ConfigurationError indicates a configuration problem
+type ConfigurationError struct {
+	Message string
+	Field   string
+}
+
+func (e *ConfigurationError) Error() string {
+	if e.Field != "" {
+		return fmt.Sprintf("configuration error: %s (field: %s)", e.Message, e.Field)
+	}
+	return fmt.Sprintf("configuration error: %s", e.Message)
+}
+
+func NewConfigurationError(message, field string) *ConfigurationError {
+	return &ConfigurationError{Message: message, Field: field}
+}
+
 // IsNotImplemented checks if an error is a NotImplementedError
 func IsNotImplemented(err error) bool {
 	_, ok := err.(*NotImplementedError)
@@ -130,3 +148,8 @@ func IsDatabaseError(err error) bool {
 	return ok
 }
 
+// IsConfiguration checks if an error is a ConfigurationError
+func IsConfiguration(err error) bool {
+	_, ok := err.(*ConfigurationError)
+	return ok
+}

@@ -1,6 +1,7 @@
 package orm
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/forgego/forge/schema"
@@ -209,6 +210,24 @@ func TestQuerySet_Chaining(t *testing.T) {
 	assert.NotEqual(t, qs, chained)
 }
 
+func TestSetFieldValue_ConvertsNumericBytes(t *testing.T) {
+	var price float64
+	field := reflect.ValueOf(&price).Elem()
+
+	setFieldValue(field, []byte("19.99"))
+
+	assert.Equal(t, 19.99, price)
+}
+
+func TestSetFieldValue_ConvertsIntBytes(t *testing.T) {
+	var count int64
+	field := reflect.ValueOf(&count).Elem()
+
+	setFieldValue(field, []byte("42"))
+
+	assert.Equal(t, int64(42), count)
+}
+
 // Note: buildSQL and other build methods are not exported
 // These would need to be tested through integration tests or by exporting them
 // Skipping these tests for now as they test internal implementation
@@ -227,11 +246,11 @@ type testModel struct {
 // Fields returns field definitions
 func (testModel) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("name").WithRequired(),
-		schema.String("email"),
-		schema.Float64("price").WithDefault(0.0),
-		schema.Bool("available").WithDefault(true),
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.StringField("name", schema.Required()),
+		schema.StringField("email"),
+		schema.Float64Field("price", schema.Default(0.0)),
+		schema.BoolField("available", schema.Default(true)),
 	}
 }
 
@@ -251,6 +270,3 @@ func (testModel) Relations() []schema.Relation {
 func (testModel) Hooks() *schema.ModelHooks {
 	return nil
 }
-
-
-

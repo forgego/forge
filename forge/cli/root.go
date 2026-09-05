@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"github.com/forgego/forge/cli/core"
 	"github.com/forgego/forge/cli/commands"
+	"github.com/forgego/forge/cli/core"
 	"github.com/spf13/cobra"
 )
 

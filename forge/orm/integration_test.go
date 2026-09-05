@@ -1,18 +1,21 @@
 package orm
 
 import (
-	"database/sql"
+	"context"
+	"fmt"
 	"testing"
 	"time"
 
-	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/internal/testutils"
+	"github.com/forgego/forge/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // TestModel is a test model for integration tests
 type TestModel struct {
+	schema.BaseSchema
 	ID        int64     `db:"id"`
 	Name      string    `db:"name"`
 	Email     string    `db:"email"`
@@ -21,173 +24,243 @@ type TestModel struct {
 	CreatedAt time.Time `db:"created_at"`
 }
 
-// setupTestDB creates a test SQLite database
-func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", ":memory:")
-	require.NoError(t, err)
-
-	// Create test table
-	_, err = db.Exec(`
-		CREATE TABLE test_models (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			name TEXT NOT NULL,
-			email TEXT,
-			price REAL DEFAULT 0.0,
-			available INTEGER DEFAULT 1,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)
-	`)
-	require.NoError(t, err)
-
-	return db
+func (TestModel) Meta() schema.Meta {
+	return schema.Meta{
+		TableName: "test_models",
+	}
 }
 
-// teardownTestDB cleans up test database
-func teardownTestDB(t *testing.T, db *sql.DB) {
-	if db != nil {
-		db.Close()
+func (TestModel) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.StringField("name", schema.Required()),
+		schema.StringField("email", schema.Optional()),
+		schema.Float64Field("price", schema.Default(0.0)),
+		schema.BoolField("available", schema.Default(true)),
+		schema.TimeField("created_at", schema.AutoNowAdd()),
 	}
+}
+
+func setupIsolatedTestTable(t *testing.T) (*db.DB, string) {
+	t.Helper()
+
+	sqlDB := testutils.SetupTestDB(t)
+	t.Cleanup(func() {
+		_ = sqlDB.Close()
+	})
+
+	database := &db.DB{DB: sqlDB, Driver: "postgres"}
+	tableName := fmt.Sprintf("test_models_%d", time.Now().UnixNano())
+	escapedTable := EscapeIdentifier(tableName)
+
+	_, err := database.Exec(fmt.Sprintf(`DROP TABLE IF EXISTS %s`, escapedTable))
+	require.NoError(t, err)
+
+	_, err = database.Exec(fmt.Sprintf(`
+		CREATE TABLE %s (
+			id SERIAL PRIMARY KEY,
+			name TEXT NOT NULL,
+			email TEXT,
+			price DECIMAL(10, 2) DEFAULT 0.0,
+			available BOOLEAN DEFAULT TRUE,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+		)
+	`, escapedTable))
+	require.NoError(t, err)
+
+	return database, tableName
 }
 
 func TestQuerySet_Integration_Filter(t *testing.T) {
-	db := setupTestDB(t)
-	defer teardownTestDB(t, db)
+	database, tableName := setupIsolatedTestTable(t)
+	escapedTable := EscapeIdentifier(tableName)
 
 	// Insert test data
-	_, err := db.Exec(`
-		INSERT INTO test_models (name, email, price, available) VALUES
-		('Product 1', 'test1@example.com', 10.0, 1),
-		('Product 2', 'test2@example.com', 20.0, 1),
-		('Product 3', 'test3@example.com', 30.0, 0)
-	`)
+	_, err := database.Exec(fmt.Sprintf(`
+		INSERT INTO %s (name, email, price, available) VALUES
+		('Product 1', 'test1@example.com', 10.0, true),
+		('Product 2', 'test2@example.com', 20.0, true),
+		('Product 3', 'test3@example.com', 30.0, false)
+	`, escapedTable))
 	require.NoError(t, err)
 
-	qs, err := NewQuerySet[TestModel]("test_models")
+	qs, err := NewQuerySet[TestModel](tableName)
 	if err != nil {
-		t.Skipf("Schema not registered for TestModel: %v", err)
-		return
+		t.Fatalf("Failed to create QuerySet: %v", err)
 	}
 
-	// Set DB connection (would need adapter for *sql.DB)
-	// For now, test that QuerySet can be created and chained
-	priceField := NewField[float64]("price", "test_models")
+	// Set DB connection
+	qs = qs.SetDB(database)
+
+	priceField := NewField[float64]("price", tableName)
 	expr := priceField.Gt(15.0)
 
 	filtered := qs.Filter(expr)
 	assert.NotNil(t, filtered)
 
-	// Verify filtering worked
-	assert.NotEqual(t, qs, filtered)
+	// Verify filtering worked by fetching data
+	results, err := filtered.All(context.Background())
+	require.NoError(t, err)
+	assert.Len(t, results, 2) // Product 2 (20.0) and Product 3 (30.0)
+	
+	for _, p := range results {
+		assert.Greater(t, p.Price, 15.0)
+	}
 }
 
 func TestQuerySet_Integration_OrderBy(t *testing.T) {
-	qs, err := NewQuerySet[TestModel]("test_models")
-	if err != nil {
-		t.Skipf("Schema not registered for TestModel: %v", err)
-		return
-	}
+	database, tableName := setupIsolatedTestTable(t)
+	escapedTable := EscapeIdentifier(tableName)
+	
+	_, err := database.Exec(fmt.Sprintf(`
+		INSERT INTO %s (name, price, email) VALUES
+		('A', 10.0, ''), ('B', 30.0, ''), ('C', 20.0, '')
+	`, escapedTable))
+	require.NoError(t, err)
+
+	qs, err := NewQuerySet[TestModel](tableName)
+	require.NoError(t, err)
+	qs = qs.SetDB(database)
 
 	ordered := qs.OrderBy(Desc("price"))
-	assert.NotNil(t, ordered)
-
-	// buildSQL is not exported, test through public API
-	_ = ordered
+	results, err := ordered.All(context.Background())
+	require.NoError(t, err)
+	assert.Len(t, results, 3)
+	assert.Equal(t, "B", results[0].Name)
+	assert.Equal(t, "C", results[1].Name)
+	assert.Equal(t, "A", results[2].Name)
 }
 
 func TestQuerySet_Integration_LimitOffset(t *testing.T) {
-	qs, err := NewQuerySet[TestModel]("test_models")
-	if err != nil {
-		t.Skipf("Schema not registered for TestModel: %v", err)
-		return
+	database, tableName := setupIsolatedTestTable(t)
+	escapedTable := EscapeIdentifier(tableName)
+
+	// Insert 15 records
+	for i := 1; i <= 15; i++ {
+		_, err := database.Exec(fmt.Sprintf(`INSERT INTO %s (name, price, email) VALUES ($1, $2, $3)`, escapedTable), 
+			"Product", float64(i), "")
+		require.NoError(t, err)
 	}
 
-	limited := qs.Limit(10).Offset(5)
-	assert.NotNil(t, limited)
+	qs, err := NewQuerySet[TestModel](tableName)
+	require.NoError(t, err)
+	qs = qs.SetDB(database)
 
-	// buildSQL is not exported, test through public API
-	_ = limited
+	limited := qs.OrderBy(Asc("price")).Limit(5).Offset(5)
+	results, err := limited.All(context.Background())
+	require.NoError(t, err)
+	
+	assert.Len(t, results, 5)
+	// Should be 6, 7, 8, 9, 10
+	assert.Equal(t, 6.0, results[0].Price)
+	assert.Equal(t, 10.0, results[4].Price)
 }
 
 func TestQuerySet_Integration_ComplexQuery(t *testing.T) {
-	qs, err := NewQuerySet[TestModel]("test_models")
-	if err != nil {
-		t.Skipf("Schema not registered for TestModel: %v", err)
-		return
-	}
+	database, tableName := setupIsolatedTestTable(t)
+	escapedTable := EscapeIdentifier(tableName)
 
-	priceField := NewField[float64]("price", "test_models")
-	availableField := NewField[bool]("available", "test_models")
+	_, err := database.Exec(fmt.Sprintf(`
+		INSERT INTO %s (name, price, available, email) VALUES
+		('P1', 100.0, true, ''),
+		('P2', 50.0, true, ''),
+		('P3', 200.0, false, ''),
+		('P4', 150.0, true, '')
+	`, escapedTable))
+	require.NoError(t, err)
 
-	// Complex query: price > 10 AND available = true, ordered by price DESC, limit 5
+	qs, err := NewQuerySet[TestModel](tableName)
+	require.NoError(t, err)
+	qs = qs.SetDB(database)
+
+	priceField := NewField[float64]("price", tableName)
+	availableField := NewField[bool]("available", tableName)
+
+	// Complex query: price > 60 AND available = true, ordered by price DESC
 	complex := qs.
-		Filter(priceField.Gt(10.0)).
+		Filter(priceField.Gt(60.0)).
 		Filter(availableField.Eq(true)).
-		OrderBy(Desc("price")).
-		Limit(5)
+		OrderBy(Desc("price"))
 
-	assert.NotNil(t, complex)
-
-	// buildSQL is not exported, test through public API
-	// Verify the QuerySet was created and chained correctly
-	assert.NotNil(t, complex)
+	results, err := complex.All(context.Background())
+	require.NoError(t, err)
+	
+	assert.Len(t, results, 2) // P4 (150), P1 (100)
+	assert.Equal(t, "P4", results[0].Name)
+	assert.Equal(t, "P1", results[1].Name)
 }
 
 func TestUpdateBuilder_Integration(t *testing.T) {
-	qs, err := NewQuerySet[TestModel]("test_models")
-	if err != nil {
-		t.Skipf("Schema not registered for TestModel: %v", err)
-		return
-	}
+	database, tableName := setupIsolatedTestTable(t)
+	escapedTable := EscapeIdentifier(tableName)
+
+	_, err := database.Exec(fmt.Sprintf(`INSERT INTO %s (id, name, price, email) VALUES (1, 'Old Name', 10.0, '')`, escapedTable))
+	require.NoError(t, err)
+
+	qs, err := NewQuerySet[TestModel](tableName)
+	require.NoError(t, err)
+	qs = qs.SetDB(database)
 
 	ub, err := NewUpdateBuilder[TestModel](qs)
-	// Skip if schema not registered
-	if err != nil {
-		t.Skipf("Schema not registered: %v", err)
-		return
-	}
+	require.NoError(t, err)
 
-	// Test update builder chaining
 	ub = ub.
 		Set("name", "Updated Name").
 		Set("price", 99.99).
-		Increment("id", int64(1))
+		Increment("id", int64(1)) // id becomes 2
 
-	assert.NotNil(t, ub)
+	// Need to handle WHERE clause to update specific row, defaulting to all if not filtered
+	// But UpdateBuilder usually applies to the queryset's filter. 
+	// Here qs is unfiltered, so it updates all.
+	
+	rows, err := ub.Execute(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), rows)
 
-	// Verify updates were stored
-	updates := ub.updates
-	assert.Greater(t, len(updates), 0)
+	// Verify update
+	var name string
+	var price float64
+	var id int64
+	err = database.QueryRow(fmt.Sprintf("SELECT id, name, price FROM %s", escapedTable)).Scan(&id, &name, &price)
+	require.NoError(t, err)
+	
+	assert.Equal(t, "Updated Name", name)
+	assert.Equal(t, 99.99, price)
+	assert.Equal(t, int64(2), id)
 }
 
+// Keep existing unit tests that don't need DB or adapt them if needed
 func TestExpression_Integration_StringOperations(t *testing.T) {
+	// ... (Same as before, no DB needed for SQL generation tests)
 	nameField := NewField[string]("name", "test_models")
 
 	// Test Contains
 	containsExpr := nameField.Contains("Product")
 	builder := NewSQLBuilder()
-	sql, args, err := containsExpr.ToSQL(builder)
+	sql, _, err := containsExpr.ToSQL(builder)
 	require.NoError(t, err)
 	assert.Contains(t, sql, "LIKE")
-	assert.Len(t, args, 1)
+	assert.Len(t, builder.Args(), 1)
 
 	// Test StartsWith
 	startsWithExpr := nameField.StartsWith("Product")
 	builder = NewSQLBuilder()
-	sql, args, err = startsWithExpr.ToSQL(builder)
+	sql, _, err = startsWithExpr.ToSQL(builder)
 	require.NoError(t, err)
 	assert.Contains(t, sql, "LIKE")
-	assert.Len(t, args, 1)
+	assert.Len(t, builder.Args(), 1)
 
 	// Test EndsWith
 	endsWithExpr := nameField.EndsWith("1")
 	builder = NewSQLBuilder()
-	sql, args, err = endsWithExpr.ToSQL(builder)
+	sql, _, err = endsWithExpr.ToSQL(builder)
 	require.NoError(t, err)
 	assert.Contains(t, sql, "LIKE")
-	assert.Len(t, args, 1)
+	assert.Len(t, builder.Args(), 1)
 }
 
 func TestQ_Integration_ComplexNesting(t *testing.T) {
+    // ... (Same as before)
 	priceField := NewField[float64]("price", "test_models")
 	availableField := NewField[bool]("available", "test_models")
 	nameField := NewField[string]("name", "test_models")
@@ -198,15 +271,16 @@ func TestQ_Integration_ComplexNesting(t *testing.T) {
 	combined := q1.And(q2)
 
 	builder := NewSQLBuilder()
-	sql, args, err := combined.ToSQL(builder)
+	sql, _, err := combined.ToSQL(builder)
 	require.NoError(t, err)
 
 	assert.Contains(t, sql, "OR")
 	assert.Contains(t, sql, "AND")
-	assert.GreaterOrEqual(t, len(args), 4)
+	assert.GreaterOrEqual(t, len(builder.Args()), 4)
 }
 
 func TestSQLBuilder_Integration_ComplexQuery(t *testing.T) {
+    // ... (Same as before)
 	builder := NewSQLBuilder()
 
 	// Build a complex SELECT query

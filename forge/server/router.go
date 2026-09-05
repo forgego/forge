@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	chimw "github.com/go-chi/chi/v5/middleware"
 )
 
 // URLParam gets a URL parameter from chi router
@@ -22,14 +21,20 @@ type Router struct {
 	methodNotAllowed http.HandlerFunc
 }
 
-// NewRouter creates a new framework router with default middleware
+// NewRouter creates a new framework router
+// Note: Default middleware (RequestID, Recoverer, etc.) are NOT added here.
+// They should be added by the Server or manually using Router.Use().
 func NewRouter() *Router {
 	r := chi.NewRouter()
 
-	// Add default chi middleware
-	r.Use(chimw.RequestID)
-	r.Use(chimw.RealIP)
-	r.Use(chimw.Recoverer)
+	// We do NOT add default chi middleware here to avoid conflicts with Server middleware stack.
+	// Server adds:
+	// 1. RequestIDMiddleware (from api/errors)
+	// 2. ErrorHandler (handles panics)
+	// 3. Logger
+	// 4. RealIP (optional, usually added by Server or load balancer)
+
+	// If using Router standalone, you should add middleware yourself.
 
 	return &Router{
 		Router: r,

@@ -1,0 +1,16 @@
+Implemented one focused high-impact batch on ORM reliability and updated 24x7 tracking docs.
+
+- Fixed scan coercion in `forge/orm/queryset.go:944` so optional fields scanned as `[]byte` are converted for `string`, `bool`, integer, unsigned integer, and float targets (root cause of zero-valued prices in integration tests).
+- Added regression tests:
+  - `forge/orm/queryset_test.go:213` `TestSetFieldValue_ConvertsNumericBytes`
+  - `forge/orm/queryset_test.go:222` `TestSetFieldValue_ConvertsIntBytes`
+- Updated run tracking:
+  - `ops/codex-24x7/STATUS.md:1` (Completed this run / Remaining work / Next run plan)
+  - `ops/codex-24x7/HISTORY.md:172` (appended run log entry)
+
+Validation run:
+- `go test ./orm -count=1` in `forge` passed (including previously failing `TestQuerySet_Integration_Filter` and `TestQuerySet_Integration_LimitOffset`).
+- `go test ./... -count=1` in `examples/ecommerce` passed.
+
+Note:
+- `git status` could not be executed due repository safe-directory ownership settings on this machine.

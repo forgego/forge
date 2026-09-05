@@ -3,58 +3,42 @@ package core
 import (
 	"context"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/forgego/forge/admin/components"
 )
 
-// Plugin defines the interface for admin system extensions
+// Plugin defines the interface for admin plugins
 type Plugin interface {
-	// Name returns the unique identifier for this plugin
+	// ID returns the unique identifier for the plugin
+	ID() string
+	
+	// Name returns the human-readable name of the plugin
 	Name() string
+	
+	// Init initializes the plugin with the admin site
+	Init(ctx context.Context, site interface{}) error
 
-	// Initialize is called when the plugin is registered with the Site
-	Initialize(ctx context.Context, site interface{}) error
-
-	// RegisterRoutes allows the plugin to register its own API endpoints
-	// The prefix for these routes will typically be /api/admin/plugins/{name}
-	RegisterRoutes(router chi.Router)
-
-	// GetMetadata returns information about UI extensions provided by this plugin
-	GetMetadata() PluginMetadata
+	// GetPages returns a map of route paths to SDUI components
+	// e.g. "settings" -> Page("Settings")
+	GetPages() map[string]components.Component
+	
+	// GetMenuItems returns menu items to add to the sidebar
+	GetMenuItems() []MenuItem
 }
 
-// PluginMetadata contains UI-side extension information
-type PluginMetadata struct {
-	Name        string       `json:"name"`
-	Label       string       `json:"label"`
-	Icon        string       `json:"icon,omitempty"`
-	Pages       []CustomPage `json:"pages,omitempty"`
-	Widgets     []WidgetMeta `json:"widgets,omitempty"`
-	MenuEntries []MenuEntry  `json:"menuEntries,omitempty"`
+// MenuItem represents a sidebar menu item
+type MenuItem struct {
+	Label    string `json:"label"`
+	Path     string `json:"path"` // e.g. "/plugins/my-plugin/settings"
+	Icon     string `json:"icon,omitempty"`
+	Children []MenuItem `json:"children,omitempty"`
 }
 
-// CustomPage represents a non-model page in the admin UI
-type CustomPage struct {
-	Name      string `json:"name"`
-	Label     string `json:"label"`
-	Path      string `json:"path"`
-	Component string `json:"component"` // Corresponds to a name in the React registry
-}
+// BasePlugin provides a default implementation for Plugin
+type BasePlugin struct{}
 
-// WidgetMeta represents a dashboard widget configuration
-type WidgetMeta struct {
-	Type        string                 `json:"type"`
-	Title       string                 `json:"title"`
-	Description string                 `json:"description,omitempty"`
-	DefaultSize string                 `json:"defaultSize,omitempty"`
-	Config      map[string]interface{} `json:"config,omitempty"`
-}
-
-// MenuEntry represents an entry in the sidebar navigation
-type MenuEntry struct {
-	Label    string      `json:"label"`
-	Icon     string      `json:"icon,omitempty"`
-	Path     string      `json:"path,omitempty"`
-	Children []MenuEntry `json:"children,omitempty"`
-	Order    int         `json:"order,omitempty"`
-}
+func (p *BasePlugin) ID() string { return "base" }
+func (p *BasePlugin) Name() string { return "Base Plugin" }
+func (p *BasePlugin) Init(ctx context.Context, site interface{}) error { return nil }
+func (p *BasePlugin) GetPages() map[string]components.Component { return nil }
+func (p *BasePlugin) GetMenuItems() []MenuItem { return nil }
 

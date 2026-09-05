@@ -1,0 +1,24 @@
+Implemented one focused high-impact reliability batch in migrations status handling.
+
+**What changed**
+- `forge/db/migrate/execute/status.go`
+  - Added `mergeAppliedVersions(...)` and wired it into `GetDetailedStatus(...)`.
+  - This infers historical applied migrations from current version, so status output no longer misclassifies older migrations as pending/out-of-order when using golang-migrate’s single-row `schema_migrations` model.
+- `forge/db/migrate/execute/status_test.go`
+  - Added unit tests for clean, dirty, and zero-version inference behavior.
+- `ops/codex-24x7/STATUS.md`
+  - Updated `Completed this run`, `Remaining work`, and `Next run plan`.
+- `ops/codex-24x7/HISTORY.md`
+  - Appended a concise run log for `2026-02-12 17:47:00`.
+
+**Tests run**
+- In `forge`:
+  - `go test ./db/migrate/execute` passed
+  - `go test ./cli/commands/migrations` passed (`[no test files]`)
+- In `examples/ecommerce`:
+  - `go test ./...` passed (all packages currently `[no test files]`)
+
+**Notes**
+- Initial test run failed due Go build cache access permissions; reran successfully with:
+  - `GOCACHE=C:\Users\hamid\AppData\Local\Temp\go-build-cache`
+- `git status`/`git diff` are blocked in this environment by Git safe-directory ownership checks, so validation was done via direct file reads.

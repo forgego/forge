@@ -27,46 +27,52 @@ const (
 
 func (t FieldType) String() string {
 	switch t {
-	case TypeInt64, TypeInt32:
-		return "integer"
-	case TypeFloat32, TypeFloat64:
-		return "float"
-	case TypeDecimal:
-		return "decimal"
+	case TypeInt64:
+		return "Int64"
+	case TypeInt32:
+		return "Int32"
 	case TypeString:
-		return "string"
-	case TypeText:
-		return "text"
-	case TypeEmail:
-		return "email"
-	case TypeURL:
-		return "url"
-	case TypeUUID:
-		return "uuid"
-	case TypeJSON:
-		return "json"
-	case TypeBytes:
-		return "bytes"
+		return "String"
 	case TypeBool:
-		return "boolean"
-	case TypeDate:
-		return "date"
-	case TypeDateTime:
-		return "datetime"
+		return "Bool"
 	case TypeTime:
-		return "time"
+		return "Time"
+	case TypeDate:
+		return "Date"
+	case TypeDateTime:
+		return "DateTime"
+	case TypeFloat32:
+		return "Float32"
+	case TypeFloat64:
+		return "Float64"
+	case TypeDecimal:
+		return "Decimal"
+	case TypeText:
+		return "Text"
+	case TypeEmail:
+		return "Email"
+	case TypeURL:
+		return "URL"
+	case TypeUUID:
+		return "UUID"
+	case TypeJSON:
+		return "JSON"
+	case TypeBytes:
+		return "Bytes"
 	case TypeForeignKey:
-		return "foreign_key"
+		return "ForeignKey"
 	case TypeManyToMany:
-		return "many_to_many"
+		return "ManyToMany"
 	case TypeOneToOne:
-		return "one_to_one"
+		return "OneToOne"
 	default:
-		return "unknown"
+		return "Unknown"
 	}
 }
 
 // Field represents a model field with ALL Django field options.
+// This struct maintains compatibility while the internal
+// organization is improved through FieldOptions (see field_config.go).
 type Field struct {
 	// Core field properties
 	CustomField CustomField

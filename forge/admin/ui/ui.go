@@ -1,3 +1,6 @@
+//go:build embed
+// +build embed
+
 package ui
 
 import (
@@ -6,7 +9,7 @@ import (
 )
 
 // dist contains the built React Admin UI files
-//go:embed dist/* dist/assets/*
+//go:embed dist/*
 var dist embed.FS
 
 // GetFS returns a sub-filesystem for the dist folder
@@ -21,3 +24,4 @@ func Handler() fs.FS {
 	return GetFS()
 }
 
+// Force rebuild 4

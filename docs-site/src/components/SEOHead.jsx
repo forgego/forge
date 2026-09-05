@@ -1,21 +1,28 @@
 import React from 'react';
 import Head from '@docusaurus/Head';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 
 /**
  * SEO Head component for adding structured data and enhanced meta tags
  */
-export default function SEOHead({ 
-  title, 
-  description, 
+export default function SEOHead({
+  title,
+  description,
   keywords = [],
-  image = '/img/forge-social-card.jpg',
+  image = '/forge-social-card.svg',
   type = 'website',
   url,
   author = 'forge Framework',
 }) {
-  const siteUrl = 'https://forgego.github.io/forge';
-  const fullUrl = url ? `${siteUrl}${url}` : siteUrl;
-  const imageUrl = image.startsWith('http') ? image : `${siteUrl}${image}`;
+  const {siteConfig} = useDocusaurusContext();
+  const siteBaseUrl = `${siteConfig.url}${siteConfig.baseUrl}`;
+  const normalizedBaseUrl = siteBaseUrl.endsWith('/')
+    ? siteBaseUrl.slice(0, -1)
+    : siteBaseUrl;
+  const fullUrl = url ? `${normalizedBaseUrl}${url}` : normalizedBaseUrl;
+  const imageUrl = image.startsWith('http')
+    ? image
+    : `${normalizedBaseUrl}${image}`;
   const keywordsString = Array.isArray(keywords) ? keywords.join(', ') : keywords;
 
   // Structured data (JSON-LD)

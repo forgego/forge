@@ -2,30 +2,31 @@ package core
 
 import (
 	"time"
+
+	"github.com/forgego/forge/admin/components"
 )
 
 // Metadata represents the complete metadata for an admin model
 // This is what gets serialized to JSON for the frontend
 type Metadata struct {
-	Name              string             `json:"name"`
-	VerboseName       string             `json:"verbose_name"`
-	VerboseNamePlural string             `json:"verbose_name_plural"`
-	Description       string             `json:"description,omitempty"`
-	Icon              string             `json:"icon,omitempty"`
-	Fields            []FieldMetadata    `json:"fields"`
-	Relations         []RelationMetadata `json:"relations,omitempty"`
-	Permissions       PermissionMetadata `json:"permissions"`
-	Actions           []ActionMetadata   `json:"actions"`
-	Filters           []FilterMetadata   `json:"filters"`
-	ListDisplay       []string           `json:"list_display"`
-	ListFilter        []string           `json:"list_filter,omitempty"`
-	SearchFields      []string           `json:"search_fields,omitempty"`
-	Ordering          []string           `json:"ordering,omitempty"`
-	Pagination        PaginationConfig   `json:"pagination"`
-	PageType          string             `json:"page_type,omitempty"` // "list", "form", "list-form", "detail"
-	UIOverrides       map[string]string  `json:"ui_overrides,omitempty"`
-	ReadOnlyFields    []string           `json:"read_only_fields,omitempty"`
-	Fieldsets         []FieldsetMetadata `json:"fieldsets,omitempty"`
+	Name              string                `json:"name"`
+	VerboseName       string                `json:"verbose_name"`
+	VerboseNamePlural string                `json:"verbose_name_plural"`
+	Description       string                `json:"description,omitempty"`
+	Icon              string                `json:"icon,omitempty"`
+	Fields            []FieldMetadata       `json:"fields"`
+	Relations         []RelationMetadata    `json:"relations,omitempty"`
+	Permissions       PermissionMetadata    `json:"permissions"`
+	Actions           []ActionMetadata      `json:"actions"`
+	Filters           []FilterMetadata      `json:"filters"`
+	ListDisplay       []string              `json:"list_display"`
+	ListFilter        []string              `json:"list_filter,omitempty"`
+	SearchFields      []string              `json:"search_fields,omitempty"`
+	Ordering          []string              `json:"ordering,omitempty"`
+	Pagination        PaginationConfig      `json:"pagination"`
+	PageType          string                `json:"page_type,omitempty"` // "list", "form", "list-form", "detail"
+	UIOverrides       map[string]string     `json:"ui_overrides,omitempty"`
+	Layout            *components.Component `json:"layout,omitempty"` // Server-Driven UI Layout
 }
 
 // FieldMetadata represents metadata for a single field
@@ -65,11 +66,12 @@ type ValidatorMetadata struct {
 
 // RelationMetadata represents metadata for a relation
 type RelationMetadata struct {
-	Name         string `json:"name"`
-	Type         string `json:"type"` // foreign_key, one_to_one, many_to_many
-	RelatedModel string `json:"related_model"`
-	RelatedField string `json:"related_field,omitempty"`
-	Label        string `json:"label"`
+	Name         string                `json:"name"`
+	Type         string                `json:"type"` // foreign_key, one_to_one, many_to_many
+	RelatedModel string                `json:"related_model"`
+	RelatedField string                `json:"related_field,omitempty"`
+	Label        string                `json:"label"`
+	Inline       *InlineRelationConfig `json:"inline,omitempty"`
 }
 
 // PermissionMetadata represents permissions for this model
@@ -102,14 +104,6 @@ type FilterMetadata struct {
 	Multiple     bool                   `json:"multiple,omitempty"`
 	Params       map[string]interface{} `json:"params,omitempty"`
 	UIComponent  string                 `json:"ui_component,omitempty"`
-}
-
-// FieldsetMetadata represents metadata for form fieldsets.
-type FieldsetMetadata struct {
-	Name        string   `json:"name"`
-	Fields      []string `json:"fields"`
-	Collapsed   bool     `json:"collapsed,omitempty"`
-	Description string   `json:"description,omitempty"`
 }
 
 // PaginationConfig represents pagination configuration
@@ -168,6 +162,7 @@ type BulkActionResponse struct {
 // BulkActionError represents an error for a specific item in bulk action
 type BulkActionError struct {
 	ID      int64  `json:"id"`
+	Code    string `json:"code,omitempty"`
 	Message string `json:"message"`
 }
 
@@ -225,4 +220,3 @@ type UploadResponse struct {
 	Height     int       `json:"height,omitempty"`
 	UploadedAt time.Time `json:"uploaded_at"`
 }
-

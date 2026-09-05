@@ -20,16 +20,16 @@ type LoggingOutputConfig struct {
 type ErrorSettings struct {
 	ProblemDetails ProblemDetailsSettings
 	RequestID      RequestIDSettings
-	Sanitization  SanitizationSettings
-	Observability ObservabilitySettings
-	Idempotency   IdempotencySettings
-	HTTP          HTTPSettings
+	Sanitization   SanitizationSettings
+	Observability  ObservabilitySettings
+	Idempotency    IdempotencySettings
+	HTTP           HTTPSettings
 }
 
 // ProblemDetailsSettings configures RFC 7807 Problem Details
 type ProblemDetailsSettings struct {
-	TypeBaseURL          string
-	IncludeStackTrace    bool
+	TypeBaseURL            string
+	IncludeStackTrace      bool
 	IncludeInternalDetails bool
 }
 
@@ -65,29 +65,29 @@ type ErrorTrackingSettings struct {
 
 // AlertsSettings configures alerting
 type AlertsSettings struct {
-	Enabled   bool
+	Enabled    bool
 	Thresholds AlertThresholds
 }
 
 // AlertThresholds defines alert thresholds
 type AlertThresholds struct {
-	ErrorRatePerMinute    int
-	ErrorRatePerEndpoint  int
+	ErrorRatePerMinute   int
+	ErrorRatePerEndpoint int
 }
 
 // IdempotencySettings configures idempotency handling
 type IdempotencySettings struct {
-	Enabled      bool
-	HeaderName   string
-	CacheTTL     int
-	StoreType    string
+	Enabled         bool
+	HeaderName      string
+	CacheTTL        int
+	StoreType       string
 	MaxNestingDepth int
 }
 
 // HTTPSettings configures HTTP semantics
 type HTTPSettings struct {
-	IncludeRetryAfter        bool
-	IncludeLinkHeader        bool
-	ProblemJSONContentType   bool
+	IncludeRetryAfter      bool
+	IncludeLinkHeader      bool
+	ProblemJSONContentType bool
 }
 

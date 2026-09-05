@@ -126,9 +126,9 @@ type Example struct {
 // Fields returns all field definitions for Example
 func (Example) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("name").WithRequired().WithMaxLength(255),
-		schema.Bool("is_active").WithDefault(true),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("name").Required().MaxLength(255).Build(),
+		schema.Bool("is_active").Default(true).Build(),
 	}
 }
 

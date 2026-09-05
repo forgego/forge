@@ -3,6 +3,7 @@ package orm
 import (
 	"fmt"
 	"strings"
+	"sync"
 )
 
 // Operator represents a SQL operator
@@ -259,7 +260,33 @@ func (q QueryExpr) buildSingle(paramIndex int) (string, []interface{}, int) {
 
 // RegisterQueryExpr registers a custom query expression type
 func RegisterQueryExpr(name string, builder func(...interface{}) QueryExpr) {
-	// TODO: Implement custom query expression registry
+	if builder == nil || normalizeRegistryName(name) == "" {
+		return
+	}
+
+	queryExprRegistryMu.Lock()
+	defer queryExprRegistryMu.Unlock()
+	queryExprRegistry[normalizeRegistryName(name)] = builder
+}
+
+// BuildQueryExpr builds a query expression from a registered custom query expression name.
+func BuildQueryExpr(name string, args ...interface{}) (QueryExpr, bool) {
+	queryExprRegistryMu.RLock()
+	builder, ok := queryExprRegistry[normalizeRegistryName(name)]
+	queryExprRegistryMu.RUnlock()
+	if !ok {
+		return QueryExpr{}, false
+	}
+	return builder(args...), true
+}
+
+var (
+	queryExprRegistryMu sync.RWMutex
+	queryExprRegistry   = map[string]func(...interface{}) QueryExpr{}
+)
+
+func normalizeRegistryName(name string) string {
+	return strings.ToLower(strings.TrimSpace(name))
 }
 
 

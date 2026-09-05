@@ -5,7 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
+
+	"github.com/forgego/forge/utils"
 )
 
 // QuerySet is the type-safe QuerySet interface
@@ -133,9 +136,12 @@ type BaseQuerySet[T any] struct {
 	selectRelated   []string
 	prefetchRelated []string
 	preloaded       map[string]bool // Track which relations are preloaded (N+1 prevention)
+	joins           []string
+	joinMap         map[string]bool
 	aggregates      []Aggregate
 	annotations     []AnnotationExpr // Using existing AnnotationExpr type
 	db              interface{}      // *db.DB
+	err             error            // Deferred error from Filter/Exclude validation (checked at execution time)
 }
 
 // NewQuerySet creates a new QuerySet
@@ -156,6 +162,8 @@ func NewQuerySet[T any](tableName string) (QuerySet[T], error) {
 		excludes:   []Expression{},
 		orderBy:    []OrderField{},
 		preloaded:  make(map[string]bool),
+		joins:      []string{},
+		joinMap:    make(map[string]bool),
 	}, nil
 }
 
@@ -169,6 +177,16 @@ func (qs *BaseQuerySet[T]) SetDB(db interface{}) QuerySet[T] {
 func (qs *BaseQuerySet[T]) getDB(ctx context.Context) (*sql.DB, error) {
 	if qs.db != nil {
 		return GetSQLDB(qs.db)
+	}
+	return nil, fmt.Errorf("database connection not set on QuerySet")
+}
+
+// getDialect retrieves the SQL dialect from the database connection
+func (qs *BaseQuerySet[T]) getDialect() (interface {
+	BuildPlaceholders(n int) string
+}, error) {
+	if qs.db != nil {
+		return GetDialect(qs.db)
 	}
 	return nil, fmt.Errorf("database connection not set on QuerySet")
 }
@@ -190,27 +208,43 @@ func (qs *BaseQuerySet[T]) clone() *BaseQuerySet[T] {
 		selectRelated:   append([]string{}, qs.selectRelated...),
 		prefetchRelated: append([]string{}, qs.prefetchRelated...),
 		preloaded:       make(map[string]bool),
+		joins:           append([]string{}, qs.joins...),
+		joinMap:         make(map[string]bool),
 		aggregates:      append([]Aggregate{}, qs.aggregates...),
 		annotations:     append([]AnnotationExpr{}, qs.annotations...),
 		db:              qs.db,
+		err:             qs.err,
 	}
 	// Copy preloaded map
 	for k, v := range qs.preloaded {
 		clone.preloaded[k] = v
 	}
+	// Copy joinMap
+	for k, v := range qs.joinMap {
+		clone.joinMap[k] = v
+	}
 	return clone
 }
 
-// Filter adds a filter condition
+// Filter adds a filter condition.
+// Validation errors are deferred and returned when the QuerySet is executed
+// (e.g. via All, Get, Count). This avoids panics while preserving the
+// chainable API.
 func (qs *BaseQuerySet[T]) Filter(expr Expression) QuerySet[T] {
 	// Check for nil queryset or schema
 	if qs == nil || qs.schema == nil {
-		panic("cannot filter: queryset or schema is nil")
+		clone := qs.clone()
+		clone.err = fmt.Errorf("cannot filter: queryset or schema is nil")
+		return clone
 	}
 
-	// Validate expression
+	// Validate expression -- store error instead of panicking
 	if err := expr.Resolve(qs.schema); err != nil {
-		panic(fmt.Sprintf("invalid filter expression: %v", err))
+		clone := qs.clone()
+		if clone.err == nil {
+			clone.err = fmt.Errorf("invalid filter expression: %w", err)
+		}
+		return clone
 	}
 
 	clone := qs.clone()
@@ -218,11 +252,16 @@ func (qs *BaseQuerySet[T]) Filter(expr Expression) QuerySet[T] {
 	return clone
 }
 
-// Exclude adds an exclude condition
+// Exclude adds an exclude condition.
+// Validation errors are deferred and returned when the QuerySet is executed.
 func (qs *BaseQuerySet[T]) Exclude(expr Expression) QuerySet[T] {
-	// Validate expression
+	// Validate expression -- store error instead of panicking
 	if err := expr.Resolve(qs.schema); err != nil {
-		panic(fmt.Sprintf("invalid exclude expression: %v", err))
+		clone := qs.clone()
+		if clone.err == nil {
+			clone.err = fmt.Errorf("invalid exclude expression: %w", err)
+		}
+		return clone
 	}
 
 	clone := qs.clone()
@@ -249,9 +288,13 @@ func extractOrderFieldPath(field any) string {
 	if spec, ok := field.(OrderFieldSpec); ok {
 		return spec.GetFieldPath()
 	}
-	// Fallback for OrderField (struct type)
-	if of, ok := field.(OrderField); ok {
-		return of.GetFieldPath()
+	// Allow FieldPath (e.g. orm.Field[T]) directly
+	if fp, ok := field.(FieldPath); ok {
+		return fp.Path()
+	}
+	// Allow plain string field names, including "-field" prefix
+	if s, ok := field.(string); ok {
+		return strings.TrimPrefix(s, "-")
 	}
 	return ""
 }
@@ -262,9 +305,13 @@ func extractOrderFieldAscending(field any) bool {
 	if spec, ok := field.(OrderFieldSpec); ok {
 		return spec.IsAscending()
 	}
-	// Fallback for OrderField (struct type)
-	if of, ok := field.(OrderField); ok {
-		return of.IsAscending()
+	// FieldPath defaults to ascending
+	if _, ok := field.(FieldPath); ok {
+		return true
+	}
+	// String supports "-" prefix for descending
+	if s, ok := field.(string); ok {
+		return !strings.HasPrefix(s, "-")
 	}
 	return true
 }
@@ -413,6 +460,9 @@ func (qs *BaseQuerySet[T]) UpdateBuilder() (*UpdateBuilder[T], error) {
 
 // All executes the query and returns all results
 func (qs *BaseQuerySet[T]) All(ctx context.Context) ([]*T, error) {
+	if qs.err != nil {
+		return nil, qs.err
+	}
 	sql, args, err := qs.buildSQL()
 	if err != nil {
 		return nil, err
@@ -429,12 +479,25 @@ func (qs *BaseQuerySet[T]) All(ctx context.Context) ([]*T, error) {
 	}
 	defer rows.Close()
 
-	return qs.scanRows(rows)
+	results, err := qs.scanRows(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prefetch related objects
+	if err := qs.prefetch(ctx, results); err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }
 
 // buildSQL builds the SQL query
 func (qs *BaseQuerySet[T]) buildSQL() (string, []interface{}, error) {
 	builder := NewSQLBuilder()
+
+	// Build JOINs first (populates qs.joins and qs.joinMap)
+	qs.buildJoinClause(builder)
 
 	// Build SELECT clause
 	selectClause := qs.buildSelectClause(builder)
@@ -443,7 +506,10 @@ func (qs *BaseQuerySet[T]) buildSQL() (string, []interface{}, error) {
 	fromClause := fmt.Sprintf("FROM %s", EscapeIdentifier(qs.table))
 
 	// Build WHERE clause
-	whereClause, _ := qs.buildWhereClause(builder)
+	whereClause, _, whereErr := qs.buildWhereClause(builder)
+	if whereErr != nil {
+		return "", nil, whereErr
+	}
 
 	// Build ORDER BY clause
 	orderByClause := qs.buildOrderByClause(builder)
@@ -454,6 +520,9 @@ func (qs *BaseQuerySet[T]) buildSQL() (string, []interface{}, error) {
 
 	// Combine all parts
 	parts := []string{selectClause, fromClause}
+	if len(qs.joins) > 0 {
+		parts = append(parts, strings.Join(qs.joins, " "))
+	}
 	if whereClause != "" {
 		parts = append(parts, whereClause)
 	}
@@ -471,6 +540,80 @@ func (qs *BaseQuerySet[T]) buildSQL() (string, []interface{}, error) {
 	args := builder.Args()
 
 	return sql, args, nil
+}
+
+// buildJoinClause builds the JOIN clause
+func (qs *BaseQuerySet[T]) buildJoinClause(builder *SQLBuilder) {
+	qs.joins = []string{}
+	qs.joinMap = make(map[string]bool)
+
+	for _, path := range qs.selectRelated {
+		if qs.joinMap[path] {
+			continue
+		}
+
+		// Resolve path to relation
+		// For MVP, support single level: "User"
+		rel := qs.schema.GetRelation(path)
+		if rel == nil {
+			continue
+		}
+
+		// Get target schema
+		targetSchema, err := GetModelSchemaByName(rel.TargetModel)
+		if err != nil {
+			continue
+		}
+
+		joinTable := EscapeIdentifier(targetSchema.TableName)
+		alias := EscapeIdentifier(rel.Name)
+		mainTable := EscapeIdentifier(qs.table)
+
+		// Try to find the FK column
+		// Strategy:
+		// 1. Look for field with DBColumn = rel.Name + "_id" (lowercase)
+		// 2. Look for field with Name = rel.Name + "ID"
+		fkColumn := ""
+
+		// Try to find field that corresponds to this relation
+		for _, f := range qs.schema.Fields {
+			// Check common naming conventions
+			if f.StructFieldName == rel.Name+"ID" {
+				fkColumn = f.DBColumn
+				break
+			}
+			if strings.EqualFold(f.DBColumn, rel.Name+"_id") {
+				fkColumn = f.DBColumn
+				break
+			}
+			// Fallback: if field name ends in ID and matches relation prefix
+			if strings.HasSuffix(f.Name, "ID") && strings.HasPrefix(f.Name, rel.Name) {
+				fkColumn = f.DBColumn
+				break
+			}
+		}
+
+		if fkColumn == "" {
+			// Try "user_id" for "User" relation
+			guess := strings.ToLower(rel.Name) + "_id"
+			if f := qs.schema.GetField(guess); f != nil {
+				fkColumn = f.DBColumn
+			}
+		}
+
+		if fkColumn == "" {
+			continue // Could not determine join condition
+		}
+
+		// JOIN target_table "Alias" ON main_table.fk = "Alias".pk
+		joinSQL := fmt.Sprintf("LEFT OUTER JOIN %s %s ON %s.%s = %s.%s",
+			joinTable, alias,
+			mainTable, EscapeIdentifier(fkColumn),
+			alias, EscapeIdentifier(targetSchema.PrimaryKey))
+
+		qs.joins = append(qs.joins, joinSQL)
+		qs.joinMap[path] = true
+	}
 }
 
 // buildSelectClause builds the SELECT clause
@@ -512,11 +655,36 @@ func (qs *BaseQuerySet[T]) buildSelectClause(builder *SQLBuilder) string {
 	}
 	selectClause += strings.Join(fields, ", ")
 
+	// Add related fields
+	for _, path := range qs.selectRelated {
+		if !qs.joinMap[path] {
+			continue
+		}
+		rel := qs.schema.GetRelation(path)
+		if rel == nil {
+			continue
+		}
+		targetSchema, err := GetModelSchemaByName(rel.TargetModel)
+		if err != nil {
+			continue
+		}
+
+		// Select all fields from target schema
+		for _, f := range targetSchema.Fields {
+			alias := EscapeIdentifier(rel.Name)
+			col := EscapeIdentifier(f.DBColumn)
+			colAlias := EscapeIdentifier(rel.Name + "__" + f.DBColumn)
+
+			selectClause += fmt.Sprintf(", %s.%s AS %s", alias, col, colAlias)
+		}
+	}
+
 	return selectClause
 }
 
-// buildWhereClause builds the WHERE clause
-func (qs *BaseQuerySet[T]) buildWhereClause(builder *SQLBuilder) (string, []interface{}) {
+// buildWhereClause builds the WHERE clause.
+// Returns the SQL string, arguments, and any error encountered during SQL generation.
+func (qs *BaseQuerySet[T]) buildWhereClause(builder *SQLBuilder) (string, []interface{}, error) {
 	var parts []string
 	var allArgs []interface{}
 
@@ -524,7 +692,7 @@ func (qs *BaseQuerySet[T]) buildWhereClause(builder *SQLBuilder) (string, []inte
 	for _, cond := range qs.conditions {
 		sql, args, err := cond.ToSQL(builder)
 		if err != nil {
-			panic(fmt.Sprintf("failed to build condition SQL: %v", err))
+			return "", nil, fmt.Errorf("failed to build condition SQL: %w", err)
 		}
 		parts = append(parts, sql)
 		allArgs = append(allArgs, args...)
@@ -534,17 +702,17 @@ func (qs *BaseQuerySet[T]) buildWhereClause(builder *SQLBuilder) (string, []inte
 	for _, exclude := range qs.excludes {
 		sql, args, err := exclude.ToSQL(builder)
 		if err != nil {
-			panic(fmt.Sprintf("failed to build exclude SQL: %v", err))
+			return "", nil, fmt.Errorf("failed to build exclude SQL: %w", err)
 		}
 		parts = append(parts, fmt.Sprintf("NOT (%s)", sql))
 		allArgs = append(allArgs, args...)
 	}
 
 	if len(parts) == 0 {
-		return "", nil
+		return "", nil, nil
 	}
 
-	return "WHERE " + strings.Join(parts, " AND "), allArgs
+	return "WHERE " + strings.Join(parts, " AND "), allArgs, nil
 }
 
 // buildOrderByClause builds the ORDER BY clause
@@ -595,10 +763,15 @@ func (qs *BaseQuerySet[T]) scanRows(rows *sql.Rows) ([]*T, error) {
 	var results []*T
 	for rows.Next() {
 		instance := new(T)
-		scanArgs := qs.prepareScanArgs(instance, columns, fieldMap)
+		scanArgs, postScan := qs.prepareScanArgs(instance, columns, fieldMap)
 
 		if err := rows.Scan(scanArgs...); err != nil {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+
+		// Post-process related fields
+		if postScan != nil {
+			postScan()
 		}
 
 		results = append(results, instance)
@@ -611,14 +784,58 @@ func (qs *BaseQuerySet[T]) scanRows(rows *sql.Rows) ([]*T, error) {
 	return results, nil
 }
 
+type scanField struct {
+	fieldInfo    *FieldInfo
+	relationName string
+}
+
 // buildFieldMap creates a mapping from column names to field info
-func (qs *BaseQuerySet[T]) buildFieldMap(columns []string) map[string]*FieldInfo {
-	fieldMap := make(map[string]*FieldInfo)
+func (qs *BaseQuerySet[T]) buildFieldMap(columns []string) map[string]scanField {
+	fieldMap := make(map[string]scanField)
 	for _, col := range columns {
+		// Check related columns first (Relation__Column)
+		if strings.Contains(col, "__") {
+			parts := strings.SplitN(col, "__", 2)
+			relName := parts[0]
+			relCol := parts[1]
+
+			if !qs.joinMap[relName] {
+				// Might be a manual alias or something else, skip relation logic
+				continue
+			}
+
+			rel := qs.schema.GetRelation(relName)
+			if rel == nil {
+				continue
+			}
+			targetSchema, err := GetModelSchemaByName(rel.TargetModel)
+			if err != nil {
+				continue
+			}
+
+			// Find field in target schema
+			var targetField *FieldInfo
+			for i := range targetSchema.Fields {
+				f := &targetSchema.Fields[i]
+				if strings.EqualFold(f.DBColumn, relCol) || strings.EqualFold(f.Name, relCol) {
+					targetField = f
+					break
+				}
+			}
+
+			if targetField != nil {
+				fieldMap[col] = scanField{
+					fieldInfo:    targetField,
+					relationName: relName,
+				}
+				continue
+			}
+		}
+
 		for i := range qs.schema.Fields {
 			field := &qs.schema.Fields[i]
 			if strings.EqualFold(field.DBColumn, col) || strings.EqualFold(field.Name, col) {
-				fieldMap[col] = field
+				fieldMap[col] = scanField{fieldInfo: field}
 				break
 			}
 		}
@@ -627,52 +844,218 @@ func (qs *BaseQuerySet[T]) buildFieldMap(columns []string) map[string]*FieldInfo
 }
 
 // prepareScanArgs prepares scan arguments using schema
-func (qs *BaseQuerySet[T]) prepareScanArgs(instance *T, columns []string, fieldMap map[string]*FieldInfo) []interface{} {
+func (qs *BaseQuerySet[T]) prepareScanArgs(instance *T, columns []string, fieldMap map[string]scanField) ([]interface{}, func()) {
 	scanArgs := make([]interface{}, len(columns))
 	instanceValue := reflect.ValueOf(instance).Elem()
-	instanceType := instanceValue.Type()
+
+	// Map relationName -> map[fieldName]holder
+	relatedHolders := make(map[string]map[string]*interface{})
+	// Track optional local fields scanned into holders
+	type localHolder struct {
+		field  reflect.Value
+		holder *interface{}
+	}
+	localHolders := make([]localHolder, 0)
 
 	for i, col := range columns {
-		fieldInfo, ok := fieldMap[col]
+		info, ok := fieldMap[col]
 		if !ok {
 			var val interface{}
 			scanArgs[i] = &val
 			continue
 		}
 
-		field := instanceValue.FieldByName(fieldInfo.Name)
-		if !field.IsValid() {
-			field = instanceValue.FieldByName(toPascalCaseSafe(fieldInfo.Name))
-		}
-		if !field.IsValid() {
-			for j := 0; j < instanceType.NumField(); j++ {
-				structField := instanceType.Field(j)
-				if !structField.IsExported() {
-					continue
-				}
-				jsonTag := strings.Split(structField.Tag.Get("json"), ",")[0]
-				dbTag := strings.Split(structField.Tag.Get("db"), ",")[0]
-				if jsonTag == "-" {
-					jsonTag = ""
-				}
-				if dbTag == "-" {
-					dbTag = ""
-				}
-				if jsonTag == fieldInfo.Name || jsonTag == fieldInfo.DBColumn || dbTag == fieldInfo.Name || dbTag == fieldInfo.DBColumn {
-					field = instanceValue.Field(j)
-					break
+		if info.relationName != "" {
+			// Related field
+			holder := new(interface{})
+			scanArgs[i] = holder
+
+			if relatedHolders[info.relationName] == nil {
+				relatedHolders[info.relationName] = make(map[string]*interface{})
+			}
+			relatedHolders[info.relationName][info.fieldInfo.Name] = holder
+		} else {
+			// Local field
+			var field reflect.Value
+			if info.fieldInfo.StructFieldName != "" {
+				field = instanceValue.FieldByName(info.fieldInfo.StructFieldName)
+			} else {
+				field = instanceValue.FieldByName(info.fieldInfo.Name)
+				if !field.IsValid() {
+					field = instanceValue.FieldByName(utils.ToPascal(info.fieldInfo.Name))
 				}
 			}
-		}
-		if field.IsValid() && field.CanSet() {
-			scanArgs[i] = field.Addr().Interface()
-		} else {
-			var val interface{}
-			scanArgs[i] = &val
+			if field.IsValid() && field.CanSet() {
+				// For optional fields, scan into a holder to tolerate NULLs
+				if !info.fieldInfo.Required && field.Kind() != reflect.Ptr {
+					holder := new(interface{})
+					scanArgs[i] = holder
+					localHolders = append(localHolders, localHolder{field: field, holder: holder})
+				} else {
+					scanArgs[i] = field.Addr().Interface()
+				}
+			} else {
+				var val interface{}
+				scanArgs[i] = &val
+			}
 		}
 	}
 
-	return scanArgs
+	postScan := func() {
+		// Populate optional local fields from holders
+		for _, lh := range localHolders {
+			if lh.holder == nil || *lh.holder == nil {
+				continue
+			}
+			setFieldValue(lh.field, *lh.holder)
+		}
+
+		for relName, fields := range relatedHolders {
+			rel := qs.schema.GetRelation(relName)
+			if rel == nil {
+				continue
+			}
+
+			targetSchema, err := GetModelSchemaByName(rel.TargetModel)
+			if err != nil {
+				continue
+			}
+
+			// Check PK
+			pkField := targetSchema.PrimaryKey
+			// Find holder for PK
+			var pkFieldName string
+			for _, f := range targetSchema.Fields {
+				if f.DBColumn == pkField {
+					pkFieldName = f.Name
+					break
+				}
+			}
+
+			pkHolder, ok := fields[pkFieldName]
+			if !ok || pkHolder == nil || *pkHolder == nil {
+				continue // No PK -> relation is nil
+			}
+
+			// Allocate relation struct
+			relField := instanceValue.FieldByName(relName)
+			// Handle pointer to struct
+			if relField.IsValid() && relField.CanSet() && relField.Kind() == reflect.Ptr {
+				val := reflect.New(relField.Type().Elem())
+				relField.Set(val)
+
+				nestedVal := val.Elem()
+
+				// Populate fields
+				for fName, holder := range fields {
+					if holder == nil || *holder == nil {
+						continue
+					}
+
+					fInfo := targetSchema.GetField(fName)
+					if fInfo == nil {
+						continue
+					}
+
+					structField := nestedVal.FieldByName(fInfo.Name)
+					if fInfo.StructFieldName != "" {
+						structField = nestedVal.FieldByName(fInfo.StructFieldName)
+					}
+
+					if structField.IsValid() && structField.CanSet() {
+						setFieldValue(structField, *holder)
+					}
+				}
+			}
+		}
+	}
+
+	return scanArgs, postScan
+}
+
+// Helper to set field value with type conversion
+func setFieldValue(field reflect.Value, value interface{}) {
+	val := reflect.ValueOf(value)
+	if val.Type().ConvertibleTo(field.Type()) {
+		field.Set(val.Convert(field.Type()))
+		return
+	}
+
+	raw := value
+	if b, ok := value.([]byte); ok {
+		raw = string(b)
+	}
+
+	switch field.Kind() {
+	case reflect.String:
+		if s, ok := raw.(string); ok {
+			field.SetString(s)
+		}
+	case reflect.Bool:
+		switch v := raw.(type) {
+		case string:
+			if parsed, err := strconv.ParseBool(v); err == nil {
+				field.SetBool(parsed)
+			}
+		case int64:
+			field.SetBool(v != 0)
+		case int32:
+			field.SetBool(v != 0)
+		case int:
+			field.SetBool(v != 0)
+		case float64:
+			field.SetBool(v != 0)
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		switch v := raw.(type) {
+		case string:
+			if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
+				field.SetInt(parsed)
+			}
+		case float64:
+			field.SetInt(int64(v))
+		case int:
+			field.SetInt(int64(v))
+		case int32:
+			field.SetInt(int64(v))
+		case int64:
+			field.SetInt(v)
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		switch v := raw.(type) {
+		case string:
+			if parsed, err := strconv.ParseUint(v, 10, 64); err == nil {
+				field.SetUint(parsed)
+			}
+		case float64:
+			field.SetUint(uint64(v))
+		case int:
+			if v >= 0 {
+				field.SetUint(uint64(v))
+			}
+		case int64:
+			if v >= 0 {
+				field.SetUint(uint64(v))
+			}
+		case uint64:
+			field.SetUint(v)
+		}
+	case reflect.Float32, reflect.Float64:
+		switch v := raw.(type) {
+		case string:
+			if parsed, err := strconv.ParseFloat(v, 64); err == nil {
+				field.SetFloat(parsed)
+			}
+		case float64:
+			field.SetFloat(v)
+		case float32:
+			field.SetFloat(float64(v))
+		case int:
+			field.SetFloat(float64(v))
+		case int64:
+			field.SetFloat(float64(v))
+		}
+	}
 }
 
 // Get retrieves a single model instance from the filtered queryset.
@@ -748,6 +1131,9 @@ func (qs *BaseQuerySet[T]) Last(ctx context.Context) (*T, error) {
 
 // Count counts matching records
 func (qs *BaseQuerySet[T]) Count(ctx context.Context) (int64, error) {
+	if qs.err != nil {
+		return 0, qs.err
+	}
 	db, err := qs.getDB(ctx)
 	if err != nil {
 		return 0, err
@@ -755,7 +1141,10 @@ func (qs *BaseQuerySet[T]) Count(ctx context.Context) (int64, error) {
 
 	builder := NewSQLBuilder()
 	selectClause := fmt.Sprintf("SELECT COUNT(*) FROM %s", EscapeIdentifier(qs.table))
-	whereClause, whereArgs := qs.buildWhereClause(builder)
+	whereClause, _, whereErr := qs.buildWhereClause(builder)
+	if whereErr != nil {
+		return 0, whereErr
+	}
 
 	sql := selectClause
 	if whereClause != "" {
@@ -763,7 +1152,7 @@ func (qs *BaseQuerySet[T]) Count(ctx context.Context) (int64, error) {
 	}
 
 	var count int64
-	err = db.QueryRowContext(ctx, sql, whereArgs...).Scan(&count)
+	err = db.QueryRowContext(ctx, sql, builder.Args()...).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("count query failed: %w", err)
 	}
@@ -779,6 +1168,9 @@ func (qs *BaseQuerySet[T]) Exists(ctx context.Context) (bool, error) {
 
 // Update performs a bulk update
 func (qs *BaseQuerySet[T]) Update(ctx context.Context, updates UpdateMap) (int64, error) {
+	if qs.err != nil {
+		return 0, qs.err
+	}
 	if len(updates) == 0 {
 		return 0, fmt.Errorf("no fields to update")
 	}
@@ -792,7 +1184,6 @@ func (qs *BaseQuerySet[T]) Update(ctx context.Context, updates UpdateMap) (int64
 
 	// Build SET clause
 	var setParts []string
-	var updateArgs []interface{}
 
 	for fieldName, value := range updates {
 		escapedField := EscapeIdentifier(fieldName)
@@ -800,27 +1191,26 @@ func (qs *BaseQuerySet[T]) Update(ctx context.Context, updates UpdateMap) (int64
 		// Check if value is an Expression
 		if expr, ok := value.(Expression); ok {
 			// Build expression SQL
-			exprSQL, exprArgs, err := expr.ToSQL(builder)
+			exprSQL, _, err := expr.ToSQL(builder)
 			if err != nil {
 				return 0, fmt.Errorf("failed to build expression SQL for field %s: %w", fieldName, err)
 			}
 			setParts = append(setParts, fmt.Sprintf("%s = %s", escapedField, exprSQL))
-			updateArgs = append(updateArgs, exprArgs...)
 		} else {
 			// Regular value
 			placeholder := builder.AddArg(value)
 			setParts = append(setParts, fmt.Sprintf("%s = %s", escapedField, placeholder))
-			updateArgs = append(updateArgs, value)
 		}
 	}
 
 	// Build WHERE clause
-	whereClause, whereArgs := qs.buildWhereClause(builder)
+	whereClause, _, whereErr := qs.buildWhereClause(builder)
+	if whereErr != nil {
+		return 0, whereErr
+	}
 
 	// Combine all args
 	allArgs := builder.Args()
-	allArgs = append(allArgs, updateArgs...)
-	allArgs = append(allArgs, whereArgs...)
 
 	// Build SQL
 	updateSQL := fmt.Sprintf("UPDATE %s SET %s", EscapeIdentifier(qs.table), strings.Join(setParts, ", "))
@@ -842,15 +1232,30 @@ func (qs *BaseQuerySet[T]) Update(ctx context.Context, updates UpdateMap) (int64
 	return rowsAffected, nil
 }
 
-// BulkUpdate performs bulk updates
-// Note: This is a planned feature. For now, use Update() in a loop or implement
-// custom bulk update logic using raw SQL if needed.
+// BulkUpdate performs bulk updates by applying each UpdateMap entry sequentially.
+// Each entry in the updates slice is applied as a separate UPDATE statement against
+// the current QuerySet filters. For true single-statement bulk updates with
+// different values per row, use raw SQL.
 func (qs *BaseQuerySet[T]) BulkUpdate(ctx context.Context, updates []UpdateMap) error {
-	return fmt.Errorf("BulkUpdate not yet implemented in QuerySet - use Update() in a loop or raw SQL for now")
+	if qs.err != nil {
+		return qs.err
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+	for i, update := range updates {
+		if _, err := qs.Update(ctx, update); err != nil {
+			return fmt.Errorf("BulkUpdate failed at index %d: %w", i, err)
+		}
+	}
+	return nil
 }
 
 // Delete performs a bulk delete
 func (qs *BaseQuerySet[T]) Delete(ctx context.Context) (int64, error) {
+	if qs.err != nil {
+		return 0, qs.err
+	}
 	db, err := qs.getDB(ctx)
 	if err != nil {
 		return 0, err
@@ -859,7 +1264,10 @@ func (qs *BaseQuerySet[T]) Delete(ctx context.Context) (int64, error) {
 	builder := NewSQLBuilder()
 
 	// Build WHERE clause
-	whereClause, whereArgs := qs.buildWhereClause(builder)
+	whereClause, _, whereErr := qs.buildWhereClause(builder)
+	if whereErr != nil {
+		return 0, whereErr
+	}
 
 	// Build SQL
 	deleteSQL := fmt.Sprintf("DELETE FROM %s", EscapeIdentifier(qs.table))
@@ -867,8 +1275,10 @@ func (qs *BaseQuerySet[T]) Delete(ctx context.Context) (int64, error) {
 		deleteSQL += " " + whereClause
 	}
 
+	args := builder.Args()
+
 	// Execute
-	result, err := db.ExecContext(ctx, deleteSQL, whereArgs...)
+	result, err := db.ExecContext(ctx, deleteSQL, args...)
 	if err != nil {
 		return 0, fmt.Errorf("delete query failed: %w", err)
 	}
@@ -1135,6 +1545,3 @@ func (vls *BaseValuesListQuerySet[T]) Flat(ctx context.Context) ([]interface{}, 
 
 	return flat, nil
 }
-
-
-

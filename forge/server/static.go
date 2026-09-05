@@ -24,6 +24,8 @@ type StaticOptions struct {
 	MaxAge int
 	// DisableCache disables caching entirely
 	DisableCache bool
+	// Fallback is the file to serve if the requested file is not found (SPA support)
+	Fallback string
 }
 
 // DefaultStaticOptions returns default static file options
@@ -34,11 +36,19 @@ func DefaultStaticOptions() *StaticOptions {
 		Prefix:       "",
 		MaxAge:       3600, // 1 hour
 		DisableCache: false,
+		Fallback:     "",
 	}
 }
 
 // StaticOption is a function that configures StaticOptions
 type StaticOption func(*StaticOptions)
+
+// WithFallback sets the fallback file (SPA support)
+func WithFallback(file string) StaticOption {
+	return func(o *StaticOptions) {
+		o.Fallback = file
+	}
+}
 
 // WithIndexFiles sets the index files
 func WithIndexFiles(files ...string) StaticOption {
@@ -122,6 +132,9 @@ func StaticFS(pattern string, filesystem fs.FS, options ...StaticOption) http.Ha
 
 		// Remove leading slash for filesystem
 		filePath := strings.TrimPrefix(urlPath, "/")
+		if filePath == "" {
+			filePath = "."
+		}
 
 		// Try to open the file
 		file, err := filesystem.Open(filePath)
@@ -139,8 +152,18 @@ func StaticFS(pattern string, filesystem fs.FS, options ...StaticOption) http.Ha
 			}
 
 			if file == nil {
-				http.NotFound(w, r)
-				return
+				// Try fallback if configured (SPA support)
+				if opts.Fallback != "" {
+					if f, err := filesystem.Open(opts.Fallback); err == nil {
+						file = f
+						filePath = opts.Fallback
+					}
+				}
+
+				if file == nil {
+					http.NotFound(w, r)
+					return
+				}
 			}
 		}
 		defer file.Close()
@@ -164,20 +187,19 @@ func StaticFS(pattern string, filesystem fs.FS, options ...StaticOption) http.Ha
 			}
 
 			// Try index files
-			found := false
 			for _, indexFile := range opts.IndexFiles {
 				indexPath := path.Join(filePath, indexFile)
 				if f, err := filesystem.Open(indexPath); err == nil {
-					f.Close()
-					// Redirect to index file
-					http.Redirect(w, r, path.Join(urlPath, indexFile)+"/", http.StatusMovedPermanently)
-					return
+					// Serve index file directly
+					defer f.Close()
+					if stat, err := f.Stat(); err == nil {
+						// Set content type
+						contentType := detectContentType(indexPath)
+						w.Header().Set("Content-Type", contentType)
+						serveContent(w, r, f, stat)
+						return
+					}
 				}
-			}
-
-			if !found {
-				http.NotFound(w, r)
-				return
 			}
 		}
 

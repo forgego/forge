@@ -1,0 +1,13 @@
+Implemented one focused reliability batch in migrations bootstrap handling.
+
+- Fixed nil-input crash path in `forge/db/migrations.go:29` by adding a guard for `db == nil` in `NewMigrationRunner(...)`, returning `database connection is nil` instead of panicking.
+- Added regression coverage in `forge/db/migrations_test.go:5` with `TestNewMigrationRunner_NilDB`.
+- Updated run tracking in `ops/codex-24x7/STATUS.md:3` and appended this run log in `ops/codex-24x7/HISTORY.md:888`.
+
+Tests run:
+- `go test ./db -count=1` (in `forge`) with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` passed.
+- `go test ./... -count=1` (in `examples/ecommerce`) with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` passed.
+
+Current blockers recorded:
+- Ecommerce support/engagement parity remains blocked by stubbed/non-SQLite module paths.
+- Admin UI `vitest` remains blocked by `spawn EPERM`.

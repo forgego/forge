@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/forgego/forge/cli/core"
-	"github.com/forgego/forge/migrate/generate"
+	"github.com/forgego/forge/db/migrate/generate"
 	"github.com/spf13/cobra"
 )
 

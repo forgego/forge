@@ -4,11 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	forgehttp "github.com/forgego/forge/server"
 	"github.com/forgego/forge/identity/backends"
 	"github.com/forgego/forge/identity/models"
 	"github.com/forgego/forge/identity/serializers"
 	"github.com/forgego/forge/identity/service"
+	forgehttp "github.com/forgego/forge/server"
 )
 
 // AuthHandler handles authentication endpoints

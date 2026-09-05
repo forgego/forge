@@ -32,7 +32,11 @@ func FromSchema[T any](schemaInstance schema.Schema) *TypedValidator[T] {
 		}
 
 		// Create field expression
-		fieldExpr := orm.FieldFor[T, interface{}](accessor, field.Name)
+		fieldExpr, err := orm.FieldFor[T, interface{}](accessor, field.Name)
+		if err != nil {
+			// Skip fields that can't be accessed
+			continue
+		}
 
 		// Build field validator using FieldFor helper
 		fieldBuilder := FieldFor[T, interface{}](builder, fieldExpr)

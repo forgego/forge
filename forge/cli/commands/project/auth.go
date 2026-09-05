@@ -64,15 +64,15 @@ type User struct {
 // Fields returns all field definitions for User
 func (User) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("username").WithUnique().WithRequired().WithMaxLength(150),
-		schema.String("email").WithUnique().WithRequired().WithMaxLength(255),
-		schema.String("password").WithRequired().WithMaxLength(128),
-		schema.Bool("is_active").WithDefault(true),
-		schema.Bool("is_staff").WithDefault(false),
-		schema.Bool("is_superuser").WithDefault(false),
-		schema.Time("date_joined").WithAutoNowAdd(),
-		schema.Time("last_login"),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("username").Unique().Required().MaxLength(150).Build(),
+		schema.String("email").Unique().Required().MaxLength(255).Build(),
+		schema.String("password").Required().MaxLength(128).Build(),
+		schema.Bool("is_active").Default(true).Build(),
+		schema.Bool("is_staff").Default(false).Build(),
+		schema.Bool("is_superuser").Default(false).Build(),
+		schema.Time("date_joined").AutoNowAdd().Build(),
+		schema.Time("last_login").Build(),
 	}
 }
 
@@ -134,8 +134,16 @@ func init() {
 	apiCode := `package auth
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"github.com/forgego/forge/api"
 	httplib "github.com/forgego/forge/server"
+	"net/http"
+	"strings"
+	"time"
 )
 
 func init() {
@@ -158,8 +166,9 @@ func RegisterAuthAPI(router *httplib.Router) {
 	apiRouter.Register("users", viewset)
 	apiRouter.RegisterRoutes(router)
 
-	// TODO: Add login/logout endpoints
-	// TODO: Add JWT token generation
+	// Register auth endpoints
+	router.Post("/api/v1/auth/login", handleLogin)
+	router.Post("/api/v1/auth/logout", handleLogout)
 }
 
 // UserSerializer serializes User model
@@ -177,6 +186,64 @@ func NewUserSerializer() api.Serializer {
 // Fields returns the fields to serialize
 func (s *UserSerializer) Fields() []string {
 	return []string{"id", "username", "email", "is_active", "date_joined"}
+}
+
+func handleLogin(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	defer req.Body.Close()
+	var payload map[string]string
+	if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	username := strings.TrimSpace(payload["username"])
+	password := strings.TrimSpace(payload["password"])
+	if username == "" || password == "" {
+		http.Error(w, "username and password are required", http.StatusBadRequest)
+		return
+	}
+
+	// In real projects, replace with real user lookup and password verification.
+	token := generateJWTToken("1", username)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"token":      token,
+		"token_type": "Bearer",
+		"user": map[string]any{
+			"id":       1,
+			"username": username,
+		},
+	})
+}
+
+func handleLogout(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func generateJWTToken(userID, username string) string {
+	headerJSON := "{\"alg\":\"HS256\",\"typ\":\"JWT\"}"
+	payloadJSON := fmt.Sprintf("{\"sub\":%q,\"username\":%q,\"iat\":%d}", userID, username, time.Now().Unix())
+	header := base64.RawURLEncoding.EncodeToString([]byte(headerJSON))
+	payload := base64.RawURLEncoding.EncodeToString([]byte(payloadJSON))
+	unsigned := header + "." + payload
+	mac := hmac.New(sha256.New, []byte("change-me-in-production"))
+	_, _ = mac.Write([]byte(unsigned))
+	signature := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+	return unsigned + "." + signature
+}
+
+func writeJSON(w http.ResponseWriter, status int, payload any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
 }
 `
 

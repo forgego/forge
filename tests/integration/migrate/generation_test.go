@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/forgego/forge/db"
-	"github.com/forgego/forge/migrate"
+	"github.com/forgego/forge/db/migrate"
 	"github.com/forgego/forge/tests/testhelpers"
 )
 
@@ -23,7 +23,7 @@ func TestGeneration_CreateTable(t *testing.T) {
 
 	opts := testhelpers.PostgresOpts{
 		UseDirect: true,
-		Host:      "localhost",
+		Host:      "127.0.0.1",
 		Port:      "5432",
 		User:      "postgres",
 		Password:  "123",
@@ -52,9 +52,9 @@ type User struct {
 
 func (User) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("email").WithRequired().WithMaxLength(255).WithUnique(),
-		schema.String("username").WithRequired().WithMaxLength(150),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("email").Required().MaxLength(255).Unique().Build(),
+		schema.String("username").Required().MaxLength(150).Build(),
 	}
 }
 
@@ -154,8 +154,8 @@ type User struct {
 
 func (User) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("email").WithRequired().WithMaxLength(255).WithUnique(),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("email").Required().MaxLength(255).Unique().Build(),
 	}
 }
 
@@ -196,9 +196,9 @@ type User struct {
 
 func (User) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("email").WithRequired().WithMaxLength(255).WithUnique(),
-		schema.String("username").WithRequired().WithMaxLength(150),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("email").Required().MaxLength(255).Unique().Build(),
+		schema.String("username").Required().MaxLength(150).Build(),
 	}
 }
 

@@ -9,14 +9,14 @@ type Product struct {
 
 func (Product) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("name").WithRequired().WithMaxLength(255),
-		schema.Text("description"),
-		schema.Decimal("price").WithRequired(),
-		schema.Int64("stock_quantity").WithDefault(0),
-		schema.Bool("is_active").WithDefault(true),
-		schema.DateTime("created_at"),
-		schema.DateTime("updated_at"),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("name").Required().MaxLength(255).Build(),
+		schema.Text("description").Build(),
+		schema.Decimal("price").Required().Build(),
+		schema.Int64("stock_quantity").Default(0).Build(),
+		schema.Bool("is_active").Default(true).Build(),
+		schema.DateTime("created_at").Build(),
+		schema.DateTime("updated_at").Build(),
 	}
 }
 
@@ -24,8 +24,8 @@ func (Product) Meta() schema.Meta {
 	return schema.Meta{
 		TableName: "products",
 		Indexes: []schema.Index{
-			schema.Index("name"),
-			schema.Index("is_active"),
+			schema.Index("name").Build(),
+			schema.Index("is_active").Build(),
 		},
 	}
 }
@@ -41,13 +41,13 @@ type Order struct {
 
 func (Order) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("order_number").WithRequired().WithMaxLength(50).WithUnique(),
-		schema.Int64("customer_id").WithRequired(),
-		schema.Decimal("total_amount").WithRequired(),
-		schema.String("status").WithRequired().WithMaxLength(50).WithDefault("pending"),
-		schema.DateTime("created_at"),
-		schema.DateTime("updated_at"),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("order_number").Required().MaxLength(50).Unique().Build(),
+		schema.Int64("customer_id").Required().Build(),
+		schema.Decimal("total_amount").Required().Build(),
+		schema.String("status").Required().MaxLength(50).Default("pending").Build(),
+		schema.DateTime("created_at").Build(),
+		schema.DateTime("updated_at").Build(),
 	}
 }
 
@@ -55,15 +55,15 @@ func (Order) Meta() schema.Meta {
 	return schema.Meta{
 		TableName: "orders",
 		Indexes: []schema.Index{
-			schema.Index("customer_id"),
-			schema.Index("status"),
+			schema.Index("customer_id").Build(),
+			schema.Index("status").Build(),
 		},
 	}
 }
 
 func (Order) Relations() []schema.Relation {
 	return []schema.Relation{
-		schema.ForeignKey("customer_id", "Customer").WithOnDelete("RESTRICT"),
+		schema.ForeignKey("customer_id", "Customer").OnDelete("RESTRICT").Build(),
 	}
 }
 
@@ -74,11 +74,11 @@ type Customer struct {
 
 func (Customer) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("email").WithRequired().WithMaxLength(255).WithUnique(),
-		schema.String("name").WithRequired().WithMaxLength(255),
-		schema.Bool("is_active").WithDefault(true),
-		schema.DateTime("created_at"),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("email").Required().MaxLength(255).Unique().Build(),
+		schema.String("name").Required().MaxLength(255).Build(),
+		schema.Bool("is_active").Default(true).Build(),
+		schema.DateTime("created_at").Build(),
 	}
 }
 

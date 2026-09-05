@@ -11,8 +11,8 @@ func NewChoice(value, label string) Choice {
 }
 
 // Choices creates multiple choices from value-label pairs
-// Usage: WithChoices("active", "Active", "inactive", "Inactive")
-func WithChoices(pairs ...string) []Choice {
+// Usage: Choices("active", "Active", "inactive", "Inactive")
+func Choices(pairs ...string) []Choice {
 	if len(pairs)%2 != 0 {
 		// If odd number, treat as values only (label = value)
 		choices := make([]Choice, len(pairs))

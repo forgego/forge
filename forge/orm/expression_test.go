@@ -1,6 +1,7 @@
 package orm
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -47,96 +48,96 @@ func TestFieldExpression_ComparisonMethods(t *testing.T) {
 	t.Run("Eq", func(t *testing.T) {
 		expr := priceField.Eq(10.0)
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "price")
 		assert.Contains(t, sql, "=")
-		assert.Len(t, args, 1)
-		assert.Equal(t, 10.0, args[0])
+		assert.Len(t, builder.Args(), 1)
+		assert.Equal(t, 10.0, builder.Args()[0])
 	})
 
 	t.Run("Gt", func(t *testing.T) {
 		expr := priceField.Gt(10.0)
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "price")
 		assert.Contains(t, sql, ">")
-		assert.Len(t, args, 1)
+		assert.Len(t, builder.Args(), 1)
 	})
 
 	t.Run("Lt", func(t *testing.T) {
 		expr := priceField.Lt(100.0)
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "price")
 		assert.Contains(t, sql, "<")
-		assert.Len(t, args, 1)
+		assert.Len(t, builder.Args(), 1)
 	})
 
 	t.Run("Gte", func(t *testing.T) {
 		expr := priceField.Gte(10.0)
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, ">=")
-		assert.Len(t, args, 1)
+		assert.Len(t, builder.Args(), 1)
 	})
 
 	t.Run("Lte", func(t *testing.T) {
 		expr := priceField.Lte(100.0)
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "<=")
-		assert.Len(t, args, 1)
+		assert.Len(t, builder.Args(), 1)
 	})
 
 	t.Run("In", func(t *testing.T) {
 		expr := priceField.In(10.0, 20.0, 30.0)
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "IN")
-		assert.GreaterOrEqual(t, len(args), 3)
+		assert.GreaterOrEqual(t, len(builder.Args()), 3)
 	})
 
 	// Note: NotIn method doesn't exist yet - would need to be implemented
 	// t.Run("NotIn", func(t *testing.T) {
 	// 	expr := priceField.NotIn(10.0, 20.0)
 	// 	builder := NewSQLBuilder()
-	// 	sql, args, err := expr.ToSQL(builder)
+	// 	sql, _, err := expr.ToSQL(builder)
 	// 	require.NoError(t, err)
 	// 	assert.Contains(t, sql, "NOT IN")
-	// 	assert.GreaterOrEqual(t, len(args), 2)
+	// 	assert.GreaterOrEqual(t, len(builder.Args()), 2)
 	// })
 
 	t.Run("IsNull", func(t *testing.T) {
 		expr := priceField.IsNull()
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "IS NULL")
-		assert.Len(t, args, 0)
+		assert.Len(t, builder.Args(), 0)
 	})
 
 	t.Run("IsNotNull", func(t *testing.T) {
 		expr := priceField.IsNotNull()
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "IS NOT NULL")
-		assert.Len(t, args, 0)
+		assert.Len(t, builder.Args(), 0)
 	})
 
 	t.Run("Range", func(t *testing.T) {
 		expr := priceField.Range(10.0, 100.0)
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "BETWEEN")
-		assert.Len(t, args, 2)
+		assert.Len(t, builder.Args(), 2)
 	})
 }
 
@@ -146,21 +147,21 @@ func TestFieldExpression_StringOperations(t *testing.T) {
 	t.Run("Contains", func(t *testing.T) {
 		expr := titleField.Contains("Go")
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "LIKE")
-		assert.Len(t, args, 1)
-		assert.Contains(t, args[0].(string), "%Go%")
+		assert.Len(t, builder.Args(), 1)
+		assert.Contains(t, builder.Args()[0].(string), "%Go%")
 	})
 
 	t.Run("StartsWith", func(t *testing.T) {
 		expr := titleField.StartsWith("The")
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "LIKE")
-		assert.Len(t, args, 1)
-		pattern := args[0].(string)
+		assert.Len(t, builder.Args(), 1)
+		pattern := builder.Args()[0].(string)
 		// StartsWith should create pattern "The%" (value + %)
 		// But implementation might have a bug - check what we actually get
 		assert.True(t, strings.HasSuffix(pattern, "%"),
@@ -173,30 +174,30 @@ func TestFieldExpression_StringOperations(t *testing.T) {
 	t.Run("EndsWith", func(t *testing.T) {
 		expr := titleField.EndsWith("Book")
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "LIKE")
-		assert.Len(t, args, 1)
-		pattern := args[0].(string)
+		assert.Len(t, builder.Args(), 1)
+		pattern := builder.Args()[0].(string)
 		assert.Contains(t, pattern, "%Book")
 	})
 
 	t.Run("IContains", func(t *testing.T) {
 		expr := titleField.IContains("go")
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "ILIKE")
-		assert.Len(t, args, 1)
+		assert.Len(t, builder.Args(), 1)
 	})
 
 	t.Run("IExact", func(t *testing.T) {
 		expr := titleField.IExact("Go Programming")
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "ILIKE")
-		assert.Len(t, args, 1)
+		assert.Len(t, builder.Args(), 1)
 	})
 }
 
@@ -207,39 +208,39 @@ func TestCombinedExpression_Arithmetic(t *testing.T) {
 	t.Run("Add", func(t *testing.T) {
 		expr := priceField.Add(taxField)
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "+")
 		assert.Contains(t, sql, "price")
 		assert.Contains(t, sql, "tax")
-		assert.Len(t, args, 0) // No args for field-to-field operations
+		assert.Len(t, builder.Args(), 0) // No args for field-to-field operations
 	})
 
 	t.Run("Sub", func(t *testing.T) {
 		expr := priceField.Sub(taxField)
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "-")
-		assert.Len(t, args, 0)
+		assert.Len(t, builder.Args(), 0)
 	})
 
 	t.Run("Mul", func(t *testing.T) {
 		expr := priceField.Mul(taxField)
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "*")
-		assert.Len(t, args, 0)
+		assert.Len(t, builder.Args(), 0)
 	})
 
 	t.Run("Div", func(t *testing.T) {
 		expr := priceField.Div(taxField)
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "/")
-		assert.Len(t, args, 0)
+		assert.Len(t, builder.Args(), 0)
 	})
 }
 
@@ -258,14 +259,14 @@ func TestQ_And(t *testing.T) {
 	combined := q1.And(q2)
 
 	builder := NewSQLBuilder()
-	sql, args, err := combined.ToSQL(builder)
+	sql, _, err := combined.ToSQL(builder)
 	require.NoError(t, err)
 
 	// Should contain both conditions
 	assert.Contains(t, sql, "price")
 	assert.Contains(t, sql, "available")
 	assert.Contains(t, sql, "AND")
-	assert.Len(t, args, 2)
+	assert.Len(t, builder.Args(), 2)
 }
 
 func TestQ_Or(t *testing.T) {
@@ -277,13 +278,13 @@ func TestQ_Or(t *testing.T) {
 	combined := q1.Or(q2)
 
 	builder := NewSQLBuilder()
-	sql, args, err := combined.ToSQL(builder)
+	sql, _, err := combined.ToSQL(builder)
 	require.NoError(t, err)
 
 	assert.Contains(t, sql, "price")
 	assert.Contains(t, sql, "pages")
 	assert.Contains(t, sql, "OR")
-	assert.Len(t, args, 2)
+	assert.Len(t, builder.Args(), 2)
 }
 
 func TestQ_Not(t *testing.T) {
@@ -293,11 +294,11 @@ func TestQ_Not(t *testing.T) {
 	negated := q.Not()
 
 	builder := NewSQLBuilder()
-	sql, args, err := negated.ToSQL(builder)
+	sql, _, err := negated.ToSQL(builder)
 	require.NoError(t, err)
 
 	assert.Contains(t, sql, "NOT")
-	assert.Len(t, args, 1)
+	assert.Len(t, builder.Args(), 1)
 }
 
 func TestQ_ComplexNesting(t *testing.T) {
@@ -311,14 +312,14 @@ func TestQ_ComplexNesting(t *testing.T) {
 	combined := q1.Or(q2)
 
 	builder := NewSQLBuilder()
-	sql, args, err := combined.ToSQL(builder)
+	sql, _, err := combined.ToSQL(builder)
 	require.NoError(t, err)
 
 	assert.Contains(t, sql, "price")
 	assert.Contains(t, sql, "available")
 	assert.Contains(t, sql, "pages")
 	assert.Contains(t, sql, "OR")
-	assert.Len(t, args, 3)
+	assert.Len(t, builder.Args(), 3)
 }
 
 func TestValueExpression_ToSQL(t *testing.T) {
@@ -337,11 +338,11 @@ func TestValueExpression_ToSQL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			expr := NewValue(tt.value)
 			builder := NewSQLBuilder()
-			sql, args, err := expr.ToSQL(builder)
+			sql, _, err := expr.ToSQL(builder)
 			require.NoError(t, err)
 			assert.Contains(t, sql, "$")
-			assert.Len(t, args, 1)
-			assert.Equal(t, tt.expected, args[0])
+			assert.Len(t, builder.Args(), 1)
+			assert.Equal(t, tt.expected, builder.Args()[0])
 		})
 	}
 }
@@ -357,33 +358,33 @@ func TestF_FieldReference(t *testing.T) {
 	t.Run("F().Gt creates comparison", func(t *testing.T) {
 		expr := F("age").Gt(18)
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "age")
 		assert.Contains(t, sql, ">")
-		assert.Len(t, args, 1)
-		assert.Equal(t, 18, args[0])
+		assert.Len(t, builder.Args(), 1)
+		assert.Equal(t, 18, builder.Args()[0])
 	})
 
 	t.Run("F().Eq creates equality", func(t *testing.T) {
 		expr := F("name").Eq("John")
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "name")
 		assert.Contains(t, sql, "=")
-		assert.Len(t, args, 1)
-		assert.Equal(t, "John", args[0])
+		assert.Len(t, builder.Args(), 1)
+		assert.Equal(t, "John", builder.Args()[0])
 	})
 
 	t.Run("F().Contains for strings", func(t *testing.T) {
 		expr := F("email").Contains("@example.com")
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "LIKE")
-		assert.Len(t, args, 1)
-		assert.Contains(t, args[0].(string), "@example.com")
+		assert.Len(t, builder.Args(), 1)
+		assert.Contains(t, builder.Args()[0].(string), "@example.com")
 	})
 }
 
@@ -396,11 +397,11 @@ func TestFieldRef_FieldReference(t *testing.T) {
 	t.Run("FieldRef().Gt creates comparison", func(t *testing.T) {
 		expr := NewFieldRef("age").Gt(18)
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "age")
 		assert.Contains(t, sql, ">")
-		assert.Len(t, args, 1)
+		assert.Len(t, builder.Args(), 1)
 	})
 }
 
@@ -408,33 +409,33 @@ func TestWhere_Condition(t *testing.T) {
 	t.Run("Where creates equality condition", func(t *testing.T) {
 		expr := Where("name", OpEquals, "John")
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "name")
 		assert.Contains(t, sql, "=")
-		assert.Len(t, args, 1)
-		assert.Equal(t, "John", args[0])
+		assert.Len(t, builder.Args(), 1)
+		assert.Equal(t, "John", builder.Args()[0])
 	})
 
 	t.Run("Where creates greater than condition", func(t *testing.T) {
 		expr := Where("age", OpGreater, 18)
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "age")
 		assert.Contains(t, sql, ">")
-		assert.Len(t, args, 1)
-		assert.Equal(t, 18, args[0])
+		assert.Len(t, builder.Args(), 1)
+		assert.Equal(t, 18, builder.Args()[0])
 	})
 
 	t.Run("Where creates IN condition", func(t *testing.T) {
 		expr := Where("status", OpIn, []interface{}{"active", "pending"})
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 		assert.Contains(t, sql, "status")
 		assert.Contains(t, sql, "IN")
-		assert.GreaterOrEqual(t, len(args), 2)
+		assert.GreaterOrEqual(t, len(builder.Args()), 2)
 	})
 }
 
@@ -445,13 +446,13 @@ func TestAnd_BooleanCombiner(t *testing.T) {
 		combined := And(expr1, expr2)
 
 		builder := NewSQLBuilder()
-		sql, args, err := combined.ToSQL(builder)
+		sql, _, err := combined.ToSQL(builder)
 		require.NoError(t, err)
 
 		assert.Contains(t, sql, "age")
 		assert.Contains(t, sql, "status")
 		assert.Contains(t, sql, "AND")
-		assert.Len(t, args, 2)
+		assert.Len(t, builder.Args(), 2)
 	})
 
 	t.Run("And combines multiple expressions", func(t *testing.T) {
@@ -461,11 +462,11 @@ func TestAnd_BooleanCombiner(t *testing.T) {
 		combined := And(expr1, expr2, expr3)
 
 		builder := NewSQLBuilder()
-		sql, args, err := combined.ToSQL(builder)
+		sql, _, err := combined.ToSQL(builder)
 		require.NoError(t, err)
 
 		assert.Contains(t, sql, "AND")
-		assert.Len(t, args, 3)
+		assert.Len(t, builder.Args(), 3)
 	})
 
 	t.Run("And with type-safe fields", func(t *testing.T) {
@@ -475,13 +476,13 @@ func TestAnd_BooleanCombiner(t *testing.T) {
 		combined := And(ageField.Gt(18), nameField.Eq("John"))
 
 		builder := NewSQLBuilder()
-		sql, args, err := combined.ToSQL(builder)
+		sql, _, err := combined.ToSQL(builder)
 		require.NoError(t, err)
 
 		assert.Contains(t, sql, "age")
 		assert.Contains(t, sql, "name")
 		assert.Contains(t, sql, "AND")
-		assert.Len(t, args, 2)
+		assert.Len(t, builder.Args(), 2)
 	})
 }
 
@@ -492,13 +493,13 @@ func TestOr_BooleanCombiner(t *testing.T) {
 		combined := Or(expr1, expr2)
 
 		builder := NewSQLBuilder()
-		sql, args, err := combined.ToSQL(builder)
+		sql, _, err := combined.ToSQL(builder)
 		require.NoError(t, err)
 
 		assert.Contains(t, sql, "age")
 		assert.Contains(t, sql, "role")
 		assert.Contains(t, sql, "OR")
-		assert.Len(t, args, 2)
+		assert.Len(t, builder.Args(), 2)
 	})
 
 	t.Run("Or combines multiple expressions", func(t *testing.T) {
@@ -508,11 +509,11 @@ func TestOr_BooleanCombiner(t *testing.T) {
 		combined := Or(expr1, expr2, expr3)
 
 		builder := NewSQLBuilder()
-		sql, args, err := combined.ToSQL(builder)
+		sql, _, err := combined.ToSQL(builder)
 		require.NoError(t, err)
 
 		assert.Contains(t, sql, "OR")
-		assert.Len(t, args, 3)
+		assert.Len(t, builder.Args(), 3)
 	})
 }
 
@@ -522,12 +523,12 @@ func TestNot_Negation(t *testing.T) {
 		negated := Not(expr)
 
 		builder := NewSQLBuilder()
-		sql, args, err := negated.ToSQL(builder)
+		sql, _, err := negated.ToSQL(builder)
 		require.NoError(t, err)
 
 		assert.Contains(t, sql, "NOT")
 		assert.Contains(t, sql, "age")
-		assert.Len(t, args, 1)
+		assert.Len(t, builder.Args(), 1)
 	})
 
 	t.Run("Not with type-safe field", func(t *testing.T) {
@@ -535,11 +536,11 @@ func TestNot_Negation(t *testing.T) {
 		negated := Not(ageField.Gt(65))
 
 		builder := NewSQLBuilder()
-		sql, args, err := negated.ToSQL(builder)
+		sql, _, err := negated.ToSQL(builder)
 		require.NoError(t, err)
 
 		assert.Contains(t, sql, "NOT")
-		assert.Len(t, args, 1)
+		assert.Len(t, builder.Args(), 1)
 	})
 }
 
@@ -555,7 +556,7 @@ func TestComplexBooleanExpressions(t *testing.T) {
 		)
 
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 
 		assert.Contains(t, sql, "age")
@@ -563,7 +564,7 @@ func TestComplexBooleanExpressions(t *testing.T) {
 		assert.Contains(t, sql, "role")
 		assert.Contains(t, sql, "AND")
 		assert.Contains(t, sql, "OR")
-		assert.Len(t, args, 3)
+		assert.Len(t, builder.Args(), 3)
 	})
 
 	t.Run("And with Not", func(t *testing.T) {
@@ -574,14 +575,14 @@ func TestComplexBooleanExpressions(t *testing.T) {
 		)
 
 		builder := NewSQLBuilder()
-		sql, args, err := expr.ToSQL(builder)
+		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
 
 		assert.Contains(t, sql, "age")
 		assert.Contains(t, sql, "status")
 		assert.Contains(t, sql, "AND")
 		assert.Contains(t, sql, "NOT")
-		assert.Len(t, args, 2)
+		assert.Len(t, builder.Args(), 2)
 	})
 }
 
@@ -591,11 +592,11 @@ func TestCompatibility_NewQ(t *testing.T) {
 		q := NewQ(ageField.Gt(18))
 
 		builder := NewSQLBuilder()
-		sql, args, err := q.ToSQL(builder)
+		sql, _, err := q.ToSQL(builder)
 		require.NoError(t, err)
 
 		assert.Contains(t, sql, "age")
-		assert.Len(t, args, 1)
+		assert.Len(t, builder.Args(), 1)
 	})
 }
 
@@ -634,5 +635,58 @@ func TestFieldRef_AllMethods(t *testing.T) {
 	})
 }
 
+func TestFieldResolve_RelationPaths(t *testing.T) {
+	t.Run("resolves valid nested relation field", func(t *testing.T) {
+		_, err := GetModelSchema[User]()
+		require.NoError(t, err)
+		postSchema, err := GetModelSchema[Post]()
+		require.NoError(t, err)
 
+		err = NewField[string]("User__email", "posts").Resolve(postSchema)
+		require.NoError(t, err)
+	})
 
+	t.Run("fails when traversing non-relation field", func(t *testing.T) {
+		schema := &ModelSchema{
+			Fields: []FieldInfo{
+				{Name: "name", Type: reflect.TypeOf("")},
+			},
+		}
+
+		err := NewField[string]("name__first", "").Resolve(schema)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot be traversed further")
+	})
+
+	t.Run("fails when relation target model is not registered", func(t *testing.T) {
+		schema := &ModelSchema{
+			Relations: []RelationInfo{
+				{Name: "author", TargetModel: "MissingModel"},
+			},
+		}
+
+		err := NewField[string]("author__email", "").Resolve(schema)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to resolve target model MissingModel")
+	})
+
+	t.Run("fails when nested field does not exist", func(t *testing.T) {
+		_, err := GetModelSchema[User]()
+		require.NoError(t, err)
+		postSchema, err := GetModelSchema[Post]()
+		require.NoError(t, err)
+
+		err = NewField[string]("User__missing", "").Resolve(postSchema)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "field User__missing not found in model")
+	})
+
+	t.Run("fails when path resolves to relation instead of field", func(t *testing.T) {
+		postSchema, err := GetModelSchema[Post]()
+		require.NoError(t, err)
+
+		err = NewField[string]("User", "").Resolve(postSchema)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "resolves to relation, not a field")
+	})
+}

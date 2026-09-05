@@ -9,7 +9,7 @@ import (
 	"github.com/forgego/forge/cli/core"
 	"github.com/forgego/forge/codegen"
 	dbstate "github.com/forgego/forge/db/migrate/state"
-	"github.com/forgego/forge/migrate"
+	"github.com/forgego/forge/db/migrate"
 	"github.com/spf13/cobra"
 )
 

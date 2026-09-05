@@ -28,6 +28,7 @@ type FieldInfo struct {
 	PrimaryKey bool
 	Unique     bool
 	ForeignKey *RelationInfo
+	StructFieldName string
 }
 
 // RelationInfo contains relation metadata
@@ -40,6 +41,7 @@ type RelationInfo struct {
 	OnUpdate    string
 	RelatedName string
 	FieldName   string // The field name on this model
+	Through     string // Through table for ManyToMany
 }
 
 // RelationType represents the type of relation
@@ -100,6 +102,27 @@ func BuildModelSchema(schemaInstance schema.Schema) (*ModelSchema, error) {
 		ms.TableName = meta.TableName
 	}
 
+	// Build map of DBColumn -> StructFieldName
+	structFieldMap := make(map[string]string)
+	if ms.ModelType.Kind() == reflect.Struct {
+		for i := 0; i < ms.ModelType.NumField(); i++ {
+			field := ms.ModelType.Field(i)
+			// Skip unexported
+			if field.PkgPath != "" {
+				continue
+			}
+
+			// Check db tag
+			dbTag := field.Tag.Get("db")
+			if dbTag != "" {
+				structFieldMap[dbTag] = field.Name
+			}
+
+			// Also map lower case name
+			structFieldMap[strings.ToLower(field.Name)] = field.Name
+		}
+	}
+
 	// Build fields from schema
 	fields := schemaInstance.Fields()
 	for _, field := range fields {
@@ -114,6 +137,13 @@ func BuildModelSchema(schemaInstance schema.Schema) (*ModelSchema, error) {
 
 		if field.DBColumn == "" {
 			fieldInfo.DBColumn = field.Name
+		}
+
+		// Resolve StructFieldName
+		if name, ok := structFieldMap[fieldInfo.DBColumn]; ok {
+			fieldInfo.StructFieldName = name
+		} else if name, ok := structFieldMap[strings.ToLower(field.Name)]; ok {
+			fieldInfo.StructFieldName = name
 		}
 
 		if field.PrimaryKey {
@@ -133,6 +163,7 @@ func BuildModelSchema(schemaInstance schema.Schema) (*ModelSchema, error) {
 			OnDelete:    string(rel.OnDelete),
 			OnUpdate:    string(rel.OnUpdate),
 			RelatedName: rel.RelatedName,
+			Through:     rel.Through,
 		}
 
 		// Determine relation type
@@ -225,6 +256,9 @@ func GetModelSchema[T any]() (*ModelSchema, error) {
 	schemaCache[typ] = schema
 	schemaMu.Unlock()
 
+	// Register type name for relation resolution
+	RegisterModelType(typ.Name(), typ)
+
 	return schema, nil
 }
 
@@ -248,14 +282,15 @@ func NewFieldAccessor[T any]() (*FieldAccessor[T], error) {
 }
 
 // Field creates a field expression (use FieldFor for type safety)
-func (fa *FieldAccessor[T]) Field(name string) FieldExpression[interface{}] {
+// Returns an error if the field is not found
+func (fa *FieldAccessor[T]) Field(name string) (FieldExpression[interface{}], error) {
 	// Validate field exists
 	fieldInfo := fa.schema.GetField(name)
 	if fieldInfo == nil {
-		panic(fmt.Sprintf("field %s not found on model", name))
+		return FieldExpression[interface{}]{}, fmt.Errorf("field %s not found on model", name)
 	}
 
-	return NewField[interface{}](name, fa.table)
+	return NewField[interface{}](name, fa.table), nil
 }
 
 // AllFieldExpressions returns all field expressions as a map
@@ -269,16 +304,17 @@ func (fa *FieldAccessor[T]) AllFieldExpressions() map[string]FieldExpression[int
 
 // RelatedField creates a type-safe related field expression
 // Use RelatedFieldFor to specify related model and field types
-func (fa *FieldAccessor[T]) RelatedField(relationName, fieldName string) FieldExpression[interface{}] {
+// Returns an error if the relation is not found
+func (fa *FieldAccessor[T]) RelatedField(relationName, fieldName string) (FieldExpression[interface{}], error) {
 	// Validate relation exists
 	rel := fa.schema.GetRelation(relationName)
 	if rel == nil {
-		panic(fmt.Sprintf("relation %s not found", relationName))
+		return FieldExpression[interface{}]{}, fmt.Errorf("relation %s not found", relationName)
 	}
 
 	// Build field path
 	fieldPath := relationName + "__" + fieldName
-	return NewField[interface{}](fieldPath, fa.table)
+	return NewField[interface{}](fieldPath, fa.table), nil
 }
 
 // AllFields returns all field names
@@ -329,13 +365,21 @@ func (ms *ModelSchema) ResolvePath(path string) (*FieldInfo, *ModelSchema, error
 		return nil, nil, fmt.Errorf("field or relation %s not found", parts[0])
 	}
 
-	// For now, return error for relation traversal
-	// Full implementation would resolve the target model schema
-	if len(parts) > 1 {
-		return nil, nil, fmt.Errorf("relation traversal not yet fully implemented for path %s", path)
+	// If path ends at a relation (no further parts), it's an error
+	if len(parts) == 1 {
+		return nil, nil, fmt.Errorf("path %s resolves to a relation, not a field", path)
 	}
 
-	return nil, nil, fmt.Errorf("path %s resolves to a relation, not a field", path)
+	// Traverse the relation to resolve the remaining path.
+	// Look up the target model schema and recurse.
+	targetSchema, err := GetModelSchemaByName(relation.TargetModel)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to resolve target model %s for relation %s: %w",
+			relation.TargetModel, parts[0], err)
+	}
+
+	remainingPath := strings.Join(parts[1:], "__")
+	return targetSchema.ResolvePath(remainingPath)
 }
 
 // GetPathType returns the type information for a field path

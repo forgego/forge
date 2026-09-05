@@ -106,7 +106,7 @@ func (fs *FilterSet[T]) ApplyQueryParams(ctx context.Context, r *http.Request) (
 	}
 
 	// Parse query parameters into AST
-	parser := NewParser(fs.security)
+	parser := NewParser(WithSecurity(fs.security))
 	ast, err := parser.ParseFilterNode(r, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse query parameters: %w", err)

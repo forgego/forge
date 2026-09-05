@@ -3,11 +3,16 @@ package core
 import (
 	"context"
 	"reflect"
+
+	"github.com/forgego/forge/db"
 )
 
 // AdminInterface is the interface that all admin instances must implement
 // This allows type-agnostic access to admin functionality
 type AdminInterface interface {
+	// Initialization
+	SetDB(database *db.DB)
+
 	// Metadata
 	ModelName() string
 	ModelType() reflect.Type

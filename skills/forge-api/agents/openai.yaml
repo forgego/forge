@@ -1,0 +1,4 @@
+interface:
+  display_name: "Forge API"
+  short_description: "Build Forge REST APIs with serializers and viewsets."
+  default_prompt: "Help me build or update a Forge REST API."

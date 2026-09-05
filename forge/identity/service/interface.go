@@ -31,6 +31,9 @@ type UserService interface {
 
 	// ResendVerificationEmail resends verification email
 	ResendVerificationEmail(ctx context.Context, email string) error
+
+	// CreateEmailVerificationToken creates a new email verification token
+	CreateEmailVerificationToken(ctx context.Context, userID int64, email string) (*models.EmailVerificationToken, error)
 }
 
 // AuthService defines the interface for authentication business logic

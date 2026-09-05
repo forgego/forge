@@ -1,0 +1,19 @@
+Implemented one focused high-impact batch on ecommerce/admin permission-denial parity.
+
+**What changed**
+- Added authenticated `403` coverage in `examples/ecommerce/main_test.go:394`:
+  - New test `TestBuildEcommerceRouter_AdminAPIDeletePermissionDeniedFlow`.
+  - Logs in via `/admin/api/login`, then verifies authenticated deletes are denied for:
+    - `/admin/api/orders/1/`
+    - `/admin/api/payments/1/`
+  - Asserts HTTP `403` and API error code `permission_denied`.
+- Updated run tracking:
+  - `ops/codex-24x7/STATUS.md:3` (Completed this run / Remaining work / Next run plan)
+  - `ops/codex-24x7/HISTORY.md:419` (appended concise run log)
+
+**Validation run**
+- `go test ./admin/api/rest -count=1` in `forge` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` passed.
+- `go test ./... -count=1` in `examples/ecommerce` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` passed.
+
+**Note**
+- `git status` is blocked in this runner due Git safe-directory ownership mismatch for `H:/Coding/gogo/forgego/newforge`; no repository config changes were made.

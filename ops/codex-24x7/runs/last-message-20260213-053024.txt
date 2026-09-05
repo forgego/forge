@@ -1,0 +1,22 @@
+Implemented one focused high-impact batch on admin action permission reliability + ecommerce parity.
+
+- Fixed object-level enforcement in action execution at `forge/admin/core/admin.go:455`.
+- `ExecuteAction` now:
+  - Reads authenticated user from context (`forge/admin/core/admin.go:471`).
+  - Enforces per-object `HasChangePermission` before action handler execution.
+  - Skips invalid/not-found/unauthorized IDs and returns them in `BulkActionResponse.Errors`.
+  - Returns partial-success style responses for mixed outcomes (`forge/admin/core/admin.go:510`).
+- Added ecommerce integration coverage for mixed object-permission action flow:
+  - `examples/ecommerce/main_test.go:906`
+  - New test: `TestBuildEcommerceRouter_AdminAPIActionObjectSpecificOrderChangePermission`
+  - Verifies `POST /admin/api/orders/action/mark_shipped` updates only mutable orders and leaves finalized orders unchanged.
+
+Updated run tracking:
+
+- `ops/codex-24x7/STATUS.md:3`
+- `ops/codex-24x7/HISTORY.md:547`
+
+Tests run:
+
+- `go test ./admin/core -count=1` in `forge` (pass)
+- `go test ./... -count=1` in `examples/ecommerce` (pass)

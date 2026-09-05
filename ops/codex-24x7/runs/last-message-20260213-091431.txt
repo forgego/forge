@@ -1,0 +1,14 @@
+Implemented one focused reliability batch in framework DB bootstrap handling.
+
+- Fixed nil-config panic path in `forge/db/db.go:20` by adding a guard in `NewDBFromConfig(...)` that returns `database config is nil` (`forge/db/db.go:22`).
+- Added regression test `TestNewDBFromConfig_NilConfig` in `forge/db/db_test.go:8`.
+
+Run tracking updated as required:
+
+- `ops/codex-24x7/STATUS.md:3` (Completed this run / Remaining work / Next run plan)
+- `ops/codex-24x7/HISTORY.md:850` (appended concise run log for this batch)
+
+Tests run:
+
+1. `go test ./db -count=1` (in `forge`) passed.
+2. `go test ./... -count=1` (in `examples/ecommerce`) passed.

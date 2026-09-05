@@ -1,0 +1,4 @@
+interface:
+  display_name: "Forge CLI"
+  short_description: "Forge CLI commands and workflows."
+  default_prompt: "Help me use Forge CLI commands and workflows."

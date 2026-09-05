@@ -1,0 +1,19 @@
+Completed one focused high-impact batch on admin/API auth reliability + ecommerce parity.
+
+### What changed
+- Added framework auth-negatives coverage in `forge/admin/api/rest/router_test.go:257`:
+  - `TestRegisterRoutes_RejectsInvalidOrMalformedTokens`
+  - Verifies protected admin endpoints return `401` for malformed auth scheme and invalid bearer token.
+- Expanded ecommerce authenticated admin flow in `examples/ecommerce/main_test.go:345`:
+  - Extended `TestBuildEcommerceRouter_AdminAPIAuthFlow` to cover:
+  - invalid-token update/delete rejection (`401`)
+  - valid-token update success (`200`)
+  - authenticated list/read (`200`)
+  - valid-token delete (`204`) and post-delete read (`404`)
+- Updated run tracking:
+  - `ops/codex-24x7/STATUS.md:4`
+  - `ops/codex-24x7/HISTORY.md:374`
+
+### Verification run
+- `go test ./admin/api/rest -count=1` in `forge` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` (pass)
+- `go test ./... -count=1` in `examples/ecommerce` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` (pass)

@@ -1,25 +1,5 @@
 package {{.AppName}}
 
-import (
-	admincore "github.com/forgego/forge/admin/core"
-	"github.com/forgego/forge/orm"
-	"github.com/forgego/forge/schema"
-)
-
-func init() {
-	// Auto-register models for admin interface
-	// Example:
-	// schemaInstance := &YourModelSchema{} // Your schema implementation
-	// manager := orm.NewManager[YourModel](db) // Your ORM manager
-	// config := &admincore.Config[YourModel]{
-	//     VerboseName:       "Your Model",
-	//     VerboseNamePlural: "Your Models",
-	//     ListPerPage:       20,
-	// }
-	// admin, err := admincore.Register(schemaInstance, manager, config)
-	// if err != nil {
-	//     log.Fatal(err)
-	// }
-}
+// Register admin configs for this app in init() once models exist.
 
 

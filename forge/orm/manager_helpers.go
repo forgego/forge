@@ -10,6 +10,7 @@ import (
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/errors"
 	"github.com/forgego/forge/schema"
+	"github.com/forgego/forge/utils"
 )
 
 // ExecuteHooks executes model hooks in the correct order
@@ -131,37 +132,59 @@ func BuildInsertSQL(instance interface{}, tableName string) (sql string, values 
 	var insertValues []interface{}
 	columnIndex := 1
 
-	for _, schemaField := range schemaFields {
-		// Skip primary key if auto-increment
-		if schemaField.PrimaryKey && schemaField.AutoIncrement {
-			continue
+	if len(schemaFields) > 0 {
+		for _, schemaField := range schemaFields {
+			if schemaField.PrimaryKey && schemaField.AutoIncrement {
+				continue
+			}
+			fieldValue, err := getFieldValueByName(instance, schemaField.Name)
+			if err != nil {
+				continue
+			}
+			fieldValueReflect := reflect.ValueOf(fieldValue)
+			if !schemaField.Required && fieldValueReflect.IsZero() {
+				continue
+			}
+			columnName := schemaField.DBColumn
+			if columnName == "" {
+				columnName = schemaField.Name
+			}
+			insertColumns = append(insertColumns, columnName)
+			insertPlaceholders = append(insertPlaceholders, fmt.Sprintf("$%d", columnIndex))
+			insertValues = append(insertValues, fieldValue)
+			columnIndex++
 		}
-
-		// Get field value using helper function
-		fieldValue, err := getFieldValueByName(instance, schemaField.Name)
-		if err != nil {
-			// Field not found or not accessible - skip it
-			continue
+	} else {
+		// Fallback: derive columns from struct fields and tags
+		typ := instanceValue.Type()
+		for i := 0; i < typ.NumField(); i++ {
+			sf := typ.Field(i)
+			// Skip unexported
+			if sf.PkgPath != "" {
+				continue
+			}
+			tag := sf.Tag.Get("db")
+			col := tag
+			if col == "" || col == "-" {
+				col = strings.ToLower(sf.Name)
+			}
+			// Skip id auto-increment
+			if col == "id" {
+				continue
+			}
+			val := instanceValue.Field(i)
+			if !val.IsValid() || !val.CanInterface() {
+				continue
+			}
+			if isZeroValue(val) {
+				continue
+			}
+			insertColumns = append(insertColumns, col)
+			insertPlaceholders = append(insertPlaceholders, fmt.Sprintf("$%d", columnIndex))
+			insertValues = append(insertValues, val.Interface())
+			columnIndex++
 		}
-
-		// Check if value is zero and field is not required
-		fieldValueReflect := reflect.ValueOf(fieldValue)
-		if !schemaField.Required && fieldValueReflect.IsZero() {
-			continue
-		}
-
-		// Get column name from schema (DBColumn or Name)
-		columnName := schemaField.DBColumn
-		if columnName == "" {
-			columnName = schemaField.Name
-		}
-
-		insertColumns = append(insertColumns, columnName)
-		insertPlaceholders = append(insertPlaceholders, fmt.Sprintf("$%d", columnIndex))
-		insertValues = append(insertValues, fieldValue)
-		columnIndex++
 	}
-
 	if len(insertColumns) == 0 {
 		return "", nil, nil, fmt.Errorf("no fields to insert")
 	}
@@ -200,39 +223,38 @@ func getFieldValueByName(instance interface{}, fieldName string) (interface{}, e
 	}
 
 	fieldValue := instanceValue.FieldByName(fieldName)
-	if fieldValue.IsValid() {
-		if !fieldValue.CanInterface() {
-			return nil, fmt.Errorf("field %s is not accessible", fieldName)
-		}
-		return fieldValue.Interface(), nil
+	if !fieldValue.IsValid() {
+		// Try PascalCase
+		fieldValue = instanceValue.FieldByName(utils.ToPascal(fieldName))
+	}
+	if !fieldValue.IsValid() {
+		return nil, fmt.Errorf("field %s not found", fieldName)
 	}
 
-	typ := instanceValue.Type()
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
-		if !field.IsExported() {
-			continue
-		}
-
-		jsonTag := strings.Split(field.Tag.Get("json"), ",")[0]
-		dbTag := strings.Split(field.Tag.Get("db"), ",")[0]
-		if jsonTag == "-" {
-			jsonTag = ""
-		}
-		if dbTag == "-" {
-			dbTag = ""
-		}
-
-		if jsonTag == fieldName || dbTag == fieldName {
-			matched := instanceValue.Field(i)
-			if !matched.CanInterface() {
-				return nil, fmt.Errorf("field %s is not accessible", fieldName)
-			}
-			return matched.Interface(), nil
-		}
+	if !fieldValue.CanInterface() {
+		return nil, fmt.Errorf("field %s is not accessible", fieldName)
 	}
 
-	return nil, fmt.Errorf("field %s not found", fieldName)
+	return fieldValue.Interface(), nil
+}
+
+func isZeroValue(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.String:
+		return v.Len() == 0
+	case reflect.Bool:
+		return v.Bool() == false
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return v.Float() == 0
+	case reflect.Pointer, reflect.Interface:
+		return v.IsNil()
+	default:
+		return v.IsZero()
+	}
 }
 
 // BuildUpdateSQL builds an UPDATE SQL statement from a model instance
@@ -362,9 +384,15 @@ func BuildBulkInsertSQL(instances []interface{}, tableName string) (sql string, 
 
 	for _, instance := range instances {
 		// Get values for this instance
-		_, instanceValues, _, err := BuildInsertSQL(instance, tableName)
+		_, instanceValues, instanceColumns, err := BuildInsertSQL(instance, tableName)
 		if err != nil {
 			return "", nil, nil, fmt.Errorf("failed to build insert SQL for instance: %w", err)
+		}
+		if len(instanceColumns) != len(columns) || strings.Join(instanceColumns, ",") != strings.Join(columns, ",") {
+			return "", nil, nil, fmt.Errorf("bulk insert requires consistent columns across instances: expected [%s], got [%s]",
+				strings.Join(columns, ", "),
+				strings.Join(instanceColumns, ", "),
+			)
 		}
 
 		// Build placeholders for this row
@@ -481,33 +509,64 @@ func GetIDValue(instance interface{}, idFieldName string) (interface{}, error) {
 		return nil, fmt.Errorf("instance must be a struct")
 	}
 
-	typ := instanceValue.Type()
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
-		fieldValue := instanceValue.Field(i)
+	var findValue func(v reflect.Value) (reflect.Value, bool, error)
+	findValue = func(v reflect.Value) (reflect.Value, bool, error) {
+		t := v.Type()
+		for i := 0; i < t.NumField(); i++ {
+			field := t.Field(i)
+			fieldValue := v.Field(i)
 
-		// Check field name
-		if strings.EqualFold(field.Name, idFieldName) {
-			if !fieldValue.CanInterface() {
-				return nil, fmt.Errorf("id field is not accessible")
-			}
-			return fieldValue.Interface(), nil
-		}
-
-		// Check db tag
-		if dbTag := field.Tag.Get("db"); dbTag != "" {
-			tagParts := strings.Split(dbTag, ",")
-			if strings.EqualFold(tagParts[0], idFieldName) {
-				if !fieldValue.CanInterface() {
-					return nil, fmt.Errorf("id field is not accessible")
+			// Recurse into anonymous embedded structs.
+			if field.Anonymous {
+				switch fieldValue.Kind() {
+				case reflect.Struct:
+					if nested, ok, err := findValue(fieldValue); err != nil {
+						return reflect.Value{}, false, err
+					} else if ok {
+						return nested, true, nil
+					}
+				case reflect.Ptr:
+					if fieldValue.IsNil() {
+						continue
+					}
+					if fieldValue.Elem().Kind() == reflect.Struct {
+						if nested, ok, err := findValue(fieldValue.Elem()); err != nil {
+							return reflect.Value{}, false, err
+						} else if ok {
+							return nested, true, nil
+						}
+					}
 				}
-				return fieldValue.Interface(), nil
+			}
+
+			// Check field name
+			if strings.EqualFold(field.Name, idFieldName) {
+				if !fieldValue.CanInterface() {
+					return reflect.Value{}, false, fmt.Errorf("id field is not accessible")
+				}
+				return fieldValue, true, nil
+			}
+
+			// Check db tag
+			if dbTag := field.Tag.Get("db"); dbTag != "" {
+				tagParts := strings.Split(dbTag, ",")
+				if strings.EqualFold(tagParts[0], idFieldName) {
+					if !fieldValue.CanInterface() {
+						return reflect.Value{}, false, fmt.Errorf("id field is not accessible")
+					}
+					return fieldValue, true, nil
+				}
 			}
 		}
+		return reflect.Value{}, false, nil
 	}
 
+	val, ok, err := findValue(instanceValue)
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		return val.Interface(), nil
+	}
 	return nil, fmt.Errorf("id field '%s' not found", idFieldName)
 }
-
-
-

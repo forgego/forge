@@ -1,0 +1,25 @@
+Implemented one focused production-readiness batch on admin/API auth reliability and updated run tracking.
+
+Changed:
+- `forge/admin/api/rest/router.go`
+  - Hardened `handleLogin` to validate credentials before issuing tokens.
+  - Added env-configurable credentials:
+    - `FORGE_ADMIN_USERNAME` (default `admin`)
+    - `FORGE_ADMIN_PASSWORD` (default `secret`)
+  - Invalid credentials now return `401` with `invalid_credentials`.
+  - Added constant-time comparison helper for credential checks.
+- `forge/admin/api/rest/router_test.go`
+  - Added `TestHandleLogin_RejectsInvalidCredentials`
+  - Added `TestHandleLogin_UsesConfiguredCredentials`
+- `ops/codex-24x7/STATUS.md`
+  - Updated `Completed this run`, `Remaining work`, `Next run plan`.
+- `ops/codex-24x7/HISTORY.md`
+  - Appended concise run log for `2026-02-13 08:34:50`.
+
+Validation run:
+- `go test ./admin/api/rest -count=1` (in `forge`) with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` passed.
+- `go test ./... -count=1` (in `examples/ecommerce`) with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` passed.
+
+Current blockers/remaining:
+- `examples/ecommerce` support/engagement admin+API parity is still blocked by current stubbed/non-SQLite module paths.
+- Admin UI unit tests still blocked in this runner by `vitest`/Vite `spawn EPERM`.

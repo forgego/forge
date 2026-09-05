@@ -1,7 +1,7 @@
 package {{.AppName}}
 
 import (
-	"github.com/forgego/forge/pkg/schema"
+	"github.com/forgego/forge/schema"
 )
 
 // {{.ModelName}} represents a {{.ModelName}} model
@@ -12,7 +12,7 @@ type {{.ModelName}} struct {
 // Fields returns all field definitions for {{.ModelName}}
 func ({{.ModelName}}) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
 		// Add your fields here
 	}
 }
@@ -35,6 +35,3 @@ func ({{.ModelName}}) Relations() []schema.Relation {
 func ({{.ModelName}}) Hooks() *schema.ModelHooks {
 	return nil
 }
-
-
-

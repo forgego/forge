@@ -1,127 +1,63 @@
 /**
  * Sidebar configuration for forge documentation
- * Multi-persona navigation structure for different user types
  */
 
 // @ts-check
 
 /** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
 const sidebars = {
-  // Getting Started sidebar - For beginners
-  gettingStarted: [
+  docs: [
     {
-      type: 'doc',
-      id: 'introduction',
-      label: 'Introduction',
+      type: 'category',
+      label: 'Start Here',
+      items: ['index', 'introduction', 'quickstart', 'installation'],
     },
     {
       type: 'category',
-      label: 'Concepts',
+      label: 'Core Build',
+      items: ['models', 'orm', 'migrations'],
+    },
+    {
+      type: 'category',
+      label: 'Admin',
+      items: ['admin/overview', 'admin/config', 'admin/actions', 'admin/filters', 'admin/ui'],
+    },
+    {
+      type: 'category',
+      label: 'API',
       items: [
-        'learn/what-is-forge',
-        'learn/architecture',
-        'learn/request-lifecycle',
-        'learn/code-generation',
+        'api/overview',
+        'api/serializers',
+        'api/viewsets',
+        'api/authentication',
+        'api/permissions',
+        'api/throttling',
+        'api/pagination',
+        'api/versioning',
+        'api/renderers-parsers',
+        'api/errors',
+        'api/openapi',
       ],
     },
     {
       type: 'category',
-      label: 'Quick Start',
-      items: [
-        'getting-started/installation',
-        'getting-started/hello-world',
-        'getting-started/first-api',
-        'getting-started/first-app',
-        'getting-started/project-structure',
-        'getting-started/quickstart',
-      ],
+      label: 'Platform',
+      items: ['filters', 'identity', 'server/overview', 'server/middleware', 'server/security', 'server/health'],
     },
     {
       type: 'category',
-      label: 'Core Logic',
-      items: [
-        'learn/extending-forge',
-      ],
-    },
-  ],
-
-  // Full Guides sidebar - For practitioners
-  fullGuides: [
-    {
-      type: 'category',
-      label: 'Tutorials',
-      items: [
-        'tutorials/01-overview',
-        'tutorials/02-getting-started',
-        'tutorials/03-admin-interface',
-      ],
+      label: 'Config',
+      items: ['config/overview', 'config/app', 'config/server', 'config/database', 'config/security', 'config/logging', 'config/errors'],
     },
     {
       type: 'category',
-      label: 'Guides',
-      items: [
-        'guides/models',
-        'guides/queries',
-        'guides/admin',
-        'guides/rest-api',
-        'guides/migrations',
-        'guides/security',
-        'guides/deployment',
-        'guides/common-patterns',
-        'guides/best-practices',
-      ],
+      label: 'Reference',
+      items: ['features', 'api-reference', 'status'],
     },
     {
       type: 'category',
-      label: 'API Reference',
-      items: [
-        'api-reference/schema',
-        'api-reference/queryset',
-        'api-reference/manager',
-        'api-reference/fields',
-        'api-reference/relations',
-        'api-reference/hooks',
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Examples',
-      items: [
-        'examples/blog',
-        'examples/ecommerce',
-        'examples/library',
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Advanced',
-      items: [
-        'advanced/performance',
-        'advanced/plugins',
-        'advanced/custom-fields',
-        'advanced/code-generation',
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Deep Dives',
-      items: [
-        'deep-dives/architecture',
-        'deep-dives/design-principles',
-        'deep-dives/features-overview',
-        'deep-dives/schema-system',
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Contributing',
-      items: [
-        'contributing/architecture',
-        'contributing/development',
-        'contributing/implementations',
-        'contributing/changelog',
-        'contributing/roadmap',
-      ],
+      label: 'Project',
+      items: ['changelog', 'community', 'security'],
     },
   ],
 };

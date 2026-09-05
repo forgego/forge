@@ -2,6 +2,7 @@ package schema
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/forgego/forge/db"
-	"github.com/forgego/forge/migrate"
+	"github.com/forgego/forge/db/migrate"
 	"github.com/forgego/forge/tests/helpers"
 	"github.com/forgego/forge/tests/testhelpers"
 )
@@ -22,7 +23,14 @@ func TestSchemaBuilders_MigrationIntegration(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	opts := testhelpers.DefaultPostgresOptsWithTest(t.Name())
+	opts := testhelpers.PostgresOpts{
+		UseDirect: true,
+		Host:      "127.0.0.1",
+		Port:      "5432",
+		User:      "postgres",
+		Password:  "123",
+		DBName:    fmt.Sprintf("test_schema_builders_%d", time.Now().UnixNano()),
+	}
 
 	postgresDB, dsn, cleanup, err := testhelpers.StartPostgresContainer(ctx, opts)
 	require.NoError(t, err)
@@ -48,17 +56,17 @@ type Product struct {
 
 func (Product) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.UUID("uuid").WithRequired().WithUnique().WithVerboseName("UUID"),
-		schema.String("name").WithRequired().WithMaxLength(255).WithVerboseName("Product Name"),
-		schema.String("sku").WithRequired().WithUnique().WithMaxLength(100).WithVerboseName("SKU"),
-		schema.Text("description").WithOptional().WithVerboseName("Description"),
-		schema.Decimal("price").WithMaxDigits(12).WithDecimalPlaces(2).WithRequired().WithMaxValue(999999.99).WithMinValue(0.0).WithVerboseName("Price"),
-		schema.Int32("stock").WithDefault(0).WithVerboseName("Stock Quantity"),
-		schema.Bool("is_active").WithDefault(true).WithVerboseName("Is Active"),
-		schema.JSON("metadata").WithOptional().WithVerboseName("Metadata"),
-		schema.DateTime("created_at").WithAutoNowAdd(),
-		schema.DateTime("updated_at").WithAutoNow(),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.UUID("uuid").Required().Unique().VerboseName("UUID").Build(),
+		schema.String("name").Required().MaxLength(255).VerboseName("Product Name").Build(),
+		schema.String("sku").Required().Unique().MaxLength(100).VerboseName("SKU").Build(),
+		schema.Text("description").Optional().VerboseName("Description").Build(),
+		schema.Decimal("price").MaxDigits(12).DecimalPlaces(2).Required().MaxValue(999999.99).MinValue(0.0).VerboseName("Price").Build(),
+		schema.Int32("stock").Default(0).VerboseName("Stock Quantity").Build(),
+		schema.Bool("is_active").Default(true).VerboseName("Is Active").Build(),
+		schema.JSON("metadata").Optional().VerboseName("Metadata").Build(),
+		schema.DateTime("created_at").AutoNowAdd().Build(),
+		schema.DateTime("updated_at").AutoNow().Build(),
 	}
 }
 
@@ -172,7 +180,14 @@ func TestSchemaBuilders_ComplexModel(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	opts := testhelpers.DefaultPostgresOptsWithTest(t.Name())
+	opts := testhelpers.PostgresOpts{
+		UseDirect: true,
+		Host:      "127.0.0.1",
+		Port:      "5432",
+		User:      "postgres",
+		Password:  "123",
+		DBName:    fmt.Sprintf("test_complex_model_%d", time.Now().UnixNano()),
+	}
 
 	postgresDB, dsn, cleanup, err := testhelpers.StartPostgresContainer(ctx, opts)
 	require.NoError(t, err)
@@ -198,32 +213,32 @@ type ComplexModel struct {
 func (ComplexModel) Fields() []schema.Field {
 	return []schema.Field{
 		// Integer types
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.Int32("count").WithDefault(0),
-		schema.Int64("total").WithDefault(0),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.Int32("count").Default(0).Build(),
+		schema.Int64("total").Default(0).Build(),
 		
 		// String types
-		schema.String("title").WithRequired().WithMaxLength(255).WithMinLength(1),
-		schema.Text("content").WithOptional(),
-		schema.Email("email").WithRequired().WithUnique().WithMaxLength(255),
-		schema.URL("website").WithOptional().WithMaxLength(500),
+		schema.String("title").Required().MaxLength(255).MinLength(1).Build(),
+		schema.Text("content").Optional().Build(),
+		schema.Email("email").Required().Unique().MaxLength(255).Build(),
+		schema.URL("website").Optional().MaxLength(500).Build(),
 		
 		// Numeric types
-		schema.Float32("rating").WithDefault(0.0).WithMaxValue(5.0).WithMinValue(0.0),
-		schema.Float64("score").WithDefault(0.0).WithMaxValue(100.0).WithMinValue(0.0),
-		schema.Decimal("amount").WithMaxDigits(10).WithDecimalPlaces(2).WithDefault(0.0),
+		schema.Float32("rating").Default(0.0).MaxValue(5.0).MinValue(0.0).Build(),
+		schema.Float64("score").Default(0.0).MaxValue(100.0).MinValue(0.0).Build(),
+		schema.Decimal("amount").MaxDigits(10).DecimalPlaces(2).Default(0.0).Build(),
 		
 		// Other types
-		schema.Bool("is_published").WithDefault(false),
-		schema.JSON("settings").WithOptional(),
-		schema.Bytes("avatar").WithOptional().WithMaxLength(1048576), // 1MB max
-		schema.UUID("external_id").WithOptional().WithUnique(),
+		schema.Bool("is_published").Default(false).Build(),
+		schema.JSON("settings").Optional().Build(),
+		schema.Bytes("avatar").Optional().MaxLength(1048576).Build(), // 1MB max
+		schema.UUID("external_id").Optional().Unique().Build(),
 		
 		// Temporal types
-		schema.Time("start_time").WithOptional(),
-		schema.Date("birth_date").WithOptional(),
-		schema.DateTime("created_at").WithAutoNowAdd(),
-		schema.DateTime("updated_at").WithAutoNow(),
+		schema.Time("start_time").Optional().Build(),
+		schema.Date("birth_date").Optional().Build(),
+		schema.DateTime("created_at").AutoNowAdd().Build(),
+		schema.DateTime("updated_at").AutoNow().Build(),
 	}
 }
 
@@ -289,7 +304,14 @@ func TestSchemaBuilders_FieldOptionsIntegration(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	opts := testhelpers.DefaultPostgresOptsWithTest(t.Name())
+	opts := testhelpers.PostgresOpts{
+		UseDirect: true,
+		Host:      "127.0.0.1",
+		Port:      "5432",
+		User:      "postgres",
+		Password:  "123",
+		DBName:    fmt.Sprintf("test_field_options_%d", time.Now().UnixNano()),
+	}
 
 	postgresDB, dsn, cleanup, err := testhelpers.StartPostgresContainer(ctx, opts)
 	require.NoError(t, err)
@@ -314,20 +336,22 @@ type OptionsModel struct {
 
 func (OptionsModel) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-				schema.String("custom_col").
-					WithDBColumn("custom_column_name").
-					WithDBType("VARCHAR(500)").
-					WithDBComment("This is a custom column").
-					WithRequired().
-					WithUnique().
-					WithDBIndex().
-					WithMaxLength(500).
-					WithVerboseName("Custom Column").
-					WithHelpText("This field has many options"),
-				schema.String("generated_field").
-					WithGeneratedColumn("UPPER(custom_column_name)", true),
-		}
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("custom_col").
+			DBColumn("custom_column_name").
+			DBType("VARCHAR(500)").
+			DBComment("This is a custom column").
+			Required().
+			Unique().
+			DBIndex().
+			MaxLength(500).
+			VerboseName("Custom Column").
+			HelpText("This field has many options").
+			Build(),
+		schema.String("generated_field").
+			GeneratedColumn("UPPER(custom_column_name)", true).
+			Build(),
+	}
 }
 
 func (OptionsModel) Meta() schema.Meta {
@@ -386,7 +410,7 @@ func (OptionsModel) Relations() []schema.Relation {
 
 	// Verify we have at least the id column
 	assert.Contains(t, columns, "id", "should have id column")
-
+	
 	// Check if custom column name is used (DBColumn option)
 	// Note: The migration generator may or may not support DBColumn yet
 	// For now, just verify the table was created successfully

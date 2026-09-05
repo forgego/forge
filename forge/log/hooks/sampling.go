@@ -6,9 +6,9 @@ import (
 
 // SamplingHook implements log sampling
 type SamplingHook struct {
-	initial   int
+	initial    int
 	thereafter int
-	count     int
+	count      int
 }
 
 // NewSamplingHook creates a new sampling hook

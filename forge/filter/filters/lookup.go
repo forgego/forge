@@ -80,7 +80,7 @@ func (f *LookupFilter[T]) ToExpression(fieldPath string, value interface{}) (orm
 	// Use the expression converter to handle different lookup types
 	// For now, create a basic comparison expression
 	fieldExpr := orm.NewField[interface{}](fieldPath, "")
-	
+
 	// Map lookup to operator
 	var op orm.Operator
 	switch lookup {
@@ -103,7 +103,7 @@ func (f *LookupFilter[T]) ToExpression(fieldPath string, value interface{}) (orm
 	default:
 		return nil, fmt.Errorf("unsupported lookup: %s", lookup)
 	}
-	
+
 	return orm.ComparisonExpression[interface{}]{
 		Field: fieldExpr,
 		Op:    op,

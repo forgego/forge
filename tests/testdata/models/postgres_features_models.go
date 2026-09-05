@@ -9,10 +9,10 @@ type ProductWithJSONB struct {
 
 func (ProductWithJSONB) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("name").WithRequired().WithMaxLength(255),
-		schema.JSON("attributes"), // Maps to JSONB in Postgres
-		schema.JSON("metadata"),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("name").Required().MaxLength(255).Build(),
+		schema.JSON("attributes").Build(), // Maps to JSONB in Postgres
+		schema.JSON("metadata").Build(),
 	}
 }
 
@@ -33,9 +33,9 @@ type UserWithUUID struct {
 
 func (UserWithUUID) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.UUID("uuid").WithRequired().WithDBDefault("gen_random_uuid()"),
-		schema.String("email").WithRequired().WithMaxLength(255).WithUnique(),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.UUID("uuid").Required().DBDefault("gen_random_uuid()").Build(),
+		schema.String("email").Required().MaxLength(255).Unique().Build(),
 	}
 }
 
@@ -56,10 +56,10 @@ type DocumentWithTimestamps struct {
 
 func (DocumentWithTimestamps) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("title").WithRequired().WithMaxLength(255),
-		schema.DateTime("created_at"),
-		schema.DateTime("updated_at"),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("title").Required().MaxLength(255).Build(),
+		schema.DateTime("created_at").Build(),
+		schema.DateTime("updated_at").Build(),
 	}
 }
 

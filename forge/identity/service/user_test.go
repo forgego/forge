@@ -2,117 +2,30 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/identity/models"
 	"github.com/forgego/forge/identity/repository"
+	"github.com/forgego/forge/identity/testutils"
 	"github.com/forgego/forge/identity/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func setupUserServiceTest(t *testing.T) (UserService, *db.DB, context.Context) {
 	testDB := setupTestDB(t)
-	repo := repository.NewUserRepository(testDB)
-	service := NewUserService(repo)
+	userRepo := repository.NewUserRepository(testDB)
+	tokenRepo := repository.NewTokenRepository(testDB)
+	emailSender := &LogEmailSender{}
+	service := NewUserService(userRepo, tokenRepo, emailSender)
 	ctx := context.Background()
 	return service, testDB, ctx
 }
 
 func setupTestDB(t *testing.T) *db.DB {
-	sqlDB, err := sql.Open("sqlite3", ":memory:")
-	require.NoError(t, err)
-	// Ensure single connection for in-memory DB
-	sqlDB.SetMaxOpenConns(1)
-
-	testDB := &db.DB{DB: sqlDB, Driver: "sqlite3"}
-
-	_, err = testDB.Exec(`
-		CREATE TABLE IF NOT EXISTS users (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			username VARCHAR(150) UNIQUE NOT NULL,
-			email VARCHAR(254) UNIQUE NOT NULL,
-			password VARCHAR(128) NOT NULL,
-			first_name VARCHAR(150),
-			last_name VARCHAR(150),
-			bio TEXT,
-			website VARCHAR(255),
-			location VARCHAR(255),
-			avatar VARCHAR(255),
-			phone_number VARCHAR(20),
-			phone_verified BOOLEAN DEFAULT 0,
-			timezone VARCHAR(50),
-			locale VARCHAR(10),
-			language VARCHAR(10),
-			is_active BOOLEAN DEFAULT 1,
-			is_staff BOOLEAN DEFAULT 0,
-			is_superuser BOOLEAN DEFAULT 0,
-			is_locked BOOLEAN DEFAULT 0,
-			email_verified BOOLEAN DEFAULT 0,
-			password_changed_at TIMESTAMP,
-			password_expires_at TIMESTAMP,
-			must_change_password BOOLEAN DEFAULT 0,
-			locked_at TIMESTAMP,
-			locked_reason VARCHAR(255),
-			failed_login_attempts INTEGER DEFAULT 0,
-			last_failed_login_at TIMESTAMP,
-			email_verified_at TIMESTAMP,
-			date_joined TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			last_login TIMESTAMP,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			deleted_at TIMESTAMP
-		);
-
-		CREATE TABLE IF NOT EXISTS user_sessions (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-			session_key VARCHAR(64) UNIQUE NOT NULL,
-			ip_address VARCHAR(45),
-			user_agent TEXT,
-			last_activity TIMESTAMP NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			expires_at TIMESTAMP,
-			is_remember_me BOOLEAN DEFAULT 0
-		);
-
-		CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
-		CREATE INDEX IF NOT EXISTS idx_user_sessions_session_key ON user_sessions(session_key);
-		CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires_at);
-
-		CREATE TABLE IF NOT EXISTS email_verification_tokens (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-			token VARCHAR(64) UNIQUE NOT NULL,
-			email VARCHAR(254) NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			expires_at TIMESTAMP NOT NULL,
-			verified_at TIMESTAMP
-		);
-
-		CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_token ON email_verification_tokens(token);
-		CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_user_id ON email_verification_tokens(user_id);
-		CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_expires_at ON email_verification_tokens(expires_at);
-
-		CREATE TABLE IF NOT EXISTS password_reset_tokens (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-			token VARCHAR(64) UNIQUE NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			expires_at TIMESTAMP NOT NULL,
-			used_at TIMESTAMP
-		);
-
-		CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
-		CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
-		CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at);
-	`)
-	require.NoError(t, err)
-
-	return testDB
+	return testutils.SetupTestDB(t)
 }
 
 func TestUserService_Register(t *testing.T) {
@@ -265,7 +178,6 @@ func TestUserService_UpdateUser(t *testing.T) {
 		updated, err := service.UpdateUser(ctx, user.ID, updateReq)
 		require.NoError(t, err)
 		assert.Equal(t, "newemail@example.com", updated.Email)
-		user.Email = updated.Email
 	})
 
 	t.Run("fails to update non-existent user", func(t *testing.T) {
@@ -276,20 +188,30 @@ func TestUserService_UpdateUser(t *testing.T) {
 	})
 
 	t.Run("fails to update with duplicate email", func(t *testing.T) {
-		// Create second user
-		user2, _ := service.Register(ctx, &RegisterRequest{
-			Username: "user2",
-			Email:    "user2@example.com",
+		// Create user A
+		userA, err := service.Register(ctx, &RegisterRequest{
+			Username: "userA",
+			Email:    "usera@example.com",
 			Password: "password123",
 		})
+		require.NoError(t, err)
 
-		// Try to update user2's email to user1's email
-		duplicateEmail := user.Email
+		// Create user B
+		userB, err := service.Register(ctx, &RegisterRequest{
+			Username: "userB",
+			Email:    "userb@example.com",
+			Password: "password123",
+		})
+		require.NoError(t, err)
+
+		// Try to update userB's email to userA's email
+		duplicateEmail := userA.Email
 		updateReq := &UpdateUserRequest{
 			Email: &duplicateEmail,
 		}
-		_, err := service.UpdateUser(ctx, user2.ID, updateReq)
+		_, err = service.UpdateUser(ctx, userB.ID, updateReq)
 		assert.Error(t, err)
+		assert.Equal(t, ErrEmailExists, err)
 	})
 }
 
@@ -409,7 +331,7 @@ func TestUserService_UpdateUser_Deactivate(t *testing.T) {
 
 		// Verify user exists in database
 		var count int
-		err = testDB.QueryRow("SELECT COUNT(*) FROM users WHERE id = ? AND deleted_at IS NULL", user.ID).Scan(&count)
+		err = testDB.QueryRow("SELECT COUNT(*) FROM users WHERE id = $1 AND deleted_at IS NULL", user.ID).Scan(&count)
 		require.NoError(t, err)
 		require.Equal(t, 1, count, "User should exist in database")
 
@@ -440,7 +362,7 @@ func TestUserService_UpdateUser_ChangeEmail(t *testing.T) {
 
 		// Verify user exists in database
 		var count int
-		err = testDB.QueryRow("SELECT COUNT(*) FROM users WHERE id = ? AND deleted_at IS NULL", user.ID).Scan(&count)
+		err = testDB.QueryRow("SELECT COUNT(*) FROM users WHERE id = $1 AND deleted_at IS NULL", user.ID).Scan(&count)
 		require.NoError(t, err)
 		require.Equal(t, 1, count, "User should exist in database")
 
@@ -478,5 +400,209 @@ func TestUserService_UpdateUser_ChangeEmail(t *testing.T) {
 		}
 		_, err = service.UpdateUser(ctx, user2.ID, updateReq)
 		assert.Error(t, err)
+	})
+}
+
+// Email Verification Tests
+
+func TestUserService_CreateEmailVerificationToken(t *testing.T) {
+	service, testDB, ctx := setupUserServiceTest(t)
+	defer testDB.Close()
+
+	// Create test user
+	user, err := service.Register(ctx, &RegisterRequest{
+		Username: "testuser",
+		Email:    "test@example.com",
+		Password: "password123",
+	})
+	require.NoError(t, err)
+
+	t.Run("creates verification token successfully", func(t *testing.T) {
+		token, err := service.CreateEmailVerificationToken(ctx, user.ID, user.Email)
+		require.NoError(t, err)
+		assert.NotEmpty(t, token.Token)
+		assert.Equal(t, user.ID, token.UserID)
+		assert.Equal(t, user.Email, token.Email)
+		assert.False(t, token.ExpiresAt.IsZero())
+		assert.True(t, token.ExpiresAt.After(time.Now()))
+	})
+}
+
+func TestUserService_VerifyEmail(t *testing.T) {
+	service, testDB, ctx := setupUserServiceTest(t)
+	defer testDB.Close()
+
+	t.Run("verifies email with valid token", func(t *testing.T) {
+		// Create test user
+		user, err := service.Register(ctx, &RegisterRequest{
+			Username: "verifyuser",
+			Email:    "verify@example.com",
+			Password: "password123",
+		})
+		require.NoError(t, err)
+		assert.False(t, user.EmailVerified)
+
+		// Create verification token
+		token, err := service.CreateEmailVerificationToken(ctx, user.ID, user.Email)
+		require.NoError(t, err)
+
+		// Verify email
+		err = service.VerifyEmail(ctx, token.Token)
+		require.NoError(t, err)
+
+		// Check user is verified
+		updatedUser, err := service.GetUser(ctx, user.ID)
+		require.NoError(t, err)
+		assert.True(t, updatedUser.EmailVerified)
+		assert.NotNil(t, updatedUser.EmailVerifiedAt)
+	})
+
+	t.Run("fails with invalid token", func(t *testing.T) {
+		err := service.VerifyEmail(ctx, "invalid-token")
+		assert.Error(t, err)
+		assert.Equal(t, ErrInvalidToken, err)
+	})
+
+	t.Run("fails with already verified email", func(t *testing.T) {
+		// Create test user
+		user, err := service.Register(ctx, &RegisterRequest{
+			Username: "alreadyverified",
+			Email:    "alreadyverified@example.com",
+			Password: "password123",
+		})
+		require.NoError(t, err)
+
+		// Create and use first token
+		token, err := service.CreateEmailVerificationToken(ctx, user.ID, user.Email)
+		require.NoError(t, err)
+		err = service.VerifyEmail(ctx, token.Token)
+		require.NoError(t, err)
+
+		// Create second token and try to verify again
+		token2, err := service.CreateEmailVerificationToken(ctx, user.ID, user.Email)
+		require.NoError(t, err)
+		err = service.VerifyEmail(ctx, token2.Token)
+		assert.Error(t, err)
+		assert.Equal(t, ErrEmailAlreadyVerified, err)
+	})
+}
+
+func TestUserService_ResendVerificationEmail(t *testing.T) {
+	service, testDB, ctx := setupUserServiceTest(t)
+	defer testDB.Close()
+
+	t.Run("resends verification email successfully", func(t *testing.T) {
+		// Create test user
+		user, err := service.Register(ctx, &RegisterRequest{
+			Username: "resenduser",
+			Email:    "resend@example.com",
+			Password: "password123",
+		})
+		require.NoError(t, err)
+		assert.False(t, user.EmailVerified)
+
+		// Resend verification email
+		err = service.ResendVerificationEmail(ctx, user.Email)
+		require.NoError(t, err)
+	})
+
+	t.Run("returns no error for non-existent email (security)", func(t *testing.T) {
+		// Should not reveal if email exists
+		err := service.ResendVerificationEmail(ctx, "nonexistent@example.com")
+		assert.NoError(t, err)
+	})
+
+	t.Run("fails for already verified email", func(t *testing.T) {
+		// Create test user
+		user, err := service.Register(ctx, &RegisterRequest{
+			Username: "verifieduser",
+			Email:    "verifieduser@example.com",
+			Password: "password123",
+		})
+		require.NoError(t, err)
+
+		// Verify the user
+		token, err := service.CreateEmailVerificationToken(ctx, user.ID, user.Email)
+		require.NoError(t, err)
+		err = service.VerifyEmail(ctx, token.Token)
+		require.NoError(t, err)
+
+		// Try to resend verification email
+		err = service.ResendVerificationEmail(ctx, user.Email)
+		assert.Error(t, err)
+		assert.Equal(t, ErrEmailAlreadyVerified, err)
+	})
+}
+
+func TestEmailVerificationToken_Model(t *testing.T) {
+	t.Run("IsExpired returns true for expired token", func(t *testing.T) {
+		token := &models.EmailVerificationToken{
+			ExpiresAt: time.Now().Add(-1 * time.Hour),
+		}
+		assert.True(t, token.IsExpired())
+	})
+
+	t.Run("IsExpired returns false for valid token", func(t *testing.T) {
+		token := &models.EmailVerificationToken{
+			ExpiresAt: time.Now().Add(1 * time.Hour),
+		}
+		assert.False(t, token.IsExpired())
+	})
+
+	t.Run("IsUsed returns true for used token", func(t *testing.T) {
+		now := time.Now()
+		token := &models.EmailVerificationToken{
+			VerifiedAt: &now,
+		}
+		assert.True(t, token.IsUsed())
+	})
+
+	t.Run("IsUsed returns false for unused token", func(t *testing.T) {
+		token := &models.EmailVerificationToken{
+			VerifiedAt: nil,
+		}
+		assert.False(t, token.IsUsed())
+	})
+}
+
+// MockEmailSender for testing
+type MockEmailSender struct {
+	LastTo    string
+	LastToken string
+	Err       error
+}
+
+func (m *MockEmailSender) SendVerificationEmail(ctx context.Context, to, token string) error {
+	m.LastTo = to
+	m.LastToken = token
+	return m.Err
+}
+
+func TestUserService_WithMockEmailSender(t *testing.T) {
+	testDB := setupTestDB(t)
+	defer testDB.Close()
+
+	userRepo := repository.NewUserRepository(testDB)
+	tokenRepo := repository.NewTokenRepository(testDB)
+	mockSender := &MockEmailSender{}
+	service := NewUserService(userRepo, tokenRepo, mockSender)
+	ctx := context.Background()
+
+	t.Run("sends email when resending verification", func(t *testing.T) {
+		// Create test user
+		user, err := service.Register(ctx, &RegisterRequest{
+			Username: "emailtest",
+			Email:    "emailtest@example.com",
+			Password: "password123",
+		})
+		require.NoError(t, err)
+
+		// Resend verification email
+		err = service.ResendVerificationEmail(ctx, user.Email)
+		require.NoError(t, err)
+
+		// Check mock was called
+		assert.Equal(t, user.Email, mockSender.LastTo)
+		assert.NotEmpty(t, mockSender.LastToken)
 	})
 }

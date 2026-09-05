@@ -1,0 +1,22 @@
+Implemented one focused high-impact batch on admin UI production readiness: closed the `DynamicModelPage` detail TODO and added view-only navigation parity.
+
+**What changed**
+- `forge/admin/ui/web/src/components/DynamicModelPage.tsx:41` now renders `ModelViewPage` for `mode="detail"` (TODO removed).
+- Added read-only detail page: `forge/admin/ui/web/src/pages/ModelViewPage.tsx:38`.
+- Added detail route: `forge/admin/ui/web/src/routes/$model/$id.view.tsx:4` (`/$model/$id/view`).
+- Added view action for view-only users in list page: `forge/admin/ui/web/src/pages/ModelListPage.tsx:642`.
+- Updated route typings for new route: `forge/admin/ui/web/src/routeTree.gen.ts:20`.
+- Added targeted unit tests for mode routing/loading/error states: `forge/admin/ui/web/src/components/DynamicModelPage.test.tsx:38`.
+- Updated run tracking:
+  - `ops/codex-24x7/STATUS.md:3`
+  - `ops/codex-24x7/HISTORY.md:294`
+
+**Validation run**
+- `npx tsc -b` in `forge/admin/ui/web` ✅
+- `go test ./admin/... -count=1` in `forge` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` ✅
+- `go test ./... -count=1` in `examples/ecommerce` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` ✅
+- `npm run test -- DynamicModelPage.test.tsx --run` in `forge/admin/ui/web` ❌ blocked by environment (`spawn EPERM` from Vite/Vitest config load)
+
+**Next steps**
+1. Unblock Node process spawn in this runner so Vitest can execute.
+2. Add one authenticated ecommerce admin/API write-flow integration test in next batch.

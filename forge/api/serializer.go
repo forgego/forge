@@ -16,6 +16,10 @@ type Serializer interface {
 	IsValid() bool
 	// Errors returns validation errors
 	Errors() map[string][]string
+	// SetData sets the input data for the serializer
+	SetData(data map[string]interface{})
+	// New creates a new instance of the serializer
+	New() Serializer
 }
 
 // BaseSerializer provides common serializer functionality
@@ -114,6 +118,11 @@ func (s *BaseSerializer) SetData(data map[string]interface{}) {
 // ToJSON converts the serializer to JSON
 func (s *BaseSerializer) ToJSON() ([]byte, error) {
 	return json.Marshal(s.data)
+}
+
+// New creates a new base serializer
+func (s *BaseSerializer) New() Serializer {
+	return NewBaseSerializer(nil)
 }
 
 // ModelSerializer is a serializer for models

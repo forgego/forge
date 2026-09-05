@@ -93,9 +93,9 @@ func Register{{.ModelName}}Admin(
 	}
 
 	data := map[string]interface{}{
-		"PackageName": packageName,
-		"ModelName":   modelName,
-		"Fields":      fields,
+		"PackageName":  packageName,
+		"ModelName":    modelName,
+		"Fields":       fields,
 		"SearchFields": searchFields,
 	}
 

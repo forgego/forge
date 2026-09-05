@@ -2,72 +2,19 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/identity/models"
+	"github.com/forgego/forge/identity/testutils"
 	"github.com/forgego/forge/identity/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
-// setupTestDB creates an in-memory SQLite database for testing
+// setupTestDB creates a database for testing
 func setupTestDB(t *testing.T) *db.DB {
-	// Use in-memory SQLite for fast tests
-	sqlDB, err := sql.Open("sqlite3", ":memory:")
-	require.NoError(t, err)
-	// Ensure single connection for in-memory DB
-	sqlDB.SetMaxOpenConns(1)
-
-	testDB := &db.DB{DB: sqlDB, Driver: "sqlite3"}
-
-	// Run migrations
-	_, err = testDB.Exec(`
-		CREATE TABLE IF NOT EXISTS users (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			username VARCHAR(150) UNIQUE NOT NULL,
-			email VARCHAR(254) UNIQUE NOT NULL,
-			password VARCHAR(128) NOT NULL,
-			first_name VARCHAR(150),
-			last_name VARCHAR(150),
-			bio TEXT,
-			website VARCHAR(255),
-			location VARCHAR(255),
-			avatar VARCHAR(255),
-			phone_number VARCHAR(20),
-			phone_verified BOOLEAN DEFAULT 0,
-			timezone VARCHAR(50),
-			locale VARCHAR(10),
-			language VARCHAR(10),
-			is_active BOOLEAN DEFAULT 1,
-			is_staff BOOLEAN DEFAULT 0,
-			is_superuser BOOLEAN DEFAULT 0,
-			is_locked BOOLEAN DEFAULT 0,
-			email_verified BOOLEAN DEFAULT 0,
-			password_changed_at TIMESTAMP,
-			password_expires_at TIMESTAMP,
-			must_change_password BOOLEAN DEFAULT 0,
-			locked_at TIMESTAMP,
-			locked_reason VARCHAR(255),
-			failed_login_attempts INTEGER DEFAULT 0,
-			last_failed_login_at TIMESTAMP,
-			email_verified_at TIMESTAMP,
-			date_joined TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			last_login TIMESTAMP,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			deleted_at TIMESTAMP
-		);
-		
-		CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-		CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-	`)
-	require.NoError(t, err)
-
-	return testDB
+	return testutils.SetupTestDB(t)
 }
 
 func TestUserRepository_Create(t *testing.T) {
@@ -115,7 +62,8 @@ func TestUserRepository_Create(t *testing.T) {
 		}
 		err = repo.Create(ctx, user2)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "UNIQUE constraint")
+		// Postgres duplicate key error check
+		assert.Contains(t, err.Error(), "duplicate key value violates unique constraint")
 	})
 
 	t.Run("fails with duplicate username", func(t *testing.T) {
@@ -136,7 +84,8 @@ func TestUserRepository_Create(t *testing.T) {
 		}
 		err = repo.Create(ctx, user2)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "UNIQUE constraint")
+		// Postgres duplicate key error check
+		assert.Contains(t, err.Error(), "duplicate key value violates unique constraint")
 	})
 
 	t.Run("normalizes email to lowercase", func(t *testing.T) {
@@ -461,7 +410,7 @@ func TestUserRepository_Delete(t *testing.T) {
 
 		// But should still exist in database (verify via direct query)
 		var deletedAt interface{}
-		err = testDB.QueryRow("SELECT deleted_at FROM users WHERE id = ?", user.ID).Scan(&deletedAt)
+		err = testDB.QueryRow("SELECT deleted_at FROM users WHERE id = $1", user.ID).Scan(&deletedAt)
 		require.NoError(t, err)
 		assert.NotNil(t, deletedAt)
 	})

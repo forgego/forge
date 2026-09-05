@@ -143,6 +143,9 @@ type TokenRepository interface {
 	// GetEmailVerificationToken retrieves an email verification token
 	GetEmailVerificationToken(ctx context.Context, token string) (*models.EmailVerificationToken, error)
 
+	// MarkEmailVerificationTokenUsed marks an email verification token as used by ID
+	MarkEmailVerificationTokenUsed(ctx context.Context, tokenID int64) error
+
 	// DeleteEmailVerificationToken deletes an email verification token
 	DeleteEmailVerificationToken(ctx context.Context, token string) error
 

@@ -1,0 +1,15 @@
+Implemented one focused high-impact batch for ecommerce admin parity and production readiness.
+
+- Updated object-aware order edit permissions in `examples/ecommerce/app/orders/admin.go:328`:
+  - `Order` updates are now denied for finalized orders (`delivered`, `cancelled`), while still allowing non-finalized orders.
+- Added a second mixed-outcome authenticated multi-object admin integration test in `examples/ecommerce/main_test.go:762`:
+  - `TestBuildEcommerceRouter_AdminAPIBulkUpdateObjectSpecificOrderChangePermission`
+  - Verifies `POST /admin/api/orders/bulk-update` returns `207` with one `permission_denied` error for finalized objects.
+  - Verifies persistence: mutable order is updated, finalized order remains unchanged.
+- Updated run tracking:
+  - `ops/codex-24x7/STATUS.md:3`
+  - `ops/codex-24x7/HISTORY.md:526`
+
+Tests run (pass):
+1. `go test ./admin/api/rest -count=1` (in `forge`, with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache`)
+2. `go test ./... -count=1` (in `examples/ecommerce`, with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache`)

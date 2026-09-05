@@ -1,0 +1,21 @@
+Implemented one focused production-readiness batch on migrations CLI resiliency.
+
+### What changed
+- Hardened migration status command behavior in `forge/cli/commands/migrations/status.go:52`:
+  - Added explicit empty-directory output: `Migration Files (0): none found` via `renderMigrationFiles(...)` (`forge/cli/commands/migrations/status.go:94`).
+  - Added guard for unexpected nil DB status from runner to avoid panic paths (`forge/cli/commands/migrations/status.go:80`).
+  - Kept status rendering safe for missing status input in `renderMigrationStatus(...)` (`forge/cli/commands/migrations/status.go:114`).
+- Added regression tests in `forge/cli/commands/migrations/status_test.go:73`:
+  - `TestRenderMigrationStatus_NilStatus`
+  - `TestRenderMigrationFiles_Empty`
+  - `TestRenderMigrationFiles_SortsFileNames`
+- Updated run tracking:
+  - `ops/codex-24x7/STATUS.md:3`
+  - `ops/codex-24x7/HISTORY.md:805`
+
+### Verification run
+- `go test ./cli/commands/migrations -count=1` in `forge` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` (pass)
+- `go test ./... -count=1` in `examples/ecommerce` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` (pass)
+
+### Notes
+- Local default Go build cache was access-restricted in this runner; tests were executed with temporary `GOCACHE` and passed.

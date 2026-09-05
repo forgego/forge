@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/forgego/forge/identity/utils"
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/identity/backends"
 	"github.com/forgego/forge/identity/models"
 	"github.com/forgego/forge/identity/repository"
+	"github.com/forgego/forge/identity/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

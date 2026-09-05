@@ -115,13 +115,8 @@ func TestIsAdminUser_Admin(t *testing.T) {
 	adminUser := &MockUser{Authenticated: true, Admin: true}
 	authentication.SetUserOnRequest(req, adminUser)
 
-	// Note: This uses reflection to find IsAdmin method/field
-	// If reflection doesn't work, the permission will return false
-	result := perm.HasPermission(req, view)
-	// For now, we'll just verify the permission is checked
-	// The actual reflection logic is tested in integration tests
-	_ = result
-	// TODO: Fix reflection-based permission checks
+	assert.True(t, perm.HasPermission(req, view))
+	assert.True(t, perm.HasObjectPermission(req, view, map[string]interface{}{"id": "1"}))
 }
 
 func TestIsAdminUser_NotAdmin(t *testing.T) {
@@ -159,13 +154,7 @@ func TestIsOwnerOrReadOnly_Owner(t *testing.T) {
 	}
 	obj := &MockObject{UserID: "123"}
 
-	// Note: This uses reflection to get the field
-	// The permission checks if user.GetID() matches obj.UserID
-	result := perm.HasObjectPermission(req, view, obj)
-	// Reflection-based checks are complex, so we verify the logic is executed
-	// Full integration tests will verify the actual behavior
-	_ = result
-	// TODO: Verify reflection-based owner checks work correctly
+	assert.True(t, perm.HasObjectPermission(req, view, obj))
 }
 
 func TestIsOwnerOrReadOnly_NotOwner(t *testing.T) {

@@ -7,15 +7,15 @@ import (
 
 // LogEntry represents a single change in the admin system
 type LogEntry struct {
-	ID          int64     `json:"id"`
-	Timestamp   time.Time `json:"timestamp"`
-	UserID      string    `json:"user_id"`
-	UserName    string    `json:"user_name"`
-	ModelName   string    `json:"model_name"`
-	ObjectID    string    `json:"object_id"`
-	ObjectRepr  string    `json:"object_repr"`
+	ID          int64      `json:"id"`
+	Timestamp   time.Time  `json:"timestamp"`
+	UserID      string     `json:"user_id"`
+	UserName    string     `json:"user_name"`
+	ModelName   string     `json:"model_name"`
+	ObjectID    string     `json:"object_id"`
+	ObjectRepr  string     `json:"object_repr"`
 	Action      ActionType `json:"action"`
-	ChangeStats string    `json:"change_stats"` // JSON of changed fields
+	ChangeStats string     `json:"change_stats"` // JSON of changed fields
 }
 
 type ActionType string

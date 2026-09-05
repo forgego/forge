@@ -1,0 +1,3006 @@
+{
+  "generatedAt": "2026-02-13T09:16:39.011362+00:00",
+  "total": 500,
+  "entries": [
+    {
+      "key": ".kilocode/skills/skill-creator/SKILL.md:154",
+      "path": ".kilocode/skills/skill-creator/SKILL.md",
+      "line": 154,
+      "text": "- Generates a SKILL.md template with proper frontmatter and TODO placeholders"
+    },
+    {
+      "key": ".kilocode/skills/skill-creator/scripts/init_skill.py:20",
+      "path": ".kilocode/skills/skill-creator/scripts/init_skill.py",
+      "line": 20,
+      "text": "description: [TODO: Complete and informative explanation of what the skill does and when to use it. Include WHEN to use this skill - specific scenarios, file types, or tasks that trigger it.]"
+    },
+    {
+      "key": ".kilocode/skills/skill-creator/scripts/init_skill.py:27",
+      "path": ".kilocode/skills/skill-creator/scripts/init_skill.py",
+      "line": 27,
+      "text": "[TODO: 1-2 sentences explaining what this skill enables]"
+    },
+    {
+      "key": ".kilocode/skills/skill-creator/scripts/init_skill.py:31",
+      "path": ".kilocode/skills/skill-creator/scripts/init_skill.py",
+      "line": 31,
+      "text": "[TODO: Choose the structure that best fits this skill's purpose. Common patterns:"
+    },
+    {
+      "key": ".kilocode/skills/skill-creator/scripts/init_skill.py:57",
+      "path": ".kilocode/skills/skill-creator/scripts/init_skill.py",
+      "line": 57,
+      "text": "## [TODO: Replace with the first main section based on chosen structure]"
+    },
+    {
+      "key": ".kilocode/skills/skill-creator/scripts/init_skill.py:59",
+      "path": ".kilocode/skills/skill-creator/scripts/init_skill.py",
+      "line": 59,
+      "text": "[TODO: Add content here. See examples in existing skills:"
+    },
+    {
+      "key": ".kilocode/skills/skill-creator/scripts/init_skill.py:119",
+      "path": ".kilocode/skills/skill-creator/scripts/init_skill.py",
+      "line": 119,
+      "text": "# TODO: Add actual script logic here"
+    },
+    {
+      "key": ".kilocode/skills/skill-creator/scripts/init_skill.py:266",
+      "path": ".kilocode/skills/skill-creator/scripts/init_skill.py",
+      "line": 266,
+      "text": "print(\"1. Edit SKILL.md to complete the TODO items and update the description\")"
+    },
+    {
+      "key": "docs-site/package-lock.json:5264",
+      "path": "docs-site/package-lock.json",
+      "line": 5264,
+      "text": "\"integrity\": \"sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==\""
+    },
+    {
+      "key": "docs-site/package-lock.json:15686",
+      "path": "docs-site/package-lock.json",
+      "line": 15686,
+      "text": "\"integrity\": \"sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==\","
+    },
+    {
+      "key": "docs-site/pnpm-lock.yaml:1532",
+      "path": "docs-site/pnpm-lock.yaml",
+      "line": 1532,
+      "text": "resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}"
+    },
+    {
+      "key": "docs-site/pnpm-lock.yaml:4344",
+      "path": "docs-site/pnpm-lock.yaml",
+      "line": 4344,
+      "text": "resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}"
+    },
+    {
+      "key": "docs-site/build/assets/css/styles.f15b7e30.css:209",
+      "path": "docs-site/build/assets/css/styles.f15b7e30.css",
+      "line": 209,
+      "text": "/* TODO: add appropriate mobile leading */"
+    },
+    {
+      "key": "docs-site/build/assets/css/styles.f15b7e30.css:3763",
+      "path": "docs-site/build/assets/css/styles.f15b7e30.css",
+      "line": 3763,
+      "text": "TODO bad, but we currently always show light mode when there's no data-theme"
+    },
+    {
+      "key": "docs-site/build/assets/css/styles.f15b7e30.css:3983",
+      "path": "docs-site/build/assets/css/styles.f15b7e30.css",
+      "line": 3983,
+      "text": "TODO merge this logic back in Infima?"
+    },
+    {
+      "key": "docs-site/build/assets/css/styles.f15b7e30.css:4528",
+      "path": "docs-site/build/assets/css/styles.f15b7e30.css",
+      "line": 4528,
+      "text": "/* TODO: deprecation, need to remove this after Safari will support `::marker` */"
+    },
+    {
+      "key": "docs-site/build/assets/js/1a4e3797.7c0463e5.js:1020",
+      "path": "docs-site/build/assets/js/1a4e3797.7c0463e5.js",
+      "line": 1020,
+      "text": "hitsPerPage:15,advancedSyntax:true,disjunctiveFacets});algoliaHelper.on('result',({results:{query,hits,page,nbHits,nbPages}})=>{if(query===''||!Array.isArray(hits)){searchResultStateDispatcher({type:'reset'});return;}const sanitizeValue=value=>value.replace(/algolia-docsearch-suggestion--highlight/g,'search-result-match');const items=hits.map(({url,_highlightResult:{hierarchy},_snippetResult:snippet={}})=>{const titles=Object.keys(hierarchy).map(key=>sanitizeValue(hierarchy[key].value));return{title:titles.pop(),url:processSearchResultUrl(url),summary:snippet.content?`${sanitizeValue(snippet.content.value)}...`:'',breadcrumbs:titles};});searchResultStateDispatcher({type:'update',value:{items,query,totalResults:nbHits,totalPages:nbPages,lastPage:page,hasMore:nbPages>page+1,loading:false}});});const[loaderRef,setLoaderRef]=(0,react.useState)(null);const prevY=(0,react.useRef)(0);const observer=(0,react.useRef)(ExecutionEnvironment/* default */.A.canUseIntersectionObserver&&new IntersectionObserver(// TODO need to fix this React Compiler lint error"
+    },
+    {
+      "key": "docs-site/build/assets/js/1a4e3797.7c0463e5.js:5472",
+      "path": "docs-site/build/assets/js/1a4e3797.7c0463e5.js",
+      "line": 5472,
+      "text": "// @TODO remove the number of outdated queries discarded instead of just one"
+    },
+    {
+      "key": "docs-site/build/assets/js/1a4e3797.7c0463e5.js:5528",
+      "path": "docs-site/build/assets/js/1a4e3797.7c0463e5.js",
+      "line": 5528,
+      "text": "// @TODO remove the number of outdated queries discarded instead of just one"
+    },
+    {
+      "key": "docs-site/build/assets/js/1a4e3797.7c0463e5.js:5582",
+      "path": "docs-site/build/assets/js/1a4e3797.7c0463e5.js",
+      "line": 5582,
+      "text": "// TODO: emit \"result\" event when events for Recommend are implemented"
+    },
+    {
+      "key": "docs-site/build/assets/js/1a4e3797.7c0463e5.js:5593",
+      "path": "docs-site/build/assets/js/1a4e3797.7c0463e5.js",
+      "line": 5593,
+      "text": "// TODO: emit \"result\" event when events for Recommend are implemented"
+    },
+    {
+      "key": "docs-site/build/assets/js/1a4e3797.7c0463e5.js:5691",
+      "path": "docs-site/build/assets/js/1a4e3797.7c0463e5.js",
+      "line": 5691,
+      "text": "// TODO: emit \"change\" event when events for Recommend are implemented"
+    },
+    {
+      "key": "docs-site/build/assets/js/1a4e3797.7c0463e5.js:7638",
+      "path": "docs-site/build/assets/js/1a4e3797.7c0463e5.js",
+      "line": 7638,
+      "text": "// @TODO: remove this if it ever gets handled by the API"
+    },
+    {
+      "key": "docs-site/build/assets/js/1a4e3797.7c0463e5.js:7897",
+      "path": "docs-site/build/assets/js/1a4e3797.7c0463e5.js",
+      "line": 7897,
+      "text": "* @param  {boolean} hierarchicalRootLevel ?? FIXME"
+    },
+    {
+      "key": "docs-site/build/assets/js/1a4e3797.7c0463e5.js:8003",
+      "path": "docs-site/build/assets/js/1a4e3797.7c0463e5.js",
+      "line": 8003,
+      "text": "* @param  {boolean} [hierarchicalRootLevel] ?? FIXME"
+    },
+    {
+      "key": "docs-site/build/assets/js/819.981ffaaa.js:218",
+      "path": "docs-site/build/assets/js/819.981ffaaa.js",
+      "line": 218,
+      "text": "*/// TODO make the hardcoded theme-classic classnames configurable (or add them"
+    },
+    {
+      "key": "docs-site/build/assets/js/819.981ffaaa.js:393",
+      "path": "docs-site/build/assets/js/819.981ffaaa.js",
+      "line": 393,
+      "text": "*/// TODO move to design system folder"
+    },
+    {
+      "key": "docs-site/build/assets/js/819.981ffaaa.js:394",
+      "path": "docs-site/build/assets/js/819.981ffaaa.js",
+      "line": 394,
+      "text": "function BreadcrumbsItemLink({children,href,isLast}){const className='breadcrumbs__link';if(isLast){return/*#__PURE__*/(0,jsx_runtime.jsx)(\"span\",{className:className,children:children});}return href?/*#__PURE__*/(0,jsx_runtime.jsx)(Link/* default */.A,{className:className,href:href,children:/*#__PURE__*/(0,jsx_runtime.jsx)(\"span\",{children:children})}):/*#__PURE__*/(0,jsx_runtime.jsx)(\"span\",{className:className,children:children});}// TODO move to design system folder"
+    },
+    {
+      "key": "docs-site/build/assets/js/819.981ffaaa.js:402",
+      "path": "docs-site/build/assets/js/819.981ffaaa.js",
+      "line": 402,
+      "text": "*/function UnlistedBannerTitle(){return/*#__PURE__*/(0,jsx_runtime.jsx)(Translate/* default */.A,{id:\"theme.contentVisibility.unlistedBanner.title\",description:\"The unlisted content banner title\",children:\"Unlisted page\"});}function UnlistedBannerMessage(){return/*#__PURE__*/(0,jsx_runtime.jsx)(Translate/* default */.A,{id:\"theme.contentVisibility.unlistedBanner.message\",description:\"The unlisted content banner message\",children:\"This page is unlisted. Search engines will not index it, and only users having a direct link can access it.\"});}// TODO Docusaurus v4 breaking change (since it's v3 public theme-common API :/)"
+    },
+    {
+      "key": "docs-site/build/assets/js/819.981ffaaa.js:513",
+      "path": "docs-site/build/assets/js/819.981ffaaa.js",
+      "line": 513,
+      "text": "return getCommentPattern(popularCommentTypes,magicCommentDirectives);}}function parseCodeBlockTitle(metastring){return metastring?.match(codeBlockTitleRegex)?.groups.title??'';}function getMetaLineNumbersStart(metastring){const showLineNumbersMeta=metastring?.split(' ').find(str=>str.startsWith('showLineNumbers'));if(showLineNumbersMeta){if(showLineNumbersMeta.startsWith('showLineNumbers=')){const value=showLineNumbersMeta.replace('showLineNumbers=','');return parseInt(value,10);}return 1;}return undefined;}function getLineNumbersStart({showLineNumbers,metastring}){const defaultStart=1;if(typeof showLineNumbers==='boolean'){return showLineNumbers?defaultStart:undefined;}if(typeof showLineNumbers==='number'){return showLineNumbers;}return getMetaLineNumbersStart(metastring);}// TODO Docusaurus v4: remove, only kept for internal retro-compatibility"
+    },
+    {
+      "key": "docs-site/build/assets/js/819.981ffaaa.js:565",
+      "path": "docs-site/build/assets/js/819.981ffaaa.js",
+      "line": 565,
+      "text": "*/// TODO Docusaurus v4: move this component at the root?"
+    },
+    {
+      "key": "docs-site/build/assets/js/819.981ffaaa.js:579",
+      "path": "docs-site/build/assets/js/819.981ffaaa.js",
+      "line": 579,
+      "text": "// TODO handle options.attributeFilter array"
+    },
+    {
+      "key": "docs-site/build/assets/js/819.981ffaaa.js:625",
+      "path": "docs-site/build/assets/js/819.981ffaaa.js",
+      "line": 625,
+      "text": "*/// TODO Docusaurus v4: remove useless forwardRef"
+    },
+    {
+      "key": "docs-site/build/assets/js/819.981ffaaa.js:716",
+      "path": "docs-site/build/assets/js/819.981ffaaa.js",
+      "line": 716,
+      "text": "*/function useCodeBlockMetadata(props){const{prism}=(0,useThemeConfig/* useThemeConfig */.p)();return createCodeBlockMetadata({code:props.children,className:props.className,metastring:props.metastring,magicComments:prism.magicComments,defaultLanguage:prism.defaultLanguage,language:props.language,title:props.title,showLineNumbers:props.showLineNumbers});}// TODO Docusaurus v4: move this component at the root?"
+    },
+    {
+      "key": "docs-site/build/assets/js/819.981ffaaa.js:1001",
+      "path": "docs-site/build/assets/js/819.981ffaaa.js",
+      "line": 1001,
+      "text": "*/const Caution_infimaClassName='alert alert--warning';const Caution_defaultProps={icon:/*#__PURE__*/(0,jsx_runtime.jsx)(AdmonitionIconCaution,{}),title:/*#__PURE__*/(0,jsx_runtime.jsx)(Translate/* default */.A,{id:\"theme.admonition.caution\",description:\"The default label used for the Caution admonition (:::caution)\",children:\"caution\"})};// TODO remove before v4: Caution replaced by Warning"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:271",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 271,
+      "text": "* TODO should become unnecessary in React v19?"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:1010",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 1010,
+      "text": "// TODO: If another transition starts while we're still confirming"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:1206",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 1206,
+      "text": "var toLocation = history.location; // TODO: We could probably make this more reliable by"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:1493",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 1493,
+      "text": "var toLocation = history.location; // TODO: We could probably make this more reliable by"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:2433",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 2433,
+      "text": "*/// TODO Docusaurus v4: remove temporary inert workaround"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:2522",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 2522,
+      "text": "*/function NavbarNavLink({activeBasePath,activeBaseRegex,to,href,label,html,isDropdownLink,prependBaseUrlToHref,...props}){// TODO all this seems hacky"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:2668",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 2668,
+      "text": "// TODO I'm pretty sure this is incorrect"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:2682",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 2682,
+      "text": "*/// TODO Docusaurus v4: require DocSearch v4"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:2808",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 2808,
+      "text": "*/function useNavbarItems(){// TODO temporary casting until ThemeConfig type is improved"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:2810",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 2810,
+      "text": "function NavbarMobilePrimaryMenu(){const mobileSidebar=(0,navbarMobileSidebar/* useNavbarMobileSidebar */.M)();// TODO how can the order be defined for mobile?"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:2896",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 2896,
+      "text": "*/function Content_useNavbarItems(){// TODO temporary casting until ThemeConfig type is improved"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:2899",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 2899,
+      "text": "${JSON.stringify(item,null,2)}`,{cause:error}),children:/*#__PURE__*/(0,jsx_runtime.jsx)(NavbarItem,{...item})},i))});}function NavbarContentLayout({left,right}){return/*#__PURE__*/(0,jsx_runtime.jsxs)(\"div\",{className:\"navbar__inner\",children:[/*#__PURE__*/(0,jsx_runtime.jsx)(\"div\",{className:(0,clsx/* default */.A)(ThemeClassNames/* ThemeClassNames */.G.layout.navbar.containerLeft,'navbar__items'),children:left}),/*#__PURE__*/(0,jsx_runtime.jsx)(\"div\",{className:(0,clsx/* default */.A)(ThemeClassNames/* ThemeClassNames */.G.layout.navbar.containerRight,'navbar__items navbar__items--right'),children:right})]});}function NavbarContent(){const mobileSidebar=(0,navbarMobileSidebar/* useNavbarMobileSidebar */.M)();const items=Content_useNavbarItems();const[leftItems,rightItems]=splitNavbarItems(items);const searchBarItem=items.find(item=>item.type==='search');return/*#__PURE__*/(0,jsx_runtime.jsx)(NavbarContentLayout,{left:/*#__PURE__*/// TODO stop hardcoding items?"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:2900",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 2900,
+      "text": "(0,jsx_runtime.jsxs)(jsx_runtime.Fragment,{children:[!mobileSidebar.disabled&&/*#__PURE__*/(0,jsx_runtime.jsx)(MobileSidebarToggle,{}),/*#__PURE__*/(0,jsx_runtime.jsx)(NavbarLogo,{}),/*#__PURE__*/(0,jsx_runtime.jsx)(NavbarItems,{items:leftItems})]}),right:/*#__PURE__*/// TODO stop hardcoding items?"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:6257",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 6257,
+      "text": "*/// TODO move to SiteMetadataDefaults or theme-common ?"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:6268",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 6268,
+      "text": "function useDefaultCanonicalUrl(){const{siteConfig:{url:siteUrl,baseUrl,trailingSlash}}=(0,useDocusaurusContext/* default */.A)();// TODO using useLocation().pathname is not a super idea"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:6270",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 6270,
+      "text": "const{pathname}=(0,react_router/* useLocation */.zy)();const canonicalPathname=(0,lib/* applyTrailingSlash */.Ks)((0,useBaseUrl/* default */.Ay)(pathname),{trailingSlash,baseUrl});return siteUrl+canonicalPathname;}// TODO move to SiteMetadataDefaults or theme-common ?"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:6271",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 6271,
+      "text": "function CanonicalUrlHeaders({permalink}){const{siteConfig:{url:siteUrl}}=(0,useDocusaurusContext/* default */.A)();const defaultCanonicalUrl=useDefaultCanonicalUrl();const canonicalUrl=permalink?`${siteUrl}${permalink}`:defaultCanonicalUrl;return/*#__PURE__*/(0,jsx_runtime.jsxs)(Head/* default */.A,{children:[/*#__PURE__*/(0,jsx_runtime.jsx)(\"meta\",{property:\"og:url\",content:canonicalUrl}),/*#__PURE__*/(0,jsx_runtime.jsx)(\"link\",{rel:\"canonical\",href:canonicalUrl})]});}function SiteMetadata(){const{i18n:{currentLocale}}=(0,useDocusaurusContext/* default */.A)();// TODO maybe move these 2 themeConfig to siteConfig?"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:6420",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 6420,
+      "text": "*/// TODO, quick fix for CSS insertion order"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:6522",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 6522,
+      "text": "*/function useAlternatePageUtils(){const{siteConfig:{baseUrl,trailingSlash},i18n:{localeConfigs}}=(0,_docusaurus_useDocusaurusContext__WEBPACK_IMPORTED_MODULE_0__/* [\"default\"] */ .A)();// TODO using useLocation().pathname is not a super idea"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:7254",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 7254,
+      "text": "*/const Context=/*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0__.createContext(null);function mergeContexts({parent,value}){if(!parent){if(!value){throw new Error('Unexpected: no Docusaurus route context found');}else if(!('plugin'in value)){throw new Error('Unexpected: Docusaurus topmost route context has no `plugin` attribute');}return value;}// TODO deep merge this"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:7324",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 7324,
+      "text": "// TODO proper detection is currently unreliable!"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:7930",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 7930,
+      "text": "const useAllDocsData=()=>useAllPluginInstancesData('docusaurus-plugin-content-docs')??StableEmptyObject;const useDocsData=pluginId=>{try{return usePluginData('docusaurus-plugin-content-docs',pluginId,{failfast:true});}catch(error){throw new Error(`You are using a feature of the Docusaurus docs plugin, but this plugin does not seem to be enabled${pluginId==='Default'?'':` (pluginId=${pluginId}`}`,{cause:error});}};// TODO this feature should be provided by docusaurus core"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:8567",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 8567,
+      "text": "return Array.from(new Set(arr));}// TODO 2025: replace by std Object.groupBy ?"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:8640",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 8640,
+      "text": "- ${uniq(allDocs.map(versionDoc=>versionDoc.id)).join('\\n- ')}`);}return doc;},[docId,versions]);}// TODO later read version/route directly from context"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:10347",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 10347,
+      "text": "if(!url||url.startsWith('#')||(0,_isInternalUrl__WEBPACK_IMPORTED_MODULE_2__/* .hasProtocol */ .z)(url)){return url;}// TODO hash router + /baseUrl/ is unlikely to work well in all situations"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:10683",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 10683,
+      "text": "// TODO: Replace with React.createContext once we can assume React 16+"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:11944",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 11944,
+      "text": "*/const ThemeClassNames={page:{blogListPage:'blog-list-page',blogPostPage:'blog-post-page',blogTagsListPage:'blog-tags-list-page',blogTagPostListPage:'blog-tags-post-list-page',blogAuthorsListPage:'blog-authors-list-page',blogAuthorsPostsPage:'blog-authors-posts-page',docsDocPage:'docs-doc-page',docsTagsListPage:'docs-tags-list-page',docsTagDocListPage:'docs-tags-doc-list-page',mdxPage:'mdx-page'},// TODO Docusaurus v4: remove old classes?"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:11946",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 11946,
+      "text": "// TODO these wrapper class names are now quite useless"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:11947",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 11947,
+      "text": "// TODO do breaking change later in 3.0"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:11951",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 11951,
+      "text": "*/docs:{docVersionBanner:'theme-doc-version-banner',docVersionBadge:'theme-doc-version-badge',docBreadcrumbs:'theme-doc-breadcrumbs',docMarkdown:'theme-doc-markdown',docTocMobile:'theme-doc-toc-mobile',docTocDesktop:'theme-doc-toc-desktop',docFooter:'theme-doc-footer',docFooterTagsRow:'theme-doc-footer-tags-row',docFooterEditMetaRow:'theme-doc-footer-edit-meta-row',docSidebarContainer:'theme-doc-sidebar-container',docSidebarMenu:'theme-doc-sidebar-menu',docSidebarItemCategory:'theme-doc-sidebar-item-category',docSidebarItemLink:'theme-doc-sidebar-item-link',docSidebarItemCategoryLevel:level=>`theme-doc-sidebar-item-category-level-${level}`,docSidebarItemLinkLevel:level=>`theme-doc-sidebar-item-link-level-${level}`// TODO add other stable classNames here"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:11952",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 11952,
+      "text": "},blog:{// TODO add other stable classNames here"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:12126",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 12126,
+      "text": "*/// TODO all this wouldn't be necessary if we used ReactRouter basename feature"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:12140",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 12140,
+      "text": "// TODO read routes and automatically detect internal/external links?"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:12141",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 12141,
+      "text": "const targetLinkWithoutPathnameProtocol=targetLinkUnprefixed?.replace('pathname://','');// TODO we should use ReactRouter basename feature instead!"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:12143",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 12143,
+      "text": "let targetLink=typeof targetLinkWithoutPathnameProtocol!=='undefined'?maybeAddBaseUrl(targetLinkWithoutPathnameProtocol):undefined;// TODO find a way to solve this problem properly"
+    },
+    {
+      "key": "docs-site/build/assets/js/main.39a6ae67.js:12266",
+      "path": "docs-site/build/assets/js/main.39a6ae67.js",
+      "line": 12266,
+      "text": "*/function usePrevious(value){const ref=(0,react__WEBPACK_IMPORTED_MODULE_0__.useRef)();(0,_docusaurus_useIsomorphicLayoutEffect__WEBPACK_IMPORTED_MODULE_1__/* [\"default\"] */ .A)(()=>{ref.current=value;});// TODO need to fix this React Compiler lint error"
+    },
+    {
+      "key": "forge/log/encoder.go:258",
+      "path": "forge/log/encoder.go",
+      "line": 258,
+      "text": "return traceZapLevel // TRACE is below DEBUG"
+    },
+    {
+      "key": "helper-projects/coreui-free-bootstrap-admin-template-main/package-lock.json:9927",
+      "path": "helper-projects/coreui-free-bootstrap-admin-template-main/package-lock.json",
+      "line": 9927,
+      "text": "\"integrity\": \"sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==\","
+    },
+    {
+      "key": "helper-projects/gentelella-master/package.json:9",
+      "path": "helper-projects/gentelella-master/package.json",
+      "line": 9,
+      "text": "\"dev:debug\": \"DEBUG=vite:* vite --clearScreen false\","
+    },
+    {
+      "key": "helper-projects/gentelella-master/docs/configuration.md:400",
+      "path": "helper-projects/gentelella-master/docs/configuration.md",
+      "line": 400,
+      "text": "VITE_DEBUG_MODE=true"
+    },
+    {
+      "key": "helper-projects/gentelella-master/docs/configuration.md:417",
+      "path": "helper-projects/gentelella-master/docs/configuration.md",
+      "line": 417,
+      "text": "VITE_DEBUG_MODE=false"
+    },
+    {
+      "key": "helper-projects/gentelella-master/docs/configuration.md:430",
+      "path": "helper-projects/gentelella-master/docs/configuration.md",
+      "line": 430,
+      "text": "const debugMode = import.meta.env.VITE_DEBUG_MODE === 'true';"
+    },
+    {
+      "key": "helper-projects/gentelella-master/docs/deployment.md:50",
+      "path": "helper-projects/gentelella-master/docs/deployment.md",
+      "line": 50,
+      "text": "VITE_DEBUG_MODE=false"
+    },
+    {
+      "key": "helper-projects/gentelella-master/docs/deployment.md:61",
+      "path": "helper-projects/gentelella-master/docs/deployment.md",
+      "line": 61,
+      "text": "VITE_GA_TRACKING_ID=UA-XXXXXXXX-X"
+    },
+    {
+      "key": "helper-projects/gentelella-master/docs/deployment.md:62",
+      "path": "helper-projects/gentelella-master/docs/deployment.md",
+      "line": 62,
+      "text": "VITE_HOTJAR_ID=XXXXXXX"
+    },
+    {
+      "key": "helper-projects/gentelella-master/docs/README.md:252",
+      "path": "helper-projects/gentelella-master/docs/README.md",
+      "line": 252,
+      "text": "ga_tracking: UA-XXXXXXXX-X"
+    },
+    {
+      "key": "helper-projects/gentelella-master/docs/_config.yml:28",
+      "path": "helper-projects/gentelella-master/docs/_config.yml",
+      "line": 28,
+      "text": "# ga_tracking: UA-XXXXXXXX-X"
+    },
+    {
+      "key": "helper-projects/gentelella-master/docs/_site/assets/js/search-data.json:186",
+      "path": "helper-projects/gentelella-master/docs/_site/assets/js/search-data.json",
+      "line": 186,
+      "text": "\"content\": \"Development Environment . Create .env.development: . # Development settings VITE_API_URL=http://localhost:8080/api VITE_APP_NAME=Gentelella Admin (Dev) VITE_DEBUG_MODE=true VITE_BUNDLE_ANALYZER=false # Feature flags VITE_ENABLE_CHARTS=true VITE_ENABLE_MAPS=true VITE_ENABLE_REAL_TIME=false . Production Environment . Create .env.production: . # Production settings VITE_API_URL=https://api.yoursite.com VITE_APP_NAME=Gentelella Admin VITE_DEBUG_MODE=false VITE_BUNDLE_ANALYZER=false # Performance settings VITE_PRELOAD_MODULES=charts,forms VITE_CDN_URL=https://cdn.yoursite.com . Using Environment Variables . // In your JavaScript files const apiUrl = import.meta.env.VITE_API_URL; const debugMode = import.meta.env.VITE_DEBUG_MODE === 'true'; if (debugMode) { console.log('Debug mode enabled'); } // Conditional module loading if (import.meta.env.VITE_ENABLE_CHARTS === 'true') { const charts = await import('./modules/charts.js'); charts.initializeCharts(); } . \","
+    },
+    {
+      "key": "helper-projects/gentelella-master/docs/_site/assets/js/search-data.json:284",
+      "path": "helper-projects/gentelella-master/docs/_site/assets/js/search-data.json",
+      "line": 284,
+      "text": "\"content\": \"Build Optimization . Before deploying, ensure your build is optimized: . # Run production build npm run build # Analyze bundle sizes npm run build:analyze # Run performance optimizations npm run optimize # Test production build locally npm run preview . Environment Configuration . Production Environment Variables . Create .env.production: . # API Configuration VITE_API_URL=https://api.yoursite.com VITE_APP_NAME=Gentelella Admin VITE_DEBUG_MODE=false # CDN Configuration VITE_CDN_URL=https://cdn.yoursite.com VITE_ASSETS_URL=https://assets.yoursite.com # Performance Settings VITE_PRELOAD_MODULES=charts,forms VITE_ENABLE_SERVICE_WORKER=true # Analytics VITE_GA_TRACKING_ID=UA-XXXXXXXX-X VITE_HOTJAR_ID=XXXXXXX . Build Configuration . Ensure vite.config.js has production optimizations: . export default defineConfig({ base: '/your-app-path/', // Set if not deploying to root build: { // Output directory outDir: 'dist', // Asset directory assetsDir: 'assets', // Source maps for production debugging sourcemap: process.env.NODE_ENV === 'development', // Minification minify: 'terser', terserOptions: { compress: { drop_console: true, drop_debugger: true } }, // Chunk size warning limit chunkSizeWarningLimit: 1000, rollupOptions: { output: { // Manual chunk splitting for optimal loading manualChunks: { 'vendor-core': ['bootstrap', '@popperjs/core'], 'vendor-charts': ['chart.js', 'morris.js'], 'vendor-forms': ['select2', 'tempus-dominus'], 'vendor-tables': ['datatables.net'], 'vendor-utils': ['dayjs', 'nprogress'] } } } } }); . \","
+    },
+    {
+      "key": "helper-projects/gentelella-master/docs/_site/configuration/index.html:735",
+      "path": "helper-projects/gentelella-master/docs/_site/configuration/index.html",
+      "line": 735,
+      "text": "VITE_DEBUG_MODE=true"
+    },
+    {
+      "key": "helper-projects/gentelella-master/docs/_site/configuration/index.html:757",
+      "path": "helper-projects/gentelella-master/docs/_site/configuration/index.html",
+      "line": 757,
+      "text": "VITE_DEBUG_MODE=false"
+    },
+    {
+      "key": "helper-projects/gentelella-master/docs/_site/configuration/index.html:775",
+      "path": "helper-projects/gentelella-master/docs/_site/configuration/index.html",
+      "line": 775,
+      "text": "<span class=\"kd\">const</span> <span class=\"nx\">debugMode</span> <span class=\"o\">=</span> <span class=\"k\">import</span><span class=\"p\">.</span><span class=\"nx\">meta</span><span class=\"p\">.</span><span class=\"nx\">env</span><span class=\"p\">.</span><span class=\"nx\">VITE_DEBUG_MODE</span> <span class=\"o\">===</span> <span class=\"dl\">'</span><span class=\"s1\">true</span><span class=\"dl\">'</span><span class=\"p\">;</span>"
+    },
+    {
+      "key": "helper-projects/gentelella-master/docs/_site/deployment/index.html:387",
+      "path": "helper-projects/gentelella-master/docs/_site/deployment/index.html",
+      "line": 387,
+      "text": "VITE_DEBUG_MODE=false"
+    },
+    {
+      "key": "helper-projects/gentelella-master/docs/_site/deployment/index.html:398",
+      "path": "helper-projects/gentelella-master/docs/_site/deployment/index.html",
+      "line": 398,
+      "text": "VITE_GA_TRACKING_ID=UA-XXXXXXXX-X"
+    },
+    {
+      "key": "helper-projects/gentelella-master/docs/_site/deployment/index.html:399",
+      "path": "helper-projects/gentelella-master/docs/_site/deployment/index.html",
+      "line": 399,
+      "text": "VITE_HOTJAR_ID=XXXXXXX"
+    },
+    {
+      "key": "helper-projects/go-admin-main/.cursorrules:101",
+      "path": "helper-projects/go-admin-main/.cursorrules",
+      "line": 101,
+      "text": "- Update TODO list when tasks complete"
+    },
+    {
+      "key": "helper-projects/go-admin-main/.github/ISSUE_TEMPLATE/bug_report.md:4",
+      "path": "helper-projects/go-admin-main/.github/ISSUE_TEMPLATE/bug_report.md",
+      "line": 4,
+      "text": "title: \"[BUG]\""
+    },
+    {
+      "key": "helper-projects/go-admin-main/.github/ISSUE_TEMPLATE/bug_report_zh.md:4",
+      "path": "helper-projects/go-admin-main/.github/ISSUE_TEMPLATE/bug_report_zh.md",
+      "line": 4,
+      "text": "title: \"[BUG]\""
+    },
+    {
+      "key": "helper-projects/go-admin-main/forgego/cmd/cli/commands/startproject.go:42",
+      "path": "helper-projects/go-admin-main/forgego/cmd/cli/commands/startproject.go",
+      "line": 42,
+      "text": "Debug:       getEnvBool(\"DEBUG\", false),"
+    },
+    {
+      "key": "helper-projects/go-admin-main/forgego/cmd/cli/commands/startproject.go:75",
+      "path": "helper-projects/go-admin-main/forgego/cmd/cli/commands/startproject.go",
+      "line": 75,
+      "text": "DEBUG=false"
+    },
+    {
+      "key": "helper-projects/go-admin-main/forgego/pkg/service/service.go:432",
+      "path": "helper-projects/go-admin-main/forgego/pkg/service/service.go",
+      "line": 432,
+      "text": "// TODO: Implement proper cursor-based pagination"
+    },
+    {
+      "key": "helper-projects/go-admin-main/forgego/pkg/settings/loader.go:148",
+      "path": "helper-projects/go-admin-main/forgego/pkg/settings/loader.go",
+      "line": 148,
+      "text": "\"DEBUG\":              \"security.debug\","
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/CONTRIBUTING_CN.md:8",
+      "path": "helper-projects/go-admin-main/goAdmin/CONTRIBUTING_CN.md",
+      "line": 8,
+      "text": "* 寻找BUG"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/go.sum:17",
+      "path": "helper-projects/go-admin-main/goAdmin/go.sum",
+      "line": 17,
+      "text": "github.com/CloudyKit/jet/v6 v6.2.0 h1:EpcZ6SR9n28BUGtNJSvlBqf90IpjeFr36Tizxhn/oME="
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/mssql.go:51",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/mssql.go",
+      "line": 51,
+      "text": "// TODO: 整理优化"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/performer.go:40",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/performer.go",
+      "line": 40,
+      "text": "// TODO: regular expressions for sqlite, use the dialect module"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/performer.go:103",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/performer.go",
+      "line": 103,
+      "text": "// TODO: regular expressions for sqlite, use the dialect module"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/postgresql.go:89",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/postgresql.go",
+      "line": 89,
+      "text": "// TODO: add \" to the keyword"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:29",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 29,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:32",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 32,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:35",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 35,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:38",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 38,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:41",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 41,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:44",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 44,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:47",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 47,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:50",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 50,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:53",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 53,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:56",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 56,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:59",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 59,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:62",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 62,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:65",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 65,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:68",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 68,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:71",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 71,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:74",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 74,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:77",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 77,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:80",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 80,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:83",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 83,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:86",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 86,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:89",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 89,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:92",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 92,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:95",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 95,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:98",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 98,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:101",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 101,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go:104",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/db/statement_test.go",
+      "line": 104,
+      "text": "// TODO"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/modules/remote_server/remote_server.go:171",
+      "path": "helper-projects/go-admin-main/goAdmin/modules/remote_server/remote_server.go",
+      "line": 171,
+      "text": "// TODO: add cache"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/plugins/plugins.go:411",
+      "path": "helper-projects/go-admin-main/goAdmin/plugins/plugins.go",
+      "line": 411,
+      "text": "// TODO: 验证插件合法性"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/plugins/admin/admin.go:28",
+      "path": "helper-projects/go-admin-main/goAdmin/plugins/admin/admin.go",
+      "line": 28,
+      "text": "// TODO: find a better way to manage the dependencies"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/plugins/admin/controller/common.go:130",
+      "path": "helper-projects/go-admin-main/goAdmin/plugins/admin/controller/common.go",
+      "line": 130,
+      "text": "// TODO: 避免重复增加，第一次加入后，后面大部分会存在重复情况，以下循环可以优化"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/plugins/admin/controller/menu.go:167",
+      "path": "helper-projects/go-admin-main/goAdmin/plugins/admin/controller/menu.go",
+      "line": 167,
+      "text": "// TODO: use transaction"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/plugins/admin/controller/menu.go:214",
+      "path": "helper-projects/go-admin-main/goAdmin/plugins/admin/controller/menu.go",
+      "line": 214,
+      "text": "// TODO: use transaction"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/plugins/admin/controller/plugins.go:486",
+      "path": "helper-projects/go-admin-main/goAdmin/plugins/admin/controller/plugins.go",
+      "line": 486,
+      "text": "// TODO: 实现运行环境与编译环境隔离"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/plugins/admin/controller/show.go:444",
+      "path": "helper-projects/go-admin-main/goAdmin/plugins/admin/controller/show.go",
+      "line": 444,
+      "text": "// TODO: support any numbers of fields."
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/plugins/admin/modules/guard/menu_delete.go:22",
+      "path": "helper-projects/go-admin-main/goAdmin/plugins/admin/modules/guard/menu_delete.go",
+      "line": 22,
+      "text": "// TODO: check the user permission"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/plugins/admin/modules/table/default.go:305",
+      "path": "helper-projects/go-admin-main/goAdmin/plugins/admin/modules/table/default.go",
+      "line": 305,
+      "text": "// TODO: ToDisplay some same logic execute repeatedly, it can be improved."
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/plugins/admin/modules/table/default.go:443",
+      "path": "helper-projects/go-admin-main/goAdmin/plugins/admin/modules/table/default.go",
+      "line": 443,
+      "text": "// TODO: refactor"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/plugins/admin/modules/table/default.go:578",
+      "path": "helper-projects/go-admin-main/goAdmin/plugins/admin/modules/table/default.go",
+      "line": 578,
+      "text": "// TODO: use the dialect"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/plugins/admin/modules/table/generators.go:1351",
+      "path": "helper-projects/go-admin-main/goAdmin/plugins/admin/modules/table/generators.go",
+      "line": 1351,
+      "text": "// TODO: add transaction"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/template/types/form.go:298",
+      "path": "helper-projects/go-admin-main/goAdmin/template/types/form.go",
+      "line": 298,
+      "text": "// TODO: optimize"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/template/types/info.go:661",
+      "path": "helper-projects/go-admin-main/goAdmin/template/types/info.go",
+      "line": 661,
+      "text": "// TODO: support like operation and join table"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/template/types/form/select/select.go:23",
+      "path": "helper-projects/go-admin-main/goAdmin/template/types/form/select/select.go",
+      "line": 23,
+      "text": "// TODO: make clear"
+    },
+    {
+      "key": "helper-projects/go-admin-main/goAdmin/tests/web/web_test.go:542",
+      "path": "helper-projects/go-admin-main/goAdmin/tests/web/web_test.go",
+      "line": 542,
+      "text": "//  TODO:"
+    },
+    {
+      "key": "helper-projects/go-admin-main/gogo/cmd/go-admin-cli/commands/createsuperuser.go:73",
+      "path": "helper-projects/go-admin-main/gogo/cmd/go-admin-cli/commands/createsuperuser.go",
+      "line": 73,
+      "text": "// TODO: Implement actual superuser creation"
+    },
+    {
+      "key": "helper-projects/go-admin-main/gogo/cmd/go-admin-cli/commands/migrate.go:58",
+      "path": "helper-projects/go-admin-main/gogo/cmd/go-admin-cli/commands/migrate.go",
+      "line": 58,
+      "text": "// TODO: Implement actual migration logic"
+    },
+    {
+      "key": "helper-projects/go-admin-main/gogo/cmd/go-admin-cli/commands/startproject.go:98",
+      "path": "helper-projects/go-admin-main/gogo/cmd/go-admin-cli/commands/startproject.go",
+      "line": 98,
+      "text": "Debug:       getEnvBool(\"DEBUG\", false),"
+    },
+    {
+      "key": "helper-projects/go-admin-main/gogo/cmd/gogo-cli/commands/startproject.go:42",
+      "path": "helper-projects/go-admin-main/gogo/cmd/gogo-cli/commands/startproject.go",
+      "line": 42,
+      "text": "Debug:       getEnvBool(\"DEBUG\", false),"
+    },
+    {
+      "key": "helper-projects/go-admin-main/gogo/cmd/gogo-cli/commands/startproject.go:75",
+      "path": "helper-projects/go-admin-main/gogo/cmd/gogo-cli/commands/startproject.go",
+      "line": 75,
+      "text": "DEBUG=false"
+    },
+    {
+      "key": "helper-projects/go-admin-main/gogo/docs/MODULAR_ARCHITECTURE.md:87",
+      "path": "helper-projects/go-admin-main/gogo/docs/MODULAR_ARCHITECTURE.md",
+      "line": 87,
+      "text": "Debug       bool   `setting:\"app.debug\" env:\"DEBUG\" default:\"false\"`"
+    },
+    {
+      "key": "helper-projects/go-admin-main/gogo/examples/complete/main.go:25",
+      "path": "helper-projects/go-admin-main/gogo/examples/complete/main.go",
+      "line": 25,
+      "text": "Debug:       getEnvBool(\"DEBUG\", false),"
+    },
+    {
+      "key": "helper-projects/go-admin-main/gogo/examples/complete/README.md:20",
+      "path": "helper-projects/go-admin-main/gogo/examples/complete/README.md",
+      "line": 20,
+      "text": "export DEBUG=false"
+    },
+    {
+      "key": "helper-projects/go-admin-main/gogo/examples/complete-app/main.go:116",
+      "path": "helper-projects/go-admin-main/gogo/examples/complete-app/main.go",
+      "line": 116,
+      "text": "Debug:       getEnvBool(\"DEBUG\", true),"
+    },
+    {
+      "key": "helper-projects/go-admin-main/gogo/examples/modular/main.go:25",
+      "path": "helper-projects/go-admin-main/gogo/examples/modular/main.go",
+      "line": 25,
+      "text": "Debug       bool   `env:\"DEBUG\" default:\"false\"`"
+    },
+    {
+      "key": "helper-projects/go-admin-main/gogo/examples/working/main.go:114",
+      "path": "helper-projects/go-admin-main/gogo/examples/working/main.go",
+      "line": 114,
+      "text": "Debug:       getEnvBool(\"DEBUG\", true),"
+    },
+    {
+      "key": "helper-projects/go-admin-main/gogo/pkg/settings/README.md:13",
+      "path": "helper-projects/go-admin-main/gogo/pkg/settings/README.md",
+      "line": 13,
+      "text": "Debug       bool   `env:\"DEBUG\" default:\"false\"`"
+    },
+    {
+      "key": "helper-projects/ngx-admin-master/package-lock.json:4396",
+      "path": "helper-projects/ngx-admin-master/package-lock.json",
+      "line": 4396,
+      "text": "\"integrity\": \"sha512-sQXCasFk+U8lWYEe66WxRDOE9PjVz4vSM51fTu3Hw+ClTpUSQb718772vH3pyS5pShp6lvQM7SxgIDXXXmOX7w==\","
+    },
+    {
+      "key": "helper-projects/ngx-admin-master/package-lock.json:17135",
+      "path": "helper-projects/ngx-admin-master/package-lock.json",
+      "line": 17135,
+      "text": "\"integrity\": \"sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==\""
+    },
+    {
+      "key": "helper-projects/ngx-admin-master/src/app/pages/dashboard/temperature/temperature-dragger/temperature-dragger.component.ts:147",
+      "path": "helper-projects/ngx-admin-master/src/app/pages/dashboard/temperature/temperature-dragger/temperature-dragger.component.ts",
+      "line": 147,
+      "text": "// TODO: review set data to styles object"
+    },
+    {
+      "key": "helper-projects/ngx-admin-master/src/app/pages/e-commerce/charts-panel/charts/orders-chart.component.ts:298",
+      "path": "helper-projects/ngx-admin-master/src/app/pages/e-commerce/charts-panel/charts/orders-chart.component.ts",
+      "line": 298,
+      "text": "// TODO: investigate more deeply"
+    },
+    {
+      "key": "helper-projects/ngx-admin-master/src/app/pages/e-commerce/charts-panel/charts/profit-chart.component.ts:190",
+      "path": "helper-projects/ngx-admin-master/src/app/pages/e-commerce/charts-panel/charts/profit-chart.component.ts",
+      "line": 190,
+      "text": "// TODO: investigate more deeply"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:5",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 5,
+      "text": "- TODO snapshot: open=132, new=132, resolved=0"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:14",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 14,
+      "text": "- Remaining: admin REST TODO implementation and executable ecommerce tests."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:18",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 18,
+      "text": "- TODO snapshot: open=500, new=500, resolved=132"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:26",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 26,
+      "text": "- Remaining: admin REST object replace/bulk CRUD TODOs, API permission reflection TODO tests, executable ecommerce tests."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:30",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 30,
+      "text": "- TODO snapshot: open=500, new=30, resolved=30"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:39",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 39,
+      "text": "- Remaining: admin REST bulk CRUD TODOs, API permission reflection TODO tests, executable ecommerce tests."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:43",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 43,
+      "text": "- TODO snapshot: open=500, new=12, resolved=12"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:44",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 44,
+      "text": "- Last message summary: Implemented one focused high-impact batch on admin REST reliability: `handleReplace` is now fully functional with validation and tests. - Code change: `forge/admin/api/rest/router.go:468` - Replaced TODO in `handleReplace` with: - object fetch via `GetObject` - object-level permission check - JSON body parse + empty-body validation - persistence via `UpdateObject` - updated object response payload - Tests added: `forge/admin/api/rest/router_test.go:183` - `TestHandleReplace_ReplacesObject` - `Te..."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:51",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 51,
+      "text": "- TODO snapshot: open=500, new=12, resolved=12"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:52",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 52,
+      "text": "- Remaining: admin REST bulk-update/bulk-delete TODOs, API permission reflection TODO tests, executable ecommerce tests."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:56",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 56,
+      "text": "- TODO snapshot: open=500, new=12, resolved=12"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:57",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 57,
+      "text": "- Last message summary: Implemented one focused high-impact batch on admin REST bulk-create reliability. Changed files: - `forge/admin/api/rest/router.go:548` - Replaced bulk-create TODO with full implementation: - accepts `[]object` or `{ \"objects\": [] }` - validates payload shape and non-empty batch - validates each item is a non-empty object - performs best-effort `CreateObject` calls - returns `201` on full success, `207` on partial success, and terminal error responses when none are created - `forge/admin/api/rest..."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:65",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 65,
+      "text": "- TODO snapshot: open=500, new=10, resolved=10"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:66",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 66,
+      "text": "- Remaining: API permission reflection TODO tests and executable ecommerce tests remain unaddressed."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:70",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 70,
+      "text": "- TODO snapshot: open=500, new=10, resolved=10"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:71",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 71,
+      "text": "- Last message summary: Implemented one focused high-impact batch on admin REST reliability: bulk update/delete TODOs are now fully implemented and tested. ### Changed - `forge/admin/api/rest/router.go` - Implemented `handleBulkUpdate`: - validates `{ ids, data }` - normalizes IDs (new `normalizeBulkID`) - fetches object + checks object-level change permission - best-effort updates with per-item error collection - returns `200` (full), `207` (partial), `400`/`500` terminal failures - Implemented `handleBulkDelete`: - v..."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:75",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 75,
+      "text": "- Batch: API permission reflection reliability + TODO test closure (framework API)"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:77",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 77,
+      "text": "- Tests: replaced placeholder TODO assertions with concrete checks in `forge/api/permissions/permission_test.go` (`TestIsAdminUser_Admin`, `TestIsOwnerOrReadOnly_Owner`); ran `go test ./api/permissions` (pass) and `go test ./...` in `examples/ecommerce` (pass/no test files)."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:78",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 78,
+      "text": "- TODO snapshot: open=500, new=10, resolved=10"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:79",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 79,
+      "text": "- Remaining: ecommerce still lacks executable tests (compile-only parity), and broader admin/ORM/schema/migrations/API TODO/FIXME burn-down remains."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:83",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 83,
+      "text": "- TODO snapshot: open=500, new=10, resolved=10"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:84",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 84,
+      "text": "- Last message summary: Implemented one focused high-impact batch on API permission reliability and TODO debt. **What changed** - Fixed reflection helper behavior in `forge/api/permissions/helpers.go`: - `getMethod` now correctly resolves pointer-receiver and value-receiver methods. - Added nil-safety for reflective method/field access. - Replaced TODO placeholder assertions in `forge/api/permissions/permission_test.go`: - `TestIsAdminUser_Admin` now asserts admin request/object permission behavior. - `TestIsOwnerOrRea..."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:91",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 91,
+      "text": "- TODO snapshot: open=500, new=14, resolved=14"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:92",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 92,
+      "text": "- Remaining: ecommerce still lacks executable tests (compile-only parity), and broad TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:96",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 96,
+      "text": "- TODO snapshot: open=500, new=14, resolved=14"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:97",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 97,
+      "text": "- Last message summary: Implemented one focused reliability batch in admin metadata and updated run tracking. - Fixed relation filter metadata mapping in `forge/admin/core/metadata_builder.go:199` and `forge/admin/core/metadata_builder.go:249`. - Replaced the prior FIXME path by setting `FilterMetadata.RelatedModel` from schema relations, including `_id` normalization (`category_id` -> `category`) in `forge/admin/core/metadata_builder.go:239`. - Added coverage in `forge/admin/core/metadata_builder_test.go:25` (`TestBui..."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:102",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 102,
+      "text": "- Changed: replaced the `RequirePermission` TODO in `forge/identity/middleware/auth.go` by integrating `PermissionService.CheckPermission`, added active-user enforcement, preserved superuser bypass, and kept a backward-compatible staff fallback for non-wired setups; added `NewAuthenticationMiddlewareWithPermissionService(...)` and wired it in `forge/identity/router.go`."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:105",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 105,
+      "text": "- TODO snapshot: open=500, new=11, resolved=11"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:106",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 106,
+      "text": "- Remaining: ecommerce still lacks executable tests; identity repository test isolation needs hardening; broad TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:110",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 110,
+      "text": "- TODO snapshot: open=500, new=11, resolved=11"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:111",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 111,
+      "text": "- Last message summary: Implemented one focused high-impact batch on API/server auth reliability by closing the permission-check TODO in identity middleware. Changed files: - `forge/identity/middleware/auth.go:18` - `forge/identity/router.go:16` - `forge/identity/middleware/auth_test.go:1` - `ops/codex-24x7/STATUS.md:3` - `ops/codex-24x7/HISTORY.md:100` What changed: - Replaced `RequirePermission`’s staff-only TODO path with real `PermissionService.CheckPermission` enforcement in `forge/identity/middleware/auth.go:155`..."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:118",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 118,
+      "text": "- TODO snapshot: open=500, new=13, resolved=13"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:119",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 119,
+      "text": "- Remaining: ecommerce still lacks executable tests (compile-only parity); broad TODO/FIXME burn-down remains across admin/ORM/schema/migrations/API."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:123",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 123,
+      "text": "- TODO snapshot: open=500, new=13, resolved=13"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:129",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 129,
+      "text": "- Changed: replaced the nested relation-path TODO in `forge/orm/expression.go` by validating full field paths in `Field.Resolve` (relation-hop traversal, non-relation traversal rejection, relation-terminal rejection, and target-model lookup errors with explicit messages)."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:133",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 133,
+      "text": "- Remaining: executable ecommerce tests are still missing; ORM integration failures need triage; broad TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:137",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 137,
+      "text": "- TODO snapshot: open=500, new=8, resolved=8"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:138",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 138,
+      "text": "- Last message summary: Implemented one focused ORM reliability batch and updated run tracking. - Closed nested-path validation TODO in `forge/orm/expression.go:61` by fully validating relation traversal paths in `Field.Resolve`. - Added `resolveNestedFieldPath(...)` in `forge/orm/expression.go:95` to: - reject traversal through non-relation fields, - resolve each relation hop target model schema, - reject terminal relation paths and missing nested fields with explicit errors. - Added tests in `forge/orm/expression_tes..."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:143",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 143,
+      "text": "- Changed: closed three ORM TODOs by implementing thread-safe registries + build helpers in `forge/orm/aggregates.go`, `forge/orm/annotations.go`, and `forge/orm/query_expr.go`:"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:149",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 149,
+      "text": "- TODO snapshot: open=500, new=10, resolved=10"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:150",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 150,
+      "text": "- Remaining: ecommerce still lacks executable tests; ORM integration failures still require triage; broad TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:154",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 154,
+      "text": "- TODO snapshot: open=500, new=10, resolved=10"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:155",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 155,
+      "text": "- Last message summary: Implemented one focused high-impact batch on ORM reliability by closing three framework TODOs and adding coverage. Changed: - `forge/orm/aggregates.go:102` Implemented custom aggregate registry with thread-safe registration and lookup/build (`RegisterAggregate`, `BuildAggregate`), including normalized names and sane fallback defaults. - `forge/orm/annotations.go:27` Implemented thread-safe annotation registry/build path (`RegisterAnnotation`, `BuildAnnotation`). - `forge/orm/query_expr.go:262` I..."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:159",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 159,
+      "text": "- Batch: logging observability TODO closure + ecommerce executable smoke tests (API/server parity)"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:160",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 160,
+      "text": "- Changed: replaced placeholder metrics hook TODO in `forge/log/hooks/metrics.go` with atomic counters by log level, plus `MetricsSnapshot`, `Snapshot()`, and `MarkDropped()`; added coverage in `forge/log/hooks/metrics_test.go`."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:163",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 163,
+      "text": "- TODO snapshot: open=500, new=12, resolved=12"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:164",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 164,
+      "text": "- Remaining: ecommerce still needs HTTP/integration-level admin/API reachability tests; ORM integration failures (`TestQuerySet_Integration_Filter`, `TestQuerySet_Integration_LimitOffset`) still need triage; broader admin/API/ORM/schema/migrations TODO/FIXME burn-down remains."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:168",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 168,
+      "text": "- TODO snapshot: open=500, new=12, resolved=12"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:169",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 169,
+      "text": "- Last message summary: Implemented one focused high-impact batch for production readiness: closed a framework TODO and added executable ecommerce tests. Changed files: - `forge/log/hooks/metrics.go` - `forge/log/hooks/metrics_test.go` - `examples/ecommerce/main_test.go` - `ops/codex-24x7/STATUS.md` - `ops/codex-24x7/HISTORY.md` What changed: - Replaced the TODO placeholder in `forge/log/hooks/metrics.go` with a thread-safe metrics hook: - per-level counters (trace/debug/info/warn/error/dpanic/panic/fatal) - total/unkn..."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:177",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 177,
+      "text": "- TODO snapshot: open=500, new=14, resolved=14"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:178",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 178,
+      "text": "- Remaining: ecommerce still needs HTTP/integration-level admin/API reachability tests; broad TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:182",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 182,
+      "text": "- TODO snapshot: open=500, new=14, resolved=14"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:187",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 187,
+      "text": "- Batch: codegen hooks extraction TODO closure (schema/codegen reliability)"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:188",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 188,
+      "text": "- Changed: replaced `extractHooks` TODO in `forge/codegen/ast_parser.go` with concrete parsing for `Hooks()` return values across struct literals, builder-chain style (`NewModelHooks().With...`), and simple assigned-variable returns."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:191",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 191,
+      "text": "- TODO snapshot: open=500, new=9, resolved=9"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:192",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 192,
+      "text": "- Remaining: ecommerce still needs HTTP/integration-level admin/API reachability tests; broad admin/API/ORM/schema/migrations TODO/FIXME burn-down remains."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:196",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 196,
+      "text": "- TODO snapshot: open=500, new=9, resolved=9"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:197",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 197,
+      "text": "- Last message summary: Implemented one focused high-impact batch on framework codegen reliability by closing the hooks-extraction TODO and adding coverage. Changed: - Implemented `Hooks()` AST extraction in `forge/codegen/ast_parser.go:1039`: - Parses `&schema.ModelHooks{...}` / `schema.ModelHooks{...}` - Parses `schema.NewModelHooks().With...(...)` chains - Handles simple assigned-variable returns (`hooks := ...; return hooks`) - Extracts hook refs for identifiers, selectors, and inline funcs (`<inline>`) - Added tes..."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:201",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 201,
+      "text": "- Batch: logging file-rotation reliability TODO closure (API/server operability)"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:202",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 202,
+      "text": "- Changed: replaced placeholder file-export TODO in `forge/log/exporters/file.go` with working in-process size-based rotation (max-size rollover, numbered backups, safe fallback to no-op writer on open failure); added thread-safe writer lifecycle (`Write`, `Sync`, `Close`)."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:205",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 205,
+      "text": "- TODO snapshot: open=500, new=14, resolved=14"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:206",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 206,
+      "text": "- Remaining: ecommerce still needs HTTP/integration-level admin/API reachability tests; broad TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:210",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 210,
+      "text": "- TODO snapshot: open=500, new=14, resolved=14"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:211",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 211,
+      "text": "- Last message summary: Implemented one focused production-readiness batch on logging reliability by closing the file-rotation TODO. ### What changed - Implemented in-process size-based file rotation in `forge/log/exporters/file.go`: - rotation on max size - numbered backups (`.1`, `.2`, ...) - thread-safe writer lifecycle (`Write`/`Sync`/`Close`) - safe no-op fallback if file open fails - Wired runtime logger file output to this exporter in `forge/log/logger.go`, so `FileOutputConfig.Rotation` is actually applied. - A..."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:226",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 226,
+      "text": "- TODO snapshot: open=500, new=13, resolved=13"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:231",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 231,
+      "text": "- Batch: identity password-reset token reliability + TODO closure (API/server auth)"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:234",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 234,
+      "text": "- Replaced password-reset delivery TODO with concrete notifier wiring via `PasswordResetNotifier` and `NewPasswordServiceWithNotifier(...)`."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:245",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 245,
+      "text": "- TODO snapshot: open=500, new=8, resolved=8"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:246",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 246,
+      "text": "- Remaining: ecommerce still needs authenticated admin/API end-to-end integration coverage; broad admin/API/ORM/schema/migrations TODO/FIXME burn-down remains."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:250",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 250,
+      "text": "- TODO snapshot: open=500, new=8, resolved=8"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:251",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 251,
+      "text": "- Last message summary: Implemented one focused high-impact batch in identity auth reliability and TODO debt: - Closed password-reset delivery TODO by adding notifier support in `forge/identity/service/password.go:19`, `forge/identity/service/password.go:45`, `forge/identity/service/password.go:129`. - Fixed broken hashed-token reset flow in `forge/identity/repository/token.go:132`, `forge/identity/repository/token.go:162`, `forge/identity/repository/token.go:189`. - Fixed token cleanup after reset to delete the persis..."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:255",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 255,
+      "text": "- Batch: CLI auth scaffolding production-readiness TODO closure (API/server parity)"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:258",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 258,
+      "text": "- Replaced scaffold TODOs for login/logout + JWT by generating concrete auth endpoints and handlers in scaffolded `app/auth/api.go`."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:262",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 262,
+      "text": "- Added tests for scaffold output contents (login/logout routes, JWT helper, TODO removal)."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:267",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 267,
+      "text": "- TODO snapshot: open=500, new=13, resolved=13"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:268",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 268,
+      "text": "- Remaining: ecommerce still needs authenticated admin/API end-to-end CRUD coverage; first-party TODO/FIXME burn-down remains in admin/UI and broader admin/ORM/schema/migrations/API paths."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:272",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 272,
+      "text": "- TODO snapshot: open=500, new=13, resolved=13"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:273",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 273,
+      "text": "- Last message summary: Implemented one focused high-impact batch on framework auth scaffolding TODO debt. **What changed** - Closed auth scaffold TODOs in `forge/cli/commands/project/auth.go`: - Added generated login/logout endpoint registration in scaffolded `api.go`: - `POST /api/v1/auth/login` - `POST /api/v1/auth/logout` - Added generated handlers `handleLogin`/`handleLogout` with request validation and JSON responses. - Added generated JWT helper `generateJWTToken(...)` (HMAC-SHA256 scaffold) and `writeJSON(...)`..."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:285",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 285,
+      "text": "- TODO snapshot: open=500, new=14, resolved=14"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:286",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 286,
+      "text": "- Remaining: authenticated admin/API end-to-end coverage is still missing; first-party TODO burn-down remains in admin UI detail page and broader admin/ORM/schema/migrations/API areas."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:290",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 290,
+      "text": "- TODO snapshot: open=500, new=14, resolved=14"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:295",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 295,
+      "text": "- Batch: admin UI detail-view TODO closure + view-only navigation parity (admin features)"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:298",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 298,
+      "text": "- Replaced detail-mode TODO fallback with real `ModelViewPage` rendering."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:314",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 314,
+      "text": "- TODO snapshot: open=500, new=8, resolved=8"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:315",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 315,
+      "text": "- Remaining: authenticated admin/API ecommerce integration coverage is still missing; frontend vitest execution is environment-blocked by process-spawn permissions; broader TODO/FIXME burn-down remains across admin/ORM/schema/migrations/API."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:319",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 319,
+      "text": "- TODO snapshot: open=500, new=8, resolved=8"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:320",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 320,
+      "text": "- Last message summary: Implemented one focused high-impact batch on admin UI production readiness: closed the `DynamicModelPage` detail TODO and added view-only navigation parity. **What changed** - `forge/admin/ui/web/src/components/DynamicModelPage.tsx:41` now renders `ModelViewPage` for `mode=\"detail\"` (TODO removed). - Added read-only detail page: `forge/admin/ui/web/src/pages/ModelViewPage.tsx:38`. - Added detail route: `forge/admin/ui/web/src/routes/$model/$id.view.tsx:4` (`/$model/$id/view`). - Added view actio..."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:336",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 336,
+      "text": "- TODO snapshot: open=500, new=14, resolved=14"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:337",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 337,
+      "text": "- Remaining: authenticated ecommerce admin/API integration coverage is still missing; admin UI `vitest` remains blocked in this runner by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:341",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 341,
+      "text": "- TODO snapshot: open=500, new=14, resolved=14"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:347",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 347,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:365",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 365,
+      "text": "- TODO snapshot: open=500, new=4, resolved=4"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:366",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 366,
+      "text": "- Remaining: extend authenticated ecommerce coverage to update/delete + invalid-token scenarios; continue TODO/FIXME burn-down across admin/ORM/schema/migrations/API; admin UI vitest remains environment-blocked by `spawn EPERM`."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:370",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 370,
+      "text": "- TODO snapshot: open=500, new=4, resolved=4"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:385",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 385,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:386",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 386,
+      "text": "- Remaining: role/object-level permission-denial integration coverage is still thin; admin UI `vitest` remains blocked in this runner by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:390",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 390,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:410",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 410,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:411",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 411,
+      "text": "- Remaining: admin/auth permission-denial integration coverage is still thin (`403` object/role paths); admin UI `vitest` remains blocked in this runner by `spawn EPERM`; broad TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:415",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 415,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:428",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 428,
+      "text": "- TODO snapshot: open=500, new=8, resolved=8"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:429",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 429,
+      "text": "- Remaining: object-level `403` deny coverage is still thin; admin UI `vitest` remains environment-blocked by `spawn EPERM`; broad TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:433",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 433,
+      "text": "- TODO snapshot: open=500, new=8, resolved=8"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:453",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 453,
+      "text": "- TODO snapshot: open=500, new=8, resolved=8"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:454",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 454,
+      "text": "- Remaining: ecommerce object-specific permission-denied integration assertions are still thin; admin UI `vitest` remains blocked by `spawn EPERM`; broad TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:458",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 458,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:475",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 475,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:476",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 476,
+      "text": "- Remaining: admin UI `vitest` execution is still blocked by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:480",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 480,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:496",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 496,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:497",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 497,
+      "text": "- Remaining: admin UI `vitest` execution is still blocked by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:501",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 501,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:517",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 517,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:518",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 518,
+      "text": "- Remaining: ecommerce still needs additional authenticated admin integration coverage for a second object-aware multi-object path with mixed outcomes; admin UI `vitest` remains blocked by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:522",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 522,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:538",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 538,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:539",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 539,
+      "text": "- Remaining: admin UI `vitest` execution is still blocked by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:543",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 543,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:560",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 560,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:561",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 561,
+      "text": "- Remaining: admin UI `vitest` execution is still blocked by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:565",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 565,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:588",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 588,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:589",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 589,
+      "text": "- Remaining: admin UI `vitest` execution is still blocked by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:593",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 593,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:609",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 609,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:610",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 610,
+      "text": "- Remaining: admin UI `vitest` execution is still blocked by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:614",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 614,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:632",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 632,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:633",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 633,
+      "text": "- Remaining: admin UI `vitest` execution is still blocked by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:637",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 637,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:664",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 664,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:665",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 665,
+      "text": "- Remaining: admin UI `vitest` execution is still blocked by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:669",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 669,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:685",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 685,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:686",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 686,
+      "text": "- Remaining: admin UI `vitest` execution remains blocked by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:690",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 690,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:713",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 713,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:714",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 714,
+      "text": "- Remaining: admin UI `vitest` execution remains blocked by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:718",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 718,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:735",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 735,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:736",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 736,
+      "text": "- Remaining: admin UI `vitest` execution remains blocked by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:740",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 740,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:746",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 746,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:752",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 752,
+      "text": "- TODO snapshot: open=500, new=4, resolved=4"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:758",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 758,
+      "text": "- TODO snapshot: open=500, new=4, resolved=4"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:764",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 764,
+      "text": "- TODO snapshot: open=500, new=4, resolved=4"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:770",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 770,
+      "text": "- TODO snapshot: open=500, new=4, resolved=4"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:776",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 776,
+      "text": "- TODO snapshot: open=500, new=4, resolved=4"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:796",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 796,
+      "text": "- TODO snapshot: open=500, new=4, resolved=4"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:797",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 797,
+      "text": "- Remaining: support/engagement ecommerce parity still blocked by current stubbed/non-SQLite module paths; admin UI `vitest` remains blocked by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:801",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 801,
+      "text": "- TODO snapshot: open=500, new=4, resolved=4"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:820",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 820,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:821",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 821,
+      "text": "- Remaining: support/engagement ecommerce parity still blocked by stubbed/non-SQLite module paths; admin UI `vitest` remains blocked by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:825",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 825,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:841",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 841,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:842",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 842,
+      "text": "- Remaining: support/engagement ecommerce parity still blocked by stubbed/non-SQLite module paths; admin UI `vitest` remains blocked by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:846",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 846,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:860",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 860,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:861",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 861,
+      "text": "- Remaining: support/engagement ecommerce parity still blocked by stubbed/non-SQLite module paths; admin UI `vitest` remains blocked by `spawn EPERM`; broader TODO/FIXME burn-down remains across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:865",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 865,
+      "text": "- TODO snapshot: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:879",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 879,
+      "text": "- TODO snapshot: open=500, new=6, resolved=6"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:880",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 880,
+      "text": "- Remaining: support/engagement ecommerce parity still blocked by stubbed/non-SQLite module paths; admin UI `vitest` remains blocked by `spawn EPERM`; broader reliability/TODO burn-down continues across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:884",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 884,
+      "text": "- TODO snapshot: open=500, new=6, resolved=6"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:899",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 899,
+      "text": "- TODO snapshot: open=500, new=3, resolved=3"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:900",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 900,
+      "text": "- Remaining: support/engagement ecommerce parity still blocked by stubbed/non-SQLite module paths; admin UI `vitest` remains blocked by `spawn EPERM`; broader reliability/TODO burn-down continues across admin/API/ORM/schema/migrations."
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:904",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 904,
+      "text": "- TODO snapshot: open=500, new=3, resolved=3"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:910",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 910,
+      "text": "- TODO snapshot: open=500, new=3, resolved=3"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:916",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 916,
+      "text": "- TODO snapshot: open=500, new=1, resolved=1"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:922",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 922,
+      "text": "- TODO snapshot: open=500, new=1, resolved=1"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:928",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 928,
+      "text": "- TODO snapshot: open=500, new=1, resolved=1"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:934",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 934,
+      "text": "- TODO snapshot: open=500, new=1, resolved=1"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:940",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 940,
+      "text": "- TODO snapshot: open=500, new=1, resolved=1"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:946",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 946,
+      "text": "- TODO snapshot: open=500, new=1, resolved=1"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:952",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 952,
+      "text": "- TODO snapshot: open=500, new=1, resolved=1"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:958",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 958,
+      "text": "- TODO snapshot: open=500, new=1, resolved=1"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:964",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 964,
+      "text": "- TODO snapshot: open=500, new=1, resolved=1"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:970",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 970,
+      "text": "- TODO snapshot: open=500, new=1, resolved=1"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:976",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 976,
+      "text": "- TODO snapshot: open=500, new=1, resolved=1"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:982",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 982,
+      "text": "- TODO snapshot: open=500, new=1, resolved=1"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:988",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 988,
+      "text": "- TODO snapshot: open=500, new=1, resolved=1"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:994",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 994,
+      "text": "- TODO snapshot: open=500, new=1, resolved=1"
+    },
+    {
+      "key": "ops/codex-24x7/HISTORY.md:1000",
+      "path": "ops/codex-24x7/HISTORY.md",
+      "line": 1000,
+      "text": "- TODO snapshot: open=500, new=1, resolved=1"
+    },
+    {
+      "key": "ops/codex-24x7/PLAN.md:4",
+      "path": "ops/codex-24x7/PLAN.md",
+      "line": 4,
+      "text": "- Enumerate TODO/FIXME and map to components."
+    },
+    {
+      "key": "ops/codex-24x7/RULES.md:5",
+      "path": "ops/codex-24x7/RULES.md",
+      "line": 5,
+      "text": "3. Prioritize reliability, tests, example parity, and TODO/FIXME debt."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:6",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 6,
+      "text": "[2026-02-12 17:20:35] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:7",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 7,
+      "text": "[2026-02-12 17:20:35] TODO snapshot updated: open=0, new=0, resolved=0"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:12",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 12,
+      "text": "[2026-02-12 17:26:19] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:13",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 13,
+      "text": "[2026-02-12 17:26:20] TODO snapshot updated: open=0, new=0, resolved=0"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:16",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 16,
+      "text": "[2026-02-12 17:26:45] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:17",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 17,
+      "text": "[2026-02-12 17:26:45] TODO snapshot updated: open=0, new=0, resolved=0"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:23",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 23,
+      "text": "[2026-02-12 17:30:53] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:24",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 24,
+      "text": "[2026-02-12 17:30:53] TODO snapshot updated: open=0, new=0, resolved=0"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:27",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 27,
+      "text": "[2026-02-12 17:31:21] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:28",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 28,
+      "text": "[2026-02-12 17:31:21] TODO snapshot updated: open=0, new=0, resolved=0"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:34",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 34,
+      "text": "[2026-02-12 17:31:37] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:35",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 35,
+      "text": "[2026-02-12 17:31:37] TODO snapshot updated: open=0, new=0, resolved=0"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:41",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 41,
+      "text": "[2026-02-12 17:36:27] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:42",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 42,
+      "text": "[2026-02-12 17:36:27] TODO snapshot updated: open=0, new=0, resolved=0"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:49",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 49,
+      "text": "[2026-02-12 17:37:26] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:50",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 50,
+      "text": "[2026-02-12 17:37:26] TODO snapshot updated: open=0, new=0, resolved=0"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:56",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 56,
+      "text": "[2026-02-12 17:38:00] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:57",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 57,
+      "text": "[2026-02-12 17:38:00] TODO snapshot updated: open=0, new=0, resolved=0"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:63",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 63,
+      "text": "[2026-02-12 17:42:11] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:65",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 65,
+      "text": "[2026-02-12 17:42:14] TODO snapshot updated: open=132, new=132, resolved=0"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:75",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 75,
+      "text": "[2026-02-12 17:44:35] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:79",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 79,
+      "text": "[2026-02-12 17:44:45] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:83",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 83,
+      "text": "[2026-02-12 17:45:03] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:87",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 87,
+      "text": "[2026-02-12 17:45:17] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:91",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 91,
+      "text": "[2026-02-12 17:46:44] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:92",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 92,
+      "text": "[2026-02-12 17:46:44] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:96",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 96,
+      "text": "[2026-02-12 17:46:54] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:97",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 97,
+      "text": "[2026-02-12 17:46:54] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:98",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 98,
+      "text": "[2026-02-12 17:47:00] TODO snapshot updated: open=500, new=500, resolved=132"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:106",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 106,
+      "text": "[2026-02-12 22:24:12] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:107",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 107,
+      "text": "[2026-02-12 22:24:12] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:108",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 108,
+      "text": "[2026-02-12 22:24:51] TODO snapshot updated: open=500, new=30, resolved=30"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:113",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 113,
+      "text": "[2026-02-12 22:37:57] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:114",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 114,
+      "text": "[2026-02-12 22:37:57] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:115",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 115,
+      "text": "[2026-02-12 22:37:58] TODO snapshot updated: open=500, new=12, resolved=12"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:120",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 120,
+      "text": "[2026-02-12 22:50:52] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:121",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 121,
+      "text": "[2026-02-12 22:50:52] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:122",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 122,
+      "text": "[2026-02-12 22:51:02] TODO snapshot updated: open=500, new=12, resolved=12"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:127",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 127,
+      "text": "[2026-02-12 23:04:56] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:128",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 128,
+      "text": "[2026-02-12 23:04:56] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:129",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 129,
+      "text": "[2026-02-12 23:04:58] TODO snapshot updated: open=500, new=10, resolved=10"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:134",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 134,
+      "text": "[2026-02-12 23:20:01] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:135",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 135,
+      "text": "[2026-02-12 23:20:02] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:136",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 136,
+      "text": "[2026-02-12 23:20:03] TODO snapshot updated: open=500, new=10, resolved=10"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:141",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 141,
+      "text": "[2026-02-12 23:32:16] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:142",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 142,
+      "text": "[2026-02-12 23:32:16] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:143",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 143,
+      "text": "[2026-02-12 23:32:17] TODO snapshot updated: open=500, new=14, resolved=14"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:148",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 148,
+      "text": "[2026-02-12 23:44:56] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:149",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 149,
+      "text": "[2026-02-12 23:44:56] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:150",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 150,
+      "text": "[2026-02-12 23:45:10] TODO snapshot updated: open=500, new=11, resolved=11"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:155",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 155,
+      "text": "[2026-02-12 23:59:44] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:156",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 156,
+      "text": "[2026-02-12 23:59:44] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:157",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 157,
+      "text": "[2026-02-12 23:59:46] TODO snapshot updated: open=500, new=13, resolved=13"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:162",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 162,
+      "text": "[2026-02-13 00:15:17] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:163",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 163,
+      "text": "[2026-02-13 00:15:17] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:164",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 164,
+      "text": "[2026-02-13 00:15:18] TODO snapshot updated: open=500, new=8, resolved=8"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:169",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 169,
+      "text": "[2026-02-13 00:29:27] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:170",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 170,
+      "text": "[2026-02-13 00:29:27] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:171",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 171,
+      "text": "[2026-02-13 00:29:35] TODO snapshot updated: open=500, new=10, resolved=10"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:176",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 176,
+      "text": "[2026-02-13 00:43:13] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:177",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 177,
+      "text": "[2026-02-13 00:43:13] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:178",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 178,
+      "text": "[2026-02-13 00:43:29] TODO snapshot updated: open=500, new=12, resolved=12"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:183",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 183,
+      "text": "[2026-02-13 00:57:54] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:184",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 184,
+      "text": "[2026-02-13 00:57:54] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:185",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 185,
+      "text": "[2026-02-13 00:58:06] TODO snapshot updated: open=500, new=14, resolved=14"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:190",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 190,
+      "text": "[2026-02-13 01:11:53] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:191",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 191,
+      "text": "[2026-02-13 01:11:53] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:192",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 192,
+      "text": "[2026-02-13 01:11:55] TODO snapshot updated: open=500, new=9, resolved=9"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:197",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 197,
+      "text": "[2026-02-13 01:26:44] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:198",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 198,
+      "text": "[2026-02-13 01:26:44] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:199",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 199,
+      "text": "[2026-02-13 01:26:46] TODO snapshot updated: open=500, new=14, resolved=14"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:204",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 204,
+      "text": "[2026-02-13 01:41:42] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:205",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 205,
+      "text": "[2026-02-13 01:41:42] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:206",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 206,
+      "text": "[2026-02-13 01:41:57] TODO snapshot updated: open=500, new=13, resolved=13"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:211",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 211,
+      "text": "[2026-02-13 01:59:04] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:212",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 212,
+      "text": "[2026-02-13 01:59:04] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:213",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 213,
+      "text": "[2026-02-13 01:59:17] TODO snapshot updated: open=500, new=8, resolved=8"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:218",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 218,
+      "text": "[2026-02-13 02:14:11] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:219",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 219,
+      "text": "[2026-02-13 02:14:11] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:220",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 220,
+      "text": "[2026-02-13 02:14:12] TODO snapshot updated: open=500, new=13, resolved=13"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:225",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 225,
+      "text": "[2026-02-13 02:29:48] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:226",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 226,
+      "text": "[2026-02-13 02:29:48] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:227",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 227,
+      "text": "[2026-02-13 02:29:50] TODO snapshot updated: open=500, new=14, resolved=14"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:232",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 232,
+      "text": "[2026-02-13 02:44:37] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:233",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 233,
+      "text": "[2026-02-13 02:44:37] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:234",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 234,
+      "text": "[2026-02-13 02:44:52] TODO snapshot updated: open=500, new=8, resolved=8"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:239",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 239,
+      "text": "[2026-02-13 03:02:18] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:240",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 240,
+      "text": "[2026-02-13 03:02:18] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:241",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 241,
+      "text": "[2026-02-13 03:02:29] TODO snapshot updated: open=500, new=14, resolved=14"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:246",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 246,
+      "text": "[2026-02-13 03:16:21] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:247",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 247,
+      "text": "[2026-02-13 03:16:21] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:248",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 248,
+      "text": "[2026-02-13 03:16:34] TODO snapshot updated: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:253",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 253,
+      "text": "[2026-02-13 03:28:42] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:254",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 254,
+      "text": "[2026-02-13 03:28:42] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:255",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 255,
+      "text": "[2026-02-13 03:28:43] TODO snapshot updated: open=500, new=4, resolved=4"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:260",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 260,
+      "text": "[2026-02-13 03:42:44] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:261",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 261,
+      "text": "[2026-02-13 03:42:44] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:262",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 262,
+      "text": "[2026-02-13 03:42:58] TODO snapshot updated: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:267",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 267,
+      "text": "[2026-02-13 03:56:00] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:268",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 268,
+      "text": "[2026-02-13 03:56:00] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:269",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 269,
+      "text": "[2026-02-13 03:56:14] TODO snapshot updated: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:274",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 274,
+      "text": "[2026-02-13 04:10:15] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:275",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 275,
+      "text": "[2026-02-13 04:10:15] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:276",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 276,
+      "text": "[2026-02-13 04:10:29] TODO snapshot updated: open=500, new=8, resolved=8"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:281",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 281,
+      "text": "[2026-02-13 04:23:25] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:282",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 282,
+      "text": "[2026-02-13 04:23:25] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:283",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 283,
+      "text": "[2026-02-13 04:23:26] TODO snapshot updated: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:288",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 288,
+      "text": "[2026-02-13 04:36:23] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:289",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 289,
+      "text": "[2026-02-13 04:36:23] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:290",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 290,
+      "text": "[2026-02-13 04:36:25] TODO snapshot updated: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:295",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 295,
+      "text": "[2026-02-13 04:50:03] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:296",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 296,
+      "text": "[2026-02-13 04:50:03] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:297",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 297,
+      "text": "[2026-02-13 04:50:17] TODO snapshot updated: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:302",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 302,
+      "text": "[2026-02-13 05:02:56] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:303",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 303,
+      "text": "[2026-02-13 05:02:56] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:304",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 304,
+      "text": "[2026-02-13 05:02:58] TODO snapshot updated: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:309",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 309,
+      "text": "[2026-02-13 05:17:26] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:310",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 310,
+      "text": "[2026-02-13 05:17:26] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:311",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 311,
+      "text": "[2026-02-13 05:17:27] TODO snapshot updated: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:316",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 316,
+      "text": "[2026-02-13 05:30:24] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:317",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 317,
+      "text": "[2026-02-13 05:30:24] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:318",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 318,
+      "text": "[2026-02-13 05:30:25] TODO snapshot updated: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:323",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 323,
+      "text": "[2026-02-13 05:46:02] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:324",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 324,
+      "text": "[2026-02-13 05:46:02] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:325",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 325,
+      "text": "[2026-02-13 05:46:12] TODO snapshot updated: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:330",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 330,
+      "text": "[2026-02-13 06:00:20] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:331",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 331,
+      "text": "[2026-02-13 06:00:20] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:332",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 332,
+      "text": "[2026-02-13 06:00:33] TODO snapshot updated: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:337",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 337,
+      "text": "[2026-02-13 06:14:06] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:338",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 338,
+      "text": "[2026-02-13 06:14:06] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:339",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 339,
+      "text": "[2026-02-13 06:14:08] TODO snapshot updated: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:344",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 344,
+      "text": "[2026-02-13 06:28:18] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:345",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 345,
+      "text": "[2026-02-13 06:28:18] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:346",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 346,
+      "text": "[2026-02-13 06:28:33] TODO snapshot updated: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:351",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 351,
+      "text": "[2026-02-13 06:44:45] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:352",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 352,
+      "text": "[2026-02-13 06:44:45] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:353",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 353,
+      "text": "[2026-02-13 06:45:00] TODO snapshot updated: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:358",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 358,
+      "text": "[2026-02-13 06:57:52] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:359",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 359,
+      "text": "[2026-02-13 06:57:52] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:360",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 360,
+      "text": "[2026-02-13 06:58:03] TODO snapshot updated: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:365",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 365,
+      "text": "[2026-02-13 07:13:00] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:366",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 366,
+      "text": "[2026-02-13 07:13:00] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:367",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 367,
+      "text": "[2026-02-13 07:13:46] TODO snapshot updated: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:372",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 372,
+      "text": "[2026-02-13 07:28:02] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:373",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 373,
+      "text": "[2026-02-13 07:28:02] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:374",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 374,
+      "text": "[2026-02-13 07:28:15] TODO snapshot updated: open=500, new=7, resolved=7"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:379",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 379,
+      "text": "[2026-02-13 07:43:28] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:380",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 380,
+      "text": "[2026-02-13 07:43:29] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:381",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 381,
+      "text": "[2026-02-13 07:43:46] TODO snapshot updated: open=500, new=4, resolved=4"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:386",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 386,
+      "text": "[2026-02-13 07:54:03] Refreshing TODO/plan snapshot for this tick."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:387",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 387,
+      "text": "[2026-02-13 07:54:03] ripgrep (rg) not found; using built-in TODO scanner."
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:388",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 388,
+      "text": "[2026-02-13 07:54:05] TODO snapshot updated: open=500, new=4, resolved=4"
+    },
+    {
+      "key": "ops/codex-24x7/runner.log:393",
+      "path": "ops/codex-24x7/runner.log",
+      "line": 393,
+      "text": "[2026-02-13 08:04:14] Refreshing TODO/plan snapshot for this tick."
+    }
+  ]
+}

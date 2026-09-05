@@ -1,0 +1,26 @@
+Implemented one focused production-readiness batch on logging observability: TRACE level is now encoded consistently across console/JSON paths, with tests and runbook updates.
+
+**What changed**
+- `forge/log/encoder.go`
+  - Added unified TRACE constant (`traceZapLevel`).
+  - Added trace-aware encoders:
+    - `TraceLevelEncoder` (uppercase)
+    - `TraceLowercaseLevelEncoder` (lowercase)
+    - `TraceColorLevelEncoder` (colored console)
+  - Wired these into development and production encoder paths.
+  - Fixed one-line console formatting to emit `TRACE` for `DebugLevel-1`.
+- `forge/log/encoder_trace_test.go`
+  - Added:
+    - `TestTraceLevelEncoder_EncodesTrace`
+    - `TestTraceLowercaseLevelEncoder_EncodesTrace`
+    - `TestConsoleEncoder_OneLineTraceLevel`
+- Updated run tracking:
+  - `ops/codex-24x7/STATUS.md`
+  - `ops/codex-24x7/HISTORY.md` (appended new run entry)
+
+**Validation run**
+- `go test ./log -count=1` in `forge` with temp `GOCACHE`: pass
+- `go test ./... -count=1` in `examples/ecommerce` with temp `GOCACHE`: pass
+
+**Notes**
+- Repo has many pre-existing unrelated local changes; I only modified the files listed above for this batch.

@@ -12,24 +12,34 @@ import (
 
 // Predefined errors
 var (
-	ErrUserNotFound     = fmt.Errorf("user not found")
-	ErrEmailExists      = fmt.Errorf("email already exists")
-	ErrUsernameExists   = fmt.Errorf("username already exists")
-	ErrInvalidEmail     = fmt.Errorf("invalid email address")
-	ErrInvalidUsername  = fmt.Errorf("invalid username")
-	ErrUserInactive     = fmt.Errorf("user account is inactive")
-	ErrUserLocked       = fmt.Errorf("user account is locked")
-	ErrEmailNotVerified = fmt.Errorf("email not verified")
+	ErrUserNotFound         = fmt.Errorf("user not found")
+	ErrEmailExists          = fmt.Errorf("email already exists")
+	ErrUsernameExists       = fmt.Errorf("username already exists")
+	ErrInvalidEmail         = fmt.Errorf("invalid email address")
+	ErrInvalidUsername      = fmt.Errorf("invalid username")
+	ErrUserInactive         = fmt.Errorf("user account is inactive")
+	ErrUserLocked           = fmt.Errorf("user account is locked")
+	ErrEmailNotVerified     = fmt.Errorf("email not verified")
+	ErrInvalidToken         = fmt.Errorf("invalid verification token")
+	ErrTokenExpired         = fmt.Errorf("verification token has expired")
+	ErrTokenAlreadyUsed     = fmt.Errorf("verification token has already been used")
+	ErrEmailAlreadyVerified = fmt.Errorf("email is already verified")
 )
 
 // userService implements UserService interface
 type userService struct {
-	userRepo repository.UserRepository
+	userRepo    repository.UserRepository
+	tokenRepo   repository.TokenRepository
+	emailSender EmailSender
 }
 
 // NewUserService creates a new user service
-func NewUserService(userRepo repository.UserRepository) UserService {
-	return &userService{userRepo: userRepo}
+func NewUserService(userRepo repository.UserRepository, tokenRepo repository.TokenRepository, emailSender EmailSender) UserService {
+	return &userService{
+		userRepo:    userRepo,
+		tokenRepo:   tokenRepo,
+		emailSender: emailSender,
+	}
 }
 
 // CreateUser creates a new user
@@ -231,15 +241,110 @@ func (s *userService) Register(ctx context.Context, req *RegisterRequest) (*mode
 
 // VerifyEmail verifies a user's email address
 func (s *userService) VerifyEmail(ctx context.Context, token string) error {
-	// This will be implemented when TokenRepository is integrated
-	// For now, return not implemented
-	return fmt.Errorf("email verification not yet implemented")
+	// 1. Find token in database
+	verificationToken, err := s.tokenRepo.GetEmailVerificationToken(ctx, token)
+	if err != nil {
+		return ErrInvalidToken
+	}
+
+	// 2. Check if token is expired
+	if verificationToken.IsExpired() {
+		return ErrTokenExpired
+	}
+
+	// 3. Check if token was already used
+	if verificationToken.IsUsed() {
+		return ErrTokenAlreadyUsed
+	}
+
+	// 4. Get the user
+	user, err := s.userRepo.GetByID(ctx, verificationToken.UserID)
+	if err != nil {
+		return ErrUserNotFound
+	}
+
+	// 5. Check if email is already verified
+	if user.EmailVerified {
+		return ErrEmailAlreadyVerified
+	}
+
+	// 6. Mark user's email as verified
+	now := time.Now()
+	user.EmailVerified = true
+	user.EmailVerifiedAt = &now
+
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
+	}
+
+	// 7. Mark token as used
+	if err := s.tokenRepo.MarkEmailVerificationTokenUsed(ctx, verificationToken.ID); err != nil {
+		// Log this error but don't fail - the email is verified
+		// In production, you might want to handle this differently
+		return fmt.Errorf("failed to mark token as used: %w", err)
+	}
+
+	return nil
 }
 
 // ResendVerificationEmail resends verification email
 func (s *userService) ResendVerificationEmail(ctx context.Context, email string) error {
-	// This will be implemented when email service is integrated
-	return fmt.Errorf("resend verification email not yet implemented")
+	// 1. Find user by email
+	user, err := s.userRepo.GetByEmail(ctx, email)
+	if err != nil {
+		// Don't reveal if user exists or not for security
+		return nil
+	}
+
+	// 2. Check if email is already verified
+	if user.EmailVerified {
+		return ErrEmailAlreadyVerified
+	}
+
+	// 3. Create a new verification token
+	verificationToken, err := s.CreateEmailVerificationToken(ctx, user.ID, user.Email)
+	if err != nil {
+		return fmt.Errorf("failed to create verification token: %w", err)
+	}
+
+	// 4. Send verification email
+	if err := s.emailSender.SendVerificationEmail(ctx, user.Email, verificationToken.Token); err != nil {
+		return fmt.Errorf("failed to send verification email: %w", err)
+	}
+
+	return nil
+}
+
+// CreateEmailVerificationToken creates a new email verification token
+func (s *userService) CreateEmailVerificationToken(ctx context.Context, userID int64, email string) (*models.EmailVerificationToken, error) {
+	// Generate secure random token
+	token, err := generateSecureToken()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate token: %w", err)
+	}
+
+	// Hash the token for storage (for security)
+	hashedToken, err := utils.HashPassword(token)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash token: %w", err)
+	}
+
+	// Create verification token record
+	verificationToken := &models.EmailVerificationToken{
+		UserID:    userID,
+		Token:     hashedToken,
+		Email:     email,
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	}
+
+	// Save to database
+	if err := s.tokenRepo.CreateEmailVerificationToken(ctx, verificationToken); err != nil {
+		return nil, fmt.Errorf("failed to create verification token: %w", err)
+	}
+
+	// Return the token with the unhashed value for sending
+	verificationToken.Token = token
+	return verificationToken, nil
 }
 
 // validateCreateUserRequest validates a create user request

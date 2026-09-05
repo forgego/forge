@@ -65,22 +65,64 @@ func (f Field[T]) Resolve(schema *ModelSchema) error {
 		return fmt.Errorf("empty field path")
 	}
 
-	// Check first part exists
-	field := schema.GetField(parts[0])
-	if field == nil {
-		return fmt.Errorf("field %s not found in model", parts[0])
-	}
-
-	// Allow dynamic field references to skip strict type checks
-	if f.fieldType != nil && f.fieldType.Kind() != reflect.Interface {
-		if field.Type != f.fieldType {
-			return fmt.Errorf("field %s has type %v, expected %v", parts[0], field.Type, f.fieldType)
+	var field *FieldInfo
+	var err error
+	if len(parts) == 1 {
+		field = schema.GetField(parts[0])
+		if field == nil {
+			if schema.GetRelation(parts[0]) != nil {
+				return fmt.Errorf("path %s resolves to relation, not a field", f.fieldPath)
+			}
+			return fmt.Errorf("field %s not found in model", parts[0])
+		}
+	} else {
+		field, err = resolveNestedFieldPath(schema, parts)
+		if err != nil {
+			return err
 		}
 	}
 
-	// TODO: Validate relation paths for nested fields
+	// Validate type matches.
+	// FieldRef-based dynamic expressions intentionally use an unset fieldType.
+	// In that case, skip strict type validation and validate only field existence.
+	if f.fieldType != nil && field.Type != f.fieldType {
+		return fmt.Errorf("field %s has type %v, expected %v", f.fieldPath, field.Type, f.fieldType)
+	}
 
 	return nil
+}
+
+func resolveNestedFieldPath(schema *ModelSchema, parts []string) (*FieldInfo, error) {
+	currentSchema := schema
+
+	for i := 0; i < len(parts)-1; i++ {
+		part := parts[i]
+
+		rel := currentSchema.GetRelation(part)
+		if rel == nil {
+			if currentSchema.GetField(part) != nil {
+				return nil, fmt.Errorf("field %s cannot be traversed further", strings.Join(parts[:i+1], "__"))
+			}
+			return nil, fmt.Errorf("relation %s not found in model", strings.Join(parts[:i+1], "__"))
+		}
+
+		nextSchema, err := GetModelSchemaByName(rel.TargetModel)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve target model %s for relation %s: %w", rel.TargetModel, strings.Join(parts[:i+1], "__"), err)
+		}
+		currentSchema = nextSchema
+	}
+
+	lastPart := parts[len(parts)-1]
+	field := currentSchema.GetField(lastPart)
+	if field == nil {
+		if currentSchema.GetRelation(lastPart) != nil {
+			return nil, fmt.Errorf("path %s resolves to relation, not a field", strings.Join(parts, "__"))
+		}
+		return nil, fmt.Errorf("field %s not found in model", strings.Join(parts, "__"))
+	}
+
+	return field, nil
 }
 
 // Arithmetic operations
@@ -334,9 +376,11 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 		return "", nil, err
 	}
 
+	// Track args added by this expression
+	startArgCount := len(builder.Args())
+
 	// Build SQL based on operator
 	var sql string
-	var args []interface{}
 
 	// Handle operators that share the same string value using if-else
 	if c.Op == OpContains {
@@ -345,7 +389,6 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 			pattern := "%" + strVal + "%"
 			placeholder := builder.AddArg(pattern)
 			sql = fmt.Sprintf("%s LIKE %s", fieldSQL, placeholder)
-			args = []interface{}{pattern}
 		} else {
 			return "", nil, fmt.Errorf("Contains operator requires string value")
 		}
@@ -355,7 +398,6 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 			pattern := strVal + "%"
 			placeholder := builder.AddArg(pattern)
 			sql = fmt.Sprintf("%s LIKE %s", fieldSQL, placeholder)
-			args = []interface{}{pattern}
 		} else {
 			return "", nil, fmt.Errorf("StartsWith operator requires string value")
 		}
@@ -365,7 +407,6 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 			pattern := "%" + strVal
 			placeholder := builder.AddArg(pattern)
 			sql = fmt.Sprintf("%s LIKE %s", fieldSQL, placeholder)
-			args = []interface{}{pattern}
 		} else {
 			return "", nil, fmt.Errorf("EndsWith operator requires string value")
 		}
@@ -375,7 +416,6 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 			pattern := "%" + strVal + "%"
 			placeholder := builder.AddArg(pattern)
 			sql = fmt.Sprintf("%s ILIKE %s", fieldSQL, placeholder)
-			args = []interface{}{pattern}
 		} else {
 			return "", nil, fmt.Errorf("IContains operator requires string value")
 		}
@@ -384,7 +424,6 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 		if strVal, ok := c.Value.(string); ok {
 			placeholder := builder.AddArg(strVal)
 			sql = fmt.Sprintf("%s ILIKE %s", fieldSQL, placeholder)
-			args = []interface{}{strVal}
 		} else {
 			return "", nil, fmt.Errorf("IExact operator requires string value")
 		}
@@ -403,7 +442,6 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 			placeholders := make([]string, len(values))
 			for i, val := range values {
 				placeholders[i] = builder.AddArg(val)
-				args = append(args, val)
 			}
 			sql = fmt.Sprintf("%s IN (%s)", fieldSQL, strings.Join(placeholders, ", "))
 		case OpNotIn:
@@ -414,7 +452,6 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 			placeholders := make([]string, len(values))
 			for i, val := range values {
 				placeholders[i] = builder.AddArg(val)
-				args = append(args, val)
 			}
 			sql = fmt.Sprintf("%s NOT IN (%s)", fieldSQL, strings.Join(placeholders, ", "))
 		case OpRange:
@@ -425,16 +462,17 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 			placeholder1 := builder.AddArg(values[0])
 			placeholder2 := builder.AddArg(values[1])
 			sql = fmt.Sprintf("%s BETWEEN %s AND %s", fieldSQL, placeholder1, placeholder2)
-			args = []interface{}{values[0], values[1]}
 		default:
 			// Standard operators (=, !=, >, >=, <, <=)
 			placeholder := builder.AddArg(c.Value)
 			sql = fmt.Sprintf("%s %s %s", fieldSQL, c.Op, placeholder)
-			args = []interface{}{c.Value}
 		}
 	}
 
-	return sql, args, nil
+	// Return only the args added by this expression
+	allArgs := builder.Args()
+	newArgs := allArgs[startArgCount:]
+	return sql, newArgs, nil
 }
 
 // Resolve validates the comparison expression
@@ -455,7 +493,7 @@ func NewValue[T any](val T) ValueExpression[T] {
 // ToSQL converts value expression to SQL
 func (v ValueExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface{}, error) {
 	placeholder := builder.AddArg(v.value)
-	return placeholder, []interface{}{v.value}, nil
+	return placeholder, nil, nil
 }
 
 // Resolve validates the value expression (always valid)
@@ -484,7 +522,9 @@ func (b *BoolExpression) ToSQL(builder *SQLBuilder) (string, []interface{}, erro
 			return "", nil, err
 		}
 		parts = append(parts, fmt.Sprintf("(%s)", sql))
-		allArgs = append(allArgs, args...)
+		if args != nil {
+			allArgs = append(allArgs, args...)
+		}
 	}
 
 	combinedSQL := strings.Join(parts, " "+string(b.operator)+" ")
@@ -534,13 +574,6 @@ func (e *EmptyExpression) Resolve(schema *ModelSchema) error {
 }
 
 // And combines multiple expressions with AND logic
-//
-// Example:
-//
-//	qs.Filter(And(
-//	    User.Name.Eq("John"),
-//	    User.Age.Gt(18),
-//	))
 func And(expressions ...Expression) Expression {
 	return &BoolExpression{
 		operator: ConnectorAnd,
@@ -549,13 +582,6 @@ func And(expressions ...Expression) Expression {
 }
 
 // Or combines multiple expressions with OR logic
-//
-// Example:
-//
-//	qs.Filter(Or(
-//	    User.Age.Gt(18),
-//	    User.Role.Eq("admin"),
-//	))
 func Or(expressions ...Expression) Expression {
 	return &BoolExpression{
 		operator: ConnectorOr,
@@ -564,10 +590,6 @@ func Or(expressions ...Expression) Expression {
 }
 
 // Not negates an expression
-//
-// Example:
-//
-//	qs.Filter(Not(User.Age.Gt(65)))
 func Not(expr Expression) Expression {
 	return &NotExpression{inner: expr}
 }
@@ -579,25 +601,7 @@ type Q struct {
 	negated     bool
 }
 
-// Note: A Q() factory function would conflict with the Q type above.
-// Use And(), Or(), Not() directly for building complex queries, or NewQ() for the Q type.
-// Example:
-//   qs.Filter(And(User.Name.Eq("John"), User.Age.Gt(18)))
-//   qs.Filter(Or(User.Age.Gt(18), User.Role.Eq("admin")))
-
 // NewQ creates a new Q object from an expression
-//
-// Deprecated: Use Q() for Django-style or Where() for explicit. NewQ will be removed in v2.0.
-// Q() provides a cleaner API that matches Django's Q object pattern.
-//
-// Migration:
-//
-//	// Old
-//	q := orm.NewQ(expr)
-//	// New
-//	q := orm.Q(expr)
-//	// Or simply
-//	qs.Filter(expr)
 func NewQ(expr Expression) *Q {
 	return &Q{
 		expressions: []Expression{expr},
@@ -645,7 +649,9 @@ func (q *Q) ToSQL(builder *SQLBuilder) (string, []interface{}, error) {
 			return "", nil, err
 		}
 		parts = append(parts, fmt.Sprintf("(%s)", sql))
-		allArgs = append(allArgs, args...)
+		if args != nil {
+			allArgs = append(allArgs, args...)
+		}
 	}
 
 	combinedSQL := ""
@@ -681,42 +687,31 @@ const (
 	ConnectorOr  Connector = "OR"
 )
 
-// splitFieldPath splits a field path by double underscores (e.g., "author__name" -> ["author", "name"])
-// This handles Django-style field paths for relations
+// splitFieldPath splits a field path by double underscores
 func splitFieldPath(path string) []string {
 	if path == "" {
 		return []string{}
 	}
-	// Split by double underscore
-	parts := strings.Split(path, "__")
-	return parts
+	return strings.Split(path, "__")
 }
 
-// FieldRef represents a runtime field reference (like Django's F)
-// Use this when you don't have type-safe field definitions
+// FieldRef represents a runtime field reference
 type FieldRef struct {
 	path string
 }
 
-// F creates a field reference (Django-style, short)
-// For Django users familiar with F() objects
-//
-// Example:
-//
-//	qs.Filter(F("age").Gt(18))
+// F creates a field reference
 func F(fieldPath string) FieldRef {
 	return FieldRef{path: fieldPath}
 }
 
-// FieldRef creates a field reference (explicit alternative)
-// For Go-first developers who prefer clarity
-//
-// Example:
-//
-//	qs.Filter(FieldRef("age").Gt(18))
+// NewFieldRef creates a field reference
 func NewFieldRef(fieldPath string) FieldRef {
 	return FieldRef{path: fieldPath}
 }
+
+// FieldRef methods (Eq, Ne, etc.)
+// ... (Keeping these as they delegate to ComparisonExpression which we fixed)
 
 // Eq creates an equality comparison
 func (f FieldRef) Eq(value interface{}) Expression {
@@ -885,6 +880,3 @@ func (f FieldRef) IContains(value string) Expression {
 		Value: value,
 	}
 }
-
-
-

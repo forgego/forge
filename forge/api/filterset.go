@@ -17,7 +17,7 @@ type FilterSetIntegration[T any] struct {
 func NewFilterSetIntegration[T any](fs *filter.FilterSet[T]) *FilterSetIntegration[T] {
 	return &FilterSetIntegration[T]{
 		filterSet: fs,
-		parser:    filter.NewParser(fs.GetSecurityConfig()),
+		parser:    filter.NewParser(filter.WithSecurity(fs.GetSecurityConfig())),
 	}
 }
 

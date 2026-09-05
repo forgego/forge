@@ -18,16 +18,13 @@ func buildMetadata[T any](s schema.Schema, config *Config[T], name string) (*Met
 	}
 
 	// Build relations metadata
-	relationsMetadata := buildRelationsMetadata(s)
+	relationsMetadata := buildRelationsMetadata(s, config)
 
 	// Build actions metadata
 	actionsMetadata := buildActionsMetadata(config)
 
 	// Build filters metadata
 	filtersMetadata := buildFiltersMetadata(s, config)
-	if len(config.Filters) > 0 {
-		filtersMetadata = append(filtersMetadata, buildCustomFiltersMetadata(config)...)
-	}
 
 	// Determine list display
 	listDisplay := config.ListDisplay
@@ -61,29 +58,10 @@ func buildMetadata[T any](s schema.Schema, config *Config[T], name string) (*Met
 			PageSize:    config.ListPerPage,
 			MaxPageSize: config.ListMaxShowAll,
 		},
-		PageType:       config.PageType,
-		UIOverrides:    config.UIOverrides,
-		ReadOnlyFields: toStringSliceAny(config.ReadOnlyFields),
-		Fieldsets:      buildFieldsetsMetadata(config.Fieldsets),
+		UIOverrides: config.UIOverrides,
 	}
 
 	return metadata, nil
-}
-
-func buildFieldsetsMetadata[T any](fieldsets []Fieldset[T]) []FieldsetMetadata {
-	if len(fieldsets) == 0 {
-		return []FieldsetMetadata{}
-	}
-	result := make([]FieldsetMetadata, len(fieldsets))
-	for i, fs := range fieldsets {
-		result[i] = FieldsetMetadata{
-			Name:        fs.Name,
-			Fields:      fs.Fields,
-			Collapsed:   fs.Collapsed,
-			Description: fs.Description,
-		}
-	}
-	return result
 }
 
 // buildFieldsMetadata builds field metadata from schema fields
@@ -95,7 +73,7 @@ func buildFieldsMetadata(s schema.Schema) ([]FieldMetadata, error) {
 		fieldMeta := FieldMetadata{
 			Name:         field.Name,
 			Type:         field.Type.String(),
-			Label:        getOrDefault(field.VerboseName, "", field.Name),
+			Label:        getOrDefault(field.VerboseName, "", humanizeFieldLabel(field.Name)),
 			HelpText:     field.HelpText,
 			Required:     field.Required,
 			ReadOnly:     !field.Editable, // ReadOnly is inverse of Editable usually, or need to check field definition
@@ -141,9 +119,14 @@ func buildFieldsMetadata(s schema.Schema) ([]FieldMetadata, error) {
 }
 
 // buildRelationsMetadata builds relation metadata from schema relations
-func buildRelationsMetadata(s schema.Schema) []RelationMetadata {
+func buildRelationsMetadata[T any](s schema.Schema, config *Config[T]) []RelationMetadata {
 	relations := s.Relations()
 	result := make([]RelationMetadata, 0, len(relations))
+	inlineConfigs := map[string]InlineRelationConfig{}
+	if config != nil && config.InlineRelations != nil {
+		inlineConfigs = config.InlineRelations
+	}
+	usedInline := map[string]struct{}{}
 
 	for _, rel := range relations {
 		relMeta := RelationMetadata{
@@ -152,6 +135,37 @@ func buildRelationsMetadata(s schema.Schema) []RelationMetadata {
 			RelatedModel: rel.To,
 			RelatedField: rel.RelatedName,
 			Label:        getOrDefault("", "", rel.Name), // Relation struct has no VerboseName
+		}
+		if inlineConfig, ok := inlineConfigs[rel.Name]; ok {
+			relMeta.Inline = &inlineConfig
+			if inlineConfig.Type != "" {
+				relMeta.Type = inlineConfig.Type
+			}
+			if inlineConfig.Label != "" {
+				relMeta.Label = inlineConfig.Label
+			}
+			if inlineConfig.RelatedModel != "" {
+				relMeta.RelatedModel = inlineConfig.RelatedModel
+			}
+			if inlineConfig.RelatedField != "" {
+				relMeta.RelatedField = inlineConfig.RelatedField
+			}
+			usedInline[rel.Name] = struct{}{}
+		}
+		result = append(result, relMeta)
+	}
+
+	for name, inlineConfig := range inlineConfigs {
+		if _, ok := usedInline[name]; ok {
+			continue
+		}
+		relMeta := RelationMetadata{
+			Name:         name,
+			Type:         inlineConfig.Type,
+			RelatedModel: inlineConfig.RelatedModel,
+			RelatedField: inlineConfig.RelatedField,
+			Label:        getOrDefault(inlineConfig.Label, "", name),
+			Inline:       &inlineConfig,
 		}
 		result = append(result, relMeta)
 	}
@@ -188,14 +202,10 @@ func buildFiltersMetadata[T any](s schema.Schema, config *Config[T]) []FilterMet
 	}
 
 	fields := s.Fields()
+	relations := s.Relations()
 	fieldMap := make(map[string]schema.Field)
 	for _, field := range fields {
 		fieldMap[field.Name] = field
-	}
-	relations := s.Relations()
-	relationMap := make(map[string]schema.Relation)
-	for _, rel := range relations {
-		relationMap[rel.Name] = rel
 	}
 
 	result := make([]FilterMetadata, 0, len(config.ListFilter))
@@ -210,7 +220,7 @@ func buildFiltersMetadata[T any](s schema.Schema, config *Config[T]) []FilterMet
 		filterMeta := FilterMetadata{
 			Name:  filterName,
 			Type:  inferFilterType(field),
-			Label: getOrDefault(field.VerboseName, "", field.Name),
+			Label: getOrDefault(field.VerboseName, "", humanizeFieldLabel(field.Name)),
 		}
 
 		// Add choices for choice fields
@@ -225,20 +235,9 @@ func buildFiltersMetadata[T any](s schema.Schema, config *Config[T]) []FilterMet
 		}
 
 		// Add related model for relations
-		// Note: Field struct doesn't have RelatedModel directly? Need to check.
-		// Assuming Relation handling is separate or Field has it.
-		// For now simplifying to avoid error if RelatedModel field absent
-		if field.Type == schema.TypeForeignKey || field.Type == schema.TypeManyToMany || field.Type == schema.TypeOneToOne {
-			rel, ok := relationMap[field.Name]
-			if !ok && strings.HasSuffix(field.Name, "_id") {
-				rel, ok = relationMap[strings.TrimSuffix(field.Name, "_id")]
-			}
-			if ok {
-				filterMeta.RelatedModel = rel.To
-				filterMeta.Multiple = rel.Type == schema.RelationManyToMany
-			} else {
-				filterMeta.Multiple = field.Type == schema.TypeManyToMany
-			}
+		if field.Type == schema.TypeForeignKey || field.Type == schema.TypeManyToMany {
+			filterMeta.RelatedModel = findRelatedModelForFilter(filterName, relations)
+			filterMeta.Multiple = field.Type == schema.TypeManyToMany
 		}
 
 		result = append(result, filterMeta)
@@ -247,23 +246,18 @@ func buildFiltersMetadata[T any](s schema.Schema, config *Config[T]) []FilterMet
 	return result
 }
 
-func buildCustomFiltersMetadata[T any](config *Config[T]) []FilterMetadata {
-	if len(config.Filters) == 0 {
-		return []FilterMetadata{}
+func findRelatedModelForFilter(filterName string, relations []schema.Relation) string {
+	if filterName == "" || len(relations) == 0 {
+		return ""
 	}
-	result := make([]FilterMetadata, 0, len(config.Filters))
-	for _, filter := range config.Filters {
-		result = append(result, FilterMetadata{
-			Name:        filter.Name,
-			Type:        filter.Type,
-			Label:       filter.Label,
-			Choices:     filter.Choices,
-			Multiple:    false,
-			Params:      nil,
-			UIComponent: filter.UIComponent,
-		})
+
+	baseName := strings.TrimSuffix(filterName, "_id")
+	for _, rel := range relations {
+		if rel.Name == filterName || rel.Name == baseName {
+			return rel.To
+		}
 	}
-	return result
+	return ""
 }
 
 // buildValidatorsMetadata builds validator metadata from field
@@ -373,7 +367,7 @@ func inferListDisplay(fields []FieldMetadata) []string {
 			continue
 		}
 
-		result = append(result, field.Name)
+		result = append(result, listDisplayFieldName(field))
 	}
 
 	// Always show at least ID if nothing else
@@ -382,6 +376,13 @@ func inferListDisplay(fields []FieldMetadata) []string {
 	}
 
 	return result
+}
+
+func listDisplayFieldName(field FieldMetadata) string {
+	if field.Name != "" {
+		return field.Name
+	}
+	return field.Label
 }
 
 // inferSearchFields infers which fields to use for search
@@ -408,6 +409,33 @@ func getOrDefault(values ...string) string {
 	return ""
 }
 
+func humanizeFieldLabel(name string) string {
+	if name == "" {
+		return ""
+	}
+
+	parts := strings.FieldsFunc(name, func(r rune) bool {
+		return r == '_' || r == '-'
+	})
+	if len(parts) == 0 {
+		return name
+	}
+
+	for i, part := range parts {
+		if part == "" {
+			continue
+		}
+		lower := strings.ToLower(part)
+		if lower == "id" {
+			parts[i] = "ID"
+			continue
+		}
+		parts[i] = strings.ToUpper(lower[:1]) + lower[1:]
+	}
+
+	return strings.Join(parts, " ")
+}
+
 // toStringSlice converts a slice of Field to a slice of strings
 func toStringSlice(input []Field) []string {
 	if len(input) == 0 {
@@ -428,20 +456,3 @@ func toFieldSlice(input []string) []Field {
 	}
 	return result
 }
-
-func toStringSliceAny(input []any) []string {
-	if len(input) == 0 {
-		return []string{}
-	}
-	result := make([]string, 0, len(input))
-	for _, v := range input {
-		switch typed := v.(type) {
-		case string:
-			result = append(result, typed)
-		case Field:
-			result = append(result, typed.Path())
-		}
-	}
-	return result
-}
-

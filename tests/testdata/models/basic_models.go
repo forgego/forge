@@ -9,12 +9,12 @@ type User struct {
 
 func (User) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("email").WithRequired().WithMaxLength(255).WithUnique(),
-		schema.String("username").WithRequired().WithMaxLength(150),
-		schema.Bool("is_active").WithDefault(true),
-		schema.DateTime("created_at"),
-		schema.DateTime("updated_at"),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("email").Required().MaxLength(255).Unique().Build(),
+		schema.String("username").Required().MaxLength(150).Build(),
+		schema.Bool("is_active").Default(true).Build(),
+		schema.DateTime("created_at").Build(),
+		schema.DateTime("updated_at").Build(),
 	}
 }
 
@@ -35,13 +35,13 @@ type Post struct {
 
 func (Post) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.String("title").WithRequired().WithMaxLength(200),
-		schema.Text("content"),
-		schema.String("status").WithDefault("draft").WithMaxLength(50),
-		schema.DateTime("published_at"),
-		schema.DateTime("created_at"),
-		schema.DateTime("updated_at"),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("title").Required().MaxLength(200).Build(),
+		schema.Text("content").Build(),
+		schema.String("status").Default("draft").MaxLength(50).Build(),
+		schema.DateTime("published_at").Build(),
+		schema.DateTime("created_at").Build(),
+		schema.DateTime("updated_at").Build(),
 	}
 }
 
@@ -62,11 +62,11 @@ type Comment struct {
 
 func (Comment) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").WithPrimary().WithAutoIncrement(),
-		schema.Text("content").WithRequired(),
-		schema.Bool("is_approved").WithDefault(false),
-		schema.DateTime("created_at"),
-		schema.DateTime("updated_at"),
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.Text("content").Required().Build(),
+		schema.Bool("is_approved").Default(false).Build(),
+		schema.DateTime("created_at").Build(),
+		schema.DateTime("updated_at").Build(),
 	}
 }
 

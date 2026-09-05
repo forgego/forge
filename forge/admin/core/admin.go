@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-
 	"time"
 
+	apicore "github.com/forgego/forge/api/core"
+	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
 	"github.com/go-viper/mapstructure/v2"
@@ -70,6 +71,13 @@ func NewAdmin[T any](
 	}
 
 	return admin, nil
+}
+
+// SetDB sets the database connection for the admin manager
+func (a *Admin[T]) SetDB(database *db.DB) {
+	if a.manager != nil {
+		a.manager.SetDB(database)
+	}
 }
 
 // ModelName returns the name of the model
@@ -215,12 +223,79 @@ func (a *Admin[T]) ListObjects(ctx context.Context, params ListParams) (*Paginat
 			}
 		}
 		if !applied {
-			// Default filter behavior (exact match) with operator support
-			if next, ok := applyFilterOperators(qs, key, value); ok {
-				qs = next
-				continue
+			// Parse lookup (e.g. price__gt, name__contains)
+			field, lookup := parseLookup(key)
+
+			// Create expression based on lookup
+			var expr orm.Expression
+			f := orm.F(field)
+
+			switch lookup {
+			case "exact":
+				expr = f.Eq(value)
+			case "ne":
+				expr = f.Ne(value)
+			case "gt":
+				expr = f.Gt(value)
+			case "gte":
+				expr = f.Gte(value)
+			case "lt":
+				expr = f.Lt(value)
+			case "lte":
+				expr = f.Lte(value)
+			case "contains":
+				if s, ok := value.(string); ok {
+					expr = f.Contains(s)
+				} else {
+					expr = f.Eq(value) // Fallback
+				}
+			case "icontains":
+				if s, ok := value.(string); ok {
+					expr = f.IContains(s)
+				} else {
+					expr = f.Eq(value) // Fallback
+				}
+			case "startswith":
+				if s, ok := value.(string); ok {
+					expr = f.StartsWith(s)
+				} else {
+					expr = f.Eq(value)
+				}
+			case "endswith":
+				if s, ok := value.(string); ok {
+					expr = f.EndsWith(s)
+				} else {
+					expr = f.Eq(value)
+				}
+			case "in":
+				// value should be slice or comma-separated string
+				// For now assume value is single string from query param
+				if s, ok := value.(string); ok {
+					parts := strings.Split(s, ",")
+					if len(parts) > 0 {
+						// We need to convert parts to interface{}
+						args := make([]interface{}, len(parts))
+						for i, v := range parts {
+							args[i] = v
+						}
+						expr = f.In(args...)
+					} else {
+						expr = f.Eq(value)
+					}
+				} else {
+					expr = f.Eq(value)
+				}
+			case "isnull":
+				if s, ok := value.(string); ok && (s == "true" || s == "1") {
+					expr = f.IsNull()
+				} else {
+					expr = f.IsNotNull()
+				}
+			default:
+				expr = f.Eq(value)
 			}
-			qs = qs.Filter(orm.F(key).Eq(value))
+
+			qs = qs.Filter(expr)
 		}
 	}
 
@@ -305,7 +380,12 @@ func (a *Admin[T]) GetObject(ctx context.Context, id interface{}) (interface{}, 
 	if err != nil {
 		return nil, err
 	}
-	return a.manager.Get(ctx, intID)
+
+	instance, err := a.safeGetObjectByID(ctx, intID)
+	if err != nil {
+		return nil, err
+	}
+	return instance, nil
 }
 
 func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}) (interface{}, error) {
@@ -330,22 +410,33 @@ func (a *Admin[T]) UpdateObject(ctx context.Context, id interface{}, data map[st
 		return nil, err
 	}
 
-	// Fetch existing instance
-	instance, err := a.manager.Get(ctx, intID)
+	// Ensure object exists (and permission hooks receive a concrete object path).
+	instance, err := a.safeGetObjectByID(ctx, intID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Map data to instance fields
-	if err := a.decodeData(data, instance); err != nil {
-		return nil, fmt.Errorf("failed to decode data: %w", err)
+	// PATCH semantics: only update provided fields and avoid writing zero-values
+	// for fields omitted from request payload.
+	updates := orm.UpdateMap{}
+	for key, value := range data {
+		if strings.EqualFold(key, "id") {
+			continue
+		}
+		updates[key] = value
+	}
+	if len(updates) == 0 {
+		return instance, nil
+	}
+	if err := a.manager.UpdateFields(ctx, intID, updates); err != nil {
+		return nil, err
 	}
 
-	err = a.SaveModel(ctx, instance, false)
+	updated, err := a.safeGetObjectByID(ctx, intID)
 	if err != nil {
 		return nil, err
 	}
-	return instance, nil
+	return updated, nil
 }
 
 func (a *Admin[T]) DeleteObject(ctx context.Context, id interface{}) error {
@@ -354,7 +445,7 @@ func (a *Admin[T]) DeleteObject(ctx context.Context, id interface{}) error {
 		return err
 	}
 
-	instance, err := a.manager.Get(ctx, intID)
+	instance, err := a.safeGetObjectByID(ctx, intID)
 	if err != nil {
 		return err
 	}
@@ -362,6 +453,8 @@ func (a *Admin[T]) DeleteObject(ctx context.Context, id interface{}) error {
 }
 
 func (a *Admin[T]) ExecuteAction(ctx context.Context, actionName string, ids []interface{}, params map[string]interface{}) (interface{}, error) {
+	_ = params
+
 	// Find action
 	var selectedAction *Action[T]
 	for _, action := range a.config.Actions {
@@ -375,26 +468,54 @@ func (a *Admin[T]) ExecuteAction(ctx context.Context, actionName string, ids []i
 		return nil, fmt.Errorf("action %s not found", actionName)
 	}
 
+	user, _ := apicore.UserFromContext(ctx)
+
 	// Fetch instances
 	instances := make([]*T, 0, len(ids))
+	actionErrors := make([]BulkActionError, 0)
 	for _, id := range ids {
 		intID, err := toInt64(id)
 		if err != nil {
-			continue // Skip invalid IDs
+			actionErrors = append(actionErrors, BulkActionError{
+				ID:      0,
+				Code:    "invalid_id",
+				Message: fmt.Sprintf("invalid id %v", id),
+			})
+			continue
 		}
 
-		instance, err := a.manager.Get(ctx, intID)
-		if err == nil {
-			instances = append(instances, instance)
+		instance, err := a.safeGetObjectByID(ctx, intID)
+		if err != nil {
+			actionErrors = append(actionErrors, BulkActionError{
+				ID:      intID,
+				Code:    "not_found",
+				Message: "object not found",
+			})
+			continue
 		}
+
+		if !a.HasChangePermission(ctx, user, instance) {
+			actionErrors = append(actionErrors, BulkActionError{
+				ID:      intID,
+				Code:    "permission_denied",
+				Message: "permission denied",
+			})
+			continue
+		}
+
+		instances = append(instances, instance)
 	}
 
 	if len(instances) == 0 {
-		return &BulkActionResponse{
+		response := &BulkActionResponse{
 			Success:  false,
 			Affected: 0,
-			Message:  "No objects found for action",
-		}, nil
+			Message:  "No permitted objects found for action",
+		}
+		if len(actionErrors) > 0 {
+			response.Errors = actionErrors
+		}
+		return response, nil
 	}
 
 	// Execute handler
@@ -403,11 +524,67 @@ func (a *Admin[T]) ExecuteAction(ctx context.Context, actionName string, ids []i
 		return nil, err
 	}
 
-	return &BulkActionResponse{
-		Success:  true,
+	response := &BulkActionResponse{
+		Success:  len(actionErrors) == 0,
 		Affected: len(instances),
 		Message:  fmt.Sprintf("Successfully executed %s on %d objects", selectedAction.Label, len(instances)),
-	}, nil
+	}
+	if len(actionErrors) > 0 {
+		response.Errors = actionErrors
+		response.Message = fmt.Sprintf("Executed %s on %d objects; %d skipped", selectedAction.Label, len(instances), len(actionErrors))
+	}
+	return response, nil
+}
+
+func (a *Admin[T]) safeGetObjectByID(ctx context.Context, id int64) (*T, error) {
+	// Primary path: direct lookup by manager.
+	// Some model/config combinations can panic inside typed filter resolution.
+	var recovered any
+	var getErr error
+	var obj *T
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				recovered = r
+			}
+		}()
+		obj, getErr = a.manager.Get(ctx, id)
+	}()
+	if recovered == nil && getErr == nil && obj != nil {
+		return obj, nil
+	}
+
+	// Fallback path: scan all records and match by extracted ID.
+	// This is slower but keeps admin operations working while ORM lookup
+	// expression typing is being hardened.
+	all, listErr := a.manager.All(ctx)
+	if listErr != nil {
+		if getErr != nil {
+			return nil, getErr
+		}
+		if recovered != nil {
+			return nil, fmt.Errorf("failed to get object with id %d: recovered panic %v", id, recovered)
+		}
+		return nil, listErr
+	}
+	for _, candidate := range all {
+		candidateID := a.getObjectID(candidate)
+		parsedID, parseErr := toInt64(candidateID)
+		if parseErr != nil {
+			continue
+		}
+		if parsedID == id {
+			return candidate, nil
+		}
+	}
+
+	if getErr != nil {
+		return nil, getErr
+	}
+	if recovered != nil {
+		return nil, fmt.Errorf("object with id %d not found after recovered panic: %v", id, recovered)
+	}
+	return nil, fmt.Errorf("object with id %d not found", id)
 }
 
 // History methods
@@ -473,10 +650,15 @@ func (a *Admin[T]) HasAddPermission(ctx context.Context, user interface{}) bool 
 }
 
 func (a *Admin[T]) HasChangePermission(ctx context.Context, user interface{}, obj interface{}) bool {
-	typedObj, ok := obj.(*T)
-	if !ok {
-		return false
+	var typedObj *T
+	if obj != nil {
+		var ok bool
+		typedObj, ok = obj.(*T)
+		if !ok {
+			return false
+		}
 	}
+
 	if a.config.HasChangePermission != nil {
 		return a.config.HasChangePermission(ctx, a, user, typedObj)
 	}
@@ -487,10 +669,15 @@ func (a *Admin[T]) HasChangePermission(ctx context.Context, user interface{}, ob
 }
 
 func (a *Admin[T]) HasDeletePermission(ctx context.Context, user interface{}, obj interface{}) bool {
-	typedObj, ok := obj.(*T)
-	if !ok {
-		return false
+	var typedObj *T
+	if obj != nil {
+		var ok bool
+		typedObj, ok = obj.(*T)
+		if !ok {
+			return false
+		}
 	}
+
 	if a.config.HasDeletePermission != nil {
 		return a.config.HasDeletePermission(ctx, a, user, typedObj)
 	}
@@ -501,10 +688,15 @@ func (a *Admin[T]) HasDeletePermission(ctx context.Context, user interface{}, ob
 }
 
 func (a *Admin[T]) HasViewPermission(ctx context.Context, user interface{}, obj interface{}) bool {
-	typedObj, ok := obj.(*T)
-	if !ok {
-		return false
+	var typedObj *T
+	if obj != nil {
+		var ok bool
+		typedObj, ok = obj.(*T)
+		if !ok {
+			return false
+		}
 	}
+
 	if a.config.HasViewPermission != nil {
 		return a.config.HasViewPermission(ctx, a, user, typedObj)
 	}
@@ -552,6 +744,7 @@ func (a *Admin[T]) decodeData(data map[string]interface{}, result interface{}) e
 		Result:           result,
 		TagName:          "json",
 		WeaklyTypedInput: true,
+		Squash:           true,
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
 			stringToDateTimeHook(),
 		),
@@ -667,81 +860,6 @@ func (a *Admin[T]) getObjectLabel(obj *T) string {
 	return a.metadata.VerboseName
 }
 
-func applyFilterOperators[T any](qs orm.QuerySet[T], key string, value interface{}) (orm.QuerySet[T], bool) {
-	parts := strings.Split(key, "__")
-	if len(parts) < 2 {
-		return qs, false
-	}
-	field := parts[0]
-	op := parts[1]
-
-	switch op {
-	case "gte":
-		return qs.Filter(orm.F(field).Gte(value)), true
-	case "lte":
-		return qs.Filter(orm.F(field).Lte(value)), true
-	case "gt":
-		return qs.Filter(orm.F(field).Gt(value)), true
-	case "lt":
-		return qs.Filter(orm.F(field).Lt(value)), true
-	case "icontains":
-		if s, ok := value.(string); ok {
-			return qs.Filter(orm.F(field).IContains(s)), true
-		}
-	case "contains":
-		if s, ok := value.(string); ok {
-			return qs.Filter(orm.F(field).Contains(s)), true
-		}
-	case "in":
-		values := coerceToInterfaceSlice(value)
-		if len(values) > 0 {
-			return qs.Filter(orm.F(field).In(values...)), true
-		}
-	case "isnull":
-		switch v := value.(type) {
-		case string:
-			if strings.EqualFold(v, "true") || v == "1" {
-				return qs.Filter(orm.F(field).IsNull()), true
-			}
-			return qs.Filter(orm.Not(orm.F(field).IsNull())), true
-		case bool:
-			if v {
-				return qs.Filter(orm.F(field).IsNull()), true
-			}
-			return qs.Filter(orm.Not(orm.F(field).IsNull())), true
-		}
-	}
-
-	return qs, false
-}
-
-func coerceToInterfaceSlice(value interface{}) []interface{} {
-	switch typed := value.(type) {
-	case []interface{}:
-		return typed
-	case []string:
-		out := make([]interface{}, 0, len(typed))
-		for _, v := range typed {
-			out = append(out, v)
-		}
-		return out
-	case string:
-		parts := strings.Split(typed, ",")
-		out := make([]interface{}, 0, len(parts))
-		for _, part := range parts {
-			if trimmed := strings.TrimSpace(part); trimmed != "" {
-				out = append(out, trimmed)
-			}
-		}
-		return out
-	default:
-		if value != nil {
-			return []interface{}{value}
-		}
-	}
-	return []interface{}{}
-}
-
 // toInt64 converts interface{} to int64
 func toInt64(v interface{}) (int64, error) {
 	if v == nil {
@@ -797,3 +915,16 @@ func toInt64(v interface{}) (int64, error) {
 	return 0, fmt.Errorf("cannot convert %T to int64", v)
 }
 
+// parseLookup splits key into field path and lookup (e.g. "price__gt" -> "price", "gt")
+func parseLookup(key string) (string, string) {
+	parts := strings.Split(key, "__")
+	if len(parts) > 1 {
+		last := parts[len(parts)-1]
+		// Check if last part is a known lookup
+		switch last {
+		case "exact", "ne", "gt", "gte", "lt", "lte", "contains", "icontains", "startswith", "endswith", "in", "isnull":
+			return strings.Join(parts[:len(parts)-1], "__"), last
+		}
+	}
+	return key, "exact"
+}

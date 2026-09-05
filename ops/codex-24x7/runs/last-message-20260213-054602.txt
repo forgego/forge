@@ -1,0 +1,24 @@
+Implemented one focused high-impact batch on admin API action reliability and ecommerce parity.
+
+- Updated `forge/admin/api/rest/router.go`:
+  - `handleAction` now rejects empty `ids` with `400`.
+  - Action responses now map status codes by outcome:
+    - `200` for full success
+    - `207` for partial success (`affected > 0` with errors)
+    - `400` when nothing is affected and errors are present
+- Added regression tests in `forge/admin/api/rest/router_test.go`:
+  - `TestHandleAction_RejectsEmptyIDs`
+  - `TestHandleAction_ReturnsMultiStatusOnPartialFailures`
+  - `TestHandleAction_ReturnsBadRequestWhenNoObjectsAffected`
+- Updated ecommerce parity test in `examples/ecommerce/main_test.go`:
+  - `TestBuildEcommerceRouter_AdminAPIActionObjectSpecificOrderChangePermission` now expects `207` for mixed-outcome action execution.
+- Updated run tracking:
+  - `ops/codex-24x7/STATUS.md`
+  - `ops/codex-24x7/HISTORY.md`
+
+Verification run:
+- `go test ./admin/api/rest -count=1` in `forge` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` (pass)
+- `go test ./... -count=1` in `examples/ecommerce` with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` (pass)
+
+Note:
+- `git status` is blocked in this environment by Git safe-directory ownership mismatch (`detected dubious ownership`).

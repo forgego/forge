@@ -44,13 +44,16 @@ func RegisterWithSite[T any](s *Site, config *core.Config[T]) (*core.Admin[T], e
 		return nil, err
 	}
 
+	// Set DB if available on site
+	if s.db != nil {
+		manager.SetDB(s.db)
+	}
+
 	// Create admin instance
 	admin, err := core.NewAdmin(schemaInstance, manager, config)
 	if err != nil {
 		return nil, err
 	}
-
-	orm.RegisterManagerFor[T](manager)
 
 	// Register with site
 	if err := s.registry.Register(admin); err != nil {
@@ -72,6 +75,34 @@ type Filter[T any] = core.Filter[T]
 type Plugin = core.Plugin
 type Field = core.Field
 type Method = core.Method
+type Fieldset[T any] = core.Fieldset[T]
+type Admin[T any] = core.Admin[T]
+type InlineRelationConfig = core.InlineRelationConfig
+type InlineConfig = core.InlineConfig
+type Choice = core.Choice
+
+const (
+	FilterTypeText      = "text"
+	FilterTypeString    = "text"
+	FilterTypeNumber    = "number"
+	FilterTypeBoolean   = "boolean"
+	FilterTypeChoice    = "choice"
+	FilterTypeDateRange = "date_range"
+	FilterTypeRelation  = "relation"
+	FilterTypeRelated   = "relation"
+	FilterTypeObjectID  = "object_id"
+)
+
+const (
+	InlineTypeOneToMany = "one_to_many"
+	InlineTypeOneToOne  = "one_to_one"
+	InlineTypeManyToMany = "many_to_many"
+)
+
+// NewFieldset creates a new fieldset for admin forms.
+func NewFieldset[T any](name string, fields ...string) core.Fieldset[T] {
+	return core.NewFieldset[T](name, fields...)
+}
 
 // Computed creates a safe reference to a method or computed field
 var Computed = core.Computed

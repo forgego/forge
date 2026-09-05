@@ -7,19 +7,14 @@ const darkCodeTheme = require('prism-react-renderer').themes.dracula;
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'forge - Django-like Go Framework',
-  tagline: 'Django-like Go framework with type safety. Build web applications in Go with Django\'s developer experience and Go\'s performance.',
-  favicon: 'img/favicon.ico',
+  tagline: 'Django-inspired productivity for Go with type safety and performance.',
+  favicon: 'favicon.svg',
 
-  // Set the production url of your site here
-  url: 'https://forgego.github.io',
-  // Set the /<baseUrl>/ pathname under which your site is served
-  // For GitHub pages deployments, it is often '/<projectName>/'
-  baseUrl: '/forge/',
+  url: 'https://hamidrabedi.github.io',
+  baseUrl: '/foreit/',
 
-  // GitHub pages deployment config.
-  // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'forgego', // Usually your GitHub org/user name.
-  projectName: 'forge', // Usually your repo name.
+  organizationName: 'hamidrabedi',
+  projectName: 'foreit',
 
   markdown: {
     hooks: {
@@ -28,12 +23,8 @@ const config = {
   },
   onBrokenLinks: 'warn',
 
-  // SEO configuration
-  trailingSlash: false,
-  
-  // Even if you don't use internalization, you can use this field to set useful
-  // metadata like html lang. For example, if your site is in Chinese, you may
-  // want to replace "en" with "zh-Hans".
+  trailingSlash: true,
+
   i18n: {
     defaultLocale: 'en',
     locales: ['en'],
@@ -46,21 +37,15 @@ const config = {
       ({
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
-          editUrl: 'https://github.com/forgego/forge/tree/main/docs-site/',
-          showLastUpdateAuthor: false, // Disable for faster builds
-          showLastUpdateTime: false, // Disable for faster builds
+          editUrl: 'https://github.com/hamidrabedi/foreit/tree/main/docs-site/',
+          showLastUpdateAuthor: false,
+          showLastUpdateTime: false,
         },
         blog: false,
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },
-        sitemap: {
-          changefreq: 'weekly',
-          priority: 0.5,
-          ignorePatterns: ['/tags/**'],
-          filename: 'sitemap.xml',
-        },
-        gtag: undefined, // Disable analytics for faster builds
+        gtag: undefined,
       }),
     ],
   ],
@@ -68,8 +53,7 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
-      // SEO: Replace with your project's social card
-      image: 'img/forge-social-card.jpg',
+      image: 'forge-social-card.svg',
       metadata: [
         {name: 'keywords', content: 'go, golang, framework, django, orm, type-safe, web framework, rest api, code generation, postgresql'},
         {name: 'author', content: 'forge Framework'},
@@ -82,23 +66,22 @@ const config = {
         title: 'forge',
         logo: {
           alt: 'forge Logo',
-          src: 'img/logo.svg',
+          src: 'logo.svg',
         },
         items: [
           {
             type: 'docSidebar',
-            sidebarId: 'gettingStarted',
+            sidebarId: 'docs',
             position: 'left',
-            label: 'Getting Started',
+            label: 'Docs',
           },
           {
-            type: 'docSidebar',
-            sidebarId: 'fullGuides',
+            to: '/docs/changelog',
+            label: 'Changelog',
             position: 'left',
-            label: 'Full Guides',
           },
           {
-            href: 'https://github.com/forgego/forge',
+            href: 'https://github.com/hamidrabedi/foreit',
             label: 'GitHub',
             position: 'right',
           },
@@ -108,58 +91,32 @@ const config = {
         style: 'dark',
         links: [
           {
-            title: 'Getting Started',
+            title: 'Start Here',
             items: [
-              {
-                label: 'Introduction',
-                to: '/docs/introduction',
-              },
-              {
-                label: 'Installation',
-                to: '/docs/getting-started/installation',
-              },
-              {
-                label: 'Quick Start',
-                to: '/docs/getting-started/quickstart',
-              },
+              {label: 'Introduction', to: '/docs/introduction'},
+              {label: 'Quick Start', to: '/docs/quickstart'},
+              {label: 'Installation', to: '/docs/installation'},
             ],
           },
           {
-            title: 'Full Guides',
+            title: 'Build',
             items: [
-              {
-                label: 'Guides',
-                to: '/docs/guides/models',
-              },
-              {
-                label: 'API Reference',
-                to: '/docs/api-reference/schema',
-              },
-              {
-                label: 'Examples',
-                to: '/docs/examples/blog',
-              },
+              {label: 'Models', to: '/docs/models'},
+              {label: 'Admin UI', to: '/docs/admin'},
+              {label: 'REST API', to: '/docs/rest-api'},
             ],
           },
           {
-            title: 'Community',
+            title: 'Project',
             items: [
-              {
-                label: 'GitHub',
-                href: 'https://github.com/forgego/forge',
-              },
-              {
-                label: 'Issues',
-                href: 'https://github.com/forgego/forge/issues',
-              },
-              {
-                label: 'Discussions',
-                href: 'https://github.com/forgego/forge/discussions',
-              },
+              {label: 'Changelog', to: '/docs/changelog'},
+              {label: 'Community', to: '/docs/community'},
+              {label: 'Security', to: '/docs/security'},
+              {label: 'GitHub', href: 'https://github.com/hamidrabedi/foreit'},
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} forge Framework. Built with Docusaurus.`,
+        copyright: `Copyright � ${new Date().getFullYear()} forge Framework. Built with Docusaurus.`,
       },
       prism: {
         theme: lightCodeTheme,
@@ -173,8 +130,8 @@ const config = {
       },
       announcementBar: {
         id: 'announcement-bar',
-        content: '🎉 forge v1.0.0 is now available!',
-        backgroundColor: '#667eea',
+        content: 'forge v1.0.0 is now available.',
+        backgroundColor: '#334155',
         textColor: '#ffffff',
         isCloseable: true,
       },
@@ -186,22 +143,8 @@ const config = {
       },
     }),
 
-  plugins: [
-    // Disabled ideal-image plugin to avoid sharp native dependency issues
-    // Uncomment if you need image optimization (requires sharp to be built)
-    // [
-    //   '@docusaurus/plugin-ideal-image',
-    //   {
-    //     quality: 70,
-    //     max: 1030,
-    //     min: 640,
-    //     steps: 2,
-    //     disableInDev: true,
-    //   },
-    // ],
-  ],
+  plugins: [],
 
-  // Build performance optimizations
   staticDirectories: ['static'],
 };
 

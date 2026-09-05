@@ -1,0 +1,23 @@
+Implemented one focused production-readiness batch on ecommerce object-level admin permissions.
+
+Changed:
+- `examples/ecommerce/app/orders/admin.go:664`
+  - `Payment` admin `HasChangePermission` is now object-aware:
+    - allows when `obj == nil`
+    - denies updates for finalized statuses: `completed`, `refunded`
+- `examples/ecommerce/main_test.go:475`
+  - Added `TestBuildEcommerceRouter_AdminAPIObjectSpecificPaymentChangePermission`
+  - Validates authenticated admin API behavior on `/admin/api/payments/{id}/`:
+    - finalized payment update returns `403` with `error.code=permission_denied`
+    - mutable payment update returns `200`
+- `ops/codex-24x7/STATUS.md:3`
+  - Updated `Completed this run`, `Remaining work`, and `Next run plan`
+- `ops/codex-24x7/HISTORY.md:462`
+  - Appended concise run log entry for this batch
+
+Verification run:
+- `go test ./admin/api/rest -count=1` (in `forge`) with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` -> pass
+- `go test ./... -count=1` (in `examples/ecommerce`) with `GOCACHE=C:\Users\hamid\AppData\Local\Temp\gocache` -> pass
+
+Note:
+- `git status` is currently blocked in this environment by a Git `safe.directory` ownership mismatch for `H:/Coding/gogo/forgego/newforge`.

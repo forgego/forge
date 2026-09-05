@@ -27,6 +27,10 @@ type MigrationRunner struct {
 
 // NewMigrationRunner creates a new migration runner (package-level function)
 func NewMigrationRunner(db *DB, migrationsPath string) (*MigrationRunner, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database connection is nil")
+	}
+
 	// Validate database connection is still open
 	if db.DB == nil {
 		return nil, fmt.Errorf("database connection is nil")
@@ -434,24 +438,12 @@ func (mr *MigrationRunner) GetDetailedStatus(ctx context.Context) (*DetailedMigr
 		if statusErr != nil {
 			return nil, fmt.Errorf("failed to get status: %w", statusErr)
 		}
-		return &DetailedMigrationStatus{
-			Current: status.Version,
-			Status:  "OK",
-			Dirty:   status.Dirty,
-		}, nil
-	}
-
-	var currentVersion uint
-	if detailed.Current != "" {
-		parsed, err := strconv.ParseUint(detailed.Current, 10, 64)
-		if err == nil {
-			currentVersion = uint(parsed)
-		}
+		return fallbackDetailedMigrationStatus(status), nil
 	}
 
 	// Convert execute.DetailedStatus to db.DetailedMigrationStatus
 	result := &DetailedMigrationStatus{
-		Current:    currentVersion,
+		Current:    detailed.Current,
 		Next:       detailed.Next,
 		Status:     detailed.Status,
 		Dirty:      detailed.Status == "DIRTY",
@@ -474,6 +466,24 @@ func (mr *MigrationRunner) GetDetailedStatus(ctx context.Context) (*DetailedMigr
 	return result, nil
 }
 
+func fallbackDetailedMigrationStatus(status *MigrationStatus) *DetailedMigrationStatus {
+	fallbackStatus := "OK"
+	if status != nil && status.Dirty {
+		fallbackStatus = "DIRTY"
+	}
+
+	current := "0"
+	if status != nil {
+		current = fmt.Sprintf("%d", status.Version)
+	}
+
+	return &DetailedMigrationStatus{
+		Current: current,
+		Status:  fallbackStatus,
+		Dirty:   status != nil && status.Dirty,
+	}
+}
+
 // MigrationStatus represents the status of migrations
 type MigrationStatus struct {
 	Version uint
@@ -482,7 +492,7 @@ type MigrationStatus struct {
 
 // DetailedMigrationStatus represents detailed migration status
 type DetailedMigrationStatus struct {
-	Current    uint
+	Current    string
 	Next       string
 	Applied    []string
 	Pending    []string
