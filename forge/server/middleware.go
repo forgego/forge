@@ -2,7 +2,7 @@ package server
 
 import (
 	"bytes"
-	"crypto/md5"
+	"crypto/sha256"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -333,7 +333,7 @@ func ETag(opts *ETagOptions) Middleware {
 
 			// Generate ETag if not already set
 			if rrw.Header().Get("ETag") == "" && rrw.body.Len() > 0 {
-				hash := md5.Sum(rrw.body.Bytes())
+				hash := sha256.Sum256(rrw.body.Bytes())
 				etag := fmt.Sprintf(`"%x"`, hash)
 				if rrw.weak {
 					etag = "W/" + etag
