@@ -24,6 +24,13 @@ type Server struct {
 
 // NewServer creates a new framework server
 func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger) (*Server, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("server config is nil")
+	}
+	if settings == nil {
+		return nil, fmt.Errorf("server settings are nil")
+	}
+
 	// Create router
 	router := NewRouter()
 
