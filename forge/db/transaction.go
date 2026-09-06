@@ -15,6 +15,10 @@ type Tx struct {
 
 // BeginTx starts a new transaction
 func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) {
+	if db == nil || db.DB == nil {
+		return nil, errors.New("database connection is nil")
+	}
+
 	tx, err := db.DB.BeginTx(ctx, opts)
 	if err != nil {
 		return nil, err

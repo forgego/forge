@@ -1,9 +1,43 @@
 package db
 
 import (
+	"context"
 	"strings"
 	"testing"
 )
+
+func TestBeginTx_NilDB(t *testing.T) {
+	var database *DB
+	_, err := database.BeginTx(context.Background(), nil)
+	if err == nil {
+		t.Fatal("expected error for nil DB, got nil")
+	}
+	if err.Error() != "database connection is nil" {
+		t.Fatalf("expected 'database connection is nil', got %v", err)
+	}
+
+	database = &DB{} // Uninitialized, db.DB is nil
+	_, err = database.BeginTx(context.Background(), nil)
+	if err == nil {
+		t.Fatal("expected error for uninitialized DB, got nil")
+	}
+	if err.Error() != "database connection is nil" {
+		t.Fatalf("expected 'database connection is nil', got %v", err)
+	}
+}
+
+func TestWithTx_NilDB(t *testing.T) {
+	var database *DB
+	err := database.WithTx(context.Background(), func(tx *Tx) error {
+		return nil
+	})
+	if err == nil {
+		t.Fatal("expected error for nil DB, got nil")
+	}
+	if err.Error() != "database connection is nil" {
+		t.Fatalf("expected 'database connection is nil', got %v", err)
+	}
+}
 
 func TestValidateSavepointName(t *testing.T) {
 	tests := []struct {
