@@ -72,6 +72,32 @@ func TestMethodCache_GetMethod(t *testing.T) {
 	}
 }
 
+// TestMethodCache_GetMethodMultiple ensures looking up one method does not
+// poison lookups of other methods on the same type (regression: the cache
+// used to report missing methods once any method for the type was cached).
+func TestMethodCache_GetMethodMultiple(t *testing.T) {
+	cache := &MethodCache{
+		methods: make(map[reflect.Type]map[string]reflect.Method),
+		fields:  make(map[reflect.Type]map[string]reflect.StructField),
+	}
+
+	mockQS := &MockQuerySet{count: 10}
+	qsType := reflect.TypeOf(mockQS)
+
+	for _, name := range []string{"Count", "All", "Filter", "Limit"} {
+		if _, found := cache.GetMethod(qsType, name); !found {
+			t.Fatalf("Expected to find %s method", name)
+		}
+	}
+
+	// Repeat in reverse order to hit populated cache entries
+	for _, name := range []string{"Limit", "Filter", "All", "Count"} {
+		if _, found := cache.GetMethod(qsType, name); !found {
+			t.Fatalf("Expected to find cached %s method", name)
+		}
+	}
+}
+
 // TestMethodCache_GetField tests the field caching functionality
 func TestMethodCache_GetField(t *testing.T) {
 	cache := &MethodCache{
