@@ -1,0 +1,6 @@
+interface:
+  display_name: "Foreit"
+  short_description: "Repo-specific patterns and workflows for foreit"
+  default_prompt: "Use the foreit repo skill to follow existing architecture, testing, and workflow conventions."
+policy:
+  allow_implicit_invocation: true
