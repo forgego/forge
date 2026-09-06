@@ -19,14 +19,14 @@
     "install:npm": "npm ci"
   },
   "dependencies": {
-    "@docusaurus/core": "^3.9.2",
-    "@docusaurus/preset-classic": "^3.9.2",
+    "@docusaurus/core": "^3.10.2",
+    "@docusaurus/preset-classic": "^3.10.2",
     "@docusaurus/plugin-sitemap": "^3.9.2",
     "@mdx-js/react": "^3.1.1",
     "clsx": "^2.1.1",
     "prism-react-renderer": "^2.4.1",
     "react": "^19.2.5",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.5"
   },
   "peerDependencies": {
     "@docusaurus/theme-classic": "^3.4.0"

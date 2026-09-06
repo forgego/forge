@@ -1,6 +1,6 @@
 ---
 sidebar_position: 3
-description: Security features: CSRF, sessions, headers.
+description: "Security features: CSRF, sessions, headers."
 image: /forge-social-card.svg
 ---
 
