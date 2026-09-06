@@ -2,16 +2,17 @@ package commerce
 
 import (
 	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/registry"
 )
 
 // Manager instances
 var (
-	ShippingMethodManager *ShippingMethodManagerImpl
-	PaymentMethodManager  *PaymentMethodManagerImpl
-	TaxRateManager        *TaxRateManagerImpl
-	CurrencyManager       *CurrencyManagerImpl
-	ExchangeRateManager   *ExchangeRateManagerImpl
+	ShippingMethodManager *orm.Manager[ShippingMethod]
+	PaymentMethodManager  *orm.Manager[PaymentMethod]
+	TaxRateManager        *orm.Manager[TaxRate]
+	CurrencyManager       *orm.Manager[Currency]
+	ExchangeRateManager   *orm.Manager[ExchangeRate]
 )
 
 // Init initializes the commerce module
@@ -23,10 +24,35 @@ func Init(database *db.DB) {
 	registry.RegisterModel(Currency{})
 	registry.RegisterModel(ExchangeRate{})
 
-	// Initialize managers (these will be generated)
-	// ShippingMethodManager = NewShippingMethodManager(database)
-	// PaymentMethodManager = NewPaymentMethodManager(database)
-	// TaxRateManager = NewTaxRateManager(database)
-	// CurrencyManager = NewCurrencyManager(database)
-	// ExchangeRateManager = NewExchangeRateManager(database)
+	// Initialize managers
+	var err error
+	ShippingMethodManager, err = orm.NewManager[ShippingMethod]("shipping_methods")
+	if err != nil {
+		panic(err)
+	}
+	ShippingMethodManager.SetDB(database)
+
+	PaymentMethodManager, err = orm.NewManager[PaymentMethod]("payment_methods")
+	if err != nil {
+		panic(err)
+	}
+	PaymentMethodManager.SetDB(database)
+
+	TaxRateManager, err = orm.NewManager[TaxRate]("tax_rates")
+	if err != nil {
+		panic(err)
+	}
+	TaxRateManager.SetDB(database)
+
+	CurrencyManager, err = orm.NewManager[Currency]("currencies")
+	if err != nil {
+		panic(err)
+	}
+	CurrencyManager.SetDB(database)
+
+	ExchangeRateManager, err = orm.NewManager[ExchangeRate]("exchange_rates")
+	if err != nil {
+		panic(err)
+	}
+	ExchangeRateManager.SetDB(database)
 }

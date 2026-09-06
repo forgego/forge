@@ -4,65 +4,159 @@ import (
 	"context"
 
 	"github.com/forgego/forge/admin"
-	adminCore "github.com/forgego/forge/admin/core"
 )
 
 // RegisterAdmin registers all commerce models with the admin interface
-func RegisterAdmin(ctx context.Context) {
-	site := admin.DefaultSite
-
+func RegisterAdmin(ctx context.Context) error {
 	// ShippingMethod Admin
-	shippingMethodAdmin := adminCore.NewModelAdmin(
-		ShippingMethod{},
-		adminCore.WithListDisplay("id", "name", "code", "base_price", "carrier_name", "is_active", "sort_order"),
-		adminCore.WithSearchFields("name", "code", "carrier_name"),
-		adminCore.WithListFilter("is_active"),
-		adminCore.WithOrdering("sort_order", "name"),
-		adminCore.WithListPerPage(50),
-	)
-	site.RegisterModel(ctx, shippingMethodAdmin)
+	_, err := admin.Register(&admin.Config[ShippingMethod]{
+		ListDisplay: []admin.Field{
+			ShippingMethodFieldsInstance.Id,
+			ShippingMethodFieldsInstance.Name,
+			ShippingMethodFieldsInstance.Code,
+			ShippingMethodFieldsInstance.BasePrice,
+			ShippingMethodFieldsInstance.CarrierName,
+			ShippingMethodFieldsInstance.IsActive,
+			ShippingMethodFieldsInstance.SortOrder,
+		},
+		SearchFields: []admin.Field{
+			ShippingMethodFieldsInstance.Name,
+			ShippingMethodFieldsInstance.Code,
+			ShippingMethodFieldsInstance.CarrierName,
+		},
+		ListFilter: []admin.Field{
+			ShippingMethodFieldsInstance.IsActive,
+		},
+		Ordering: []admin.Field{
+			ShippingMethodFieldsInstance.SortOrder,
+			ShippingMethodFieldsInstance.Name,
+		},
+		ListPerPage: 50,
+	})
+	if err != nil {
+		return err
+	}
 
 	// PaymentMethod Admin
-	paymentMethodAdmin := adminCore.NewModelAdmin(
-		PaymentMethod{},
-		adminCore.WithListDisplay("id", "name", "code", "processor_name", "is_active", "supports_refund", "sort_order"),
-		adminCore.WithSearchFields("name", "code", "processor_name"),
-		adminCore.WithListFilter("is_active", "supports_refund", "requires_auth"),
-		adminCore.WithOrdering("sort_order", "name"),
-		adminCore.WithListPerPage(50),
-	)
-	site.RegisterModel(ctx, paymentMethodAdmin)
+	_, err = admin.Register(&admin.Config[PaymentMethod]{
+		ListDisplay: []admin.Field{
+			PaymentMethodFieldsInstance.Id,
+			PaymentMethodFieldsInstance.Name,
+			PaymentMethodFieldsInstance.Code,
+			PaymentMethodFieldsInstance.ProcessorName,
+			PaymentMethodFieldsInstance.IsActive,
+			PaymentMethodFieldsInstance.SupportsRefund,
+			PaymentMethodFieldsInstance.SortOrder,
+		},
+		SearchFields: []admin.Field{
+			PaymentMethodFieldsInstance.Name,
+			PaymentMethodFieldsInstance.Code,
+			PaymentMethodFieldsInstance.ProcessorName,
+		},
+		ListFilter: []admin.Field{
+			PaymentMethodFieldsInstance.IsActive,
+			PaymentMethodFieldsInstance.SupportsRefund,
+			PaymentMethodFieldsInstance.RequiresAuth,
+		},
+		Ordering: []admin.Field{
+			PaymentMethodFieldsInstance.SortOrder,
+			PaymentMethodFieldsInstance.Name,
+		},
+		ListPerPage: 50,
+	})
+	if err != nil {
+		return err
+	}
 
 	// TaxRate Admin
-	taxRateAdmin := adminCore.NewModelAdmin(
-		TaxRate{},
-		adminCore.WithListDisplay("id", "name", "code", "rate", "country", "state", "is_active", "priority"),
-		adminCore.WithSearchFields("name", "code", "country", "state"),
-		adminCore.WithListFilter("is_active", "country", "is_compound", "apply_to_shipping"),
-		adminCore.WithOrdering("priority", "country", "state"),
-		adminCore.WithListPerPage(50),
-	)
-	site.RegisterModel(ctx, taxRateAdmin)
+	_, err = admin.Register(&admin.Config[TaxRate]{
+		ListDisplay: []admin.Field{
+			TaxRateFieldsInstance.Id,
+			TaxRateFieldsInstance.Name,
+			TaxRateFieldsInstance.Code,
+			TaxRateFieldsInstance.Rate,
+			TaxRateFieldsInstance.Country,
+			TaxRateFieldsInstance.State,
+			TaxRateFieldsInstance.IsActive,
+			TaxRateFieldsInstance.Priority,
+		},
+		SearchFields: []admin.Field{
+			TaxRateFieldsInstance.Name,
+			TaxRateFieldsInstance.Code,
+			TaxRateFieldsInstance.Country,
+			TaxRateFieldsInstance.State,
+		},
+		ListFilter: []admin.Field{
+			TaxRateFieldsInstance.IsActive,
+			TaxRateFieldsInstance.Country,
+			TaxRateFieldsInstance.IsCompound,
+			TaxRateFieldsInstance.ApplyToShipping,
+		},
+		Ordering: []admin.Field{
+			TaxRateFieldsInstance.Priority,
+			TaxRateFieldsInstance.Country,
+			TaxRateFieldsInstance.State,
+		},
+		ListPerPage: 50,
+	})
+	if err != nil {
+		return err
+	}
 
 	// Currency Admin
-	currencyAdmin := adminCore.NewModelAdmin(
-		Currency{},
-		adminCore.WithListDisplay("id", "code", "name", "symbol", "decimal_places", "is_active", "is_default"),
-		adminCore.WithSearchFields("code", "name"),
-		adminCore.WithListFilter("is_active", "is_default"),
-		adminCore.WithOrdering("code"),
-		adminCore.WithListPerPage(50),
-	)
-	site.RegisterModel(ctx, currencyAdmin)
+	_, err = admin.Register(&admin.Config[Currency]{
+		ListDisplay: []admin.Field{
+			CurrencyFieldsInstance.Id,
+			CurrencyFieldsInstance.Code,
+			CurrencyFieldsInstance.Name,
+			CurrencyFieldsInstance.Symbol,
+			CurrencyFieldsInstance.DecimalPlaces,
+			CurrencyFieldsInstance.IsActive,
+			CurrencyFieldsInstance.IsDefault,
+		},
+		SearchFields: []admin.Field{
+			CurrencyFieldsInstance.Code,
+			CurrencyFieldsInstance.Name,
+		},
+		ListFilter: []admin.Field{
+			CurrencyFieldsInstance.IsActive,
+			CurrencyFieldsInstance.IsDefault,
+		},
+		Ordering: []admin.Field{
+			CurrencyFieldsInstance.Code,
+		},
+		ListPerPage: 50,
+	})
+	if err != nil {
+		return err
+	}
 
 	// ExchangeRate Admin
-	exchangeRateAdmin := adminCore.NewModelAdmin(
-		ExchangeRate{},
-		adminCore.WithListDisplay("id", "from_currency_id", "to_currency_id", "rate", "effective_date", "source", "is_active"),
-		adminCore.WithSearchFields("source"),
-		adminCore.WithListFilter("is_active", "effective_date"),
-		adminCore.WithOrdering("-effective_date"),
-		adminCore.WithListPerPage(50),
-	)
-	site.RegisterModel(ctx, exchangeRateAdmin)
+	_, err = admin.Register(&admin.Config[ExchangeRate]{
+		ListDisplay: []admin.Field{
+			ExchangeRateFieldsInstance.Id,
+			ExchangeRateFieldsInstance.FromCurrencyId,
+			ExchangeRateFieldsInstance.ToCurrencyId,
+			ExchangeRateFieldsInstance.Rate,
+			ExchangeRateFieldsInstance.EffectiveDate,
+			ExchangeRateFieldsInstance.Source,
+			ExchangeRateFieldsInstance.IsActive,
+		},
+		SearchFields: []admin.Field{
+			ExchangeRateFieldsInstance.Source,
+		},
+		ListFilter: []admin.Field{
+			ExchangeRateFieldsInstance.IsActive,
+			ExchangeRateFieldsInstance.EffectiveDate,
+		},
+		Ordering: []admin.Field{
+			ExchangeRateFieldsInstance.EffectiveDate,
+		},
+		ListPerPage: 50,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

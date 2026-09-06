@@ -1,5 +1,5 @@
 database:
-  driver: postgres
+  driver: sqlite
   host: localhost
   port: 5432
   user: postgres
