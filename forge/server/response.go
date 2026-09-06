@@ -92,7 +92,7 @@ func (r *Response) SetHeader(key, value string) {
 
 // WriteHeader writes the status code
 func (r *Response) WriteHeader(code int) {
-	if r.statusCode == 0 {
+	if r.statusCode == 0 || r.statusCode == http.StatusOK {
 		r.statusCode = code
 	}
 	r.ResponseWriter.WriteHeader(r.statusCode)

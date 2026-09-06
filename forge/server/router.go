@@ -118,7 +118,10 @@ func (r *Router) With(middleware ...func(http.Handler) http.Handler) *Router {
 
 // Group creates a new route group with middleware
 func (r *Router) Group(fn func(*Router)) {
-	r.Route("", fn)
+	r.Router.Group(func(c chi.Router) {
+		subRouter := &Router{Router: c}
+		fn(subRouter)
+	})
 }
 
 // NotFound sets a custom 404 handler
