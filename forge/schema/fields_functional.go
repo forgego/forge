@@ -90,6 +90,11 @@ func Float64Field(name string, opts ...FieldOpt) Field {
 	return f
 }
 
+// FloatField is an alias for Float64Field.
+func FloatField(name string, opts ...FieldOpt) Field {
+	return Float64Field(name, opts...)
+}
+
 func Float32Field(name string, opts ...FieldOpt) Field {
 	f := Field{Name: name, Type: TypeFloat32, Editable: true, Serialize: true}
 	for _, opt := range opts {

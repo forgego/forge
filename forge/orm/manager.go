@@ -123,6 +123,20 @@ func (m *Manager[T]) All(ctx context.Context) ([]*T, error) {
 	return qs.All(ctx)
 }
 
+// Count returns the number of model instances
+func (m *Manager[T]) Count(ctx context.Context) (int64, error) {
+	qs, err := NewQuerySet[T](m.tableName)
+	if err != nil {
+		return 0, err
+	}
+
+	if m.db != nil {
+		qs = qs.SetDB(m.db)
+	}
+
+	return qs.Count(ctx)
+}
+
 // Create creates a new model instance
 func (m *Manager[T]) Create(ctx context.Context, instance *T) error {
 	if m.db == nil {

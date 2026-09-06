@@ -394,7 +394,7 @@ func (p *ASTParser) isFieldBuilder(name string) bool {
 		"EmailField", "URLField", "UUIDField",
 		"JSONField", "BytesField",
 		"Float64Field", "DecimalField",
-		"Float32Field",
+		"Float32Field", "FloatField",
 		"ForeignKeyField", "OneToOneField", "OneToManyField", "ManyToManyField",
 	}
 	for _, b := range builders {
@@ -451,6 +451,8 @@ func (p *ASTParser) mapFieldTypeToGoType(fieldType string) string {
 		"BytesField":      "[]byte",
 		"Float64":         "float64",
 		"Float64Field":    "float64",
+		"Float":           "float64", // Alias for Float64
+		"FloatField":      "float64",
 		"Float32":         "float32",
 		"Float32Field":    "float32",
 		"Decimal":         "float64",

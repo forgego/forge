@@ -24,11 +24,11 @@ var globalCache = &MethodCache{
 func (c *MethodCache) GetMethod(t reflect.Type, name string) (reflect.Method, bool) {
 	// First check with read lock (fast path)
 	c.mu.RLock()
-	typeMethods, ok := c.methods[t]
-	if ok {
-		method, found := typeMethods[name]
-		c.mu.RUnlock()
-		return method, found
+	if typeMethods, ok := c.methods[t]; ok {
+		if method, found := typeMethods[name]; found {
+			c.mu.RUnlock()
+			return method, true
+		}
 	}
 	c.mu.RUnlock()
 
@@ -37,9 +37,10 @@ func (c *MethodCache) GetMethod(t reflect.Type, name string) (reflect.Method, bo
 	defer c.mu.Unlock()
 
 	// Double-check after acquiring write lock
-	if typeMethods, ok = c.methods[t]; ok {
-		method, found := typeMethods[name]
-		return method, found
+	if typeMethods, ok := c.methods[t]; ok {
+		if method, found := typeMethods[name]; found {
+			return method, true
+		}
 	}
 
 	// Lookup method
@@ -61,11 +62,11 @@ func (c *MethodCache) GetMethod(t reflect.Type, name string) (reflect.Method, bo
 func (c *MethodCache) GetField(t reflect.Type, name string) (reflect.StructField, bool) {
 	// First check with read lock (fast path)
 	c.mu.RLock()
-	typeFields, ok := c.fields[t]
-	if ok {
-		field, found := typeFields[name]
-		c.mu.RUnlock()
-		return field, found
+	if typeFields, ok := c.fields[t]; ok {
+		if field, found := typeFields[name]; found {
+			c.mu.RUnlock()
+			return field, true
+		}
 	}
 	c.mu.RUnlock()
 
@@ -74,9 +75,10 @@ func (c *MethodCache) GetField(t reflect.Type, name string) (reflect.StructField
 	defer c.mu.Unlock()
 
 	// Double-check after acquiring write lock
-	if typeFields, ok = c.fields[t]; ok {
-		field, found := typeFields[name]
-		return field, found
+	if typeFields, ok := c.fields[t]; ok {
+		if field, found := typeFields[name]; found {
+			return field, true
+		}
 	}
 
 	// Lookup field
