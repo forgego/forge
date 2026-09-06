@@ -1336,6 +1336,10 @@ type BaseValuesQuerySet[T any] struct {
 }
 
 func (vqs *BaseValuesQuerySet[T]) All(ctx context.Context) ([]map[string]interface{}, error) {
+	if vqs.base.err != nil {
+		return nil, vqs.base.err
+	}
+
 	db, err := vqs.base.getDB(ctx)
 	if err != nil {
 		return nil, err
@@ -1386,6 +1390,10 @@ func (vqs *BaseValuesQuerySet[T]) All(ctx context.Context) ([]map[string]interfa
 }
 
 func (vqs *BaseValuesQuerySet[T]) Get(ctx context.Context) (map[string]interface{}, error) {
+	if vqs.base.err != nil {
+		return nil, vqs.base.err
+	}
+
 	fields := make([]any, len(vqs.base.selectFields))
 	for i, f := range vqs.base.selectFields {
 		fields[i] = f
@@ -1407,6 +1415,10 @@ func (vqs *BaseValuesQuerySet[T]) Get(ctx context.Context) (map[string]interface
 }
 
 func (vqs *BaseValuesQuerySet[T]) First(ctx context.Context) (map[string]interface{}, error) {
+	if vqs.base.err != nil {
+		return nil, vqs.base.err
+	}
+
 	fields := make([]any, len(vqs.base.selectFields))
 	for i, f := range vqs.base.selectFields {
 		fields[i] = f
@@ -1429,6 +1441,10 @@ type BaseValuesListQuerySet[T any] struct {
 }
 
 func (vls *BaseValuesListQuerySet[T]) All(ctx context.Context) ([][]interface{}, error) {
+	if vls.base.err != nil {
+		return nil, vls.base.err
+	}
+
 	db, err := vls.base.getDB(ctx)
 	if err != nil {
 		return nil, err
@@ -1477,6 +1493,10 @@ func (vls *BaseValuesListQuerySet[T]) All(ctx context.Context) ([][]interface{},
 }
 
 func (vls *BaseValuesListQuerySet[T]) Get(ctx context.Context) ([]interface{}, error) {
+	if vls.base.err != nil {
+		return nil, vls.base.err
+	}
+
 	// Create a new values list query set with limit
 	limited := vls.base.clone()
 	limit := 2
@@ -1503,6 +1523,10 @@ func (vls *BaseValuesListQuerySet[T]) Get(ctx context.Context) ([]interface{}, e
 }
 
 func (vls *BaseValuesListQuerySet[T]) First(ctx context.Context) ([]interface{}, error) {
+	if vls.base.err != nil {
+		return nil, vls.base.err
+	}
+
 	// Create a new values list query set with limit
 	limited := vls.base.clone()
 	limit := 1
@@ -1525,6 +1549,10 @@ func (vls *BaseValuesListQuerySet[T]) First(ctx context.Context) ([]interface{},
 }
 
 func (vls *BaseValuesListQuerySet[T]) Flat(ctx context.Context) ([]interface{}, error) {
+	if vls.base.err != nil {
+		return nil, vls.base.err
+	}
+
 	// For flat, we expect exactly one field
 	if len(vls.base.selectFields) != 1 {
 		return nil, fmt.Errorf("Flat() requires exactly one field, got %d", len(vls.base.selectFields))
