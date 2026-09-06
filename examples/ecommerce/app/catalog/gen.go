@@ -13,11 +13,11 @@ import (
 type CategoryGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	Name string `json:"name" db:"name" validate:""`
-	Slug string `json:"slug" db:"slug" validate:""`
+	Name string `json:"name" db:"name" validate:"required,max=200"`
+	Slug string `json:"slug" db:"slug" validate:"required,max=200"`
 	Description string `json:"description" db:"description" validate:""`
 	ParentId int64 `json:"parent_id" db:"parent_id" validate:""`
-	ImageUrl string `json:"image_url" db:"image_url" validate:""`
+	ImageUrl string `json:"image_url" db:"image_url" validate:"max=500"`
 	SortOrder int32 `json:"sort_order" db:"sort_order" validate:""`
 	IsActive bool `json:"is_active" db:"is_active" validate:""`
 	Level int32 `json:"level" db:"level" validate:""`
@@ -71,11 +71,11 @@ var CategoryFieldsInstance = CategoryFields{
 type BrandGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	Name string `json:"name" db:"name" validate:""`
-	Slug string `json:"slug" db:"slug" validate:""`
+	Name string `json:"name" db:"name" validate:"required,max=200"`
+	Slug string `json:"slug" db:"slug" validate:"required,max=200"`
 	Description string `json:"description" db:"description" validate:""`
-	LogoUrl string `json:"logo_url" db:"logo_url" validate:""`
-	WebsiteUrl string `json:"website_url" db:"website_url" validate:""`
+	LogoUrl string `json:"logo_url" db:"logo_url" validate:"max=500"`
+	WebsiteUrl string `json:"website_url" db:"website_url" validate:"max=500"`
 	IsActive bool `json:"is_active" db:"is_active" validate:""`
 	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
@@ -123,14 +123,14 @@ var BrandFieldsInstance = BrandFields{
 type ProductGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	Name string `json:"name" db:"name" validate:""`
-	Slug string `json:"slug" db:"slug" validate:""`
-	Sku string `json:"sku" db:"sku" validate:""`
-	Description string `json:"description" db:"description" validate:""`
+	Name string `json:"name" db:"name" validate:"required,max=255"`
+	Slug string `json:"slug" db:"slug" validate:"required,max=255"`
+	Sku string `json:"sku" db:"sku" validate:"required,max=100"`
+	Description string `json:"description" db:"description" validate:"required"`
 	ShortDescription string `json:"short_description" db:"short_description" validate:""`
-	CategoryId int64 `json:"category_id" db:"category_id" validate:""`
+	CategoryId int64 `json:"category_id" db:"category_id" validate:"required"`
 	BrandId int64 `json:"brand_id" db:"brand_id" validate:""`
-	Price float64 `json:"price" db:"price" validate:""`
+	Price float64 `json:"price" db:"price" validate:"required"`
 	CostPrice float64 `json:"cost_price" db:"cost_price" validate:""`
 	CompareAtPrice float64 `json:"compare_at_price" db:"compare_at_price" validate:""`
 	StockQuantity int32 `json:"stock_quantity" db:"stock_quantity" validate:""`
@@ -143,9 +143,9 @@ type ProductGenerated struct {
 	IsActive bool `json:"is_active" db:"is_active" validate:""`
 	IsFeatured bool `json:"is_featured" db:"is_featured" validate:""`
 	IsDigital bool `json:"is_digital" db:"is_digital" validate:""`
-	MetaTitle string `json:"meta_title" db:"meta_title" validate:""`
+	MetaTitle string `json:"meta_title" db:"meta_title" validate:"max=255"`
 	MetaDescription string `json:"meta_description" db:"meta_description" validate:""`
-	MetaKeywords string `json:"meta_keywords" db:"meta_keywords" validate:""`
+	MetaKeywords string `json:"meta_keywords" db:"meta_keywords" validate:"max=500"`
 	ViewCount int32 `json:"view_count" db:"view_count" validate:""`
 	OrderCount int32 `json:"order_count" db:"order_count" validate:""`
 	RatingAverage float64 `json:"rating_average" db:"rating_average" validate:""`
@@ -241,15 +241,15 @@ var ProductFieldsInstance = ProductFields{
 type ProductVariantGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	ProductId int64 `json:"product_id" db:"product_id" validate:""`
-	Sku string `json:"sku" db:"sku" validate:""`
-	Name string `json:"name" db:"name" validate:""`
-	Option1Name string `json:"option1_name" db:"option1_name" validate:""`
-	Option1Value string `json:"option1_value" db:"option1_value" validate:""`
-	Option2Name string `json:"option2_name" db:"option2_name" validate:""`
-	Option2Value string `json:"option2_value" db:"option2_value" validate:""`
-	Option3Name string `json:"option3_name" db:"option3_name" validate:""`
-	Option3Value string `json:"option3_value" db:"option3_value" validate:""`
+	ProductId int64 `json:"product_id" db:"product_id" validate:"required"`
+	Sku string `json:"sku" db:"sku" validate:"required,max=100"`
+	Name string `json:"name" db:"name" validate:"required,max=255"`
+	Option1Name string `json:"option1_name" db:"option1_name" validate:"max=100"`
+	Option1Value string `json:"option1_value" db:"option1_value" validate:"max=100"`
+	Option2Name string `json:"option2_name" db:"option2_name" validate:"max=100"`
+	Option2Value string `json:"option2_value" db:"option2_value" validate:"max=100"`
+	Option3Name string `json:"option3_name" db:"option3_name" validate:"max=100"`
+	Option3Value string `json:"option3_value" db:"option3_value" validate:"max=100"`
 	Price float64 `json:"price" db:"price" validate:""`
 	CompareAtPrice float64 `json:"compare_at_price" db:"compare_at_price" validate:""`
 	CostPrice float64 `json:"cost_price" db:"cost_price" validate:""`
@@ -262,7 +262,7 @@ type ProductVariantGenerated struct {
 	Height float64 `json:"height" db:"height" validate:""`
 	IsActive bool `json:"is_active" db:"is_active" validate:""`
 	IsDefault bool `json:"is_default" db:"is_default" validate:""`
-	ImageUrl string `json:"image_url" db:"image_url" validate:""`
+	ImageUrl string `json:"image_url" db:"image_url" validate:"max=500"`
 	SortOrder int32 `json:"sort_order" db:"sort_order" validate:""`
 	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
@@ -344,11 +344,11 @@ var ProductVariantFieldsInstance = ProductVariantFields{
 type ProductImageGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	ProductId int64 `json:"product_id" db:"product_id" validate:""`
+	ProductId int64 `json:"product_id" db:"product_id" validate:"required"`
 	VariantId int64 `json:"variant_id" db:"variant_id" validate:""`
-	ImageUrl string `json:"image_url" db:"image_url" validate:""`
-	ThumbnailUrl string `json:"thumbnail_url" db:"thumbnail_url" validate:""`
-	AltText string `json:"alt_text" db:"alt_text" validate:""`
+	ImageUrl string `json:"image_url" db:"image_url" validate:"required,max=500"`
+	ThumbnailUrl string `json:"thumbnail_url" db:"thumbnail_url" validate:"max=500"`
+	AltText string `json:"alt_text" db:"alt_text" validate:"max=255"`
 	SortOrder int32 `json:"sort_order" db:"sort_order" validate:""`
 	IsPrimary bool `json:"is_primary" db:"is_primary" validate:""`
 	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
@@ -399,9 +399,9 @@ var ProductImageFieldsInstance = ProductImageFields{
 type ProductAttributeGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	Name string `json:"name" db:"name" validate:""`
-	Code string `json:"code" db:"code" validate:""`
-	Type string `json:"type" db:"type" validate:""`
+	Name string `json:"name" db:"name" validate:"required,max=200"`
+	Code string `json:"code" db:"code" validate:"required,max=100"`
+	Type string `json:"type" db:"type" validate:"required,max=50"`
 	IsFilterable bool `json:"is_filterable" db:"is_filterable" validate:""`
 	IsVisible bool `json:"is_visible" db:"is_visible" validate:""`
 	SortOrder int32 `json:"sort_order" db:"sort_order" validate:""`
@@ -448,9 +448,9 @@ var ProductAttributeFieldsInstance = ProductAttributeFields{
 type ProductAttributeValueGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	ProductId int64 `json:"product_id" db:"product_id" validate:""`
-	AttributeId int64 `json:"attribute_id" db:"attribute_id" validate:""`
-	Value string `json:"value" db:"value" validate:""`
+	ProductId int64 `json:"product_id" db:"product_id" validate:"required"`
+	AttributeId int64 `json:"attribute_id" db:"attribute_id" validate:"required"`
+	Value string `json:"value" db:"value" validate:"required,max=500"`
 	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
 }
 

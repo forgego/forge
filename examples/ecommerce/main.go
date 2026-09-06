@@ -29,6 +29,7 @@ import (
 	"examples/ecommerce/app/orders"
 	"examples/ecommerce/app/promotions"
 	"examples/ecommerce/app/support"
+	"examples/ecommerce/app/users"
 )
 
 //go:generate forge generate
@@ -152,16 +153,17 @@ func buildEcommerceRouter(ctx context.Context, cfg *config.Config, database *db.
 	orders.RegisterAdmin(ctx)
 	promotions.RegisterAdmin(ctx)
 	support.RegisterAdmin(ctx)
+	users.RegisterAdmin(ctx)
 
 	_ = adminSite.RegisterPlugin(ctx, &ReportsPlugin{})
 	SetupDashboard()
 
 	r := server.NewRouter()
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   cfg.GetStringSlice("cors.allowed_origins"),
-		AllowedMethods:   cfg.GetStringSlice("cors.allowed_methods"),
-		AllowedHeaders:   cfg.GetStringSlice("cors.allowed_headers"),
-		ExposedHeaders:   cfg.GetStringSlice("cors.exposed_headers"),
+		AllowedOrigins:   cfg.GetStringSlice("cors.allowed_origins", nil),
+		AllowedMethods:   cfg.GetStringSlice("cors.allowed_methods", nil),
+		AllowedHeaders:   cfg.GetStringSlice("cors.allowed_headers", nil),
+		ExposedHeaders:   cfg.GetStringSlice("cors.exposed_headers", nil),
 		AllowCredentials: cfg.GetBool("cors.allow_credentials", false),
 		MaxAge:           cfg.GetInt("cors.max_age", 0),
 	}))
@@ -182,6 +184,7 @@ func buildEcommerceRouter(ctx context.Context, cfg *config.Config, database *db.
 		orders.RegisterAPI(ctx, apiRouter, database)
 		promotions.RegisterAPI(ctx, apiRouter, database)
 		support.RegisterAPI(ctx, apiRouter, database)
+		users.RegisterAPI(ctx, apiRouter, database)
 		apiRouter.RegisterRoutes(r)
 	}
 

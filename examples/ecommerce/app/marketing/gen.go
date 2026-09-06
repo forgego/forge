@@ -13,24 +13,24 @@ import (
 type CouponGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	Code string `json:"code" db:"code" validate:""`
-	Name string `json:"name" db:"name" validate:""`
+	Code string `json:"code" db:"code" validate:"required,max=50"`
+	Name string `json:"name" db:"name" validate:"required,max=200"`
 	Description string `json:"description" db:"description" validate:""`
-	DiscountType string `json:"discount_type" db:"discount_type" validate:""`
-	DiscountValue float64 `json:"discount_value" db:"discount_value" validate:""`
+	DiscountType string `json:"discount_type" db:"discount_type" validate:"required,max=20"`
+	DiscountValue float64 `json:"discount_value" db:"discount_value" validate:"required"`
 	MinimumPurchaseAmount float64 `json:"minimum_purchase_amount" db:"minimum_purchase_amount" validate:""`
 	MaximumDiscountAmount float64 `json:"maximum_discount_amount" db:"maximum_discount_amount" validate:""`
 	UsageLimit int32 `json:"usage_limit" db:"usage_limit" validate:""`
 	UsageLimitPerCustomer int32 `json:"usage_limit_per_customer" db:"usage_limit_per_customer" validate:""`
 	UsageCount int32 `json:"usage_count" db:"usage_count" validate:""`
 	AppliesToAllProducts bool `json:"applies_to_all_products" db:"applies_to_all_products" validate:""`
-	ProductIds string `json:"product_ids" db:"product_ids" validate:""`
-	CategoryIds string `json:"category_ids" db:"category_ids" validate:""`
-	ExcludedProductIds string `json:"excluded_product_ids" db:"excluded_product_ids" validate:""`
+	ProductIds string `json:"product_ids" db:"product_ids" validate:"max=500"`
+	CategoryIds string `json:"category_ids" db:"category_ids" validate:"max=500"`
+	ExcludedProductIds string `json:"excluded_product_ids" db:"excluded_product_ids" validate:"max=500"`
 	AppliesToAllCustomers bool `json:"applies_to_all_customers" db:"applies_to_all_customers" validate:""`
-	CustomerGroupIds string `json:"customer_group_ids" db:"customer_group_ids" validate:""`
+	CustomerGroupIds string `json:"customer_group_ids" db:"customer_group_ids" validate:"max=500"`
 	CustomerEmailList string `json:"customer_email_list" db:"customer_email_list" validate:""`
-	ValidFrom time.Time `json:"valid_from" db:"valid_from" validate:""`
+	ValidFrom time.Time `json:"valid_from" db:"valid_from" validate:"required"`
 	ValidUntil time.Time `json:"valid_until" db:"valid_until" validate:""`
 	IsActive bool `json:"is_active" db:"is_active" validate:""`
 	IsPublic bool `json:"is_public" db:"is_public" validate:""`
@@ -113,10 +113,10 @@ var CouponFieldsInstance = CouponFields{
 type CouponUsageGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	CouponId int64 `json:"coupon_id" db:"coupon_id" validate:""`
-	OrderId int64 `json:"order_id" db:"order_id" validate:""`
-	CustomerId int64 `json:"customer_id" db:"customer_id" validate:""`
-	DiscountAmount float64 `json:"discount_amount" db:"discount_amount" validate:""`
+	CouponId int64 `json:"coupon_id" db:"coupon_id" validate:"required"`
+	OrderId int64 `json:"order_id" db:"order_id" validate:"required"`
+	CustomerId int64 `json:"customer_id" db:"customer_id" validate:"required"`
+	DiscountAmount float64 `json:"discount_amount" db:"discount_amount" validate:"required"`
 	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
 }
 
@@ -156,14 +156,14 @@ var CouponUsageFieldsInstance = CouponUsageFields{
 type ReviewGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	ProductId int64 `json:"product_id" db:"product_id" validate:""`
-	CustomerId int64 `json:"customer_id" db:"customer_id" validate:""`
+	ProductId int64 `json:"product_id" db:"product_id" validate:"required"`
+	CustomerId int64 `json:"customer_id" db:"customer_id" validate:"required"`
 	OrderId int64 `json:"order_id" db:"order_id" validate:""`
-	Title string `json:"title" db:"title" validate:""`
-	Content string `json:"content" db:"content" validate:""`
-	Rating int32 `json:"rating" db:"rating" validate:""`
+	Title string `json:"title" db:"title" validate:"required,max=255"`
+	Content string `json:"content" db:"content" validate:"required"`
+	Rating int32 `json:"rating" db:"rating" validate:"required"`
 	IsVerifiedPurchase bool `json:"is_verified_purchase" db:"is_verified_purchase" validate:""`
-	Status string `json:"status" db:"status" validate:""`
+	Status string `json:"status" db:"status" validate:"required,max=20"`
 	IsFeatured bool `json:"is_featured" db:"is_featured" validate:""`
 	HelpfulCount int32 `json:"helpful_count" db:"helpful_count" validate:""`
 	NotHelpfulCount int32 `json:"not_helpful_count" db:"not_helpful_count" validate:""`
@@ -241,10 +241,10 @@ var ReviewFieldsInstance = ReviewFields{
 type ReviewImageGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	ReviewId int64 `json:"review_id" db:"review_id" validate:""`
-	ImageUrl string `json:"image_url" db:"image_url" validate:""`
-	ThumbnailUrl string `json:"thumbnail_url" db:"thumbnail_url" validate:""`
-	AltText string `json:"alt_text" db:"alt_text" validate:""`
+	ReviewId int64 `json:"review_id" db:"review_id" validate:"required"`
+	ImageUrl string `json:"image_url" db:"image_url" validate:"required,max=500"`
+	ThumbnailUrl string `json:"thumbnail_url" db:"thumbnail_url" validate:"max=500"`
+	AltText string `json:"alt_text" db:"alt_text" validate:"max=255"`
 	SortOrder int32 `json:"sort_order" db:"sort_order" validate:""`
 	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
 }
@@ -287,10 +287,10 @@ var ReviewImageFieldsInstance = ReviewImageFields{
 type ReviewHelpfulnessGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	ReviewId int64 `json:"review_id" db:"review_id" validate:""`
+	ReviewId int64 `json:"review_id" db:"review_id" validate:"required"`
 	CustomerId int64 `json:"customer_id" db:"customer_id" validate:""`
-	IsHelpful bool `json:"is_helpful" db:"is_helpful" validate:""`
-	IpAddress string `json:"ip_address" db:"ip_address" validate:""`
+	IsHelpful bool `json:"is_helpful" db:"is_helpful" validate:"required"`
+	IpAddress string `json:"ip_address" db:"ip_address" validate:"max=45"`
 	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
 }
 
@@ -330,14 +330,14 @@ var ReviewHelpfulnessFieldsInstance = ReviewHelpfulnessFields{
 type ProductQuestionGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	ProductId int64 `json:"product_id" db:"product_id" validate:""`
-	CustomerId int64 `json:"customer_id" db:"customer_id" validate:""`
-	Question string `json:"question" db:"question" validate:""`
+	ProductId int64 `json:"product_id" db:"product_id" validate:"required"`
+	CustomerId int64 `json:"customer_id" db:"customer_id" validate:"required"`
+	Question string `json:"question" db:"question" validate:"required"`
 	Answer string `json:"answer" db:"answer" validate:""`
 	AnsweredAt time.Time `json:"answered_at" db:"answered_at" validate:""`
 	AnsweredByUserId int64 `json:"answered_by_user_id" db:"answered_by_user_id" validate:""`
-	AnsweredByUserName string `json:"answered_by_user_name" db:"answered_by_user_name" validate:""`
-	Status string `json:"status" db:"status" validate:""`
+	AnsweredByUserName string `json:"answered_by_user_name" db:"answered_by_user_name" validate:"max=200"`
+	Status string `json:"status" db:"status" validate:"required,max=20"`
 	IsPublic bool `json:"is_public" db:"is_public" validate:""`
 	HelpfulCount int32 `json:"helpful_count" db:"helpful_count" validate:""`
 	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`

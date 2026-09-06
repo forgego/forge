@@ -7,55 +7,40 @@ import (
 	"github.com/forgego/forge/db"
 )
 
-// RegisterAPI registers all commerce API endpoints
+// RegisterAPI registers commerce API endpoints.
 func RegisterAPI(ctx context.Context, router *api.Router, database *db.DB) {
-	// ShippingMethod ViewSet
-	shippingMethodViewSet := api.NewModelViewSet(
-		ShippingMethod{},
-		database,
-		api.WithFilterFields("is_active", "carrier_name"),
-		api.WithSearchFields("name", "code", "carrier_name"),
-		api.WithOrderingFields("sort_order", "name", "base_price"),
-	)
-	router.RegisterViewSet("shipping-methods", shippingMethodViewSet)
+	_ = ctx
+	_ = database
 
-	// PaymentMethod ViewSet
-	paymentMethodViewSet := api.NewModelViewSet(
-		PaymentMethod{},
-		database,
-		api.WithFilterFields("is_active", "processor_name", "supports_refund"),
-		api.WithSearchFields("name", "code", "processor_name"),
-		api.WithOrderingFields("sort_order", "name"),
-	)
-	router.RegisterViewSet("payment-methods", paymentMethodViewSet)
+	base := api.NewBaseSerializer(nil)
 
-	// TaxRate ViewSet
-	taxRateViewSet := api.NewModelViewSet(
-		TaxRate{},
-		database,
-		api.WithFilterFields("is_active", "country", "state", "is_compound"),
-		api.WithSearchFields("name", "code", "country", "state"),
-		api.WithOrderingFields("priority", "country", "state"),
-	)
-	router.RegisterViewSet("tax-rates", taxRateViewSet)
+	router.Register("shipping-methods", &api.ViewSetConfig{
+		Model:      &ShippingMethod{},
+		Queryset:   ShippingMethodObjects,
+		Serializer: base,
+	})
 
-	// Currency ViewSet
-	currencyViewSet := api.NewModelViewSet(
-		Currency{},
-		database,
-		api.WithFilterFields("is_active", "is_default"),
-		api.WithSearchFields("code", "name"),
-		api.WithOrderingFields("code"),
-	)
-	router.RegisterViewSet("currencies", currencyViewSet)
+	router.Register("payment-methods", &api.ViewSetConfig{
+		Model:      &PaymentMethod{},
+		Queryset:   PaymentMethodObjects,
+		Serializer: base,
+	})
 
-	// ExchangeRate ViewSet
-	exchangeRateViewSet := api.NewModelViewSet(
-		ExchangeRate{},
-		database,
-		api.WithFilterFields("is_active", "from_currency_id", "to_currency_id"),
-		api.WithSearchFields("source"),
-		api.WithOrderingFields("-effective_date"),
-	)
-	router.RegisterViewSet("exchange-rates", exchangeRateViewSet)
+	router.Register("tax-rates", &api.ViewSetConfig{
+		Model:      &TaxRate{},
+		Queryset:   TaxRateObjects,
+		Serializer: base,
+	})
+
+	router.Register("currencies", &api.ViewSetConfig{
+		Model:      &Currency{},
+		Queryset:   CurrencyObjects,
+		Serializer: base,
+	})
+
+	router.Register("exchange-rates", &api.ViewSetConfig{
+		Model:      &ExchangeRate{},
+		Queryset:   ExchangeRateObjects,
+		Serializer: base,
+	})
 }

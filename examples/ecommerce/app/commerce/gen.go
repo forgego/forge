@@ -3,44 +3,29 @@ package commerce
 
 import (
 	"time"
-
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
 	validate "github.com/forgego/forge/validate"
 )
 
+
 // ShippingMethodGenerated struct definition
 type ShippingMethodGenerated struct {
 	schema.BaseSchema
-	Id                    int64     `json:"id" db:"id" validate:""`
-	Name                  string    `json:"name" db:"name" validate:""`
-	Code                  string    `json:"code" db:"code" validate:""`
-	Description           string    `json:"description" db:"description" validate:""`
-	Carrier               string    `json:"carrier" db:"carrier" validate:""`
-	ServiceLevel          string    `json:"service_level" db:"service_level" validate:""`
-	BasePrice             float64   `json:"base_price" db:"base_price" validate:""`
-	HandlingFee           float64   `json:"handling_fee" db:"handling_fee" validate:""`
-	FreeShippingThreshold float64   `json:"free_shipping_threshold" db:"free_shipping_threshold" validate:""`
-	MinWeight             float64   `json:"min_weight" db:"min_weight" validate:""`
-	MaxWeight             float64   `json:"max_weight" db:"max_weight" validate:""`
-	WeightUnit            string    `json:"weight_unit" db:"weight_unit" validate:""`
-	MinLength             float64   `json:"min_length" db:"min_length" validate:""`
-	MaxLength             float64   `json:"max_length" db:"max_length" validate:""`
-	MinWidth              float64   `json:"min_width" db:"min_width" validate:""`
-	MaxWidth              float64   `json:"max_width" db:"max_width" validate:""`
-	MinHeight             float64   `json:"min_height" db:"min_height" validate:""`
-	MaxHeight             float64   `json:"max_height" db:"max_height" validate:""`
-	DimensionUnit         string    `json:"dimension_unit" db:"dimension_unit" validate:""`
-	MinDays               int32     `json:"min_days" db:"min_days" validate:""`
-	MaxDays               int32     `json:"max_days" db:"max_days" validate:""`
-	Countries             string    `json:"countries" db:"countries" validate:""`
-	ExcludedCountries     string    `json:"excluded_countries" db:"excluded_countries" validate:""`
-	IsActive              bool      `json:"is_active" db:"is_active" validate:""`
-	IsDefault             bool      `json:"is_default" db:"is_default" validate:""`
-	Priority              int32     `json:"priority" db:"priority" validate:""`
-	Config                string    `json:"config" db:"config" validate:""`
-	CreatedAt             time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt             time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	Name string `json:"name" db:"name" validate:"required,max=200"`
+	Code string `json:"code" db:"code" validate:"required,max=50"`
+	Description string `json:"description" db:"description" validate:""`
+	BasePrice float64 `json:"base_price" db:"base_price" validate:""`
+	PricePerKg float64 `json:"price_per_kg" db:"price_per_kg" validate:""`
+	EstimatedDaysMin int32 `json:"estimated_days_min" db:"estimated_days_min" validate:""`
+	EstimatedDaysMax int32 `json:"estimated_days_max" db:"estimated_days_max" validate:""`
+	IsActive bool `json:"is_active" db:"is_active" validate:""`
+	SortOrder int32 `json:"sort_order" db:"sort_order" validate:""`
+	CarrierName string `json:"carrier_name" db:"carrier_name" validate:"max=200"`
+	TrackingUrlFormat string `json:"tracking_url_format" db:"tracking_url_format" validate:"max=500"`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the ShippingMethod model
@@ -50,95 +35,62 @@ func (m *ShippingMethod) Validate() error {
 }
 
 // ShippingMethodObjects provides type-safe operations for ShippingMethod
+// Uses generic orm.Manager[ShippingMethod] and orm.BaseQuerySet[ShippingMethod]
 var ShippingMethodObjects, _ = orm.NewManager[ShippingMethod]("shipping_methods")
 
 // ShippingMethodFields provides type-safe field access for ShippingMethod
 type ShippingMethodFields struct {
-	Id                    orm.Field[int64]
-	Name                  orm.Field[string]
-	Code                  orm.Field[string]
-	Description           orm.Field[string]
-	Carrier               orm.Field[string]
-	ServiceLevel          orm.Field[string]
-	BasePrice             orm.Field[float64]
-	HandlingFee           orm.Field[float64]
-	FreeShippingThreshold orm.Field[float64]
-	MinWeight             orm.Field[float64]
-	MaxWeight             orm.Field[float64]
-	WeightUnit            orm.Field[string]
-	MinLength             orm.Field[float64]
-	MaxLength             orm.Field[float64]
-	MinWidth              orm.Field[float64]
-	MaxWidth              orm.Field[float64]
-	MinHeight             orm.Field[float64]
-	MaxHeight             orm.Field[float64]
-	DimensionUnit         orm.Field[string]
-	MinDays               orm.Field[int32]
-	MaxDays               orm.Field[int32]
-	Countries             orm.Field[string]
-	ExcludedCountries     orm.Field[string]
-	IsActive              orm.Field[bool]
-	IsDefault             orm.Field[bool]
-	Priority              orm.Field[int32]
-	Config                orm.Field[string]
-	CreatedAt             orm.Field[time.Time]
-	UpdatedAt             orm.Field[time.Time]
+	Id orm.Field[int64]
+	Name orm.Field[string]
+	Code orm.Field[string]
+	Description orm.Field[string]
+	BasePrice orm.Field[float64]
+	PricePerKg orm.Field[float64]
+	EstimatedDaysMin orm.Field[int32]
+	EstimatedDaysMax orm.Field[int32]
+	IsActive orm.Field[bool]
+	SortOrder orm.Field[int32]
+	CarrierName orm.Field[string]
+	TrackingUrlFormat orm.Field[string]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
 }
 
 var ShippingMethodFieldsInstance = ShippingMethodFields{
-	Id:                    orm.NewField[int64]("id", "shipping_methods"),
-	Name:                  orm.NewField[string]("name", "shipping_methods"),
-	Code:                  orm.NewField[string]("code", "shipping_methods"),
-	Description:           orm.NewField[string]("description", "shipping_methods"),
-	Carrier:               orm.NewField[string]("carrier", "shipping_methods"),
-	ServiceLevel:          orm.NewField[string]("service_level", "shipping_methods"),
-	BasePrice:             orm.NewField[float64]("base_price", "shipping_methods"),
-	HandlingFee:           orm.NewField[float64]("handling_fee", "shipping_methods"),
-	FreeShippingThreshold: orm.NewField[float64]("free_shipping_threshold", "shipping_methods"),
-	MinWeight:             orm.NewField[float64]("min_weight", "shipping_methods"),
-	MaxWeight:             orm.NewField[float64]("max_weight", "shipping_methods"),
-	WeightUnit:            orm.NewField[string]("weight_unit", "shipping_methods"),
-	MinLength:             orm.NewField[float64]("min_length", "shipping_methods"),
-	MaxLength:             orm.NewField[float64]("max_length", "shipping_methods"),
-	MinWidth:              orm.NewField[float64]("min_width", "shipping_methods"),
-	MaxWidth:              orm.NewField[float64]("max_width", "shipping_methods"),
-	MinHeight:             orm.NewField[float64]("min_height", "shipping_methods"),
-	MaxHeight:             orm.NewField[float64]("max_height", "shipping_methods"),
-	DimensionUnit:         orm.NewField[string]("dimension_unit", "shipping_methods"),
-	MinDays:               orm.NewField[int32]("min_days", "shipping_methods"),
-	MaxDays:               orm.NewField[int32]("max_days", "shipping_methods"),
-	Countries:             orm.NewField[string]("countries", "shipping_methods"),
-	ExcludedCountries:     orm.NewField[string]("excluded_countries", "shipping_methods"),
-	IsActive:              orm.NewField[bool]("is_active", "shipping_methods"),
-	IsDefault:             orm.NewField[bool]("is_default", "shipping_methods"),
-	Priority:              orm.NewField[int32]("priority", "shipping_methods"),
-	Config:                orm.NewField[string]("config", "shipping_methods"),
-	CreatedAt:             orm.NewField[time.Time]("created_at", "shipping_methods"),
-	UpdatedAt:             orm.NewField[time.Time]("updated_at", "shipping_methods"),
+	Id: orm.NewField[int64]("id", "shipping_methods"),
+	Name: orm.NewField[string]("name", "shipping_methods"),
+	Code: orm.NewField[string]("code", "shipping_methods"),
+	Description: orm.NewField[string]("description", "shipping_methods"),
+	BasePrice: orm.NewField[float64]("base_price", "shipping_methods"),
+	PricePerKg: orm.NewField[float64]("price_per_kg", "shipping_methods"),
+	EstimatedDaysMin: orm.NewField[int32]("estimated_days_min", "shipping_methods"),
+	EstimatedDaysMax: orm.NewField[int32]("estimated_days_max", "shipping_methods"),
+	IsActive: orm.NewField[bool]("is_active", "shipping_methods"),
+	SortOrder: orm.NewField[int32]("sort_order", "shipping_methods"),
+	CarrierName: orm.NewField[string]("carrier_name", "shipping_methods"),
+	TrackingUrlFormat: orm.NewField[string]("tracking_url_format", "shipping_methods"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "shipping_methods"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "shipping_methods"),
 }
+
+
+
 
 // PaymentMethodGenerated struct definition
 type PaymentMethodGenerated struct {
 	schema.BaseSchema
-	Id            int64     `json:"id" db:"id" validate:""`
-	Name          string    `json:"name" db:"name" validate:""`
-	Code          string    `json:"code" db:"code" validate:""`
-	Type          string    `json:"type" db:"type" validate:""`
-	Description   string    `json:"description" db:"description" validate:""`
-	Gateway       string    `json:"gateway" db:"gateway" validate:""`
-	GatewayConfig string    `json:"gateway_config" db:"gateway_config" validate:""`
-	FixedFee      float64   `json:"fixed_fee" db:"fixed_fee" validate:""`
-	PercentageFee float64   `json:"percentage_fee" db:"percentage_fee" validate:""`
-	MinAmount     float64   `json:"min_amount" db:"min_amount" validate:""`
-	MaxAmount     float64   `json:"max_amount" db:"max_amount" validate:""`
-	Currencies    string    `json:"currencies" db:"currencies" validate:""`
-	Icon          string    `json:"icon" db:"icon" validate:""`
-	DisplayOrder  int32     `json:"display_order" db:"display_order" validate:""`
-	IsActive      bool      `json:"is_active" db:"is_active" validate:""`
-	IsDefault     bool      `json:"is_default" db:"is_default" validate:""`
-	TestMode      bool      `json:"test_mode" db:"test_mode" validate:""`
-	CreatedAt     time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt     time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	Name string `json:"name" db:"name" validate:"required,max=200"`
+	Code string `json:"code" db:"code" validate:"required,max=50"`
+	Description string `json:"description" db:"description" validate:""`
+	ProcessorName string `json:"processor_name" db:"processor_name" validate:"max=100"`
+	IsActive bool `json:"is_active" db:"is_active" validate:""`
+	SortOrder int32 `json:"sort_order" db:"sort_order" validate:""`
+	RequiresAuth bool `json:"requires_auth" db:"requires_auth" validate:""`
+	SupportsRefund bool `json:"supports_refund" db:"supports_refund" validate:""`
+	IconUrl string `json:"icon_url" db:"icon_url" validate:"max=500"`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the PaymentMethod model
@@ -148,76 +100,61 @@ func (m *PaymentMethod) Validate() error {
 }
 
 // PaymentMethodObjects provides type-safe operations for PaymentMethod
+// Uses generic orm.Manager[PaymentMethod] and orm.BaseQuerySet[PaymentMethod]
 var PaymentMethodObjects, _ = orm.NewManager[PaymentMethod]("payment_methods")
 
 // PaymentMethodFields provides type-safe field access for PaymentMethod
 type PaymentMethodFields struct {
-	Id            orm.Field[int64]
-	Name          orm.Field[string]
-	Code          orm.Field[string]
-	Type          orm.Field[string]
-	Description   orm.Field[string]
-	Gateway       orm.Field[string]
-	GatewayConfig orm.Field[string]
-	FixedFee      orm.Field[float64]
-	PercentageFee orm.Field[float64]
-	MinAmount     orm.Field[float64]
-	MaxAmount     orm.Field[float64]
-	Currencies    orm.Field[string]
-	Icon          orm.Field[string]
-	DisplayOrder  orm.Field[int32]
-	IsActive      orm.Field[bool]
-	IsDefault     orm.Field[bool]
-	TestMode      orm.Field[bool]
-	CreatedAt     orm.Field[time.Time]
-	UpdatedAt     orm.Field[time.Time]
+	Id orm.Field[int64]
+	Name orm.Field[string]
+	Code orm.Field[string]
+	Description orm.Field[string]
+	ProcessorName orm.Field[string]
+	IsActive orm.Field[bool]
+	SortOrder orm.Field[int32]
+	RequiresAuth orm.Field[bool]
+	SupportsRefund orm.Field[bool]
+	IconUrl orm.Field[string]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
 }
 
 var PaymentMethodFieldsInstance = PaymentMethodFields{
-	Id:            orm.NewField[int64]("id", "payment_methods"),
-	Name:          orm.NewField[string]("name", "payment_methods"),
-	Code:          orm.NewField[string]("code", "payment_methods"),
-	Type:          orm.NewField[string]("type", "payment_methods"),
-	Description:   orm.NewField[string]("description", "payment_methods"),
-	Gateway:       orm.NewField[string]("gateway", "payment_methods"),
-	GatewayConfig: orm.NewField[string]("gateway_config", "payment_methods"),
-	FixedFee:      orm.NewField[float64]("fixed_fee", "payment_methods"),
-	PercentageFee: orm.NewField[float64]("percentage_fee", "payment_methods"),
-	MinAmount:     orm.NewField[float64]("min_amount", "payment_methods"),
-	MaxAmount:     orm.NewField[float64]("max_amount", "payment_methods"),
-	Currencies:    orm.NewField[string]("currencies", "payment_methods"),
-	Icon:          orm.NewField[string]("icon", "payment_methods"),
-	DisplayOrder:  orm.NewField[int32]("display_order", "payment_methods"),
-	IsActive:      orm.NewField[bool]("is_active", "payment_methods"),
-	IsDefault:     orm.NewField[bool]("is_default", "payment_methods"),
-	TestMode:      orm.NewField[bool]("test_mode", "payment_methods"),
-	CreatedAt:     orm.NewField[time.Time]("created_at", "payment_methods"),
-	UpdatedAt:     orm.NewField[time.Time]("updated_at", "payment_methods"),
+	Id: orm.NewField[int64]("id", "payment_methods"),
+	Name: orm.NewField[string]("name", "payment_methods"),
+	Code: orm.NewField[string]("code", "payment_methods"),
+	Description: orm.NewField[string]("description", "payment_methods"),
+	ProcessorName: orm.NewField[string]("processor_name", "payment_methods"),
+	IsActive: orm.NewField[bool]("is_active", "payment_methods"),
+	SortOrder: orm.NewField[int32]("sort_order", "payment_methods"),
+	RequiresAuth: orm.NewField[bool]("requires_auth", "payment_methods"),
+	SupportsRefund: orm.NewField[bool]("supports_refund", "payment_methods"),
+	IconUrl: orm.NewField[string]("icon_url", "payment_methods"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "payment_methods"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "payment_methods"),
 }
+
+
+
 
 // TaxRateGenerated struct definition
 type TaxRateGenerated struct {
 	schema.BaseSchema
-	Id                int64     `json:"id" db:"id" validate:""`
-	Name              string    `json:"name" db:"name" validate:""`
-	Code              string    `json:"code" db:"code" validate:""`
-	Description       string    `json:"description" db:"description" validate:""`
-	Rate              float64   `json:"rate" db:"rate" validate:""`
-	Country           string    `json:"country" db:"country" validate:""`
-	State             string    `json:"state" db:"state" validate:""`
-	ZipPattern        string    `json:"zip_pattern" db:"zip_pattern" validate:""`
-	City              string    `json:"city" db:"city" validate:""`
-	TaxType           string    `json:"tax_type" db:"tax_type" validate:""`
-	AppliesToProducts bool      `json:"applies_to_products" db:"applies_to_products" validate:""`
-	AppliesToShipping bool      `json:"applies_to_shipping" db:"applies_to_shipping" validate:""`
-	AppliesToServices bool      `json:"applies_to_services" db:"applies_to_services" validate:""`
-	StartDate         time.Time `json:"start_date" db:"start_date" validate:""`
-	EndDate           time.Time `json:"end_date" db:"end_date" validate:""`
-	IsActive          bool      `json:"is_active" db:"is_active" validate:""`
-	IsCompound        bool      `json:"is_compound" db:"is_compound" validate:""`
-	Priority          int32     `json:"priority" db:"priority" validate:""`
-	CreatedAt         time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt         time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	Name string `json:"name" db:"name" validate:"required,max=200"`
+	Code string `json:"code" db:"code" validate:"required,max=50"`
+	Rate float64 `json:"rate" db:"rate" validate:"required"`
+	Country string `json:"country" db:"country" validate:"max=2"`
+	State string `json:"state" db:"state" validate:"max=100"`
+	City string `json:"city" db:"city" validate:"max=100"`
+	ZipCode string `json:"zip_code" db:"zip_code" validate:"max=20"`
+	IsCompound bool `json:"is_compound" db:"is_compound" validate:""`
+	IsActive bool `json:"is_active" db:"is_active" validate:""`
+	Priority int32 `json:"priority" db:"priority" validate:""`
+	ApplyToShipping bool `json:"apply_to_shipping" db:"apply_to_shipping" validate:""`
+	IncludedInPrice bool `json:"included_in_price" db:"included_in_price" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the TaxRate model
@@ -227,72 +164,61 @@ func (m *TaxRate) Validate() error {
 }
 
 // TaxRateObjects provides type-safe operations for TaxRate
+// Uses generic orm.Manager[TaxRate] and orm.BaseQuerySet[TaxRate]
 var TaxRateObjects, _ = orm.NewManager[TaxRate]("tax_rates")
 
 // TaxRateFields provides type-safe field access for TaxRate
 type TaxRateFields struct {
-	Id                orm.Field[int64]
-	Name              orm.Field[string]
-	Code              orm.Field[string]
-	Description       orm.Field[string]
-	Rate              orm.Field[float64]
-	Country           orm.Field[string]
-	State             orm.Field[string]
-	ZipPattern        orm.Field[string]
-	City              orm.Field[string]
-	TaxType           orm.Field[string]
-	AppliesToProducts orm.Field[bool]
-	AppliesToShipping orm.Field[bool]
-	AppliesToServices orm.Field[bool]
-	StartDate         orm.Field[time.Time]
-	EndDate           orm.Field[time.Time]
-	IsActive          orm.Field[bool]
-	IsCompound        orm.Field[bool]
-	Priority          orm.Field[int32]
-	CreatedAt         orm.Field[time.Time]
-	UpdatedAt         orm.Field[time.Time]
+	Id orm.Field[int64]
+	Name orm.Field[string]
+	Code orm.Field[string]
+	Rate orm.Field[float64]
+	Country orm.Field[string]
+	State orm.Field[string]
+	City orm.Field[string]
+	ZipCode orm.Field[string]
+	IsCompound orm.Field[bool]
+	IsActive orm.Field[bool]
+	Priority orm.Field[int32]
+	ApplyToShipping orm.Field[bool]
+	IncludedInPrice orm.Field[bool]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
 }
 
 var TaxRateFieldsInstance = TaxRateFields{
-	Id:                orm.NewField[int64]("id", "tax_rates"),
-	Name:              orm.NewField[string]("name", "tax_rates"),
-	Code:              orm.NewField[string]("code", "tax_rates"),
-	Description:       orm.NewField[string]("description", "tax_rates"),
-	Rate:              orm.NewField[float64]("rate", "tax_rates"),
-	Country:           orm.NewField[string]("country", "tax_rates"),
-	State:             orm.NewField[string]("state", "tax_rates"),
-	ZipPattern:        orm.NewField[string]("zip_pattern", "tax_rates"),
-	City:              orm.NewField[string]("city", "tax_rates"),
-	TaxType:           orm.NewField[string]("tax_type", "tax_rates"),
-	AppliesToProducts: orm.NewField[bool]("applies_to_products", "tax_rates"),
-	AppliesToShipping: orm.NewField[bool]("applies_to_shipping", "tax_rates"),
-	AppliesToServices: orm.NewField[bool]("applies_to_services", "tax_rates"),
-	StartDate:         orm.NewField[time.Time]("start_date", "tax_rates"),
-	EndDate:           orm.NewField[time.Time]("end_date", "tax_rates"),
-	IsActive:          orm.NewField[bool]("is_active", "tax_rates"),
-	IsCompound:        orm.NewField[bool]("is_compound", "tax_rates"),
-	Priority:          orm.NewField[int32]("priority", "tax_rates"),
-	CreatedAt:         orm.NewField[time.Time]("created_at", "tax_rates"),
-	UpdatedAt:         orm.NewField[time.Time]("updated_at", "tax_rates"),
+	Id: orm.NewField[int64]("id", "tax_rates"),
+	Name: orm.NewField[string]("name", "tax_rates"),
+	Code: orm.NewField[string]("code", "tax_rates"),
+	Rate: orm.NewField[float64]("rate", "tax_rates"),
+	Country: orm.NewField[string]("country", "tax_rates"),
+	State: orm.NewField[string]("state", "tax_rates"),
+	City: orm.NewField[string]("city", "tax_rates"),
+	ZipCode: orm.NewField[string]("zip_code", "tax_rates"),
+	IsCompound: orm.NewField[bool]("is_compound", "tax_rates"),
+	IsActive: orm.NewField[bool]("is_active", "tax_rates"),
+	Priority: orm.NewField[int32]("priority", "tax_rates"),
+	ApplyToShipping: orm.NewField[bool]("apply_to_shipping", "tax_rates"),
+	IncludedInPrice: orm.NewField[bool]("included_in_price", "tax_rates"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "tax_rates"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "tax_rates"),
 }
+
+
+
 
 // CurrencyGenerated struct definition
 type CurrencyGenerated struct {
 	schema.BaseSchema
-	Id                int64     `json:"id" db:"id" validate:""`
-	Code              string    `json:"code" db:"code" validate:""`
-	Name              string    `json:"name" db:"name" validate:""`
-	Symbol            string    `json:"symbol" db:"symbol" validate:""`
-	DecimalPlaces     int32     `json:"decimal_places" db:"decimal_places" validate:""`
-	DecimalSeparator  string    `json:"decimal_separator" db:"decimal_separator" validate:""`
-	ThousandSeparator string    `json:"thousand_separator" db:"thousand_separator" validate:""`
-	SymbolPosition    string    `json:"symbol_position" db:"symbol_position" validate:""`
-	IsBaseCurrency    bool      `json:"is_base_currency" db:"is_base_currency" validate:""`
-	ExchangeRate      float64   `json:"exchange_rate" db:"exchange_rate" validate:""`
-	IsActive          bool      `json:"is_active" db:"is_active" validate:""`
-	IsDefault         bool      `json:"is_default" db:"is_default" validate:""`
-	CreatedAt         time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt         time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	Code string `json:"code" db:"code" validate:"required,max=3"`
+	Name string `json:"name" db:"name" validate:"required,max=100"`
+	Symbol string `json:"symbol" db:"symbol" validate:"max=10"`
+	DecimalPlaces int32 `json:"decimal_places" db:"decimal_places" validate:""`
+	IsActive bool `json:"is_active" db:"is_active" validate:""`
+	IsDefault bool `json:"is_default" db:"is_default" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the Currency model
@@ -302,55 +228,49 @@ func (m *Currency) Validate() error {
 }
 
 // CurrencyObjects provides type-safe operations for Currency
+// Uses generic orm.Manager[Currency] and orm.BaseQuerySet[Currency]
 var CurrencyObjects, _ = orm.NewManager[Currency]("currencies")
 
 // CurrencyFields provides type-safe field access for Currency
 type CurrencyFields struct {
-	Id                orm.Field[int64]
-	Code              orm.Field[string]
-	Name              orm.Field[string]
-	Symbol            orm.Field[string]
-	DecimalPlaces     orm.Field[int32]
-	DecimalSeparator  orm.Field[string]
-	ThousandSeparator orm.Field[string]
-	SymbolPosition    orm.Field[string]
-	IsBaseCurrency    orm.Field[bool]
-	ExchangeRate      orm.Field[float64]
-	IsActive          orm.Field[bool]
-	IsDefault         orm.Field[bool]
-	CreatedAt         orm.Field[time.Time]
-	UpdatedAt         orm.Field[time.Time]
+	Id orm.Field[int64]
+	Code orm.Field[string]
+	Name orm.Field[string]
+	Symbol orm.Field[string]
+	DecimalPlaces orm.Field[int32]
+	IsActive orm.Field[bool]
+	IsDefault orm.Field[bool]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
 }
 
 var CurrencyFieldsInstance = CurrencyFields{
-	Id:                orm.NewField[int64]("id", "currencies"),
-	Code:              orm.NewField[string]("code", "currencies"),
-	Name:              orm.NewField[string]("name", "currencies"),
-	Symbol:            orm.NewField[string]("symbol", "currencies"),
-	DecimalPlaces:     orm.NewField[int32]("decimal_places", "currencies"),
-	DecimalSeparator:  orm.NewField[string]("decimal_separator", "currencies"),
-	ThousandSeparator: orm.NewField[string]("thousand_separator", "currencies"),
-	SymbolPosition:    orm.NewField[string]("symbol_position", "currencies"),
-	IsBaseCurrency:    orm.NewField[bool]("is_base_currency", "currencies"),
-	ExchangeRate:      orm.NewField[float64]("exchange_rate", "currencies"),
-	IsActive:          orm.NewField[bool]("is_active", "currencies"),
-	IsDefault:         orm.NewField[bool]("is_default", "currencies"),
-	CreatedAt:         orm.NewField[time.Time]("created_at", "currencies"),
-	UpdatedAt:         orm.NewField[time.Time]("updated_at", "currencies"),
+	Id: orm.NewField[int64]("id", "currencies"),
+	Code: orm.NewField[string]("code", "currencies"),
+	Name: orm.NewField[string]("name", "currencies"),
+	Symbol: orm.NewField[string]("symbol", "currencies"),
+	DecimalPlaces: orm.NewField[int32]("decimal_places", "currencies"),
+	IsActive: orm.NewField[bool]("is_active", "currencies"),
+	IsDefault: orm.NewField[bool]("is_default", "currencies"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "currencies"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "currencies"),
 }
+
+
+
 
 // ExchangeRateGenerated struct definition
 type ExchangeRateGenerated struct {
 	schema.BaseSchema
-	Id            int64     `json:"id" db:"id" validate:""`
-	FromCurrency  string    `json:"from_currency" db:"from_currency" validate:""`
-	ToCurrency    string    `json:"to_currency" db:"to_currency" validate:""`
-	Rate          float64   `json:"rate" db:"rate" validate:""`
-	EffectiveFrom time.Time `json:"effective_from" db:"effective_from" validate:""`
-	EffectiveTo   time.Time `json:"effective_to" db:"effective_to" validate:""`
-	Provider      string    `json:"provider" db:"provider" validate:""`
-	CreatedAt     time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt     time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	FromCurrencyId int64 `json:"from_currency_id" db:"from_currency_id" validate:"required"`
+	ToCurrencyId int64 `json:"to_currency_id" db:"to_currency_id" validate:"required"`
+	Rate float64 `json:"rate" db:"rate" validate:"required"`
+	EffectiveDate time.Time `json:"effective_date" db:"effective_date" validate:"required"`
+	Source string `json:"source" db:"source" validate:"max=100"`
+	IsActive bool `json:"is_active" db:"is_active" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the ExchangeRate model
@@ -360,29 +280,34 @@ func (m *ExchangeRate) Validate() error {
 }
 
 // ExchangeRateObjects provides type-safe operations for ExchangeRate
+// Uses generic orm.Manager[ExchangeRate] and orm.BaseQuerySet[ExchangeRate]
 var ExchangeRateObjects, _ = orm.NewManager[ExchangeRate]("exchange_rates")
 
 // ExchangeRateFields provides type-safe field access for ExchangeRate
 type ExchangeRateFields struct {
-	Id            orm.Field[int64]
-	FromCurrency  orm.Field[string]
-	ToCurrency    orm.Field[string]
-	Rate          orm.Field[float64]
-	EffectiveFrom orm.Field[time.Time]
-	EffectiveTo   orm.Field[time.Time]
-	Provider      orm.Field[string]
-	CreatedAt     orm.Field[time.Time]
-	UpdatedAt     orm.Field[time.Time]
+	Id orm.Field[int64]
+	FromCurrencyId orm.Field[int64]
+	ToCurrencyId orm.Field[int64]
+	Rate orm.Field[float64]
+	EffectiveDate orm.Field[time.Time]
+	Source orm.Field[string]
+	IsActive orm.Field[bool]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
 }
 
 var ExchangeRateFieldsInstance = ExchangeRateFields{
-	Id:            orm.NewField[int64]("id", "exchange_rates"),
-	FromCurrency:  orm.NewField[string]("from_currency", "exchange_rates"),
-	ToCurrency:    orm.NewField[string]("to_currency", "exchange_rates"),
-	Rate:          orm.NewField[float64]("rate", "exchange_rates"),
-	EffectiveFrom: orm.NewField[time.Time]("effective_from", "exchange_rates"),
-	EffectiveTo:   orm.NewField[time.Time]("effective_to", "exchange_rates"),
-	Provider:      orm.NewField[string]("provider", "exchange_rates"),
-	CreatedAt:     orm.NewField[time.Time]("created_at", "exchange_rates"),
-	UpdatedAt:     orm.NewField[time.Time]("updated_at", "exchange_rates"),
+	Id: orm.NewField[int64]("id", "exchange_rates"),
+	FromCurrencyId: orm.NewField[int64]("from_currency_id", "exchange_rates"),
+	ToCurrencyId: orm.NewField[int64]("to_currency_id", "exchange_rates"),
+	Rate: orm.NewField[float64]("rate", "exchange_rates"),
+	EffectiveDate: orm.NewField[time.Time]("effective_date", "exchange_rates"),
+	Source: orm.NewField[string]("source", "exchange_rates"),
+	IsActive: orm.NewField[bool]("is_active", "exchange_rates"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "exchange_rates"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "exchange_rates"),
 }
+
+
+
+

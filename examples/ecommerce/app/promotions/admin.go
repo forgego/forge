@@ -17,7 +17,7 @@ func RegisterAdmin(ctx context.Context) error {
 			PromotionFieldsInstance.DiscountType,
 			PromotionFieldsInstance.DiscountValue,
 			PromotionFieldsInstance.IsActive,
-			PromotionFieldsInstance.TimesUsed,
+			PromotionFieldsInstance.UsageCount,
 			PromotionFieldsInstance.StartDate,
 			PromotionFieldsInstance.EndDate,
 		},
@@ -29,7 +29,7 @@ func RegisterAdmin(ctx context.Context) error {
 		ListFilter: []admin.Field{
 			PromotionFieldsInstance.IsActive,
 			PromotionFieldsInstance.DiscountType,
-			PromotionFieldsInstance.CanStack,
+			PromotionFieldsInstance.IsStackable,
 		},
 		Ordering: []admin.Field{
 			PromotionFieldsInstance.Priority,
@@ -47,16 +47,15 @@ func RegisterAdmin(ctx context.Context) error {
 			PromotionRuleFieldsInstance.Id,
 			PromotionRuleFieldsInstance.PromotionId,
 			PromotionRuleFieldsInstance.RuleType,
-			PromotionRuleFieldsInstance.Parameters,
-			PromotionRuleFieldsInstance.Logic,
+			PromotionRuleFieldsInstance.Value,
+			PromotionRuleFieldsInstance.LogicType,
 		},
 		SearchFields: []admin.Field{
 			PromotionRuleFieldsInstance.RuleType,
-			PromotionRuleFieldsInstance.Parameters,
+			PromotionRuleFieldsInstance.Value,
 		},
 		ListFilter: []admin.Field{
 			PromotionRuleFieldsInstance.RuleType,
-			PromotionRuleFieldsInstance.IsActive,
 		},
 		Ordering: []admin.Field{
 			PromotionRuleFieldsInstance.PromotionId,

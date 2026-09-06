@@ -17,7 +17,7 @@ func RegisterAdmin(ctx context.Context) error {
 			SupportTicketFieldsInstance.Subject,
 			SupportTicketFieldsInstance.Status,
 			SupportTicketFieldsInstance.Priority,
-			SupportTicketFieldsInstance.Type,
+			SupportTicketFieldsInstance.Category,
 			SupportTicketFieldsInstance.AssignedTo,
 			SupportTicketFieldsInstance.CreatedAt,
 		},
@@ -29,8 +29,8 @@ func RegisterAdmin(ctx context.Context) error {
 		ListFilter: []admin.Field{
 			SupportTicketFieldsInstance.Status,
 			SupportTicketFieldsInstance.Priority,
-			SupportTicketFieldsInstance.Type,
-			SupportTicketFieldsInstance.RelatedType,
+			SupportTicketFieldsInstance.Category,
+			SupportTicketFieldsInstance.OrderId,
 		},
 		Ordering: []admin.Field{
 			SupportTicketFieldsInstance.CreatedAt,
@@ -47,17 +47,17 @@ func RegisterAdmin(ctx context.Context) error {
 			SupportMessageFieldsInstance.Id,
 			SupportMessageFieldsInstance.TicketId,
 			SupportMessageFieldsInstance.SenderType,
-			SupportMessageFieldsInstance.CustomerId,
-			SupportMessageFieldsInstance.IsInternalNote,
+			SupportMessageFieldsInstance.SenderId,
+			SupportMessageFieldsInstance.IsInternal,
 			SupportMessageFieldsInstance.CreatedAt,
 		},
 		SearchFields: []admin.Field{
-			SupportMessageFieldsInstance.Content,
-			SupportMessageFieldsInstance.CustomerId,
+			SupportMessageFieldsInstance.Message,
+			SupportMessageFieldsInstance.SenderId,
 		},
 		ListFilter: []admin.Field{
 			SupportMessageFieldsInstance.SenderType,
-			SupportMessageFieldsInstance.IsInternalNote,
+			SupportMessageFieldsInstance.IsInternal,
 		},
 		Ordering: []admin.Field{
 			SupportMessageFieldsInstance.CreatedAt,

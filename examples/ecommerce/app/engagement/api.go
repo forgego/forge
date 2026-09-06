@@ -7,75 +7,52 @@ import (
 	"github.com/forgego/forge/db"
 )
 
-// RegisterAPI registers all engagement API endpoints
+// RegisterAPI registers engagement API endpoints.
 func RegisterAPI(ctx context.Context, router *api.Router, database *db.DB) {
-	// RecentlyViewed ViewSet
-	recentlyViewedViewSet := api.NewModelViewSet(
-		RecentlyViewed{},
-		database,
-		api.WithFilterFields("customer_id", "product_id", "viewed_at"),
-		api.WithSearchFields("session_id"),
-		api.WithOrderingFields("-viewed_at", "view_count"),
-	)
-	router.RegisterViewSet("recently-viewed", recentlyViewedViewSet)
+	_ = ctx
+	_ = database
 
-	// ProductComparison ViewSet
-	productComparisonViewSet := api.NewModelViewSet(
-		ProductComparison{},
-		database,
-		api.WithFilterFields("customer_id", "is_public"),
-		api.WithSearchFields("name"),
-		api.WithOrderingFields("-created_at"),
-	)
-	router.RegisterViewSet("product-comparisons", productComparisonViewSet)
+	base := api.NewBaseSerializer(nil)
 
-	// Notification ViewSet
-	notificationViewSet := api.NewModelViewSet(
-		Notification{},
-		database,
-		api.WithFilterFields("customer_id", "type", "priority", "is_read"),
-		api.WithSearchFields("title", "message"),
-		api.WithOrderingFields("-created_at"),
-	)
-	router.RegisterViewSet("notifications", notificationViewSet)
+	router.Register("recently-viewed", &api.ViewSetConfig{
+		Model:      &RecentlyViewed{},
+		Queryset:   RecentlyViewedObjects,
+		Serializer: base,
+	})
 
-	// CustomerActivity ViewSet (read-only for analytics)
-	customerActivityViewSet := api.NewModelViewSet(
-		CustomerActivity{},
-		database,
-		api.WithFilterFields("customer_id", "activity_type", "entity_type"),
-		api.WithSearchFields("description"),
-		api.WithOrderingFields("-created_at"),
-	)
-	router.RegisterViewSet("customer-activities", customerActivityViewSet)
+	router.Register("product-comparisons", &api.ViewSetConfig{
+		Model:      &ProductComparison{},
+		Queryset:   ProductComparisonObjects,
+		Serializer: base,
+	})
 
-	// AbandonedCartReminder ViewSet
-	abandonedCartReminderViewSet := api.NewModelViewSet(
-		AbandonedCartReminder{},
-		database,
-		api.WithFilterFields("customer_id", "cart_id", "status", "converted"),
-		api.WithSearchFields("email_address"),
-		api.WithOrderingFields("-sent_at"),
-	)
-	router.RegisterViewSet("abandoned-cart-reminders", abandonedCartReminderViewSet)
+	router.Register("notifications", &api.ViewSetConfig{
+		Model:      &Notification{},
+		Queryset:   NotificationObjects,
+		Serializer: base,
+	})
 
-	// UserSegment ViewSet
-	userSegmentViewSet := api.NewModelViewSet(
-		UserSegment{},
-		database,
-		api.WithFilterFields("is_active", "is_dynamic"),
-		api.WithSearchFields("name", "description"),
-		api.WithOrderingFields("-priority", "name"),
-	)
-	router.RegisterViewSet("user-segments", userSegmentViewSet)
+	router.Register("customer-activities", &api.ViewSetConfig{
+		Model:      &CustomerActivity{},
+		Queryset:   CustomerActivityObjects,
+		Serializer: base,
+	})
 
-	// SegmentRule ViewSet
-	segmentRuleViewSet := api.NewModelViewSet(
-		SegmentRule{},
-		database,
-		api.WithFilterFields("segment_id", "operator", "logic_type"),
-		api.WithSearchFields("field", "value"),
-		api.WithOrderingFields("segment_id", "sort_order"),
-	)
-	router.RegisterViewSet("segment-rules", segmentRuleViewSet)
+	router.Register("abandoned-cart-reminders", &api.ViewSetConfig{
+		Model:      &AbandonedCartReminder{},
+		Queryset:   AbandonedCartReminderObjects,
+		Serializer: base,
+	})
+
+	router.Register("user-segments", &api.ViewSetConfig{
+		Model:      &UserSegment{},
+		Queryset:   UserSegmentObjects,
+		Serializer: base,
+	})
+
+	router.Register("segment-rules", &api.ViewSetConfig{
+		Model:      &SegmentRule{},
+		Queryset:   SegmentRuleObjects,
+		Serializer: base,
+	})
 }

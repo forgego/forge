@@ -14,16 +14,16 @@ type CartGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
 	CustomerId int64 `json:"customer_id" db:"customer_id" validate:""`
-	SessionId string `json:"session_id" db:"session_id" validate:""`
-	GuestEmail string `json:"guest_email" db:"guest_email" validate:""`
+	SessionId string `json:"session_id" db:"session_id" validate:"max=255"`
+	GuestEmail string `json:"guest_email" db:"guest_email" validate:"max=255"`
 	Subtotal float64 `json:"subtotal" db:"subtotal" validate:""`
 	DiscountAmount float64 `json:"discount_amount" db:"discount_amount" validate:""`
 	TaxAmount float64 `json:"tax_amount" db:"tax_amount" validate:""`
 	ShippingAmount float64 `json:"shipping_amount" db:"shipping_amount" validate:""`
 	Total float64 `json:"total" db:"total" validate:""`
 	CouponId int64 `json:"coupon_id" db:"coupon_id" validate:""`
-	CouponCode string `json:"coupon_code" db:"coupon_code" validate:""`
-	Status string `json:"status" db:"status" validate:""`
+	CouponCode string `json:"coupon_code" db:"coupon_code" validate:"max=50"`
+	Status string `json:"status" db:"status" validate:"required,max=20"`
 	IsAbandoned bool `json:"is_abandoned" db:"is_abandoned" validate:""`
 	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
@@ -89,17 +89,17 @@ var CartFieldsInstance = CartFields{
 type CartItemGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	CartId int64 `json:"cart_id" db:"cart_id" validate:""`
-	ProductId int64 `json:"product_id" db:"product_id" validate:""`
+	CartId int64 `json:"cart_id" db:"cart_id" validate:"required"`
+	ProductId int64 `json:"product_id" db:"product_id" validate:"required"`
 	VariantId int64 `json:"variant_id" db:"variant_id" validate:""`
-	Quantity int32 `json:"quantity" db:"quantity" validate:""`
-	UnitPrice float64 `json:"unit_price" db:"unit_price" validate:""`
+	Quantity int32 `json:"quantity" db:"quantity" validate:"required"`
+	UnitPrice float64 `json:"unit_price" db:"unit_price" validate:"required"`
 	DiscountAmount float64 `json:"discount_amount" db:"discount_amount" validate:""`
 	TaxAmount float64 `json:"tax_amount" db:"tax_amount" validate:""`
-	Total float64 `json:"total" db:"total" validate:""`
-	ProductName string `json:"product_name" db:"product_name" validate:""`
-	VariantName string `json:"variant_name" db:"variant_name" validate:""`
-	ImageUrl string `json:"image_url" db:"image_url" validate:""`
+	Total float64 `json:"total" db:"total" validate:"required"`
+	ProductName string `json:"product_name" db:"product_name" validate:"max=255"`
+	VariantName string `json:"variant_name" db:"variant_name" validate:"max=255"`
+	ImageUrl string `json:"image_url" db:"image_url" validate:"max=500"`
 	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
@@ -156,55 +156,55 @@ var CartItemFieldsInstance = CartItemFields{
 type OrderGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	OrderNumber string `json:"order_number" db:"order_number" validate:""`
-	CustomerId int64 `json:"customer_id" db:"customer_id" validate:""`
-	CustomerEmail string `json:"customer_email" db:"customer_email" validate:""`
-	CustomerFirstName string `json:"customer_first_name" db:"customer_first_name" validate:""`
-	CustomerLastName string `json:"customer_last_name" db:"customer_last_name" validate:""`
-	CustomerPhone string `json:"customer_phone" db:"customer_phone" validate:""`
-	Subtotal float64 `json:"subtotal" db:"subtotal" validate:""`
+	OrderNumber string `json:"order_number" db:"order_number" validate:"required,max=50"`
+	CustomerId int64 `json:"customer_id" db:"customer_id" validate:"required"`
+	CustomerEmail string `json:"customer_email" db:"customer_email" validate:"required,max=255"`
+	CustomerFirstName string `json:"customer_first_name" db:"customer_first_name" validate:"required,max=100"`
+	CustomerLastName string `json:"customer_last_name" db:"customer_last_name" validate:"required,max=100"`
+	CustomerPhone string `json:"customer_phone" db:"customer_phone" validate:"max=20"`
+	Subtotal float64 `json:"subtotal" db:"subtotal" validate:"required"`
 	DiscountAmount float64 `json:"discount_amount" db:"discount_amount" validate:""`
-	TaxAmount float64 `json:"tax_amount" db:"tax_amount" validate:""`
-	ShippingAmount float64 `json:"shipping_amount" db:"shipping_amount" validate:""`
-	Total float64 `json:"total" db:"total" validate:""`
+	TaxAmount float64 `json:"tax_amount" db:"tax_amount" validate:"required"`
+	ShippingAmount float64 `json:"shipping_amount" db:"shipping_amount" validate:"required"`
+	Total float64 `json:"total" db:"total" validate:"required"`
 	CouponId int64 `json:"coupon_id" db:"coupon_id" validate:""`
-	CouponCode string `json:"coupon_code" db:"coupon_code" validate:""`
+	CouponCode string `json:"coupon_code" db:"coupon_code" validate:"max=50"`
 	CouponDiscount float64 `json:"coupon_discount" db:"coupon_discount" validate:""`
-	Status string `json:"status" db:"status" validate:""`
-	PaymentStatus string `json:"payment_status" db:"payment_status" validate:""`
-	FulfillmentStatus string `json:"fulfillment_status" db:"fulfillment_status" validate:""`
+	Status string `json:"status" db:"status" validate:"required,max=20"`
+	PaymentStatus string `json:"payment_status" db:"payment_status" validate:"required,max=20"`
+	FulfillmentStatus string `json:"fulfillment_status" db:"fulfillment_status" validate:"required,max=20"`
 	ShippingAddressId int64 `json:"shipping_address_id" db:"shipping_address_id" validate:""`
 	BillingAddressId int64 `json:"billing_address_id" db:"billing_address_id" validate:""`
-	ShippingFirstName string `json:"shipping_first_name" db:"shipping_first_name" validate:""`
-	ShippingLastName string `json:"shipping_last_name" db:"shipping_last_name" validate:""`
-	ShippingCompany string `json:"shipping_company" db:"shipping_company" validate:""`
-	ShippingAddressLine1 string `json:"shipping_address_line1" db:"shipping_address_line1" validate:""`
-	ShippingAddressLine2 string `json:"shipping_address_line2" db:"shipping_address_line2" validate:""`
-	ShippingCity string `json:"shipping_city" db:"shipping_city" validate:""`
-	ShippingState string `json:"shipping_state" db:"shipping_state" validate:""`
-	ShippingPostalCode string `json:"shipping_postal_code" db:"shipping_postal_code" validate:""`
-	ShippingCountryCode string `json:"shipping_country_code" db:"shipping_country_code" validate:""`
-	ShippingCountryName string `json:"shipping_country_name" db:"shipping_country_name" validate:""`
-	ShippingPhone string `json:"shipping_phone" db:"shipping_phone" validate:""`
-	BillingFirstName string `json:"billing_first_name" db:"billing_first_name" validate:""`
-	BillingLastName string `json:"billing_last_name" db:"billing_last_name" validate:""`
-	BillingCompany string `json:"billing_company" db:"billing_company" validate:""`
-	BillingAddressLine1 string `json:"billing_address_line1" db:"billing_address_line1" validate:""`
-	BillingAddressLine2 string `json:"billing_address_line2" db:"billing_address_line2" validate:""`
-	BillingCity string `json:"billing_city" db:"billing_city" validate:""`
-	BillingState string `json:"billing_state" db:"billing_state" validate:""`
-	BillingPostalCode string `json:"billing_postal_code" db:"billing_postal_code" validate:""`
-	BillingCountryCode string `json:"billing_country_code" db:"billing_country_code" validate:""`
-	BillingCountryName string `json:"billing_country_name" db:"billing_country_name" validate:""`
-	PaymentMethod string `json:"payment_method" db:"payment_method" validate:""`
-	PaymentTransactionId string `json:"payment_transaction_id" db:"payment_transaction_id" validate:""`
-	ShippingMethod string `json:"shipping_method" db:"shipping_method" validate:""`
-	TrackingNumber string `json:"tracking_number" db:"tracking_number" validate:""`
-	Carrier string `json:"carrier" db:"carrier" validate:""`
+	ShippingFirstName string `json:"shipping_first_name" db:"shipping_first_name" validate:"max=100"`
+	ShippingLastName string `json:"shipping_last_name" db:"shipping_last_name" validate:"max=100"`
+	ShippingCompany string `json:"shipping_company" db:"shipping_company" validate:"max=200"`
+	ShippingAddressLine1 string `json:"shipping_address_line1" db:"shipping_address_line1" validate:"max=255"`
+	ShippingAddressLine2 string `json:"shipping_address_line2" db:"shipping_address_line2" validate:"max=255"`
+	ShippingCity string `json:"shipping_city" db:"shipping_city" validate:"max=100"`
+	ShippingState string `json:"shipping_state" db:"shipping_state" validate:"max=100"`
+	ShippingPostalCode string `json:"shipping_postal_code" db:"shipping_postal_code" validate:"max=20"`
+	ShippingCountryCode string `json:"shipping_country_code" db:"shipping_country_code" validate:"max=2"`
+	ShippingCountryName string `json:"shipping_country_name" db:"shipping_country_name" validate:"max=100"`
+	ShippingPhone string `json:"shipping_phone" db:"shipping_phone" validate:"max=20"`
+	BillingFirstName string `json:"billing_first_name" db:"billing_first_name" validate:"max=100"`
+	BillingLastName string `json:"billing_last_name" db:"billing_last_name" validate:"max=100"`
+	BillingCompany string `json:"billing_company" db:"billing_company" validate:"max=200"`
+	BillingAddressLine1 string `json:"billing_address_line1" db:"billing_address_line1" validate:"max=255"`
+	BillingAddressLine2 string `json:"billing_address_line2" db:"billing_address_line2" validate:"max=255"`
+	BillingCity string `json:"billing_city" db:"billing_city" validate:"max=100"`
+	BillingState string `json:"billing_state" db:"billing_state" validate:"max=100"`
+	BillingPostalCode string `json:"billing_postal_code" db:"billing_postal_code" validate:"max=20"`
+	BillingCountryCode string `json:"billing_country_code" db:"billing_country_code" validate:"max=2"`
+	BillingCountryName string `json:"billing_country_name" db:"billing_country_name" validate:"max=100"`
+	PaymentMethod string `json:"payment_method" db:"payment_method" validate:"max=50"`
+	PaymentTransactionId string `json:"payment_transaction_id" db:"payment_transaction_id" validate:"max=255"`
+	ShippingMethod string `json:"shipping_method" db:"shipping_method" validate:"max=100"`
+	TrackingNumber string `json:"tracking_number" db:"tracking_number" validate:"max=255"`
+	Carrier string `json:"carrier" db:"carrier" validate:"max=100"`
 	CustomerNotes string `json:"customer_notes" db:"customer_notes" validate:""`
 	AdminNotes string `json:"admin_notes" db:"admin_notes" validate:""`
-	IpAddress string `json:"ip_address" db:"ip_address" validate:""`
-	UserAgent string `json:"user_agent" db:"user_agent" validate:""`
+	IpAddress string `json:"ip_address" db:"ip_address" validate:"max=45"`
+	UserAgent string `json:"user_agent" db:"user_agent" validate:"max=500"`
 	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 	PaidAt time.Time `json:"paid_at" db:"paid_at" validate:""`
@@ -352,22 +352,22 @@ var OrderFieldsInstance = OrderFields{
 type OrderItemGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	OrderId int64 `json:"order_id" db:"order_id" validate:""`
-	ProductId int64 `json:"product_id" db:"product_id" validate:""`
+	OrderId int64 `json:"order_id" db:"order_id" validate:"required"`
+	ProductId int64 `json:"product_id" db:"product_id" validate:"required"`
 	VariantId int64 `json:"variant_id" db:"variant_id" validate:""`
-	ProductName string `json:"product_name" db:"product_name" validate:""`
-	ProductSku string `json:"product_sku" db:"product_sku" validate:""`
-	VariantName string `json:"variant_name" db:"variant_name" validate:""`
-	VariantSku string `json:"variant_sku" db:"variant_sku" validate:""`
-	ImageUrl string `json:"image_url" db:"image_url" validate:""`
-	Quantity int32 `json:"quantity" db:"quantity" validate:""`
-	UnitPrice float64 `json:"unit_price" db:"unit_price" validate:""`
+	ProductName string `json:"product_name" db:"product_name" validate:"required,max=255"`
+	ProductSku string `json:"product_sku" db:"product_sku" validate:"required,max=100"`
+	VariantName string `json:"variant_name" db:"variant_name" validate:"max=255"`
+	VariantSku string `json:"variant_sku" db:"variant_sku" validate:"max=100"`
+	ImageUrl string `json:"image_url" db:"image_url" validate:"max=500"`
+	Quantity int32 `json:"quantity" db:"quantity" validate:"required"`
+	UnitPrice float64 `json:"unit_price" db:"unit_price" validate:"required"`
 	DiscountAmount float64 `json:"discount_amount" db:"discount_amount" validate:""`
 	TaxAmount float64 `json:"tax_amount" db:"tax_amount" validate:""`
-	Total float64 `json:"total" db:"total" validate:""`
+	Total float64 `json:"total" db:"total" validate:"required"`
 	QuantityFulfilled int32 `json:"quantity_fulfilled" db:"quantity_fulfilled" validate:""`
 	QuantityRefunded int32 `json:"quantity_refunded" db:"quantity_refunded" validate:""`
-	FulfillmentStatus string `json:"fulfillment_status" db:"fulfillment_status" validate:""`
+	FulfillmentStatus string `json:"fulfillment_status" db:"fulfillment_status" validate:"required,max=20"`
 	Weight float64 `json:"weight" db:"weight" validate:""`
 	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
@@ -437,17 +437,17 @@ var OrderItemFieldsInstance = OrderItemFields{
 type PaymentGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	OrderId int64 `json:"order_id" db:"order_id" validate:""`
-	TransactionId string `json:"transaction_id" db:"transaction_id" validate:""`
-	Amount float64 `json:"amount" db:"amount" validate:""`
-	Currency string `json:"currency" db:"currency" validate:""`
-	PaymentMethod string `json:"payment_method" db:"payment_method" validate:""`
-	PaymentGateway string `json:"payment_gateway" db:"payment_gateway" validate:""`
-	CardLast4 string `json:"card_last4" db:"card_last4" validate:""`
-	CardBrand string `json:"card_brand" db:"card_brand" validate:""`
-	Status string `json:"status" db:"status" validate:""`
+	OrderId int64 `json:"order_id" db:"order_id" validate:"required"`
+	TransactionId string `json:"transaction_id" db:"transaction_id" validate:"max=255"`
+	Amount float64 `json:"amount" db:"amount" validate:"required"`
+	Currency string `json:"currency" db:"currency" validate:"required,max=3"`
+	PaymentMethod string `json:"payment_method" db:"payment_method" validate:"required,max=50"`
+	PaymentGateway string `json:"payment_gateway" db:"payment_gateway" validate:"max=50"`
+	CardLast4 string `json:"card_last4" db:"card_last4" validate:"max=4"`
+	CardBrand string `json:"card_brand" db:"card_brand" validate:"max=50"`
+	Status string `json:"status" db:"status" validate:"required,max=20"`
 	GatewayResponse string `json:"gateway_response" db:"gateway_response" validate:""`
-	FailureReason string `json:"failure_reason" db:"failure_reason" validate:""`
+	FailureReason string `json:"failure_reason" db:"failure_reason" validate:"max=500"`
 	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 	CompletedAt time.Time `json:"completed_at" db:"completed_at" validate:""`
@@ -513,22 +513,22 @@ var PaymentFieldsInstance = PaymentFields{
 type ShipmentGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	OrderId int64 `json:"order_id" db:"order_id" validate:""`
-	TrackingNumber string `json:"tracking_number" db:"tracking_number" validate:""`
-	Carrier string `json:"carrier" db:"carrier" validate:""`
-	ServiceLevel string `json:"service_level" db:"service_level" validate:""`
-	RecipientName string `json:"recipient_name" db:"recipient_name" validate:""`
-	AddressLine1 string `json:"address_line1" db:"address_line1" validate:""`
-	AddressLine2 string `json:"address_line2" db:"address_line2" validate:""`
-	City string `json:"city" db:"city" validate:""`
-	State string `json:"state" db:"state" validate:""`
-	PostalCode string `json:"postal_code" db:"postal_code" validate:""`
-	CountryCode string `json:"country_code" db:"country_code" validate:""`
-	CountryName string `json:"country_name" db:"country_name" validate:""`
-	Phone string `json:"phone" db:"phone" validate:""`
+	OrderId int64 `json:"order_id" db:"order_id" validate:"required"`
+	TrackingNumber string `json:"tracking_number" db:"tracking_number" validate:"required,max=255"`
+	Carrier string `json:"carrier" db:"carrier" validate:"required,max=100"`
+	ServiceLevel string `json:"service_level" db:"service_level" validate:"max=100"`
+	RecipientName string `json:"recipient_name" db:"recipient_name" validate:"required,max=200"`
+	AddressLine1 string `json:"address_line1" db:"address_line1" validate:"required,max=255"`
+	AddressLine2 string `json:"address_line2" db:"address_line2" validate:"max=255"`
+	City string `json:"city" db:"city" validate:"required,max=100"`
+	State string `json:"state" db:"state" validate:"max=100"`
+	PostalCode string `json:"postal_code" db:"postal_code" validate:"required,max=20"`
+	CountryCode string `json:"country_code" db:"country_code" validate:"required,max=2"`
+	CountryName string `json:"country_name" db:"country_name" validate:"required,max=100"`
+	Phone string `json:"phone" db:"phone" validate:"max=20"`
 	Weight float64 `json:"weight" db:"weight" validate:""`
-	ShippingCost float64 `json:"shipping_cost" db:"shipping_cost" validate:""`
-	Status string `json:"status" db:"status" validate:""`
+	ShippingCost float64 `json:"shipping_cost" db:"shipping_cost" validate:"required"`
+	Status string `json:"status" db:"status" validate:"required,max=20"`
 	TrackingEvents string `json:"tracking_events" db:"tracking_events" validate:""`
 	Notes string `json:"notes" db:"notes" validate:""`
 	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`

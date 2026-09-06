@@ -3,9 +3,19 @@ package main
 import (
 	"context"
 	"log"
+	"strings"
 
 	"github.com/forgego/forge/db"
 )
+
+// adaptDDL rewrites PostgreSQL-specific DDL for SQLite, which requires
+// INTEGER PRIMARY KEY (rowid alias) for autoincrement instead of SERIAL.
+func adaptDDL(driver, stmt string) string {
+	if driver == "sqlite3" || driver == "sqlite" {
+		stmt = strings.ReplaceAll(stmt, "SERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
+	}
+	return stmt
+}
 
 // SetupSchema creates the database schema for the ecommerce example
 func SetupSchema(database *db.DB) {
@@ -13,7 +23,7 @@ func SetupSchema(database *db.DB) {
 	log.Println("🛠️  Setting up database schema...")
 
 	// Categories
-	_, err := database.ExecContext(ctx, `
+	_, err := database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS categories (
 			id SERIAL PRIMARY KEY,
 			name VARCHAR(200) NOT NULL,
@@ -29,13 +39,13 @@ func SetupSchema(database *db.DB) {
 		);
 		CREATE INDEX IF NOT EXISTS idx_category_slug ON categories(slug);
 		CREATE INDEX IF NOT EXISTS idx_category_parent ON categories(parent_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create categories table: %v", err)
 	}
 
 	// Brands
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS brands (
 			id SERIAL PRIMARY KEY,
 			name VARCHAR(200) NOT NULL,
@@ -48,13 +58,13 @@ func SetupSchema(database *db.DB) {
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 		CREATE INDEX IF NOT EXISTS idx_brand_slug ON brands(slug);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create brands table: %v", err)
 	}
 	
 	// Products
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS products (
 			id SERIAL PRIMARY KEY,
 			name VARCHAR(255) NOT NULL,
@@ -91,13 +101,13 @@ func SetupSchema(database *db.DB) {
 		CREATE INDEX IF NOT EXISTS idx_product_slug ON products(slug);
 		CREATE INDEX IF NOT EXISTS idx_product_sku ON products(sku);
 		CREATE INDEX IF NOT EXISTS idx_product_category ON products(category_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create products table: %v", err)
 	}
 
 	// Product Variants
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS product_variants (
 			id SERIAL PRIMARY KEY,
 			product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
@@ -128,13 +138,13 @@ func SetupSchema(database *db.DB) {
 		);
 		CREATE INDEX IF NOT EXISTS idx_variant_sku ON product_variants(sku);
 		CREATE INDEX IF NOT EXISTS idx_variant_product ON product_variants(product_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create product_variants table: %v", err)
 	}
 
 	// Product Images
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS product_images (
 			id SERIAL PRIMARY KEY,
 			product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
@@ -148,13 +158,13 @@ func SetupSchema(database *db.DB) {
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 		CREATE INDEX IF NOT EXISTS idx_image_product ON product_images(product_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create product_images table: %v", err)
 	}
 
 	// Product Attributes
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS product_attributes (
 			id SERIAL PRIMARY KEY,
 			name VARCHAR(200) NOT NULL UNIQUE,
@@ -165,13 +175,13 @@ func SetupSchema(database *db.DB) {
 			sort_order INTEGER DEFAULT 0,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create product_attributes table: %v", err)
 	}
 
 	// Product Attribute Values
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS product_attribute_values (
 			id SERIAL PRIMARY KEY,
 			product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
@@ -181,7 +191,7 @@ func SetupSchema(database *db.DB) {
 			UNIQUE(product_id, attribute_id)
 		);
 		CREATE INDEX IF NOT EXISTS idx_attr_value_product ON product_attribute_values(product_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create product_attribute_values table: %v", err)
 	}
@@ -189,7 +199,7 @@ func SetupSchema(database *db.DB) {
 	// --- CUSTOMERS APP ---
 
 	// Customer Groups
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS customer_groups (
 			id SERIAL PRIMARY KEY,
 			name VARCHAR(200) NOT NULL UNIQUE,
@@ -200,13 +210,13 @@ func SetupSchema(database *db.DB) {
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create customer_groups table: %v", err)
 	}
 
 	// Customers
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS customers (
 			id SERIAL PRIMARY KEY,
 			email VARCHAR(255) NOT NULL UNIQUE,
@@ -238,13 +248,13 @@ func SetupSchema(database *db.DB) {
 		);
 		CREATE INDEX IF NOT EXISTS idx_customer_email ON customers(email);
 		CREATE INDEX IF NOT EXISTS idx_customer_group ON customers(customer_group_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create customers table: %v", err)
 	}
 
 	// Addresses
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS addresses (
 			id SERIAL PRIMARY KEY,
 			customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
@@ -269,13 +279,13 @@ func SetupSchema(database *db.DB) {
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 		CREATE INDEX IF NOT EXISTS idx_address_customer ON addresses(customer_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create addresses table: %v", err)
 	}
 
 	// Wish Lists
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS wish_lists (
 			id SERIAL PRIMARY KEY,
 			customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
@@ -288,13 +298,13 @@ func SetupSchema(database *db.DB) {
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 		CREATE INDEX IF NOT EXISTS idx_wishlist_customer ON wish_lists(customer_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create wish_lists table: %v", err)
 	}
 
 	// Wish List Items
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS wish_list_items (
 			id SERIAL PRIMARY KEY,
 			wish_list_id INTEGER NOT NULL REFERENCES wish_lists(id) ON DELETE CASCADE,
@@ -309,7 +319,7 @@ func SetupSchema(database *db.DB) {
 			UNIQUE(wish_list_id, product_id, variant_id)
 		);
 		CREATE INDEX IF NOT EXISTS idx_wishlist_item_list ON wish_list_items(wish_list_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create wish_list_items table: %v", err)
 	}
@@ -317,7 +327,7 @@ func SetupSchema(database *db.DB) {
 	// --- MARKETING APP ---
 
 	// Coupons
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS coupons (
 			id SERIAL PRIMARY KEY,
 			code VARCHAR(50) NOT NULL UNIQUE,
@@ -346,13 +356,13 @@ func SetupSchema(database *db.DB) {
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 		CREATE INDEX IF NOT EXISTS idx_coupon_code ON coupons(code);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create coupons table: %v", err)
 	}
 
 	// Coupon Usage
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS coupon_usage (
 			id SERIAL PRIMARY KEY,
 			coupon_id INTEGER NOT NULL REFERENCES coupons(id) ON DELETE CASCADE,
@@ -363,13 +373,13 @@ func SetupSchema(database *db.DB) {
 		);
 		CREATE INDEX IF NOT EXISTS idx_usage_coupon ON coupon_usage(coupon_id);
 		CREATE INDEX IF NOT EXISTS idx_usage_customer ON coupon_usage(customer_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create coupon_usage table: %v", err)
 	}
 
 	// Reviews
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS reviews (
 			id SERIAL PRIMARY KEY,
 			product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
@@ -395,13 +405,13 @@ func SetupSchema(database *db.DB) {
 		);
 		CREATE INDEX IF NOT EXISTS idx_review_product ON reviews(product_id);
 		CREATE INDEX IF NOT EXISTS idx_review_customer ON reviews(customer_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create reviews table: %v", err)
 	}
 
 	// Review Images
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS review_images (
 			id SERIAL PRIMARY KEY,
 			review_id INTEGER NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
@@ -412,13 +422,13 @@ func SetupSchema(database *db.DB) {
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 		CREATE INDEX IF NOT EXISTS idx_review_image_review ON review_images(review_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create review_images table: %v", err)
 	}
 
 	// Review Helpfulness
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS review_helpfulness (
 			id SERIAL PRIMARY KEY,
 			review_id INTEGER NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
@@ -430,13 +440,13 @@ func SetupSchema(database *db.DB) {
 			UNIQUE(review_id, ip_address)
 		);
 		CREATE INDEX IF NOT EXISTS idx_helpfulness_review ON review_helpfulness(review_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create review_helpfulness table: %v", err)
 	}
 
 	// Product Questions
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS product_questions (
 			id SERIAL PRIMARY KEY,
 			product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
@@ -453,7 +463,7 @@ func SetupSchema(database *db.DB) {
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 		CREATE INDEX IF NOT EXISTS idx_question_product ON product_questions(product_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create product_questions table: %v", err)
 	}
@@ -461,7 +471,7 @@ func SetupSchema(database *db.DB) {
 	// --- ORDERS APP ---
 
 	// Carts
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS carts (
 			id SERIAL PRIMARY KEY,
 			customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
@@ -483,13 +493,13 @@ func SetupSchema(database *db.DB) {
 		);
 		CREATE INDEX IF NOT EXISTS idx_cart_customer ON carts(customer_id);
 		CREATE INDEX IF NOT EXISTS idx_cart_session ON carts(session_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create carts table: %v", err)
 	}
 
 	// Cart Items
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS cart_items (
 			id SERIAL PRIMARY KEY,
 			cart_id INTEGER NOT NULL REFERENCES carts(id) ON DELETE CASCADE,
@@ -508,13 +518,13 @@ func SetupSchema(database *db.DB) {
 			UNIQUE(cart_id, product_id, variant_id)
 		);
 		CREATE INDEX IF NOT EXISTS idx_cart_item_cart ON cart_items(cart_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create cart_items table: %v", err)
 	}
 
 	// Orders
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS orders (
 			id SERIAL PRIMARY KEY,
 			order_number VARCHAR(50) NOT NULL UNIQUE,
@@ -576,20 +586,20 @@ func SetupSchema(database *db.DB) {
 		);
 		CREATE INDEX IF NOT EXISTS idx_order_number ON orders(order_number);
 		CREATE INDEX IF NOT EXISTS idx_order_customer ON orders(customer_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create orders table: %v", err)
 	}
 
 	// Update coupon_usage and reviews order_id foreign key (since we couldn't add FK before order existed)
 	// Actually, we can just create the FK constraint now
-	_, _ = database.ExecContext(ctx, `
+	_, _ = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		ALTER TABLE coupon_usage ADD CONSTRAINT fk_coupon_usage_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE;
 		ALTER TABLE reviews ADD CONSTRAINT fk_reviews_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL;
-	`)
+	`))
 
 	// Order Items
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS order_items (
 			id SERIAL PRIMARY KEY,
 			order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
@@ -613,13 +623,13 @@ func SetupSchema(database *db.DB) {
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 		CREATE INDEX IF NOT EXISTS idx_order_item_order ON order_items(order_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create order_items table: %v", err)
 	}
 
 	// Payments
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS payments (
 			id SERIAL PRIMARY KEY,
 			order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
@@ -640,13 +650,13 @@ func SetupSchema(database *db.DB) {
 			refunded_at TIMESTAMP
 		);
 		CREATE INDEX IF NOT EXISTS idx_payment_order ON payments(order_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create payments table: %v", err)
 	}
 
 	// Shipments
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS shipments (
 			id SERIAL PRIMARY KEY,
 			order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
@@ -674,7 +684,7 @@ func SetupSchema(database *db.DB) {
 			delivered_at TIMESTAMP
 		);
 		CREATE INDEX IF NOT EXISTS idx_shipment_order ON shipments(order_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create shipments table: %v", err)
 	}
@@ -682,7 +692,7 @@ func SetupSchema(database *db.DB) {
 	// --- INVENTORY APP ---
 
 	// Warehouses
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS warehouses (
 			id SERIAL PRIMARY KEY,
 			name VARCHAR(200) NOT NULL,
@@ -707,13 +717,13 @@ func SetupSchema(database *db.DB) {
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 		CREATE INDEX IF NOT EXISTS idx_warehouse_code ON warehouses(code);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create warehouses table: %v", err)
 	}
 
 	// Stock
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS stock (
 			id SERIAL PRIMARY KEY,
 			product_variant_id INTEGER NOT NULL REFERENCES product_variants(id) ON DELETE CASCADE,
@@ -733,13 +743,13 @@ func SetupSchema(database *db.DB) {
 		);
 		CREATE INDEX IF NOT EXISTS idx_stock_variant ON stock(product_variant_id);
 		CREATE INDEX IF NOT EXISTS idx_stock_warehouse ON stock(warehouse_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create stock table: %v", err)
 	}
 
 	// Stock Movements
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS stock_movements (
 			id SERIAL PRIMARY KEY,
 			stock_id INTEGER NOT NULL REFERENCES stock(id) ON DELETE CASCADE,
@@ -764,13 +774,13 @@ func SetupSchema(database *db.DB) {
 			movement_date TIMESTAMP NOT NULL
 		);
 		CREATE INDEX IF NOT EXISTS idx_movement_stock ON stock_movements(stock_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create stock_movements table: %v", err)
 	}
 
 	// Stock Alerts
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS stock_alerts (
 			id SERIAL PRIMARY KEY,
 			stock_id INTEGER NOT NULL REFERENCES stock(id) ON DELETE CASCADE,
@@ -791,13 +801,13 @@ func SetupSchema(database *db.DB) {
 			resolved_at TIMESTAMP
 		);
 		CREATE INDEX IF NOT EXISTS idx_alert_stock ON stock_alerts(stock_id);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create stock_alerts table: %v", err)
 	}
 
 	// Stock Transfers
-	_, err = database.ExecContext(ctx, `
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS stock_transfers (
 			id SERIAL PRIMARY KEY,
 			transfer_number VARCHAR(50) NOT NULL UNIQUE,
@@ -821,7 +831,7 @@ func SetupSchema(database *db.DB) {
 			cancelled_at TIMESTAMP
 		);
 		CREATE INDEX IF NOT EXISTS idx_transfer_number ON stock_transfers(transfer_number);
-	`)
+	`))
 	if err != nil {
 		log.Fatalf("Failed to create stock_transfers table: %v", err)
 	}

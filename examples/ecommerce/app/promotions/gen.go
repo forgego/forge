@@ -3,45 +3,35 @@ package promotions
 
 import (
 	"time"
-
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
 	validate "github.com/forgego/forge/validate"
 )
 
+
 // PromotionGenerated struct definition
 type PromotionGenerated struct {
 	schema.BaseSchema
-	Id               int64   `json:"id" db:"id" validate:""`
-	Name             string  `json:"name" db:"name" validate:""`
-	Description      string  `json:"description" db:"description" validate:""`
-	Code             string  `json:"code" db:"code" validate:""`
-	Type             string  `json:"type" db:"type" validate:""`
-	DiscountValue    float64 `json:"discount_value" db:"discount_value" validate:""`
-	DiscountType     string  `json:"discount_type" db:"discount_type" validate:""`
-	MinPurchase      float64 `json:"min_purchase" db:"min_purchase" validate:""`
-	MaxDiscount      float64 `json:"max_discount" db:"max_discount" validate:""`
-	BuyQuantity      int32   `json:"buy_quantity" db:"buy_quantity" validate:""`
-	GetQuantity      int32   `json:"get_quantity" db:"get_quantity" validate:""`
-	FreeProductId    int64   `json:"free_product_id" db:"free_product_id" validate:""`
-	FreeShipping     bool    `json:"free_shipping" db:"free_shipping" validate:""`
-	AppliesTo        string  `json:"applies_to" db:"applies_to" validate:""`
-	ProductIds       string  `json:"product_ids" db:"product_ids" validate:""`
-	CategoryIds      string  `json:"category_ids" db:"category_ids" validate:""`
-	BrandIds         string  `json:"brand_ids" db:"brand_ids" validate:""`
-	NewCustomersOnly bool    `json:"new_customers_only" db:"new_customers_only" validate:""`
-	CustomerGroupIds string  `json:"customer_group_ids" db:"customer_group_ids" validate:""`
-	TotalUsageLimit  int32   `json:"total_usage_limit" db:"total_usage_limit" validate:""`
-	PerCustomerLimit int32   `json:"per_customer_limit" db:"per_customer_limit" validate:""`
-	StartDate    time.Time `json:"start_date" db:"start_date" validate:""`
-	EndDate      time.Time `json:"end_date" db:"end_date" validate:""`
-	Priority     int32     `json:"priority" db:"priority" validate:""`
-	CanStack     bool      `json:"can_stack" db:"can_stack" validate:""`
-	StackWith    string    `json:"stack_with" db:"stack_with" validate:""`
-	IsActive     bool      `json:"is_active" db:"is_active" validate:""`
-	TimesUsed    int32     `json:"times_used" db:"times_used" validate:""`
-	CreatedAt    time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt    time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	Name string `json:"name" db:"name" validate:"required,max=200"`
+	Code string `json:"code" db:"code" validate:"max=50"`
+	Description string `json:"description" db:"description" validate:""`
+	DiscountType string `json:"discount_type" db:"discount_type" validate:"required,max=20"`
+	DiscountValue float64 `json:"discount_value" db:"discount_value" validate:"required"`
+	MinPurchase float64 `json:"min_purchase" db:"min_purchase" validate:""`
+	MaxDiscount float64 `json:"max_discount" db:"max_discount" validate:""`
+	StartDate time.Time `json:"start_date" db:"start_date" validate:"required"`
+	EndDate time.Time `json:"end_date" db:"end_date" validate:""`
+	UsageLimit int32 `json:"usage_limit" db:"usage_limit" validate:""`
+	UsageCount int32 `json:"usage_count" db:"usage_count" validate:""`
+	PerCustomerLimit int32 `json:"per_customer_limit" db:"per_customer_limit" validate:""`
+	IsActive bool `json:"is_active" db:"is_active" validate:""`
+	IsStackable bool `json:"is_stackable" db:"is_stackable" validate:""`
+	Priority int32 `json:"priority" db:"priority" validate:""`
+	AppliesTo string `json:"applies_to" db:"applies_to" validate:"max=50"`
+	TargetEntityIds string `json:"target_entity_ids" db:"target_entity_ids" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the Promotion model
@@ -51,86 +41,72 @@ func (m *Promotion) Validate() error {
 }
 
 // PromotionObjects provides type-safe operations for Promotion
+// Uses generic orm.Manager[Promotion] and orm.BaseQuerySet[Promotion]
 var PromotionObjects, _ = orm.NewManager[Promotion]("promotions")
 
 // PromotionFields provides type-safe field access for Promotion
 type PromotionFields struct {
-	Id               orm.Field[int64]
-	Name             orm.Field[string]
-	Description      orm.Field[string]
-	Code             orm.Field[string]
-	Type             orm.Field[string]
-	DiscountValue    orm.Field[float64]
-	DiscountType     orm.Field[string]
-	MinPurchase      orm.Field[float64]
-	MaxDiscount      orm.Field[float64]
-	BuyQuantity      orm.Field[int32]
-	GetQuantity      orm.Field[int32]
-	FreeProductId    orm.Field[int64]
-	FreeShipping     orm.Field[bool]
-	AppliesTo        orm.Field[string]
-	ProductIds       orm.Field[string]
-	CategoryIds      orm.Field[string]
-	BrandIds         orm.Field[string]
-	NewCustomersOnly orm.Field[bool]
-	CustomerGroupIds orm.Field[string]
-	TotalUsageLimit  orm.Field[int32]
+	Id orm.Field[int64]
+	Name orm.Field[string]
+	Code orm.Field[string]
+	Description orm.Field[string]
+	DiscountType orm.Field[string]
+	DiscountValue orm.Field[float64]
+	MinPurchase orm.Field[float64]
+	MaxDiscount orm.Field[float64]
+	StartDate orm.Field[time.Time]
+	EndDate orm.Field[time.Time]
+	UsageLimit orm.Field[int32]
+	UsageCount orm.Field[int32]
 	PerCustomerLimit orm.Field[int32]
-	StartDate        orm.Field[time.Time]
-	EndDate          orm.Field[time.Time]
-	Priority         orm.Field[int32]
-	CanStack         orm.Field[bool]
-	StackWith        orm.Field[string]
-	IsActive         orm.Field[bool]
-	TimesUsed        orm.Field[int32]
-	CreatedAt        orm.Field[time.Time]
-	UpdatedAt        orm.Field[time.Time]
+	IsActive orm.Field[bool]
+	IsStackable orm.Field[bool]
+	Priority orm.Field[int32]
+	AppliesTo orm.Field[string]
+	TargetEntityIds orm.Field[string]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
 }
 
 var PromotionFieldsInstance = PromotionFields{
-	Id:               orm.NewField[int64]("id", "promotions"),
-	Name:             orm.NewField[string]("name", "promotions"),
-	Description:      orm.NewField[string]("description", "promotions"),
-	Code:             orm.NewField[string]("code", "promotions"),
-	Type:             orm.NewField[string]("type", "promotions"),
-	DiscountValue:    orm.NewField[float64]("discount_value", "promotions"),
-	DiscountType:     orm.NewField[string]("discount_type", "promotions"),
-	MinPurchase:      orm.NewField[float64]("min_purchase", "promotions"),
-	MaxDiscount:      orm.NewField[float64]("max_discount", "promotions"),
-	BuyQuantity:      orm.NewField[int32]("buy_quantity", "promotions"),
-	GetQuantity:      orm.NewField[int32]("get_quantity", "promotions"),
-	FreeProductId:    orm.NewField[int64]("free_product_id", "promotions"),
-	FreeShipping:     orm.NewField[bool]("free_shipping", "promotions"),
-	AppliesTo:        orm.NewField[string]("applies_to", "promotions"),
-	ProductIds:       orm.NewField[string]("product_ids", "promotions"),
-	CategoryIds:      orm.NewField[string]("category_ids", "promotions"),
-	BrandIds:         orm.NewField[string]("brand_ids", "promotions"),
-	NewCustomersOnly: orm.NewField[bool]("new_customers_only", "promotions"),
-	CustomerGroupIds: orm.NewField[string]("customer_group_ids", "promotions"),
-	TotalUsageLimit:  orm.NewField[int32]("total_usage_limit", "promotions"),
+	Id: orm.NewField[int64]("id", "promotions"),
+	Name: orm.NewField[string]("name", "promotions"),
+	Code: orm.NewField[string]("code", "promotions"),
+	Description: orm.NewField[string]("description", "promotions"),
+	DiscountType: orm.NewField[string]("discount_type", "promotions"),
+	DiscountValue: orm.NewField[float64]("discount_value", "promotions"),
+	MinPurchase: orm.NewField[float64]("min_purchase", "promotions"),
+	MaxDiscount: orm.NewField[float64]("max_discount", "promotions"),
+	StartDate: orm.NewField[time.Time]("start_date", "promotions"),
+	EndDate: orm.NewField[time.Time]("end_date", "promotions"),
+	UsageLimit: orm.NewField[int32]("usage_limit", "promotions"),
+	UsageCount: orm.NewField[int32]("usage_count", "promotions"),
 	PerCustomerLimit: orm.NewField[int32]("per_customer_limit", "promotions"),
-	StartDate:        orm.NewField[time.Time]("start_date", "promotions"),
-	EndDate:          orm.NewField[time.Time]("end_date", "promotions"),
-	Priority:         orm.NewField[int32]("priority", "promotions"),
-	CanStack:         orm.NewField[bool]("can_stack", "promotions"),
-	StackWith:        orm.NewField[string]("stack_with", "promotions"),
-	IsActive:         orm.NewField[bool]("is_active", "promotions"),
-	TimesUsed:        orm.NewField[int32]("times_used", "promotions"),
-	CreatedAt:        orm.NewField[time.Time]("created_at", "promotions"),
-	UpdatedAt:        orm.NewField[time.Time]("updated_at", "promotions"),
+	IsActive: orm.NewField[bool]("is_active", "promotions"),
+	IsStackable: orm.NewField[bool]("is_stackable", "promotions"),
+	Priority: orm.NewField[int32]("priority", "promotions"),
+	AppliesTo: orm.NewField[string]("applies_to", "promotions"),
+	TargetEntityIds: orm.NewField[string]("target_entity_ids", "promotions"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "promotions"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "promotions"),
 }
+
+
+
 
 // PromotionRuleGenerated struct definition
 type PromotionRuleGenerated struct {
 	schema.BaseSchema
-	Id          int64     `json:"id" db:"id" validate:""`
-	PromotionId int64     `json:"promotion_id" db:"promotion_id" validate:""`
-	RuleType    string    `json:"rule_type" db:"rule_type" validate:""`
-	Parameters  string    `json:"parameters" db:"parameters" validate:""`
-	Logic       string    `json:"logic" db:"logic" validate:""`
-	IsActive    bool      `json:"is_active" db:"is_active" validate:""`
-	CreatedAt   time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	PromotionId int64 `json:"promotion_id" db:"promotion_id" validate:"required"`
+	RuleType string `json:"rule_type" db:"rule_type" validate:"required,max=50"`
+	Field string `json:"field" db:"field" validate:"required,max=100"`
+	Operator string `json:"operator" db:"operator" validate:"required,max=20"`
+	Value string `json:"value" db:"value" validate:"required,max=500"`
+	LogicType string `json:"logic_type" db:"logic_type" validate:"max=10"`
+	SortOrder int32 `json:"sort_order" db:"sort_order" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the PromotionRule model
@@ -140,58 +116,57 @@ func (m *PromotionRule) Validate() error {
 }
 
 // PromotionRuleObjects provides type-safe operations for PromotionRule
+// Uses generic orm.Manager[PromotionRule] and orm.BaseQuerySet[PromotionRule]
 var PromotionRuleObjects, _ = orm.NewManager[PromotionRule]("promotion_rules")
 
 // PromotionRuleFields provides type-safe field access for PromotionRule
 type PromotionRuleFields struct {
-	Id          orm.Field[int64]
+	Id orm.Field[int64]
 	PromotionId orm.Field[int64]
-	RuleType    orm.Field[string]
-	Parameters  orm.Field[string]
-	Logic       orm.Field[string]
-	IsActive    orm.Field[bool]
-	CreatedAt   orm.Field[time.Time]
-	UpdatedAt   orm.Field[time.Time]
+	RuleType orm.Field[string]
+	Field orm.Field[string]
+	Operator orm.Field[string]
+	Value orm.Field[string]
+	LogicType orm.Field[string]
+	SortOrder orm.Field[int32]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
 }
 
 var PromotionRuleFieldsInstance = PromotionRuleFields{
-	Id:          orm.NewField[int64]("id", "promotion_rules"),
+	Id: orm.NewField[int64]("id", "promotion_rules"),
 	PromotionId: orm.NewField[int64]("promotion_id", "promotion_rules"),
-	RuleType:    orm.NewField[string]("rule_type", "promotion_rules"),
-	Parameters:  orm.NewField[string]("parameters", "promotion_rules"),
-	Logic:       orm.NewField[string]("logic", "promotion_rules"),
-	IsActive:    orm.NewField[bool]("is_active", "promotion_rules"),
-	CreatedAt:   orm.NewField[time.Time]("created_at", "promotion_rules"),
-	UpdatedAt:   orm.NewField[time.Time]("updated_at", "promotion_rules"),
+	RuleType: orm.NewField[string]("rule_type", "promotion_rules"),
+	Field: orm.NewField[string]("field", "promotion_rules"),
+	Operator: orm.NewField[string]("operator", "promotion_rules"),
+	Value: orm.NewField[string]("value", "promotion_rules"),
+	LogicType: orm.NewField[string]("logic_type", "promotion_rules"),
+	SortOrder: orm.NewField[int32]("sort_order", "promotion_rules"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "promotion_rules"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "promotion_rules"),
 }
+
+
+
 
 // BannerGenerated struct definition
 type BannerGenerated struct {
 	schema.BaseSchema
-	Id              int64     `json:"id" db:"id" validate:""`
-	Title           string    `json:"title" db:"title" validate:""`
-	Subtitle        string    `json:"subtitle" db:"subtitle" validate:""`
-	ImageUrl        string    `json:"image_url" db:"image_url" validate:""`
-	MobileImageUrl  string    `json:"mobile_image_url" db:"mobile_image_url" validate:""`
-	VideoUrl        string    `json:"video_url" db:"video_url" validate:""`
-	Content         string    `json:"content" db:"content" validate:""`
-	Link            string    `json:"link" db:"link" validate:""`
-	LinkText        string    `json:"link_text" db:"link_text" validate:""`
-	Position        string    `json:"position" db:"position" validate:""`
-	BackgroundColor string    `json:"background_color" db:"background_color" validate:""`
-	TextColor       string    `json:"text_color" db:"text_color" validate:""`
-	StartDate       time.Time `json:"start_date" db:"start_date" validate:""`
-	EndDate         time.Time `json:"end_date" db:"end_date" validate:""`
-	Schedule        string    `json:"schedule" db:"schedule" validate:""`
-	DeviceTypes     string    `json:"device_types" db:"device_types" validate:""`
-	UserTypes       string    `json:"user_types" db:"user_types" validate:""`
-	CustomerGroupIds string   `json:"customer_group_ids" db:"customer_group_ids" validate:""`
-	Priority        int32     `json:"priority" db:"priority" validate:""`
-	IsActive        bool      `json:"is_active" db:"is_active" validate:""`
-	ClickCount      int32     `json:"click_count" db:"click_count" validate:""`
-	ViewCount       int32     `json:"view_count" db:"view_count" validate:""`
-	CreatedAt       time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt       time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	Title string `json:"title" db:"title" validate:"required,max=200"`
+	Description string `json:"description" db:"description" validate:""`
+	ImageUrl string `json:"image_url" db:"image_url" validate:"required,max=500"`
+	LinkUrl string `json:"link_url" db:"link_url" validate:"max=500"`
+	Placement string `json:"placement" db:"placement" validate:"max=50"`
+	StartDate time.Time `json:"start_date" db:"start_date" validate:"required"`
+	EndDate time.Time `json:"end_date" db:"end_date" validate:""`
+	IsActive bool `json:"is_active" db:"is_active" validate:""`
+	SortOrder int32 `json:"sort_order" db:"sort_order" validate:""`
+	ClickCount int32 `json:"click_count" db:"click_count" validate:""`
+	ViewCount int32 `json:"view_count" db:"view_count" validate:""`
+	TargetGroup string `json:"target_group" db:"target_group" validate:"max=50"`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the Banner model
@@ -201,82 +176,65 @@ func (m *Banner) Validate() error {
 }
 
 // BannerObjects provides type-safe operations for Banner
+// Uses generic orm.Manager[Banner] and orm.BaseQuerySet[Banner]
 var BannerObjects, _ = orm.NewManager[Banner]("banners")
 
 // BannerFields provides type-safe field access for Banner
 type BannerFields struct {
-	Id              orm.Field[int64]
-	Title           orm.Field[string]
-	Subtitle        orm.Field[string]
-	ImageUrl        orm.Field[string]
-	MobileImageUrl  orm.Field[string]
-	VideoUrl        orm.Field[string]
-	Content         orm.Field[string]
-	Link            orm.Field[string]
-	LinkText        orm.Field[string]
-	Position        orm.Field[string]
-	BackgroundColor orm.Field[string]
-	TextColor       orm.Field[string]
-	StartDate       orm.Field[time.Time]
-	EndDate         orm.Field[time.Time]
-	Schedule        orm.Field[string]
-	DeviceTypes     orm.Field[string]
-	UserTypes       orm.Field[string]
-	CustomerGroupIds orm.Field[string]
-	Priority        orm.Field[int32]
-	IsActive        orm.Field[bool]
-	ClickCount      orm.Field[int32]
-	ViewCount       orm.Field[int32]
-	CreatedAt       orm.Field[time.Time]
-	UpdatedAt       orm.Field[time.Time]
+	Id orm.Field[int64]
+	Title orm.Field[string]
+	Description orm.Field[string]
+	ImageUrl orm.Field[string]
+	LinkUrl orm.Field[string]
+	Placement orm.Field[string]
+	StartDate orm.Field[time.Time]
+	EndDate orm.Field[time.Time]
+	IsActive orm.Field[bool]
+	SortOrder orm.Field[int32]
+	ClickCount orm.Field[int32]
+	ViewCount orm.Field[int32]
+	TargetGroup orm.Field[string]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
 }
 
 var BannerFieldsInstance = BannerFields{
-	Id:              orm.NewField[int64]("id", "banners"),
-	Title:           orm.NewField[string]("title", "banners"),
-	Subtitle:        orm.NewField[string]("subtitle", "banners"),
-	ImageUrl:        orm.NewField[string]("image_url", "banners"),
-	MobileImageUrl:  orm.NewField[string]("mobile_image_url", "banners"),
-	VideoUrl:        orm.NewField[string]("video_url", "banners"),
-	Content:         orm.NewField[string]("content", "banners"),
-	Link:            orm.NewField[string]("link", "banners"),
-	LinkText:        orm.NewField[string]("link_text", "banners"),
-	Position:        orm.NewField[string]("position", "banners"),
-	BackgroundColor: orm.NewField[string]("background_color", "banners"),
-	TextColor:       orm.NewField[string]("text_color", "banners"),
-	StartDate:       orm.NewField[time.Time]("start_date", "banners"),
-	EndDate:         orm.NewField[time.Time]("end_date", "banners"),
-	Schedule:        orm.NewField[string]("schedule", "banners"),
-	DeviceTypes:     orm.NewField[string]("device_types", "banners"),
-	UserTypes:       orm.NewField[string]("user_types", "banners"),
-	CustomerGroupIds: orm.NewField[string]("customer_group_ids", "banners"),
-	Priority:        orm.NewField[int32]("priority", "banners"),
-	IsActive:        orm.NewField[bool]("is_active", "banners"),
-	ClickCount:      orm.NewField[int32]("click_count", "banners"),
-	ViewCount:       orm.NewField[int32]("view_count", "banners"),
-	CreatedAt:       orm.NewField[time.Time]("created_at", "banners"),
-	UpdatedAt:       orm.NewField[time.Time]("updated_at", "banners"),
+	Id: orm.NewField[int64]("id", "banners"),
+	Title: orm.NewField[string]("title", "banners"),
+	Description: orm.NewField[string]("description", "banners"),
+	ImageUrl: orm.NewField[string]("image_url", "banners"),
+	LinkUrl: orm.NewField[string]("link_url", "banners"),
+	Placement: orm.NewField[string]("placement", "banners"),
+	StartDate: orm.NewField[time.Time]("start_date", "banners"),
+	EndDate: orm.NewField[time.Time]("end_date", "banners"),
+	IsActive: orm.NewField[bool]("is_active", "banners"),
+	SortOrder: orm.NewField[int32]("sort_order", "banners"),
+	ClickCount: orm.NewField[int32]("click_count", "banners"),
+	ViewCount: orm.NewField[int32]("view_count", "banners"),
+	TargetGroup: orm.NewField[string]("target_group", "banners"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "banners"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "banners"),
 }
+
+
+
 
 // NewsletterSubscriptionGenerated struct definition
 type NewsletterSubscriptionGenerated struct {
 	schema.BaseSchema
-	Id             int64     `json:"id" db:"id" validate:""`
-	Email          string    `json:"email" db:"email" validate:""`
-	ListType       string    `json:"list_type" db:"list_type" validate:""`
-	Source         string    `json:"source" db:"source" validate:""`
-	Preferences    string    `json:"preferences" db:"preferences" validate:""`
-	ConsentGiven   bool      `json:"consent_given" db:"consent_given" validate:""`
-	ConsentDate    time.Time `json:"consent_date" db:"consent_date" validate:""`
-	ConsentIp      string    `json:"consent_ip" db:"consent_ip" validate:""`
-	Status         string    `json:"status" db:"status" validate:""`
-	SubscribedAt   time.Time `json:"subscribed_at" db:"subscribed_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	Email string `json:"email" db:"email" validate:"required,max=255"`
+	FirstName string `json:"first_name" db:"first_name" validate:"max=100"`
+	LastName string `json:"last_name" db:"last_name" validate:"max=100"`
+	CustomerId int64 `json:"customer_id" db:"customer_id" validate:""`
+	Status string `json:"status" db:"status" validate:"max=20"`
+	Source string `json:"source" db:"source" validate:"max=50"`
+	IpAddress string `json:"ip_address" db:"ip_address" validate:"max=45"`
+	ConfirmedAt time.Time `json:"confirmed_at" db:"confirmed_at" validate:""`
 	UnsubscribedAt time.Time `json:"unsubscribed_at" db:"unsubscribed_at" validate:""`
-	ClickCount     int32     `json:"click_count" db:"click_count" validate:""`
-	OpenCount      int32     `json:"open_count" db:"open_count" validate:""`
-	Segments       string    `json:"segments" db:"segments" validate:""`
-	CreatedAt      time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt      time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Preferences string `json:"preferences" db:"preferences" validate:""`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the NewsletterSubscription model
@@ -286,56 +244,55 @@ func (m *NewsletterSubscription) Validate() error {
 }
 
 // NewsletterSubscriptionObjects provides type-safe operations for NewsletterSubscription
+// Uses generic orm.Manager[NewsletterSubscription] and orm.BaseQuerySet[NewsletterSubscription]
 var NewsletterSubscriptionObjects, _ = orm.NewManager[NewsletterSubscription]("newsletter_subscriptions")
 
 // NewsletterSubscriptionFields provides type-safe field access for NewsletterSubscription
 type NewsletterSubscriptionFields struct {
-	Id             orm.Field[int64]
-	Email          orm.Field[string]
-	ListType       orm.Field[string]
-	Source         orm.Field[string]
-	Preferences    orm.Field[string]
-	ConsentGiven   orm.Field[bool]
-	ConsentDate    orm.Field[time.Time]
-	ConsentIp      orm.Field[string]
-	Status         orm.Field[string]
-	SubscribedAt   orm.Field[time.Time]
+	Id orm.Field[int64]
+	Email orm.Field[string]
+	FirstName orm.Field[string]
+	LastName orm.Field[string]
+	CustomerId orm.Field[int64]
+	Status orm.Field[string]
+	Source orm.Field[string]
+	IpAddress orm.Field[string]
+	ConfirmedAt orm.Field[time.Time]
 	UnsubscribedAt orm.Field[time.Time]
-	ClickCount     orm.Field[int32]
-	OpenCount      orm.Field[int32]
-	Segments       orm.Field[string]
-	CreatedAt      orm.Field[time.Time]
-	UpdatedAt      orm.Field[time.Time]
+	Preferences orm.Field[string]
+	CreatedAt orm.Field[time.Time]
+	UpdatedAt orm.Field[time.Time]
 }
 
 var NewsletterSubscriptionFieldsInstance = NewsletterSubscriptionFields{
-	Id:             orm.NewField[int64]("id", "newsletter_subscriptions"),
-	Email:          orm.NewField[string]("email", "newsletter_subscriptions"),
-	ListType:       orm.NewField[string]("list_type", "newsletter_subscriptions"),
-	Source:         orm.NewField[string]("source", "newsletter_subscriptions"),
-	Preferences:    orm.NewField[string]("preferences", "newsletter_subscriptions"),
-	ConsentGiven:   orm.NewField[bool]("consent_given", "newsletter_subscriptions"),
-	ConsentDate:    orm.NewField[time.Time]("consent_date", "newsletter_subscriptions"),
-	ConsentIp:      orm.NewField[string]("consent_ip", "newsletter_subscriptions"),
-	Status:         orm.NewField[string]("status", "newsletter_subscriptions"),
-	SubscribedAt:   orm.NewField[time.Time]("subscribed_at", "newsletter_subscriptions"),
+	Id: orm.NewField[int64]("id", "newsletter_subscriptions"),
+	Email: orm.NewField[string]("email", "newsletter_subscriptions"),
+	FirstName: orm.NewField[string]("first_name", "newsletter_subscriptions"),
+	LastName: orm.NewField[string]("last_name", "newsletter_subscriptions"),
+	CustomerId: orm.NewField[int64]("customer_id", "newsletter_subscriptions"),
+	Status: orm.NewField[string]("status", "newsletter_subscriptions"),
+	Source: orm.NewField[string]("source", "newsletter_subscriptions"),
+	IpAddress: orm.NewField[string]("ip_address", "newsletter_subscriptions"),
+	ConfirmedAt: orm.NewField[time.Time]("confirmed_at", "newsletter_subscriptions"),
 	UnsubscribedAt: orm.NewField[time.Time]("unsubscribed_at", "newsletter_subscriptions"),
-	ClickCount:     orm.NewField[int32]("click_count", "newsletter_subscriptions"),
-	OpenCount:      orm.NewField[int32]("open_count", "newsletter_subscriptions"),
-	Segments:       orm.NewField[string]("segments", "newsletter_subscriptions"),
-	CreatedAt:      orm.NewField[time.Time]("created_at", "newsletter_subscriptions"),
-	UpdatedAt:      orm.NewField[time.Time]("updated_at", "newsletter_subscriptions"),
+	Preferences: orm.NewField[string]("preferences", "newsletter_subscriptions"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "newsletter_subscriptions"),
+	UpdatedAt: orm.NewField[time.Time]("updated_at", "newsletter_subscriptions"),
 }
+
+
+
 
 // PromotionUsageGenerated struct definition
 type PromotionUsageGenerated struct {
 	schema.BaseSchema
-	Id             int64     `json:"id" db:"id" validate:""`
-	PromotionId    int64     `json:"promotion_id" db:"promotion_id" validate:""`
-	OrderId        int64     `json:"order_id" db:"order_id" validate:""`
-	CustomerId     int64     `json:"customer_id" db:"customer_id" validate:""`
-	DiscountAmount float64   `json:"discount_amount" db:"discount_amount" validate:""`
-	UsedAt         time.Time `json:"used_at" db:"used_at" validate:""`
+	Id int64 `json:"id" db:"id" validate:""`
+	PromotionId int64 `json:"promotion_id" db:"promotion_id" validate:"required"`
+	CustomerId int64 `json:"customer_id" db:"customer_id" validate:"required"`
+	OrderId int64 `json:"order_id" db:"order_id" validate:"required"`
+	UsedAt time.Time `json:"used_at" db:"used_at" validate:"required"`
+	DiscountAmount float64 `json:"discount_amount" db:"discount_amount" validate:"required"`
+	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
 }
 
 // Validate validates the PromotionUsage model
@@ -345,23 +302,30 @@ func (m *PromotionUsage) Validate() error {
 }
 
 // PromotionUsageObjects provides type-safe operations for PromotionUsage
-var PromotionUsageObjects, _ = orm.NewManager[PromotionUsage]("promotion_usage")
+// Uses generic orm.Manager[PromotionUsage] and orm.BaseQuerySet[PromotionUsage]
+var PromotionUsageObjects, _ = orm.NewManager[PromotionUsage]("promotion_usages")
 
 // PromotionUsageFields provides type-safe field access for PromotionUsage
 type PromotionUsageFields struct {
-	Id             orm.Field[int64]
-	PromotionId    orm.Field[int64]
-	OrderId        orm.Field[int64]
-	CustomerId     orm.Field[int64]
+	Id orm.Field[int64]
+	PromotionId orm.Field[int64]
+	CustomerId orm.Field[int64]
+	OrderId orm.Field[int64]
+	UsedAt orm.Field[time.Time]
 	DiscountAmount orm.Field[float64]
-	UsedAt         orm.Field[time.Time]
+	CreatedAt orm.Field[time.Time]
 }
 
 var PromotionUsageFieldsInstance = PromotionUsageFields{
-	Id:             orm.NewField[int64]("id", "promotion_usage"),
-	PromotionId:    orm.NewField[int64]("promotion_id", "promotion_usage"),
-	OrderId:        orm.NewField[int64]("order_id", "promotion_usage"),
-	CustomerId:     orm.NewField[int64]("customer_id", "promotion_usage"),
-	DiscountAmount: orm.NewField[float64]("discount_amount", "promotion_usage"),
-	UsedAt:         orm.NewField[time.Time]("used_at", "promotion_usage"),
+	Id: orm.NewField[int64]("id", "promotion_usages"),
+	PromotionId: orm.NewField[int64]("promotion_id", "promotion_usages"),
+	CustomerId: orm.NewField[int64]("customer_id", "promotion_usages"),
+	OrderId: orm.NewField[int64]("order_id", "promotion_usages"),
+	UsedAt: orm.NewField[time.Time]("used_at", "promotion_usages"),
+	DiscountAmount: orm.NewField[float64]("discount_amount", "promotion_usages"),
+	CreatedAt: orm.NewField[time.Time]("created_at", "promotion_usages"),
 }
+
+
+
+

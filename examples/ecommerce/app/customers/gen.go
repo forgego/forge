@@ -13,8 +13,8 @@ import (
 type CustomerGroupGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	Name string `json:"name" db:"name" validate:""`
-	Code string `json:"code" db:"code" validate:""`
+	Name string `json:"name" db:"name" validate:"required,max=200"`
+	Code string `json:"code" db:"code" validate:"required,max=50"`
 	Description string `json:"description" db:"description" validate:""`
 	DiscountPercentage float64 `json:"discount_percentage" db:"discount_percentage" validate:""`
 	IsActive bool `json:"is_active" db:"is_active" validate:""`
@@ -62,29 +62,29 @@ var CustomerGroupFieldsInstance = CustomerGroupFields{
 type CustomerGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	Email string `json:"email" db:"email" validate:""`
-	PasswordHash string `json:"password_hash" db:"password_hash" validate:""`
-	FirstName string `json:"first_name" db:"first_name" validate:""`
-	LastName string `json:"last_name" db:"last_name" validate:""`
-	Phone string `json:"phone" db:"phone" validate:""`
+	Email string `json:"email" db:"email" validate:"required,max=255"`
+	PasswordHash string `json:"password_hash" db:"password_hash" validate:"required,max=255"`
+	FirstName string `json:"first_name" db:"first_name" validate:"required,max=100"`
+	LastName string `json:"last_name" db:"last_name" validate:"required,max=100"`
+	Phone string `json:"phone" db:"phone" validate:"max=20"`
 	DateOfBirth time.Time `json:"date_of_birth" db:"date_of_birth" validate:""`
-	Gender string `json:"gender" db:"gender" validate:""`
-	CompanyName string `json:"company_name" db:"company_name" validate:""`
-	TaxId string `json:"tax_id" db:"tax_id" validate:""`
+	Gender string `json:"gender" db:"gender" validate:"max=20"`
+	CompanyName string `json:"company_name" db:"company_name" validate:"max=200"`
+	TaxId string `json:"tax_id" db:"tax_id" validate:"max=50"`
 	CustomerGroupId int64 `json:"customer_group_id" db:"customer_group_id" validate:""`
 	IsActive bool `json:"is_active" db:"is_active" validate:""`
 	IsVerified bool `json:"is_verified" db:"is_verified" validate:""`
 	AcceptsMarketing bool `json:"accepts_marketing" db:"accepts_marketing" validate:""`
-	VerificationToken string `json:"verification_token" db:"verification_token" validate:""`
-	ResetPasswordToken string `json:"reset_password_token" db:"reset_password_token" validate:""`
+	VerificationToken string `json:"verification_token" db:"verification_token" validate:"max=255"`
+	ResetPasswordToken string `json:"reset_password_token" db:"reset_password_token" validate:"max=255"`
 	ResetPasswordExpiresAt time.Time `json:"reset_password_expires_at" db:"reset_password_expires_at" validate:""`
 	LastLoginAt time.Time `json:"last_login_at" db:"last_login_at" validate:""`
-	LastLoginIp string `json:"last_login_ip" db:"last_login_ip" validate:""`
+	LastLoginIp string `json:"last_login_ip" db:"last_login_ip" validate:"max=45"`
 	TotalOrders int32 `json:"total_orders" db:"total_orders" validate:""`
 	TotalSpent float64 `json:"total_spent" db:"total_spent" validate:""`
 	AverageOrderValue float64 `json:"average_order_value" db:"average_order_value" validate:""`
-	PreferredLanguage string `json:"preferred_language" db:"preferred_language" validate:""`
-	PreferredCurrency string `json:"preferred_currency" db:"preferred_currency" validate:""`
+	PreferredLanguage string `json:"preferred_language" db:"preferred_language" validate:"max=10"`
+	PreferredCurrency string `json:"preferred_currency" db:"preferred_currency" validate:"max=3"`
 	Notes string `json:"notes" db:"notes" validate:""`
 	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
@@ -168,19 +168,19 @@ var CustomerFieldsInstance = CustomerFields{
 type AddressGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	CustomerId int64 `json:"customer_id" db:"customer_id" validate:""`
-	AddressType string `json:"address_type" db:"address_type" validate:""`
-	FirstName string `json:"first_name" db:"first_name" validate:""`
-	LastName string `json:"last_name" db:"last_name" validate:""`
-	CompanyName string `json:"company_name" db:"company_name" validate:""`
-	Phone string `json:"phone" db:"phone" validate:""`
-	AddressLine1 string `json:"address_line1" db:"address_line1" validate:""`
-	AddressLine2 string `json:"address_line2" db:"address_line2" validate:""`
-	City string `json:"city" db:"city" validate:""`
-	StateProvince string `json:"state_province" db:"state_province" validate:""`
-	PostalCode string `json:"postal_code" db:"postal_code" validate:""`
-	CountryCode string `json:"country_code" db:"country_code" validate:""`
-	CountryName string `json:"country_name" db:"country_name" validate:""`
+	CustomerId int64 `json:"customer_id" db:"customer_id" validate:"required"`
+	AddressType string `json:"address_type" db:"address_type" validate:"required,max=20"`
+	FirstName string `json:"first_name" db:"first_name" validate:"required,max=100"`
+	LastName string `json:"last_name" db:"last_name" validate:"required,max=100"`
+	CompanyName string `json:"company_name" db:"company_name" validate:"max=200"`
+	Phone string `json:"phone" db:"phone" validate:"max=20"`
+	AddressLine1 string `json:"address_line1" db:"address_line1" validate:"required,max=255"`
+	AddressLine2 string `json:"address_line2" db:"address_line2" validate:"max=255"`
+	City string `json:"city" db:"city" validate:"required,max=100"`
+	StateProvince string `json:"state_province" db:"state_province" validate:"max=100"`
+	PostalCode string `json:"postal_code" db:"postal_code" validate:"required,max=20"`
+	CountryCode string `json:"country_code" db:"country_code" validate:"required,max=2"`
+	CountryName string `json:"country_name" db:"country_name" validate:"required,max=100"`
 	Latitude float64 `json:"latitude" db:"latitude" validate:""`
 	Longitude float64 `json:"longitude" db:"longitude" validate:""`
 	IsDefaultShipping bool `json:"is_default_shipping" db:"is_default_shipping" validate:""`
@@ -256,11 +256,11 @@ var AddressFieldsInstance = AddressFields{
 type WishListGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	CustomerId int64 `json:"customer_id" db:"customer_id" validate:""`
-	Name string `json:"name" db:"name" validate:""`
+	CustomerId int64 `json:"customer_id" db:"customer_id" validate:"required"`
+	Name string `json:"name" db:"name" validate:"required,max=200"`
 	Description string `json:"description" db:"description" validate:""`
 	IsPublic bool `json:"is_public" db:"is_public" validate:""`
-	ShareToken string `json:"share_token" db:"share_token" validate:""`
+	ShareToken string `json:"share_token" db:"share_token" validate:"max=100"`
 	IsDefault bool `json:"is_default" db:"is_default" validate:""`
 	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
@@ -308,8 +308,8 @@ var WishListFieldsInstance = WishListFields{
 type WishListItemGenerated struct {
 	schema.BaseSchema
 	Id int64 `json:"id" db:"id" validate:""`
-	WishListId int64 `json:"wish_list_id" db:"wish_list_id" validate:""`
-	ProductId int64 `json:"product_id" db:"product_id" validate:""`
+	WishListId int64 `json:"wish_list_id" db:"wish_list_id" validate:"required"`
+	ProductId int64 `json:"product_id" db:"product_id" validate:"required"`
 	VariantId int64 `json:"variant_id" db:"variant_id" validate:""`
 	DesiredQuantity int32 `json:"desired_quantity" db:"desired_quantity" validate:""`
 	PriceWhenAdded float64 `json:"price_when_added" db:"price_when_added" validate:""`

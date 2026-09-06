@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/forgego/forge/admin"
-	"github.com/forgego/forge/orm"
 )
 
 // RegisterAdmin registers all engagement models with the admin interface
@@ -12,16 +11,16 @@ func RegisterAdmin(ctx context.Context) error {
 	// RecentlyViewed Admin
 	_, err := admin.Register(&admin.Config[RecentlyViewed]{
 		ListDisplay: []admin.Field{
-			RecentlyViewedFieldsInstance.ID,
-			RecentlyViewedFieldsInstance.CustomerID,
-			RecentlyViewedFieldsInstance.ProductID,
+			RecentlyViewedFieldsInstance.Id,
+			RecentlyViewedFieldsInstance.CustomerId,
+			RecentlyViewedFieldsInstance.ProductId,
 			RecentlyViewedFieldsInstance.ViewedAt,
 			RecentlyViewedFieldsInstance.ViewCount,
 		},
 		SearchFields: []admin.Field{
-			RecentlyViewedFieldsInstance.CustomerID,
-			RecentlyViewedFieldsInstance.ProductID,
-			RecentlyViewedFieldsInstance.SessionID,
+			RecentlyViewedFieldsInstance.CustomerId,
+			RecentlyViewedFieldsInstance.ProductId,
+			RecentlyViewedFieldsInstance.SessionId,
 		},
 		ListFilter: []admin.Field{
 			RecentlyViewedFieldsInstance.ViewedAt,
@@ -38,15 +37,15 @@ func RegisterAdmin(ctx context.Context) error {
 	// ProductComparison Admin
 	_, err = admin.Register(&admin.Config[ProductComparison]{
 		ListDisplay: []admin.Field{
-			ProductComparisonFieldsInstance.ID,
-			ProductComparisonFieldsInstance.CustomerID,
+			ProductComparisonFieldsInstance.Id,
+			ProductComparisonFieldsInstance.CustomerId,
 			ProductComparisonFieldsInstance.Name,
 			ProductComparisonFieldsInstance.IsPublic,
 			ProductComparisonFieldsInstance.CreatedAt,
 		},
 		SearchFields: []admin.Field{
 			ProductComparisonFieldsInstance.Name,
-			ProductComparisonFieldsInstance.CustomerID,
+			ProductComparisonFieldsInstance.CustomerId,
 		},
 		ListFilter: []admin.Field{
 			ProductComparisonFieldsInstance.IsPublic,
@@ -63,8 +62,8 @@ func RegisterAdmin(ctx context.Context) error {
 	// Notification Admin
 	_, err = admin.Register(&admin.Config[Notification]{
 		ListDisplay: []admin.Field{
-			NotificationFieldsInstance.ID,
-			NotificationFieldsInstance.CustomerID,
+			NotificationFieldsInstance.Id,
+			NotificationFieldsInstance.CustomerId,
 			NotificationFieldsInstance.Title,
 			NotificationFieldsInstance.Type,
 			NotificationFieldsInstance.Priority,
@@ -74,7 +73,7 @@ func RegisterAdmin(ctx context.Context) error {
 		SearchFields: []admin.Field{
 			NotificationFieldsInstance.Title,
 			NotificationFieldsInstance.Message,
-			NotificationFieldsInstance.CustomerID,
+			NotificationFieldsInstance.CustomerId,
 		},
 		ListFilter: []admin.Field{
 			NotificationFieldsInstance.Type,
@@ -93,15 +92,15 @@ func RegisterAdmin(ctx context.Context) error {
 	// CustomerActivity Admin
 	_, err = admin.Register(&admin.Config[CustomerActivity]{
 		ListDisplay: []admin.Field{
-			CustomerActivityFieldsInstance.ID,
-			CustomerActivityFieldsInstance.CustomerID,
+			CustomerActivityFieldsInstance.Id,
+			CustomerActivityFieldsInstance.CustomerId,
 			CustomerActivityFieldsInstance.ActivityType,
 			CustomerActivityFieldsInstance.EntityType,
-			CustomerActivityFieldsInstance.EntityID,
+			CustomerActivityFieldsInstance.EntityId,
 			CustomerActivityFieldsInstance.CreatedAt,
 		},
 		SearchFields: []admin.Field{
-			CustomerActivityFieldsInstance.CustomerID,
+			CustomerActivityFieldsInstance.CustomerId,
 			CustomerActivityFieldsInstance.ActivityType,
 			CustomerActivityFieldsInstance.Description,
 		},
@@ -121,17 +120,17 @@ func RegisterAdmin(ctx context.Context) error {
 	// AbandonedCartReminder Admin
 	_, err = admin.Register(&admin.Config[AbandonedCartReminder]{
 		ListDisplay: []admin.Field{
-			AbandonedCartReminderFieldsInstance.ID,
-			AbandonedCartReminderFieldsInstance.CartID,
-			AbandonedCartReminderFieldsInstance.CustomerID,
+			AbandonedCartReminderFieldsInstance.Id,
+			AbandonedCartReminderFieldsInstance.CartId,
+			AbandonedCartReminderFieldsInstance.CustomerId,
 			AbandonedCartReminderFieldsInstance.ReminderType,
 			AbandonedCartReminderFieldsInstance.Status,
 			AbandonedCartReminderFieldsInstance.Converted,
 			AbandonedCartReminderFieldsInstance.SentAt,
 		},
 		SearchFields: []admin.Field{
-			AbandonedCartReminderFieldsInstance.CartID,
-			AbandonedCartReminderFieldsInstance.CustomerID,
+			AbandonedCartReminderFieldsInstance.CartId,
+			AbandonedCartReminderFieldsInstance.CustomerId,
 			AbandonedCartReminderFieldsInstance.EmailAddress,
 		},
 		ListFilter: []admin.Field{
@@ -151,7 +150,7 @@ func RegisterAdmin(ctx context.Context) error {
 	// UserSegment Admin
 	_, err = admin.Register(&admin.Config[UserSegment]{
 		ListDisplay: []admin.Field{
-			UserSegmentFieldsInstance.ID,
+			UserSegmentFieldsInstance.Id,
 			UserSegmentFieldsInstance.Name,
 			UserSegmentFieldsInstance.IsActive,
 			UserSegmentFieldsInstance.IsDynamic,
@@ -180,8 +179,8 @@ func RegisterAdmin(ctx context.Context) error {
 	// SegmentRule Admin
 	_, err = admin.Register(&admin.Config[SegmentRule]{
 		ListDisplay: []admin.Field{
-			SegmentRuleFieldsInstance.ID,
-			SegmentRuleFieldsInstance.SegmentID,
+			SegmentRuleFieldsInstance.Id,
+			SegmentRuleFieldsInstance.SegmentId,
 			SegmentRuleFieldsInstance.Field,
 			SegmentRuleFieldsInstance.Operator,
 			SegmentRuleFieldsInstance.Value,
@@ -197,7 +196,7 @@ func RegisterAdmin(ctx context.Context) error {
 			SegmentRuleFieldsInstance.LogicType,
 		},
 		Ordering: []admin.Field{
-			SegmentRuleFieldsInstance.SegmentID,
+			SegmentRuleFieldsInstance.SegmentId,
 			SegmentRuleFieldsInstance.SortOrder,
 		},
 		ListPerPage: 50,
