@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 import { Button } from '../components/ui/button';
-import { Columns, Settings2 } from 'lucide-react';
+import { Settings2 } from 'lucide-react';
 import type { FieldMetadata } from '../api/types';
 
 interface ColumnCustomizerProps {
@@ -22,12 +22,6 @@ export function ColumnCustomizer({
   visibleColumns,
   onColumnsChange,
 }: ColumnCustomizerProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   const allColumns = fields
     .filter((f) => !f.read_only)
     .map((f) => f.name);
@@ -49,8 +43,6 @@ export function ColumnCustomizer({
       onColumnsChange([allColumns[0]]);
     }
   };
-
-  if (!mounted) return null;
 
   return (
     <DropdownMenu>

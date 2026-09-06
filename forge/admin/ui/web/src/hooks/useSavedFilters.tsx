@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +28,19 @@ interface SavedFiltersProps {
   onSetDefault?: (id: string) => void;
 }
 
+function readStoredFilters(modelName: string): SavedFilter[] {
+  const key = `forge-saved-filters-${modelName}`;
+  const stored = localStorage.getItem(key);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 export function SavedFilters({
   model,
   currentFilters,
@@ -36,27 +49,17 @@ export function SavedFilters({
   onDeleteFilter,
   onSetDefault,
 }: SavedFiltersProps) {
-  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>(() =>
+    readStoredFilters(model),
+  );
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [newFilterName, setNewFilterName] = useState('');
 
-  useEffect(() => {
-    setMounted(true);
-    loadSavedFilters();
-  }, [model]);
-
-  const loadSavedFilters = () => {
-    const key = `forge-saved-filters-${model}`;
-    const stored = localStorage.getItem(key);
-    if (stored) {
-      try {
-        setSavedFilters(JSON.parse(stored));
-      } catch {
-        setSavedFilters([]);
-      }
-    }
-  };
+  const [prevModel, setPrevModel] = useState(model);
+  if (prevModel !== model) {
+    setPrevModel(model);
+    setSavedFilters(readStoredFilters(model));
+  }
 
   const saveFilters = (filters: SavedFilter[]) => {
     const key = `forge-saved-filters-${model}`;
@@ -99,8 +102,6 @@ export function SavedFilters({
   };
 
   const getDefaultFilter = () => savedFilters.find((f) => f.isDefault);
-
-  if (!mounted) return null;
 
   return (
     <div className="relative">
@@ -228,19 +229,15 @@ export function SavedFilters({
 // Hook for managing filter state with localStorage persistence
 export function useSavedFilters(model: string) {
   const [filters, setFilters] = useState<Record<string, any>>({});
-  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>(() =>
+    readStoredFilters(model),
+  );
 
-  useEffect(() => {
-    const key = `forge-saved-filters-${model}`;
-    const stored = localStorage.getItem(key);
-    if (stored) {
-      try {
-        setSavedFilters(JSON.parse(stored));
-      } catch {
-        setSavedFilters([]);
-      }
-    }
-  }, [model]);
+  const [prevModel, setPrevModel] = useState(model);
+  if (prevModel !== model) {
+    setPrevModel(model);
+    setSavedFilters(readStoredFilters(model));
+  }
 
   const saveCurrentFilter = (name: string) => {
     const newFilter: SavedFilter = {

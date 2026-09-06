@@ -1,6 +1,5 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useToast } from './use-toast';
 
 interface KeyboardShortcut {
   key: string;
@@ -67,7 +66,6 @@ export function useKeyboardShortcuts(
 // Predefined shortcuts for admin
 export function useAdminShortcuts() {
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const shortcuts: KeyboardShortcut[] = [
     {
