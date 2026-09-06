@@ -28,7 +28,12 @@ func (sa *SafeAccessor[T]) Get(instance *T, fieldName string) (interface{}, erro
 	// Validate field exists
 	fieldInfo := sa.schema.GetField(fieldName)
 	if fieldInfo == nil {
-		return nil, fmt.Errorf("field %s not found on model", fieldName)
+		// Try with PascalCase since that's how it's stored in schema (struct field name)
+		pascalName := toPascalCaseSafe(fieldName)
+		fieldInfo = sa.schema.GetField(pascalName)
+		if fieldInfo == nil {
+			return nil, fmt.Errorf("field %s not found on model", fieldName)
+		}
 	}
 
 	// Get value using reflection
@@ -58,7 +63,12 @@ func (sa *SafeAccessor[T]) Set(instance *T, fieldName string, value interface{})
 	// Validate field exists
 	fieldInfo := sa.schema.GetField(fieldName)
 	if fieldInfo == nil {
-		return fmt.Errorf("field %s not found on model", fieldName)
+		// Try with PascalCase
+		pascalName := toPascalCaseSafe(fieldName)
+		fieldInfo = sa.schema.GetField(pascalName)
+		if fieldInfo == nil {
+			return fmt.Errorf("field %s not found on model", fieldName)
+		}
 	}
 
 	// Validate type

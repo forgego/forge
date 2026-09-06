@@ -63,11 +63,22 @@ type IndexInfo struct {
 
 // GetField retrieves a field by name
 func (ms *ModelSchema) GetField(name string) *FieldInfo {
+	// First try exact match (case-sensitive)
 	for i := range ms.Fields {
 		if ms.Fields[i].Name == name || ms.Fields[i].DBColumn == name {
 			return &ms.Fields[i]
 		}
 	}
+
+	// If exact match fails, try case-insensitive match for convenience
+	// as sometimes the field might be queried by PascalCase but stored as camelCase or snake_case
+	lowerName := strings.ToLower(name)
+	for i := range ms.Fields {
+		if strings.ToLower(ms.Fields[i].Name) == lowerName || strings.ToLower(ms.Fields[i].DBColumn) == lowerName {
+			return &ms.Fields[i]
+		}
+	}
+
 	return nil
 }
 
