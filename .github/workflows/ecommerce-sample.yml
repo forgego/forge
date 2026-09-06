@@ -82,7 +82,7 @@ jobs:
         run: docker build -t ecommerce-sample:${{ github.sha }} -f examples/ecommerce/Dockerfile examples/ecommerce
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ecommerce-binary
           path: examples/ecommerce/ecommerce
@@ -118,7 +118,7 @@ jobs:
           go-version: '1.25'
 
       - name: Download ecommerce binary
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ecommerce-binary
           path: ./bin
