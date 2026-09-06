@@ -106,11 +106,13 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
     })),
   });
 
-  useEffect(() => {
-    if (objectData && mode === "edit") {
-      setFormData(objectData);
-    }
-  }, [objectData, mode]);
+  // Sync fetched object into the form when it (re)loads in edit mode.
+  // Done during render (adjust-state pattern) instead of an effect.
+  const [formSource, setFormSource] = useState<unknown>(null);
+  if (mode === "edit" && objectData && formSource !== objectData) {
+    setFormSource(objectData);
+    setFormData(objectData);
+  }
 
   useEffect(() => {
     inlineRelationDetails.forEach((detail, index) => {
@@ -864,6 +866,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
   return (
     <AdminLayout>
       <div className="space-y-6">
+        {/* eslint-disable-next-line react-hooks/static-components -- useUIComponent returns a stable registry ref */}
         <FormHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground/90">
@@ -911,6 +914,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
 
                 if (FormBody) {
                   return (
+                    // eslint-disable-next-line react-hooks/static-components -- useUIComponent returns a stable registry ref
                     <FormBody
                       fields={metadata.fields}
                       formData={formData}
@@ -971,6 +975,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
                 );
               })()}
 
+              {/* eslint-disable-next-line react-hooks/static-components -- useUIComponent returns a stable registry ref */}
               <FormFooter className="pt-4 border-t border-border/50 flex justify-end">
                 <Button
                   type="submit"

@@ -250,6 +250,7 @@ export default function ModelListPage() {
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          {/* eslint-disable-next-line react-hooks/static-components -- resolved via useUIComponent registry (stable ref) */}
           <ListTitle className="space-y-1.5">
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">
               {metadata.verbose_name_plural}
@@ -258,6 +259,7 @@ export default function ModelListPage() {
               {metadata.description}
             </p>
           </ListTitle>
+          {/* eslint-disable-next-line react-hooks/static-components -- resolved via useUIComponent registry (stable ref) */}
           <ActionHeader className="flex items-center gap-2">
             <div className="relative">
               <select

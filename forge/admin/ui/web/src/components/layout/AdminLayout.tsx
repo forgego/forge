@@ -283,7 +283,7 @@ export default function AdminLayout({
       location.pathname.startsWith(`/${model.name}`)
     );
     if (!activeModel) return null;
-    let groupKey = "";
+    let groupKey: string;
     if (activeModel.name.includes(".")) {
       groupKey = activeModel.name.split(".")[0];
     } else if (activeModel.name.includes("_")) {

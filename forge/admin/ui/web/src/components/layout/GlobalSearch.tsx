@@ -24,6 +24,13 @@ export function GlobalSearch({
   const [query, setQuery] = React.useState("");
   const [results, setResults] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [prevSearch, setPrevSearch] = React.useState({ open, query });
+  if (prevSearch.open !== open || prevSearch.query !== query) {
+    setPrevSearch({ open, query });
+    if (!open || query.trim() === "") {
+      setResults([]);
+    }
+  }
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -54,7 +61,6 @@ export function GlobalSearch({
 
   React.useEffect(() => {
     if (!open || query.trim() === "") {
-      setResults([]);
       return;
     }
 
