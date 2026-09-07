@@ -12,3 +12,4 @@ Managers expose CRUD entry points for a model.
 - `Get`
 - `Update`
 - `Delete`
+- `Filter`, `All` (queryset entry points)

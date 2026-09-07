@@ -110,6 +110,23 @@ Content-Security-Policy: default-src 'self'
 - Session regeneration on authentication
 - CSRF token validation
 
+### Filter Security
+
+- The filter AST (`forge/filter`) is a default-deny whitelist: only
+  explicitly allowed fields and lookups can be queried.
+- Cost scoring plus a JOIN-explosion guard bound filter complexity.
+
+### Middleware Order
+
+Canonical order: RequestID → IP → Recoverer → Logger → Session →
+CSRF → Auth. Do not reorder without updating this section.
+
+### Agent Tooling Credentials
+
+- User credentials and private MCP configurations live in
+  `~/.codex/config.toml` (or the equivalent user config), never in
+  repo-local files.
+
 ## Security Best Practices
 
 ### For Users

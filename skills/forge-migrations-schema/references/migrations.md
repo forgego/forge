@@ -460,6 +460,42 @@ func RunMigration(ctx context.Context, db *sql.DB) error {
 
 ## Next Steps
 
-- [Schema Reference](/docs/api-reference/schema) - Learn about model definitions
-- [Development Guide](/docs/contributing/development) - Contributing to forge
-- [Deployment Guide](/docs/guides/deployment) - Deploying your application
+- [Models guide](../forge-models/references/models.md) - Model definitions drive migrations
+
+## Appendix: Internals
+
+Package map under `forge/db/migrate/`:
+
+- `generate/` — model diffing and migration file generation
+- `state/` — schema-state tracking
+- `sql/` — per-dialect SQL builders (`postgres.go`, `sqlite.go`)
+- `execute/` — `Executor` (`Migrate`/`Rollback`), status reporting
+- `verify/` — drift detection (`DriftDetector.DetectDrift`), linting
+- `parse/` — migration file parsing
+- `core/` — change-type definitions; `migrate.go` re-exports aliases
+  (`RenameTable`, `ModifyColumn`, `RunSQL`, `RunGo`, …)
+
+Go API for embedding migrations:
+
+```go
+// dbDriver is a golang-migrate database driver instance.
+executor, err := execute.NewExecutor(dbDriver, migrationsPath)
+if err != nil {
+    return err
+}
+if err := executor.Migrate(ctx); err != nil {
+    return err
+}
+if err := executor.Rollback(ctx); err != nil {
+    return err
+}
+```
+
+Safety contract: migrations run wrapped in transactions with dirty-state
+detection, checksum verification, plus dry-run / recover / validator
+tooling. Change types cover table/column/index operations including
+`RenameTable`, `ModifyColumn`, `RunSQL`, and `RunGo`.
+
+Future direction (unscheduled): data migrations, squashing UI, a
+migration testing framework, perf analysis, multi-database support,
+and migration templates.

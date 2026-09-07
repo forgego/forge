@@ -26,10 +26,27 @@ The ORM provides type-safe queries through `QuerySet` and `Manager` APIs, with s
 
 ```go
 posts, err := PostObjects.
-    Filter(PostFieldsInstance.Published.Equals(true)).
+    Filter(PostFieldsInstance.Published.Eq(true)).
     OrderBy(orm.Desc("created_at")).
     Limit(10).
     All(ctx)
+```
+
+## Type-Safe Field Access
+
+Resolve fields by name through a field accessor instead of using
+generated instances directly:
+
+```go
+fa, err := manager.GetFieldAccessor()
+if err != nil {
+    return err
+}
+priceField, err := orm.FieldFor[Book, float64](fa, "price")
+if err != nil {
+    return err
+}
+qs.Select(priceField).OrderBy(priceField.Desc())
 ```
 
 ## Relations

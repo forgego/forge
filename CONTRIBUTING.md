@@ -276,6 +276,19 @@ const UserCard = ({ user }: any) => <div>{user.name}</div>;
 - [ ] Performance is acceptable
 - [ ] No hardcoded values (use config/env)
 
+### Framework Patterns
+
+- **Interfaces**: small, focused interfaces; embed for defaults
+  (`BaseSchema`, `BaseQuerySet`).
+- **Generics**: type-safe collections (`QuerySet[T]`); prefer concrete
+  types when possible.
+- **Context**: every public Go API takes `context.Context` first and
+  threads it through.
+- **Errors**: custom framework error types implementing `error`; wrap
+  with context; HTTP layer returns structured responses with
+  appropriate status codes; validation collects field-specific errors
+  in a consistent format.
+
 ## 🧪 Testing
 
 ### Writing Tests
@@ -309,6 +322,15 @@ describe('UserCard', () => {
   });
 });
 ```
+
+### Testing Patterns
+
+- **Setup/teardown**: `t.Cleanup()` for resources, timestamped
+  database names, 60s context timeouts, shared `helpers.Assert*`.
+- **Table-driven tests** for multiple inputs/outputs with descriptive
+  case structs.
+- **Test helpers**: pure assertions in `tests/helpers/`, infra setup
+  in `tests/infra/`, reused across packages.
 
 ### Running Tests
 
@@ -390,6 +412,22 @@ tests/
 docs-site/
 └── docs/           # Documentation
 ```
+
+## 🧭 Framework Rules
+
+These are load-bearing conventions. Do not break them without updating
+`docs/DESIGN.md` first.
+
+- **QuerySets are chainable, lazy, and effectively immutable.** Never
+  mutate a QuerySet in place; each chaining call returns a new one.
+- **Registry-centric extensibility.** Prefer registries over hard-coded
+  lists and `main.go` wiring.
+- **Deterministic codegen.** `forge generate` output (`*.gen.go`) must
+  never clobber user files, and generated files must round-trip
+  (a CI check enforces freshness).
+- **Test helper contract.** DB-backed tests use timestamped database
+  names, `t.Cleanup()` for teardown, 60s context timeouts, and the
+  shared `helpers.Assert*` assertions.
 
 ## 🐛 Reporting Bugs
 

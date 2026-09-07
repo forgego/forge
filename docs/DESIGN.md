@@ -131,7 +131,7 @@ Design reason: chainable methods map cleanly to AST extraction and maintain read
 
 ## 6. Design patterns used
 
-This section is adapted from `docs/archive/FRAMEWORK_ARCHITECTURE.md` and `docs/archive/USER_SYSTEM_ARCHITECTURE.md`, then updated to point at current packages.
+Patterns below are described against current packages.
 
 ### 6.1 Strategy pattern
 
@@ -299,7 +299,7 @@ Writer should avoid clobbering user code.
 
 ## 9. ORM/QuerySet design
 
-This section draws from archived `API_REFERENCE.md` and the current implementation in `forge/orm/*`.
+Described against the current implementation in `forge/orm/*`.
 
 ### 9.1 QuerySet as a persistent builder
 
@@ -353,7 +353,7 @@ Guardrail: `forge/orm/preload.go` defines errors when relations are accessed wit
 
 ## 10. Filtering design
 
-This section is based on `docs/archive/FILTERING_SYSTEM.md` and current `forge/filter/*`.
+Described against current `forge/filter/*`.
 
 ### 10.1 Why a separate filtering subsystem
 
@@ -593,7 +593,60 @@ This repository contains a large archive.
 
 Rules:
 
-- `docs/ARCHITECTURE.md`, `docs/DESIGN.md`, `docs/PRD.md`, `docs/ROADMAP.md` are authoritative.
-- `docs/archive/*` are historical sources and deep dives. They are not automatically accurate.
-- When code changes, update the authoritative docs and optionally add a note in the archive README if you want to preserve history.
+- `docs/DESIGN.md`, `docs/PRD.md`, `docs/ROADMAP.md`, `docs/TECH-DEBT.md`,
+  `docs/BUGS.md` are authoritative.
+- When code changes, update the authoritative docs.
 
+
+## 20. Recorded subsystem decisions
+
+Decisions below were salvaged from ops run notes and the archive before
+those sources were deleted. They document behavior the code implements.
+
+### 20.1 Admin REST conventions
+
+- Bulk endpoints use `201` (full success) / `207` (partial) / `400`-`500`
+  (terminal) semantics.
+- Bulk actions report per-item codes `invalid_id` / `not_found` /
+  `permission_denied` in `BulkActionError.Code`.
+- Single-object update/delete fetches the object first, returns 404 when
+  missing, and enforces object-level `HasChange`/`HasDeletePermission`.
+- `ExecuteAction` enforces per-object `HasChangePermission` with skip
+  reporting in `BulkActionResponse.Errors`.
+- Auth is bearer-token via an in-memory expiring session store;
+  `/api/login` is public; credentials come from `FORGE_ADMIN_USERNAME` /
+  `FORGE_ADMIN_PASSWORD` with constant-time compare and `401
+  invalid_credentials` on failure.
+
+### 20.2 Migrations
+
+- Migration status infers applied history via `mergeAppliedVersions`;
+  a dirty current version is reported `DIRTY` and excluded from the
+  applied list.
+- The status reporter and CLI degrade gracefully on a nil engine
+  (explicit "Unknown" metadata, ASCII `[WARN]`/`[x]`/`[ ]`/`[!]` markers,
+  empty-directory message) instead of panicking.
+- SQL builders are split per driver (`postgres.go` / `sqlite.go`):
+  never lowest-common-denominator SQL.
+
+### 20.3 Identity
+
+- `RequirePermission` is wired to `PermissionService.CheckPermission`
+  with superuser bypass plus staff fallback.
+- Password reset uses a notifier plus a fixed hashed-token flow.
+- Serializer-as-factory (`func() Serializer`) avoids shared mutable state.
+
+### 20.4 ORM
+
+- `Field.Resolve` validates full nested relation paths (rejects
+  non-relation traversal and terminal relations).
+- Aggregate/annotation registries are thread-safe.
+- Hook order on write paths is
+  `BeforeSave` → `BeforeCreate` → `AfterCreate` → `AfterSave`
+  (and the `BeforeUpdate`/`BeforeDelete` analogues).
+
+### 20.5 Example authorization pattern
+
+- The ecommerce example uses object-aware permissions: finalized
+  payments/orders, primary warehouses, and used coupons are immutable.
+  Mixed-outcome `207` tests verify the pattern.

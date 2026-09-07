@@ -52,7 +52,17 @@ const sidebars = {
     {
       type: 'category',
       label: 'Reference',
-      items: ['features', 'api-reference', 'status'],
+      items: [
+        'features',
+        'api-reference',
+        'api-reference/schema',
+        'api-reference/queryset',
+        'api-reference/manager',
+        'api-reference/fields',
+        'api-reference/hooks',
+        'api-reference/relations',
+        'status',
+      ],
     },
     {
       type: 'category',

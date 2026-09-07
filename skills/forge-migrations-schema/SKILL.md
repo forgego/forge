@@ -31,5 +31,3 @@ Use schema primitives to define models and manage database changes with the migr
 
 ## References
 - [Migration guide](references/migrations.md)
-- [Schema system](references/schema-system.md)
-- [Migration system internals](references/migration-system.md)

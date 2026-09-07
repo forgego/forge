@@ -24,7 +24,6 @@ tests/
 ├── testhelpers/         # Test utilities
 ├── testdata/            # Test fixtures and models
 │   └── models/          # Model definitions for testing
-├── TESTING.md           # Comprehensive testing guide
 └── README.md            # This file
 ```
 
@@ -176,11 +175,47 @@ Pre-defined model fixtures in `testdata/models/`:
 
 ## Documentation
 
-See [TESTING.md](./TESTING.md) for comprehensive testing guide including:
-- Detailed test categories
-- Writing new tests
-- Best practices
-- Troubleshooting
+See `docs/TECH-DEBT.md` for the test helper contract (timestamped DB
+names, `t.Cleanup()`, 60s contexts, `helpers.Assert*`).
+
+## Writing Tests
+
+Use the shared helpers — do not hand-roll setup:
+
+```go
+opts := testhelpers.PostgresOpts{
+    UseDirect: true,
+    Host:      "localhost",
+    Port:      "5432",
+    User:      "postgres",
+    Password:  "123",
+    DBName:    fmt.Sprintf("test_%d", time.Now().UnixNano()),
+}
+postgresDB, dsn, cleanup, err := testhelpers.StartPostgresContainer(ctx, opts)
+require.NoError(t, err)
+defer cleanup()
+```
+
+```go
+tempDir, cleanup := testhelpers.TempDirInTests(t, "prefix_")
+defer cleanup()
+```
+
+```go
+helpers.AssertTableExists(ctx, t, db, "postgres", "table_name")
+helpers.AssertColumnExists(ctx, t, db, "postgres", "table_name", "column_name")
+helpers.AssertMigrationState(ctx, t, database, migrationsDir, expectedVersion, expectDirty)
+helpers.AssertRowCount(ctx, t, db, "table_name", expectedCount)
+```
+
+Best practices: unique timestamped database names, always defer
+cleanup, 60s context timeouts, helper assertions over raw checks,
+independent tests with descriptive names.
+
+Troubleshooting: "connection refused" means PostgreSQL is not up
+(`psql -h localhost -U postgres -c "SELECT 1"`, default password
+`123`); "database already exists" means concurrent runs colliding —
+wait and retry; run unit-only suites for speed (`go test ./orm`).
 
 ## Contributing
 
@@ -188,7 +223,7 @@ When adding new features:
 
 1. Write tests first (TDD)
 2. Add tests to the appropriate package (`integration/migrate`, `integration/schema`, etc.)
-3. Update documentation (this README and TESTING.md)
+3. Update this README if you add suites or helpers
 4. Ensure all tests pass: `go test ./...`
 5. Check test coverage
 
@@ -237,6 +272,6 @@ go mod download
 ## References
 
 - [Forge Schema Package](../forge/schema/)
-- [Forge Migration Package](../forge/migrate/)
+- [Forge Migration Package](../forge/db/migrate/)
 - [Forge DB Package](../forge/db/)
-- [Comprehensive Testing Guide](./TESTING.md)
+

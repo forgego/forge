@@ -26,15 +26,19 @@ go mod download
 
 ### 3. Create Database
 
+No action needed for the default setup: the example uses SQLite
+(`./ecommerce.sqlite`, see `database.sqlite_path` in
+`config/config.yaml`) and creates the file on first run. For
+PostgreSQL instead, create the database and point the config at it:
+
 ```bash
-make db-create
-# or
-createdb ecommerce_db
+createdb forge_ecommerce
 ```
 
 ### 4. Configure Database
 
-Edit `config/config.yaml` if needed (default settings should work for local PostgreSQL):
+Defaults in `config/config.yaml` work out of the box (SQLite). To use
+PostgreSQL, set:
 
 ```yaml
 database:
@@ -42,8 +46,8 @@ database:
   host: localhost
   port: 5432
   user: postgres
-  password: postgres
-  dbname: ecommerce_db
+  password: 123
+  name: forge_ecommerce
   sslmode: disable
 ```
 
@@ -84,6 +88,15 @@ forge runserver
 - **Homepage**: http://localhost:8000/
 - **Admin Interface**: http://localhost:8000/admin/
 - **REST API**: http://localhost:8000/api/v1/
+
+## Configuration Knobs
+
+Defaults live under `ecommerce:` in `config/config.yaml`:
+
+- `currency: USD`, `tax_rate: 0.08` (8%)
+- `shipping_cost: 10.00`, `free_shipping_threshold: 100.00`
+- `low_stock_threshold: 10`, `order_expiry_hours: 24`
+- Feature flags: `enable_reviews`, `enable_wishlist`, `enable_coupons`
 
 ## Docker Setup (Alternative)
 

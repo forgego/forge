@@ -10,7 +10,7 @@
 
 **A Django-like Go framework with full type safety, code generation, and extensibility.**
 
-[Documentation](https://hamidrabedi.github.io/foreit/) • [Examples](examples/) • [API Reference](https://hamidrabedi.github.io/foreit/docs/api-reference/schema) • [Contributing](CONTRIBUTING.md)
+[Documentation](https://hamidrabedi.github.io/foreit/) • [Examples](examples/ecommerce/) • [API Reference](https://hamidrabedi.github.io/foreit/docs/api-reference/schema) • [Contributing](CONTRIBUTING.md)
 
 </div>
 
@@ -107,7 +107,7 @@ forge runserver
 
 Visit `http://localhost:8000/admin/` for the auto-generated admin interface!
 
-For detailed instructions, see the [Getting Started Guide](docs-site/docs/getting-started/quickstart.md).
+For detailed instructions, see the [Quickstart Guide](docs-site/docs/quickstart.md).
 
 ## Install as a Library
 

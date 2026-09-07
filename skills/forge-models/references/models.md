@@ -204,6 +204,17 @@ func (User) Meta() schema.Meta {
 }
 ```
 
+Check constraints use `UniqueConstraint` with a SQL expression:
+
+```go
+Constraints: []schema.UniqueConstraint{
+    {
+        Name:  "check_age",
+        Check: "age >= 0",
+    },
+}
+```
+
 ## Model Hooks
 
 Hooks allow you to run code at specific points in a model's lifecycle:
@@ -234,6 +245,12 @@ func (User) Hooks() *schema.ModelHooks {
             return nil
         },
         AfterDelete: func(ctx context.Context, instance interface{}) error {
+            return nil
+        },
+        Clean: func(ctx context.Context, instance interface{}) error {
+            return nil
+        },
+        Validate: func(ctx context.Context, instance interface{}) error {
             return nil
         },
     }

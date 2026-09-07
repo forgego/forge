@@ -425,6 +425,85 @@ func main() {
 
 ## Next Steps
 
-- [Queries Guide](/docs/guides/queries) - Learn about QuerySet filtering
-- [Security Guide](/docs/guides/security) - Secure your API
-- [Advanced Topics](/docs/advanced/plugins) - Extend the API system
+- [Queries Guide](../forge-models/references/models.md) - Models backing your API
+- [Security Guide](../../SECURITY.md) - Secure your API
+
+## Appendix: Manual Handlers Without ViewSets
+
+ViewSets are sugar. The same endpoint as plain chi handlers, using the
+generated manager and field instances directly:
+
+```go
+func RegisterPostRoutes(router chi.Router) {
+    router.Route("/api/posts", func(r chi.Router) {
+        r.Get("/", listPosts)
+        r.Post("/", createPost)
+        r.Get("/{id}", getPost)
+        r.Put("/{id}", updatePost)
+        r.Delete("/{id}", deletePost)
+    })
+}
+
+func listPosts(w http.ResponseWriter, r *http.Request) {
+    ctx := r.Context()
+
+    posts, err := PostObjects.
+        Filter(PostFieldsInstance.Published.Eq(true)).
+        OrderBy("-created_at").
+        All(ctx)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(posts)
+}
+
+func createPost(w http.ResponseWriter, r *http.Request) {
+    ctx := r.Context()
+
+    var post Post
+    if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
+
+    if err := PostObjects.Create(ctx, &post); err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(post)
+}
+```
+
+Test the loop with curl (server runs via `forge runserver`):
+
+```bash
+curl -X POST http://localhost:8000/api/posts \
+  -H "Content-Type: application/json" \
+  -d '{"title": "My First Post", "content": "...", "published": true}'
+
+curl http://localhost:8000/api/posts
+curl http://localhost:8000/api/posts/1
+
+curl -X PUT http://localhost:8000/api/posts/1 \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Updated Title", "content": "...", "published": true}'
+
+curl -X DELETE http://localhost:8000/api/posts/1
+```
+
+## Appendix: Codegen and Migration Ordering
+
+```bash
+forge generate        # emits <app>/gen.go (managers, field instances)
+forge makemigrations  # detect model changes
+forge migrate up      # apply to the database
+```
+
+Generate before migrating: migrations are derived from models, and the
+generated managers are what ViewSets query at runtime.

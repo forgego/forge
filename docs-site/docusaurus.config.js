@@ -18,10 +18,10 @@ const config = {
 
   markdown: {
     hooks: {
-      onBrokenMarkdownLinks: 'warn',
+      onBrokenMarkdownLinks: 'throw',
     },
   },
-  onBrokenLinks: 'warn',
+  onBrokenLinks: 'throw',
 
   trailingSlash: true,
 
@@ -102,8 +102,8 @@ const config = {
             title: 'Build',
             items: [
               {label: 'Models', to: '/docs/models'},
-              {label: 'Admin UI', to: '/docs/admin'},
-              {label: 'REST API', to: '/docs/rest-api'},
+              {label: 'Admin UI', to: '/docs/admin/overview'},
+              {label: 'REST API', to: '/docs/api/overview'},
             ],
           },
           {
@@ -116,7 +116,7 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} forge Framework. Built with Docusaurus.`,
+        copyright: `Copyright ï¿½ ${new Date().getFullYear()} forge Framework. Built with Docusaurus.`,
       },
       prism: {
         theme: lightCodeTheme,

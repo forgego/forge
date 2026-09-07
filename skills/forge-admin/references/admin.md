@@ -236,7 +236,7 @@ Override the base queryset:
 
 ```go
 config := &admincore.Config[Post]{
-    GetQueryset: func(ctx context.Context, admin *admincore.Admin[Post], qs query.QuerySet[Post]) (query.QuerySet[Post], error) {
+    GetQueryset: func(ctx context.Context, admin *admincore.Admin[Post], qs orm.QuerySet[Post]) (orm.QuerySet[Post], error) {
         // Only show published posts to non-staff users
         if user := GetUserFromContext(ctx); user != nil && !user.IsStaff {
             return qs.Filter(publishedField.Eq(true)), nil
@@ -252,7 +252,7 @@ Customize how models are saved:
 
 ```go
 config := &admincore.Config[Post]{
-    SaveModel: func(ctx context.Context, admin *admincore.Admin[Post], instance *Post, formData admincore.FormData, isNew bool) error {
+    SaveModel: func(ctx context.Context, admin *admincore.Admin[Post], instance *Post, isNew bool) error {
         // Custom validation
         if instance.Title == "" {
             return errors.New("title is required")
@@ -700,10 +700,33 @@ func InitPostAdmin(postManager *query.Manager[Post], commentManager *query.Manag
 }
 ```
 
+## Custom Admin Site
+
+Brand the admin with a named site (from `admin.NewSite`):
+
+```go
+site := admin.NewSite("myblog")
+site.Title = "My Blog Administration"
+site.Header = "Blog Admin"
+site.IndexTitle = "Welcome to Blog Administration"
+```
+
+## Troubleshooting
+
+- **Admin not showing up.** Check that models are registered
+  (`core.GetGlobalRegistry().GetAll()`), that HTTP routes are
+  registered, and that auth middleware is not blocking access.
+- **Filters not working.** Ensure filter fields exist in the model,
+  filter types match field types, and the QuerySet supports the
+  filter operations.
+- **Inlines not displaying.** Verify the foreign-key relationship,
+  that the related manager is provided, and that inline fields exist
+  in the related model.
+- **Protect admin routes** with auth middleware in `main` (see
+  `forge/identity/middleware`).
+
 ## Next Steps
 
-- [Admin Tutorial](/docs/tutorials/admin-interface/) - Step-by-step tutorial
-- [REST API Guide](/docs/guides/rest-api) - Build APIs for your frontend
-- [Security Guide](/docs/guides/security) - Secure your admin interface
-- [Advanced Topics](/docs/advanced/plugins) - Extend the admin with plugins
+- [REST API Guide](../forge-api/references/rest-api.md) - Build APIs for your frontend
+- [Security Guide](../../SECURITY.md) - Secure your admin interface
 

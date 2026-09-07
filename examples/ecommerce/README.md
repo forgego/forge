@@ -107,7 +107,7 @@ ecommerce/
 3. **WishList** - Customer wish lists
 4. **CustomerGroup** - Customer segmentation
 
-### Orders (5 models)
+### Orders (6 models)
 1. **Cart** - Shopping cart
 2. **CartItem** - Cart line items
 3. **Order** - Order master
@@ -707,35 +707,58 @@ docker-compose up -d
 ## Architecture Highlights
 
 ### Modular Design
-- Each app is independent and reusable
-- Clear separation of concerns
-- Easy to extend and maintain
+
+- Each app (`catalog`, `customers`, `orders`, `inventory`, `marketing`,
+  `commerce`, `engagement`, `promotions`, `support`, `users`) owns its
+  `models` / `admin` / `api` code plus generated managers, and is
+  independently reusable.
+
+### Request Flow
+
+CORS → Auth → Logging → RateLimit → Router → Service → ORM → DB.
+
+### Order Flow
+
+Cart → validate → checkout → pay → transaction-create → reserve stock
+→ email → fulfill → track.
+
+### Commerce Foundation
+
+`commerce` provides `ShippingMethod` / `PaymentMethod` + `TaxRate` +
+`Currency` / `ExchangeRate` for tax and multi-currency support.
+
+### Promotion Engine
+
+Promotions replace coupons-only: banners, newsletter, usage tracking
+(`PromotionUsage`), stacking rules.
+
+### Engagement
+
+`RecentlyViewed`, product comparisons, user segments, and
+abandoned-cart recovery.
+
+### Support
+
+Tickets, threaded messages, live chat, returns, FAQ, and attachments
+audit trail.
+
+### Inventory
+
+Multi-warehouse `Stock` plus a `StockMovement` audit trail and
+`StockAlert` thresholds.
 
 ### Type Safety
+
 - Compile-time type checking
 - IDE autocomplete support
-- No runtime reflection overhead
-
-### Performance
-- Connection pooling
-- Query optimization
-- Efficient JOIN generation
-- Caching strategies
-
-### Security
-- SQL injection prevention
-- CSRF protection
-- XSS prevention
-- Input validation
-- Permission system
+- Generated managers and field instances per model
 
 ## Learn More
 
-- **Framework Docs**: `../../docs/`
-- **API Reference**: `../../docs/API_REFERENCE.md`
-- **Schema Guide**: `../../docs/SCHEMA_REFERENCE.md`
-- **ORM Guide**: `../../docs/orm/README.md`
-- **Admin Guide**: `../../docs/pkg_admin_README.md`
+- **Framework Docs**: `../../docs-site/docs/`
+- **Framework Design**: `../../docs/DESIGN.md`
+- **Setup Guide**: `SETUP.md`
+
 
 ## License
 

@@ -31,7 +31,6 @@ Define data models using `github.com/forgego/forge/schema`. This skill focuses o
 
 ## References
 - [Models guide](references/models.md)
-- [Schema API](references/schema.md)
 - [Fields API](references/fields.md)
 - [Relations API](references/relations.md)
 - [Hooks API](references/hooks.md)

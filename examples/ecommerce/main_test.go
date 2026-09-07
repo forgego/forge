@@ -1,3 +1,9 @@
+// End-to-end tests for the ecommerce example (router + admin + API).
+//
+// API SLOs this suite guards: list <200ms, detail <100ms, write <300ms,
+// complex flows <500ms; `ab -n 1000 -c 100` must complete with zero failures.
+// DB checks worth keeping alongside: FK-violation insert rejection,
+// EXPLAIN ANALYZE on hot queries, and pg_stats correlation audits.
 package main
 
 import (
