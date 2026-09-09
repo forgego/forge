@@ -50,9 +50,10 @@ go install github.com/forgego/forge/cli/cmd@latest
 
 Make sure `$GOPATH/bin` or `$HOME/go/bin` is in your PATH.
 
-### Option 3: Download Binary (Coming Soon)
+### Option 3: Release Binaries
 
-We'll have pre-built binaries available for download soon.
+Pre-compiled release binaries are published with tagged releases on GitHub:
+`https://github.com/hamidrabedi/foreit/releases`
 
 ### Verify Installation
 

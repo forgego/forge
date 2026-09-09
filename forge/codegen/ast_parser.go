@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -214,28 +215,82 @@ func (p *ASTParser) extractFields(method *ast.FuncDecl) ([]FieldDefinition, erro
 	var fields []FieldDefinition
 	processed := make(map[ast.Node]bool) // Track processed nodes
 
+	if method == nil || method.Body == nil {
+		return fields, nil
+	}
+
+	assignedExprs := collectAssignedExprs(method.Body)
+
+	// Helper to extract fields from a slice composite literal
+	extractFromSliceLit := func(compLit *ast.CompositeLit) {
+		for _, elt := range compLit.Elts {
+			elt = p.resolveAssignedExpr(elt, assignedExprs)
+			if call, ok := elt.(*ast.CallExpr); ok && !processed[call] {
+				processed[call] = true
+				if field := p.extractFieldFromCall(call); field != nil {
+					fields = append(fields, *field)
+				}
+			}
+		}
+	}
+
 	// Walk the method body to find field definitions
-	// We look for return statements with composite literals containing field builder calls
-	ast.Inspect(method.Body, func(n ast.Node) bool {
-		switch x := n.(type) {
+	for _, stmt := range method.Body.List {
+		switch s := stmt.(type) {
 		case *ast.ReturnStmt:
-			// Process return statement - it contains the field definitions
-			for _, result := range x.Results {
-				if compLit, ok := result.(*ast.CompositeLit); ok {
-					// This is a slice literal like []schema.Field{...}
-					for _, elt := range compLit.Elts {
-						if call, ok := elt.(*ast.CallExpr); ok && !processed[call] {
-							processed[call] = true
-							if field := p.extractFieldFromCall(call); field != nil {
+			for _, result := range s.Results {
+				resExpr := p.resolveAssignedExpr(result, assignedExprs)
+				if compLit, ok := resExpr.(*ast.CompositeLit); ok {
+					extractFromSliceLit(compLit)
+				}
+			}
+		case *ast.DeclStmt:
+			if gen, ok := s.Decl.(*ast.GenDecl); ok && gen.Tok == token.VAR {
+				for _, spec := range gen.Specs {
+					if valSpec, ok := spec.(*ast.ValueSpec); ok {
+						for _, val := range valSpec.Values {
+							if compLit, ok := val.(*ast.CompositeLit); ok {
+								extractFromSliceLit(compLit)
+							}
+						}
+					}
+				}
+			}
+		case *ast.ExprStmt:
+			if call, ok := s.X.(*ast.CallExpr); ok {
+				if fnIdent, ok := call.Fun.(*ast.Ident); ok && fnIdent.Name == "append" && len(call.Args) > 1 {
+					for _, arg := range call.Args[1:] {
+						arg = p.resolveAssignedExpr(arg, assignedExprs)
+						if c, ok := arg.(*ast.CallExpr); ok && !processed[c] {
+							processed[c] = true
+							if field := p.extractFieldFromCall(c); field != nil {
 								fields = append(fields, *field)
 							}
 						}
 					}
 				}
 			}
+		case *ast.AssignStmt:
+			for _, rhs := range s.Rhs {
+				if compLit, ok := rhs.(*ast.CompositeLit); ok {
+					extractFromSliceLit(compLit)
+				}
+				if call, ok := rhs.(*ast.CallExpr); ok {
+					if fnIdent, ok := call.Fun.(*ast.Ident); ok && fnIdent.Name == "append" && len(call.Args) > 1 {
+						for _, arg := range call.Args[1:] {
+							arg = p.resolveAssignedExpr(arg, assignedExprs)
+							if c, ok := arg.(*ast.CallExpr); ok && !processed[c] {
+								processed[c] = true
+								if field := p.extractFieldFromCall(c); field != nil {
+									fields = append(fields, *field)
+								}
+							}
+						}
+					}
+				}
+			}
 		}
-		return true
-	})
+	}
 
 	return fields, nil
 }
@@ -553,9 +608,23 @@ func (p *ASTParser) extractOptionFromMethod(methodName string, call *ast.CallExp
 			}
 		}
 	case "Choices":
-		// Choices is more complex, extract if needed
 		if len(call.Args) > 0 {
 			options["has_choices"] = true
+			var choices []string
+			for _, arg := range call.Args {
+				if lit, ok := arg.(*ast.BasicLit); ok && lit.Kind == token.STRING {
+					choices = append(choices, strings.Trim(lit.Value, `"`))
+				} else if comp, ok := arg.(*ast.CompositeLit); ok {
+					for _, elt := range comp.Elts {
+						if slit, ok := elt.(*ast.BasicLit); ok && slit.Kind == token.STRING {
+							choices = append(choices, strings.Trim(slit.Value, `"`))
+						}
+					}
+				}
+			}
+			if len(choices) > 0 {
+				options["choices"] = choices
+			}
 		}
 	case "MaxDigits":
 		if len(call.Args) > 0 {
@@ -668,6 +737,16 @@ func (p *ASTParser) buildValidationTag(fieldType string, options map[string]inte
 		tags = append(tags, "required")
 	}
 
+	// Unique
+	if unique, ok := options["unique"].(bool); ok && unique {
+		tags = append(tags, "unique")
+	}
+
+	// Choices
+	if choices, ok := options["choices"].([]string); ok && len(choices) > 0 {
+		tags = append(tags, "oneof="+strings.Join(choices, " "))
+	}
+
 	// Type-specific validations
 	switch fieldType {
 	case "Email":
@@ -696,7 +775,7 @@ func (p *ASTParser) buildValidationTag(fieldType string, options map[string]inte
 	if maxVal, ok := options["max_value"]; ok {
 		switch v := maxVal.(type) {
 		case float64:
-			tags = append(tags, fmt.Sprintf("lte=%g", v))
+			tags = append(tags, "lte="+strconv.FormatFloat(v, 'f', -1, 64))
 		case int:
 			tags = append(tags, fmt.Sprintf("lte=%d", v))
 		}
@@ -706,7 +785,7 @@ func (p *ASTParser) buildValidationTag(fieldType string, options map[string]inte
 	if minVal, ok := options["min_value"]; ok {
 		switch v := minVal.(type) {
 		case float64:
-			tags = append(tags, fmt.Sprintf("gte=%g", v))
+			tags = append(tags, "gte="+strconv.FormatFloat(v, 'f', -1, 64))
 		case int:
 			tags = append(tags, fmt.Sprintf("gte=%d", v))
 		}
@@ -737,21 +816,80 @@ func (p *ASTParser) buildValidationTag(fieldType string, options map[string]inte
 func (p *ASTParser) extractRelations(method *ast.FuncDecl) ([]RelationDefinition, error) {
 	var relations []RelationDefinition
 
-	if method.Body == nil {
+	if method == nil || method.Body == nil {
 		return relations, nil
 	}
 
-	// Find return statement
+	assignedExprs := collectAssignedExprs(method.Body)
+	processed := make(map[ast.Node]bool)
+
+	// Process slice of relations
+	processSlice := func(sliceLit *ast.CompositeLit) {
+		for _, elt := range sliceLit.Elts {
+			elt = p.resolveAssignedExpr(elt, assignedExprs)
+			if processed[elt] {
+				continue
+			}
+			processed[elt] = true
+			relation := p.extractRelationFromExpr(elt)
+			if relation != nil {
+				relations = append(relations, *relation)
+			}
+		}
+	}
+
 	for _, stmt := range method.Body.List {
-		if retStmt, ok := stmt.(*ast.ReturnStmt); ok {
-			if len(retStmt.Results) > 0 {
-				// Get the slice literal
-				if sliceLit, ok := retStmt.Results[0].(*ast.CompositeLit); ok {
-					// Iterate through slice elements
-					for _, elt := range sliceLit.Elts {
-						relation := p.extractRelationFromExpr(elt)
-						if relation != nil {
-							relations = append(relations, *relation)
+		switch s := stmt.(type) {
+		case *ast.ReturnStmt:
+			for _, result := range s.Results {
+				resExpr := p.resolveAssignedExpr(result, assignedExprs)
+				if sliceLit, ok := resExpr.(*ast.CompositeLit); ok {
+					processSlice(sliceLit)
+				}
+			}
+		case *ast.DeclStmt:
+			if gen, ok := s.Decl.(*ast.GenDecl); ok && gen.Tok == token.VAR {
+				for _, spec := range gen.Specs {
+					if valSpec, ok := spec.(*ast.ValueSpec); ok {
+						for _, val := range valSpec.Values {
+							if compLit, ok := val.(*ast.CompositeLit); ok {
+								processSlice(compLit)
+							}
+						}
+					}
+				}
+			}
+		case *ast.ExprStmt:
+			if call, ok := s.X.(*ast.CallExpr); ok {
+				if fnIdent, ok := call.Fun.(*ast.Ident); ok && fnIdent.Name == "append" && len(call.Args) > 1 {
+					for _, arg := range call.Args[1:] {
+						arg = p.resolveAssignedExpr(arg, assignedExprs)
+						if processed[arg] {
+							continue
+						}
+						processed[arg] = true
+						if rel := p.extractRelationFromExpr(arg); rel != nil {
+							relations = append(relations, *rel)
+						}
+					}
+				}
+			}
+		case *ast.AssignStmt:
+			for _, rhs := range s.Rhs {
+				if compLit, ok := rhs.(*ast.CompositeLit); ok {
+					processSlice(compLit)
+				}
+				if call, ok := rhs.(*ast.CallExpr); ok {
+					if fnIdent, ok := call.Fun.(*ast.Ident); ok && fnIdent.Name == "append" && len(call.Args) > 1 {
+						for _, arg := range call.Args[1:] {
+							arg = p.resolveAssignedExpr(arg, assignedExprs)
+							if processed[arg] {
+								continue
+							}
+							processed[arg] = true
+							if rel := p.extractRelationFromExpr(arg); rel != nil {
+								relations = append(relations, *rel)
+							}
 						}
 					}
 				}
@@ -809,8 +947,7 @@ func (p *ASTParser) extractRelationFromExpr(expr ast.Expr) *RelationDefinition {
 			}
 		}
 	} else if callExpr, ok := expr.(*ast.CallExpr); ok {
-		// Check if it's a builder call like schema.ForeignKey()
-		// Find the builder call in the chain
+		// Check if it's a builder call like schema.ForeignKey() or schema.ForeignKeyField()
 		builderCall, builderType := p.findRelationBuilderInChain(callExpr)
 		if builderCall != nil {
 			relation.Type = builderType
@@ -824,6 +961,8 @@ func (p *ASTParser) extractRelationFromExpr(expr ast.Expr) *RelationDefinition {
 			}
 			// Extract builder chain options
 			p.extractRelationOptionsFromChain(callExpr, relation.Options)
+			// Extract functional variadic options (e.g. schema.OnDelete(...))
+			p.extractRelationOptionsFromVariadicArgs(builderCall, relation.Options)
 		}
 	}
 
@@ -834,6 +973,20 @@ func (p *ASTParser) extractRelationFromExpr(expr ast.Expr) *RelationDefinition {
 	return relation
 }
 
+// extractRelationOptionsFromVariadicArgs extracts options from variadic arguments of relation builders
+func (p *ASTParser) extractRelationOptionsFromVariadicArgs(builderCall *ast.CallExpr, options map[string]interface{}) {
+	if len(builderCall.Args) <= 2 {
+		return
+	}
+	for _, arg := range builderCall.Args[2:] {
+		if call, ok := arg.(*ast.CallExpr); ok {
+			if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+				p.extractRelationOptionFromMethod(sel.Sel.Name, call, options)
+			}
+		}
+	}
+}
+
 // findRelationBuilderInChain finds the relation builder call in a method chain
 func (p *ASTParser) findRelationBuilderInChain(expr ast.Expr) (*ast.CallExpr, string) {
 	switch x := expr.(type) {
@@ -841,7 +994,10 @@ func (p *ASTParser) findRelationBuilderInChain(expr ast.Expr) (*ast.CallExpr, st
 		if sel, ok := x.Fun.(*ast.SelectorExpr); ok {
 			if pkgIdent, ok := sel.X.(*ast.Ident); ok && pkgIdent.Name == "schema" {
 				builderType := sel.Sel.Name
-				if builderType == "ForeignKey" || builderType == "OneToOne" || builderType == "ManyToMany" || builderType == "OneToMany" {
+				if strings.HasPrefix(builderType, "ForeignKey") ||
+					strings.HasPrefix(builderType, "OneToOne") ||
+					strings.HasPrefix(builderType, "ManyToMany") ||
+					strings.HasPrefix(builderType, "OneToMany") {
 					return x, builderType
 				}
 			}
@@ -946,16 +1102,22 @@ func (p *ASTParser) extractIntFromExpr(expr ast.Expr) *int {
 func (p *ASTParser) extractMeta(method *ast.FuncDecl) (MetaDefinition, error) {
 	meta := MetaDefinition{}
 
-	if method.Body == nil {
+	if method == nil || method.Body == nil {
 		return meta, nil
 	}
+
+	assignedExprs := collectAssignedExprs(method.Body)
 
 	// Find return statement
 	for _, stmt := range method.Body.List {
 		if retStmt, ok := stmt.(*ast.ReturnStmt); ok {
 			if len(retStmt.Results) > 0 {
+				res := p.resolveAssignedExpr(retStmt.Results[0], assignedExprs)
+				if unary, ok := res.(*ast.UnaryExpr); ok && unary.Op == token.AND {
+					res = unary.X
+				}
 				// Get the composite literal (struct literal)
-				if compLit, ok := retStmt.Results[0].(*ast.CompositeLit); ok {
+				if compLit, ok := res.(*ast.CompositeLit); ok {
 					// Extract struct fields
 					for _, elt := range compLit.Elts {
 						if kv, ok := elt.(*ast.KeyValueExpr); ok {
@@ -1116,9 +1278,26 @@ func (p *ASTParser) extractHooks(method *ast.FuncDecl) (HooksDefinition, error) 
 		return hooks, nil
 	}
 
-	assignedExprs := make(map[string]ast.Expr)
+	assignedExprs := collectAssignedExprs(method.Body)
 
 	for _, stmt := range method.Body.List {
+		if retStmt, ok := stmt.(*ast.ReturnStmt); ok {
+			for _, result := range retStmt.Results {
+				p.extractHooksFromExpr(p.resolveAssignedExpr(result, assignedExprs), &hooks)
+			}
+		}
+	}
+
+	return hooks, nil
+}
+
+func collectAssignedExprs(body *ast.BlockStmt) map[string]ast.Expr {
+	assignedExprs := make(map[string]ast.Expr)
+	if body == nil {
+		return assignedExprs
+	}
+
+	for _, stmt := range body.List {
 		switch s := stmt.(type) {
 		case *ast.AssignStmt:
 			if len(s.Lhs) == 1 && len(s.Rhs) == 1 {
@@ -1138,14 +1317,9 @@ func (p *ASTParser) extractHooks(method *ast.FuncDecl) (HooksDefinition, error) 
 				}
 				assignedExprs[valSpec.Names[0].Name] = valSpec.Values[0]
 			}
-		case *ast.ReturnStmt:
-			for _, result := range s.Results {
-				p.extractHooksFromExpr(p.resolveAssignedExpr(result, assignedExprs), &hooks)
-			}
 		}
 	}
-
-	return hooks, nil
+	return assignedExprs
 }
 
 func (p *ASTParser) resolveAssignedExpr(expr ast.Expr, assignedExprs map[string]ast.Expr) ast.Expr {

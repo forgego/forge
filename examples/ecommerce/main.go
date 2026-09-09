@@ -135,6 +135,7 @@ func buildEcommerceRouter(ctx context.Context, cfg *config.Config, database *db.
 	orders.Init(database)
 	promotions.Init(database)
 	support.Init(database)
+	users.Init(database)
 
 	adminSite := admin.DefaultSite
 	adminSite.Title = "Forge Ecommerce Admin"

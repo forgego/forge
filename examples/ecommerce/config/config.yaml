@@ -33,8 +33,12 @@ api:
   max_page_size: 100
 
 security:
-  session_secret: change-me-in-production-with-random-string
-  csrf_secret_key: change-me-in-production-with-random-string
+  # Secrets for sessions and CSRF protection.
+  # In development, leave empty or omit to use auto-generated ephemeral secrets.
+  # For production deployments, supply random 64-char strings via environment:
+  #   FORGE_SECURITY_SESSION_SECRET and FORGE_SECURITY_CSRF_SECRET_KEY
+  session_secret: ""
+  csrf_secret_key: ""
   session_lifetime: 86400 # 24 hours
 
 logging:

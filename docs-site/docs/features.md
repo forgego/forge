@@ -12,31 +12,38 @@ Forge provides a comprehensive toolkit for building web applications in Go. This
 
 ### Schema System
 - Define models with fields, relations, metadata, and lifecycle hooks
-- Field types: integers, strings, booleans, dates, times, floats, decimals, text, email, URL, UUID, JSON, and binary data
-- Field options: required, unique, indexed, default values, auto-increment
-- Schema metadata: table names, indexes, constraints, permissions, ordering
-- Lifecycle hooks: pre-save, post-save, pre-delete, post-delete
+- **Dual Syntax**: Fluent builder constructors (`schema.String("name")`) and functional options (`schema.StringField("name", ...)`)
+- **Field types**: integers (Int64, Int32), strings, text, booleans, dates, times, timestamps, floats (Float64, Float32), fixed-point decimals, email, URL, UUID, JSON/JSONB, and binary bytes
+- **Generated Columns**: First-class support for SQL computed columns (`schema.GeneratedColumn("expr", stored)`)
+- **Database options**: custom column names (`DBColumn`), SQL default expressions (`DBDefault`), collation (`DBCollation`), column comments (`DBComment`), tablespace (`DBTablespace`), and index flags (`DBIndex`)
+- **Choices & Enums**: Permitted value-label sets with `schema.Choices` and `schema.NewChoice`
+- **Referential Integrity & Cascades**: `CascadeCASCADE`, `CascadePROTECT`, `CascadeSET_NULL`, `CascadeSET_DEFAULT`, `CascadeDO_NOTHING`
+- **Lifecycle hooks**: `BeforeCreate`, `AfterCreate`, `BeforeUpdate`, `AfterUpdate`, `BeforeSave`, `AfterSave`, `BeforeDelete`, `AfterDelete`, and `Clean` validation
 
 ### Code Generation
 - Auto-generate type-safe managers for each model
-- Generate field expressions for compile-time query validation
-- Create admin interfaces automatically
-- Build boilerplate for APIs and handlers
-- CLI commands: `forge generate`, `forge add model`, `forge add api`
+- Generate field expressions for compile-time query validation (`orm.Q`)
+- Create React 19 admin interfaces automatically
+- Build boilerplate for APIs, serializers, and handlers
+- CLI commands: `forge generate`, `forge new`, `forge routes`, `forge check`
 
 ### Type-Safe ORM
-- QuerySet API for filtering, ordering, and aggregating data
+- QuerySet API for filtering, ordering, slicing, and aggregating data
 - Manager for CRUD operations with full type safety
 - Generated field expressions for compile-time validation
 - IDE autocomplete for all queries and field access
 - Prevent SQL injection and runtime errors
+- Boolean query trees (`orm.And`, `orm.Or`, `orm.Not`)
+- Eager loading via `SelectRelated` (SQL JOINs) and `PrefetchRelated` (batched queries)
 
-### Database Layer
-- PostgreSQL support with advanced features
-- Connection pooling and transaction management
-- Automatic schema migrations
-- Query optimization and lazy loading
-- Support for custom SQL when needed
+### Database Layer & Migrations
+- SQLite and PostgreSQL support with connection pooling
+- **AST-Driven Migrations**: Introspects Go AST code to detect model diffs automatically
+- Cryptographic SHA-256 checksums on all migration files to detect drift
+- Disaster recovery with `forge migrate recover --verify` and `forge migrate recover --force`
+- Reversible migrations with explicit `Up` and `Down` builders
+- Query optimization and lazy execution
+- Support for raw SQL queries and atomic ACID transactions (`orm.WithTransaction`)
 
 ## ORM & Queries
 

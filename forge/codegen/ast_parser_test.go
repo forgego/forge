@@ -120,6 +120,115 @@ func (User) Hooks() *schema.ModelHooks {
 	}
 }
 
+func TestParseFile_ExtractsFieldsFromAssignedVariableAndAppend(t *testing.T) {
+	src := `package models
+import "github.com/forgego/forge/schema"
+
+type Product struct { schema.BaseSchema }
+
+func (Product) Fields() []schema.Field {
+	fields := []schema.Field{
+		schema.Int64Field("id", schema.Primary()),
+		schema.StringField("name", schema.Required(), schema.Unique()),
+	}
+	fields = append(fields, schema.StringField("status", schema.Choices("active", "draft", "archived")))
+	return fields
+}
+`
+	def := parseSingleModelDefinition(t, src)
+	if len(def.Fields) != 3 {
+		t.Fatalf("expected 3 fields, got %d", len(def.Fields))
+	}
+	if def.Fields[0].Name != "id" {
+		t.Errorf("expected field id, got %s", def.Fields[0].Name)
+	}
+	if def.Fields[1].Name != "name" {
+		t.Errorf("expected field name, got %s", def.Fields[1].Name)
+	}
+	if def.Fields[1].ValidationTag != "required,unique" {
+		t.Errorf("expected validation tag required,unique, got %q", def.Fields[1].ValidationTag)
+	}
+	if def.Fields[2].Name != "status" {
+		t.Errorf("expected field status, got %s", def.Fields[2].Name)
+	}
+	if def.Fields[2].ValidationTag != "oneof=active draft archived" {
+		t.Errorf("expected validation tag oneof=active draft archived, got %q", def.Fields[2].ValidationTag)
+	}
+}
+
+func TestParseFile_ExtractsRelationsFromAssignedVariable(t *testing.T) {
+	src := `package models
+import "github.com/forgego/forge/schema"
+
+type Order struct { schema.BaseSchema }
+
+func (Order) Relations() []schema.Relation {
+	rels := []schema.Relation{
+		schema.ForeignKeyField("customer_id", "Customer", schema.OnDelete(schema.CascadeCASCADE)),
+	}
+	return rels
+}
+`
+	def := parseSingleModelDefinition(t, src)
+	if len(def.Relations) != 1 {
+		t.Fatalf("expected 1 relation, got %d", len(def.Relations))
+	}
+	if def.Relations[0].Name != "customer_id" {
+		t.Errorf("expected relation name customer_id, got %s", def.Relations[0].Name)
+	}
+	if def.Relations[0].To != "Customer" {
+		t.Errorf("expected relation to Customer, got %s", def.Relations[0].To)
+	}
+}
+
+func TestParseFile_ExtractsMetaFromAssignedVariable(t *testing.T) {
+	src := `package models
+import "github.com/forgego/forge/schema"
+
+type Customer struct { schema.BaseSchema }
+
+func (Customer) Meta() schema.Meta {
+	m := schema.Meta{
+		TableName: "app_customers",
+		VerboseName: "Customer Account",
+		VerboseNamePlural: "Customer Accounts",
+	}
+	return m
+}
+`
+	def := parseSingleModelDefinition(t, src)
+	if def.Meta.TableName != "app_customers" {
+		t.Errorf("expected table name app_customers, got %s", def.Meta.TableName)
+	}
+	if def.Meta.VerboseName != "Customer Account" {
+		t.Errorf("expected verbose name Customer Account, got %s", def.Meta.VerboseName)
+	}
+	if def.Meta.VerboseNamePlural != "Customer Accounts" {
+		t.Errorf("expected verbose name plural Customer Accounts, got %s", def.Meta.VerboseNamePlural)
+	}
+}
+
+func TestParseFile_DecimalLargeFloatValidationTag(t *testing.T) {
+	src := `package models
+import "github.com/forgego/forge/schema"
+
+type Account struct { schema.BaseSchema }
+
+func (Account) Fields() []schema.Field {
+	return []schema.Field{
+		schema.FloatField("balance", schema.MaxValue(10000000.5)),
+	}
+}
+`
+	def := parseSingleModelDefinition(t, src)
+	if len(def.Fields) != 1 {
+		t.Fatalf("expected 1 field, got %d", len(def.Fields))
+	}
+	if def.Fields[0].ValidationTag != "lte=10000000.5" {
+		t.Errorf("expected validation tag lte=10000000.5 (no scientific notation), got %q", def.Fields[0].ValidationTag)
+	}
+}
+
 func parseSingleModelDefinition(t *testing.T, src string) *ModelDefinition {
 	t.Helper()
 

@@ -28,6 +28,7 @@ func (c *GenerateCommand) Definition() *cobra.Command {
 	}
 	cmd.Flags().String("models", "./models", "Directory containing schema definitions")
 	cmd.Flags().String("output", "./models", "Output directory for generated code")
+	cmd.Flags().Bool("api", false, "Generate REST API ViewSets, Serializers, and routes")
 	return cmd
 }
 

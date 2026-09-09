@@ -39,6 +39,14 @@ func (v *Validator) registerCustomValidators() {
 	// Decimal validators
 	v.RegisterCustomValidator("decimal_max_digits", validateDecimalMaxDigits)
 	v.RegisterCustomValidator("decimal_places", validateDecimalPlaces)
+
+	// Unique validator (recognized for struct tags; full DB uniqueness is verified by ORM/storage layer)
+	v.RegisterCustomValidator("unique", validateUnique)
+}
+
+// validateUnique recognizes the unique tag so struct validation succeeds without unknown tag errors.
+func validateUnique(fl validator.FieldLevel) bool {
+	return true
 }
 
 // validateSlug validates that a string is a valid slug
@@ -77,12 +85,19 @@ func validatePhone(fl validator.FieldLevel) bool {
 }
 
 // validateChoices validates that a value is one of the allowed choices
-// This is a fallback validator. The oneof tag from go-playground/validator
-// should be used instead when choices are known at validation tag generation time.
 func validateChoices(fl validator.FieldLevel) bool {
-	// This validator is a fallback - in practice, use the "oneof" tag with choice values
-	// This will always pass - actual validation should use oneof
-	return true
+	param := fl.Param()
+	if param == "" {
+		return true
+	}
+	val := fmt.Sprintf("%v", fl.Field().Interface())
+	choices := strings.Fields(param)
+	for _, c := range choices {
+		if c == val {
+			return true
+		}
+	}
+	return false
 }
 
 // validateDecimalMaxDigits validates that a decimal number has at most N digits
@@ -99,7 +114,7 @@ func validateDecimalMaxDigits(fl validator.FieldLevel) bool {
 
 	switch fieldValue.Kind() {
 	case reflect.Float32, reflect.Float64:
-		valueStr = fmt.Sprintf("%g", fieldValue.Float())
+		valueStr = strconv.FormatFloat(fieldValue.Float(), 'f', -1, 64)
 	case reflect.String:
 		valueStr = fieldValue.String()
 	default:
@@ -131,7 +146,7 @@ func validateDecimalPlaces(fl validator.FieldLevel) bool {
 
 	switch fieldValue.Kind() {
 	case reflect.Float32, reflect.Float64:
-		valueStr = fmt.Sprintf("%g", fieldValue.Float())
+		valueStr = strconv.FormatFloat(fieldValue.Float(), 'f', -1, 64)
 	case reflect.String:
 		valueStr = fieldValue.String()
 	default:

@@ -210,7 +210,77 @@ func getColumnName(field reflect.StructField) string {
 	return field.Name
 }
 
-// getFieldValueByName gets a struct field value by name using minimal reflection
+// findFieldInValue recursively searches for a struct field matching fieldName
+func findFieldInValue(v reflect.Value, fieldName string) reflect.Value {
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return reflect.Value{}
+		}
+		v = v.Elem()
+	}
+	if v.Kind() != reflect.Struct {
+		return reflect.Value{}
+	}
+
+	// 1. Direct field name lookup
+	if f := v.FieldByName(fieldName); f.IsValid() {
+		return f
+	}
+
+	// 2. PascalCase lookup
+	pascal := utils.ToPascal(fieldName)
+	if f := v.FieldByName(pascal); f.IsValid() {
+		return f
+	}
+
+	// 3. PascalCase with ID suffix (e.g. customer_id -> CustomerID, id -> ID)
+	if strings.HasSuffix(pascal, "Id") {
+		idVariant := strings.TrimSuffix(pascal, "Id") + "ID"
+		if f := v.FieldByName(idVariant); f.IsValid() {
+			return f
+		}
+	}
+	if strings.EqualFold(fieldName, "id") {
+		if f := v.FieldByName("ID"); f.IsValid() {
+			return f
+		}
+		if f := v.FieldByName("Id"); f.IsValid() {
+			return f
+		}
+	}
+
+	// 4. Iterate fields (case-insensitive and struct tags: db, json) including anonymous embedded structs
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		sf := t.Field(i)
+		fieldVal := v.Field(i)
+
+		if sf.Anonymous {
+			if f := findFieldInValue(fieldVal, fieldName); f.IsValid() {
+				return f
+			}
+			continue
+		}
+
+		if strings.EqualFold(sf.Name, fieldName) || strings.EqualFold(sf.Name, pascal) {
+			return fieldVal
+		}
+
+		dbTag := strings.Split(sf.Tag.Get("db"), ",")[0]
+		if dbTag != "" && dbTag != "-" && strings.EqualFold(dbTag, fieldName) {
+			return fieldVal
+		}
+
+		jsonTag := strings.Split(sf.Tag.Get("json"), ",")[0]
+		if jsonTag != "" && jsonTag != "-" && strings.EqualFold(jsonTag, fieldName) {
+			return fieldVal
+		}
+	}
+
+	return reflect.Value{}
+}
+
+// getFieldValueByName gets a struct field value by name using reflection
 // This is used when we know the field name from schema metadata
 func getFieldValueByName(instance interface{}, fieldName string) (interface{}, error) {
 	instanceValue := reflect.ValueOf(instance)
@@ -222,11 +292,7 @@ func getFieldValueByName(instance interface{}, fieldName string) (interface{}, e
 		return nil, fmt.Errorf("instance must be a struct")
 	}
 
-	fieldValue := instanceValue.FieldByName(fieldName)
-	if !fieldValue.IsValid() {
-		// Try PascalCase
-		fieldValue = instanceValue.FieldByName(utils.ToPascal(fieldName))
-	}
+	fieldValue := findFieldInValue(instanceValue, fieldName)
 	if !fieldValue.IsValid() {
 		return nil, fmt.Errorf("field %s not found", fieldName)
 	}

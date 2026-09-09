@@ -23,6 +23,7 @@ func NewMigrateGroup() *MigrateGroup {
 			NewForceCommand(),
 			NewSquashCommand(),
 			NewFakeCommand(),
+			NewRecoverCommand(),
 		},
 	}
 }

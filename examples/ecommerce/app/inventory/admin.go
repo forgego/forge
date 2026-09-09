@@ -78,6 +78,9 @@ func RegisterAdmin(ctx context.Context) {
 		// Read-only fields
 		ReadOnlyFields: []string{"created_at", "updated_at"},
 		// Permission checkers
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[Warehouse], user interface{}) bool {
+			return true // Authenticated users can add warehouse
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[Warehouse], user interface{}, obj *Warehouse) bool {
 			return true
 		},
@@ -229,6 +232,9 @@ func RegisterAdmin(ctx context.Context) {
 		// Read-only fields
 		ReadOnlyFields: []string{"created_at", "updated_at", "last_counted_at", "available_quantity"},
 		// Permission checkers
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[Stock], user interface{}) bool {
+			return true // Authenticated users can add stock
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[Stock], user interface{}, obj *Stock) bool {
 			return true
 		},
@@ -378,6 +384,9 @@ func RegisterAdmin(ctx context.Context) {
 		// Read-only fields
 		ReadOnlyFields: []string{"created_at", "quantity_before", "quantity_after"},
 		// Permission checkers
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[StockMovement], user interface{}) bool {
+			return true // Authenticated users can add stockmovement
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[StockMovement], user interface{}, obj *StockMovement) bool {
 			return true
 		},
@@ -521,6 +530,9 @@ func RegisterAdmin(ctx context.Context) {
 		// Read-only fields
 		ReadOnlyFields: []string{"created_at", "updated_at", "product_variant_id", "warehouse_id", "current_quantity", "threshold"},
 		// Permission checkers
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[StockAlert], user interface{}) bool {
+			return true // Authenticated users can add stockalert
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[StockAlert], user interface{}, obj *StockAlert) bool {
 			return true
 		},
@@ -680,6 +692,9 @@ func RegisterAdmin(ctx context.Context) {
 		// Read-only fields
 		ReadOnlyFields: []string{"created_at", "updated_at", "transfer_number", "requested_by_user_name", "approved_by_user_name"},
 		// Permission checkers
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[StockTransfer], user interface{}) bool {
+			return true // Authenticated users can add stocktransfer
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[StockTransfer], user interface{}, obj *StockTransfer) bool {
 			return true
 		},

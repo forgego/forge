@@ -14,6 +14,11 @@ const (
 	MaxCost = utils.MaxCost
 )
 
+// IsHashed returns true if the password string is already a bcrypt hash
+func IsHashed(password string) bool {
+	return utils.IsHashed(password)
+}
+
 // HashPassword hashes a password using bcrypt
 func HashPassword(password string) (string, error) {
 	return utils.HashPassword(password)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/forgego/forge/config"
 	"github.com/forgego/forge/log"
+	"github.com/gorilla/csrf"
 	"go.uber.org/zap"
 )
 
@@ -54,9 +55,14 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 		router.Use(RequestSizeLimit(settings.Server.MaxRequestSize))
 	}
 
+	// Secure cookies only in production so plain-HTTP local
+	// development keeps working.
+	secureCookies := settings.App.Env == "production"
+
 	// Add session middleware if configured
 	if settings.Security.SessionSecret != "" {
 		sessionManager := NewSessionManager([]byte(settings.Security.SessionSecret))
+		sessionManager.Cookie.Secure = secureCookies
 		router.Use(sessionManager.Middleware())
 	}
 
@@ -64,7 +70,7 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 	if settings.Security.CSRFSecretKey != "" {
 		csrfProtect := NewCSRF(
 			[]byte(settings.Security.CSRFSecretKey),
-			DefaultCSRFOptions()...,
+			append(DefaultCSRFOptions(), csrf.Secure(secureCookies))...,
 		)
 		csrfMiddleware := csrfProtect.Middleware()
 		router.Use(func(next http.Handler) http.Handler {

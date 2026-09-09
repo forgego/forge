@@ -6,15 +6,22 @@ import (
 
 // Generator is the main code generator
 type Generator struct {
-	parser    *ASTParser
-	writer    *Writer
-	modelsDir string
-	outputDir string
+	parser      *ASTParser
+	writer      *Writer
+	modelsDir   string
+	outputDir   string
+	generateAPI bool
 }
 
 // GetParser returns the AST parser
 func (g *Generator) GetParser() *ASTParser {
 	return g.parser
+}
+
+// SetGenerateAPI enables or disables REST API generation
+func (g *Generator) SetGenerateAPI(enabled bool) *Generator {
+	g.generateAPI = enabled
+	return g
 }
 
 // NewGenerator creates a new generator
@@ -45,7 +52,28 @@ func (g *Generator) Generate() error {
 		return fmt.Errorf("failed to generate combined code: %w", err)
 	}
 
+	// If API generation is enabled, generate api_gen.go
+	if g.generateAPI {
+		if err := g.writer.WriteAPI(definitions, g.outputDir); err != nil {
+			return fmt.Errorf("failed to generate API code: %w", err)
+		}
+	}
+
 	return nil
+}
+
+// GenerateAPI parses schemas and generates REST API code (api_gen.go)
+func (g *Generator) GenerateAPI() error {
+	definitions, err := g.parser.ParseDirectory(g.modelsDir)
+	if err != nil {
+		return fmt.Errorf("failed to parse schemas: %w", err)
+	}
+
+	if len(definitions) == 0 {
+		return nil
+	}
+
+	return g.writer.WriteAPI(definitions, g.outputDir)
 }
 
 // generateCombined generates all models in a single gen.go file

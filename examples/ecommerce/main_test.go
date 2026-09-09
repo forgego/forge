@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -24,6 +25,14 @@ import (
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/server"
 )
+
+// TestMain configures explicit admin credentials for the suite: since the
+// framework ships no default login, tests must provide their own.
+func TestMain(m *testing.M) {
+	_ = os.Setenv("FORGE_ADMIN_USERNAME", "admin")
+	_ = os.Setenv("FORGE_ADMIN_PASSWORD", "secret")
+	os.Exit(m.Run())
+}
 
 func TestNormalizePath(t *testing.T) {
 	tests := []struct {
@@ -1583,4 +1592,492 @@ func (e testErr) Error() string { return string(e) }
 
 func newTestErr(format string, args ...any) error {
 	return testErr(fmt.Sprintf(format, args...))
+}
+
+func setupTestEcommerceRouter(t *testing.T) (*server.Router, *db.DB) {
+	t.Helper()
+	dbPath := filepath.Join(t.TempDir(), "ecommerce-flow-test.sqlite")
+	cfg := config.NewConfig()
+	cfg.Set("database.driver", "sqlite3")
+	cfg.Set("database.sqlite_path", dbPath)
+	cfg.Set("admin.path", "/admin")
+	cfg.Set("api.path", "/api/v1")
+	cfg.Set("api.enabled", true)
+	cfg.Set("cors.allowed_origins", []string{"http://localhost"})
+	cfg.Set("cors.allowed_methods", []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"})
+	cfg.Set("cors.allowed_headers", []string{"Content-Type", "Authorization"})
+	cfg.Set("cors.exposed_headers", []string{"X-Total-Count"})
+
+	database, err := db.NewDB(dbPath)
+	if err != nil {
+		errText := err.Error()
+		if strings.Contains(errText, "go-sqlite3 requires cgo") || strings.Contains(errText, "gcc") {
+			t.Skipf("skipping flow test: sqlite driver unavailable in this environment (%v)", err)
+		}
+		t.Fatalf("failed to create sqlite db: %v", err)
+	}
+	t.Cleanup(func() {
+		database.Close()
+	})
+
+	admin.DefaultSite = admin.NewSite("default")
+	router := buildEcommerceRouter(context.Background(), cfg, database)
+	return router, database
+}
+
+func TestBuildEcommerceRouter_APICustomerAndAddressFlow(t *testing.T) {
+	router, _ := setupTestEcommerceRouter(t)
+
+	// 1. Create customer group
+	createdGroup := performJSONRequest(t, router, http.MethodPost, "/api/v1/customer-groups/", map[string]interface{}{
+		"name":                "VIP Club",
+		"code":                "VIP-CLUB",
+		"description":         "VIP club customers with 15% off",
+		"discount_percentage": 15.0,
+		"is_active":           true,
+	}, http.StatusCreated)
+	groupID := int64(createdGroup["id"].(float64))
+	if groupID == 0 {
+		t.Fatal("expected non-zero customer group id")
+	}
+
+	// 2. Create customer
+	createdCustomer := performJSONRequest(t, router, http.MethodPost, "/api/v1/customers/", map[string]interface{}{
+		"first_name":        "Alice",
+		"last_name":         "Smith",
+		"email":             "alice.smith@example.com",
+		"password_hash":     "hashed_pwd_abc123",
+		"customer_group_id": groupID,
+		"is_active":         true,
+	}, http.StatusCreated)
+	customerID := int64(createdCustomer["id"].(float64))
+	if customerID == 0 {
+		t.Fatal("expected non-zero customer id")
+	}
+
+	// 3. Retrieve customer
+	retrievedCustomer := performJSONRequest(t, router, http.MethodGet, fmt.Sprintf("/api/v1/customers/%d", customerID), nil, http.StatusOK)
+	if got, _ := retrievedCustomer["email"].(string); got != "alice.smith@example.com" {
+		t.Fatalf("expected email %q, got %q", "alice.smith@example.com", got)
+	}
+	if got, _ := retrievedCustomer["first_name"].(string); got != "Alice" {
+		t.Fatalf("expected first_name %q, got %q", "Alice", got)
+	}
+
+	// 4. Create address for customer
+	createdAddress := performJSONRequest(t, router, http.MethodPost, "/api/v1/addresses/", map[string]interface{}{
+		"customer_id":          customerID,
+		"address_type":         "shipping",
+		"first_name":           "Alice",
+		"last_name":            "Smith",
+		"address_line1":        "123 Market St",
+		"city":                 "Seattle",
+		"state_province":       "WA",
+		"postal_code":          "98101",
+		"country_code":         "US",
+		"country_name":         "United States",
+		"is_default_shipping":  true,
+	}, http.StatusCreated)
+	addressID := int64(createdAddress["id"].(float64))
+	if addressID == 0 {
+		t.Fatal("expected non-zero address id")
+	}
+
+	// 5. Retrieve address
+	retrievedAddress := performJSONRequest(t, router, http.MethodGet, fmt.Sprintf("/api/v1/addresses/%d", addressID), nil, http.StatusOK)
+	if got, _ := retrievedAddress["city"].(string); got != "Seattle" {
+		t.Fatalf("expected city %q, got %q", "Seattle", got)
+	}
+
+	// 6. Update address
+	updatedAddress := performJSONRequest(t, router, http.MethodPatch, fmt.Sprintf("/api/v1/addresses/%d", addressID), map[string]interface{}{
+		"address_line1": "123 Market St Suite 500",
+	}, http.StatusOK)
+	if got, _ := updatedAddress["address_line1"].(string); got != "123 Market St Suite 500" {
+		t.Fatalf("expected updated address_line1 %q, got %q", "123 Market St Suite 500", got)
+	}
+
+	// 7. Filter addresses by customer_id
+	filteredAddresses := performJSONRequest(t, router, http.MethodGet, fmt.Sprintf("/api/v1/addresses/?customer_id=%d", customerID), nil, http.StatusOK)
+	results, ok := filteredAddresses["results"].([]interface{})
+	if !ok || len(results) == 0 {
+		t.Fatalf("expected non-empty addresses list, got %v", filteredAddresses["results"])
+	}
+}
+
+func TestBuildEcommerceRouter_APIInventoryStockMovementFlow(t *testing.T) {
+	router, _ := setupTestEcommerceRouter(t)
+
+	// 1. Create Category and Product
+	cat := performJSONRequest(t, router, http.MethodPost, "/api/v1/categories/", map[string]interface{}{
+		"name": "Apparel",
+		"slug": "apparel-inv",
+	}, http.StatusCreated)
+	catID := int64(cat["id"].(float64))
+
+	prod := performJSONRequest(t, router, http.MethodPost, "/api/v1/products/", map[string]interface{}{
+		"name":        "Cotton Crew T-Shirt",
+		"slug":        "cotton-crew-t-shirt",
+		"sku":         "TSHIRT-CREW-01",
+		"description": "Premium combed cotton t-shirt",
+		"price":       24.99,
+		"category_id": catID,
+	}, http.StatusCreated)
+	prodID := int64(prod["id"].(float64))
+
+	// 2. Create Product Variant
+	variant := performJSONRequest(t, router, http.MethodPost, "/api/v1/product-variants/", map[string]interface{}{
+		"product_id":     prodID,
+		"sku":            "TSHIRT-CREW-01-L",
+		"name":           "Cotton Crew T-Shirt Large",
+		"option1_name":   "Size",
+		"option1_value":  "Large",
+		"stock_quantity": 100,
+	}, http.StatusCreated)
+	variantID := int64(variant["id"].(float64))
+
+	// 3. Create Warehouse
+	wh := performJSONRequest(t, router, http.MethodPost, "/api/v1/warehouses/", map[string]interface{}{
+		"name":          "Central Logistics Hub",
+		"code":          "WH-CENTRAL-01",
+		"address_line1": "700 Logistics Way",
+		"city":          "Dallas",
+		"state":         "TX",
+		"postal_code":   "75201",
+		"country_code":  "US",
+		"country_name":  "United States",
+		"is_active":     true,
+	}, http.StatusCreated)
+	whID := int64(wh["id"].(float64))
+
+	// 4. Create Stock Record
+	stk := performJSONRequest(t, router, http.MethodPost, "/api/v1/stock/", map[string]interface{}{
+		"product_variant_id": variantID,
+		"warehouse_id":       whID,
+		"quantity":           100,
+		"available_quantity": 100,
+		"reorder_point":      20,
+		"is_active":          true,
+	}, http.StatusCreated)
+	stockID := int64(stk["id"].(float64))
+
+	retrievedStock := performJSONRequest(t, router, http.MethodGet, fmt.Sprintf("/api/v1/stock/%d", stockID), nil, http.StatusOK)
+	if got, _ := retrievedStock["quantity"].(float64); int(got) != 100 {
+		t.Fatalf("expected stock quantity 100, got %v", retrievedStock["quantity"])
+	}
+
+	// 5. Create Stock Movement (inbound receipt)
+	mvt := performJSONRequest(t, router, http.MethodPost, "/api/v1/stock-movements/", map[string]interface{}{
+		"stock_id":           stockID,
+		"product_variant_id": variantID,
+		"warehouse_id":       whID,
+		"type":               "inbound",
+		"quantity":           50,
+		"quantity_before":    100,
+		"quantity_after":     150,
+		"reason":             "Restock shipment arrival",
+		"movement_date":      "2026-09-07T10:00:00Z",
+	}, http.StatusCreated)
+	mvtID := int64(mvt["id"].(float64))
+
+	retrievedMvt := performJSONRequest(t, router, http.MethodGet, fmt.Sprintf("/api/v1/stock-movements/%d", mvtID), nil, http.StatusOK)
+	if got, _ := retrievedMvt["type"].(string); got != "inbound" {
+		t.Fatalf("expected movement type %q, got %q", "inbound", got)
+	}
+	if got, _ := retrievedMvt["quantity"].(float64); int(got) != 50 {
+		t.Fatalf("expected movement quantity 50, got %v", retrievedMvt["quantity"])
+	}
+
+	// 6. Filter Stock Movements by stock_id
+	filteredMvts := performJSONRequest(t, router, http.MethodGet, fmt.Sprintf("/api/v1/stock-movements/?stock_id=%d", stockID), nil, http.StatusOK)
+	mvtResults, ok := filteredMvts["results"].([]interface{})
+	if !ok || len(mvtResults) == 0 {
+		t.Fatalf("expected stock movements for stock_id %d, got %v", stockID, filteredMvts["results"])
+	}
+}
+
+func TestBuildEcommerceRouter_APIPurchaseAndOrderDeliveryFlow(t *testing.T) {
+	router, _ := setupTestEcommerceRouter(t)
+
+	// 1. Fixtures: Customer, Category, Product, Variant
+	cust := performJSONRequest(t, router, http.MethodPost, "/api/v1/customers/", map[string]interface{}{
+		"first_name":    "Bob",
+		"last_name":     "Miller",
+		"email":         "bob.miller@example.com",
+		"password_hash": "hashed_pw_order",
+		"is_active":     true,
+	}, http.StatusCreated)
+	custID := int64(cust["id"].(float64))
+
+	cat := performJSONRequest(t, router, http.MethodPost, "/api/v1/categories/", map[string]interface{}{
+		"name": "Shoes",
+		"slug": "shoes-flow",
+	}, http.StatusCreated)
+	catID := int64(cat["id"].(float64))
+
+	prod := performJSONRequest(t, router, http.MethodPost, "/api/v1/products/", map[string]interface{}{
+		"name":        "Running Shoes Pro",
+		"slug":        "running-shoes-pro",
+		"sku":         "SHOE-RUN-01",
+		"description": "Top-tier marathon running shoes",
+		"price":       120.00,
+		"category_id": catID,
+	}, http.StatusCreated)
+	prodID := int64(prod["id"].(float64))
+
+	variant := performJSONRequest(t, router, http.MethodPost, "/api/v1/product-variants/", map[string]interface{}{
+		"product_id":     prodID,
+		"sku":            "SHOE-RUN-01-42",
+		"name":           "Running Shoes Pro Size 42",
+		"stock_quantity": 50,
+	}, http.StatusCreated)
+	variantID := int64(variant["id"].(float64))
+
+	// 2. Shopping Cart and Cart Item
+	cart := performJSONRequest(t, router, http.MethodPost, "/api/v1/carts/", map[string]interface{}{
+		"customer_id": custID,
+		"status":      "active",
+		"subtotal":    240.00,
+		"total":       240.00,
+	}, http.StatusCreated)
+	cartID := int64(cart["id"].(float64))
+
+	cartItem := performJSONRequest(t, router, http.MethodPost, "/api/v1/cart-items/", map[string]interface{}{
+		"cart_id":      cartID,
+		"product_id":   prodID,
+		"variant_id":   variantID,
+		"quantity":     2,
+		"unit_price":   120.00,
+		"total":        240.00,
+		"product_name": "Running Shoes Pro",
+	}, http.StatusCreated)
+	cartItemID := int64(cartItem["id"].(float64))
+	if cartItemID == 0 {
+		t.Fatal("expected non-zero cart item id")
+	}
+
+	// 3. Order Placement
+	order := performJSONRequest(t, router, http.MethodPost, "/api/v1/orders/", map[string]interface{}{
+		"order_number":        "ORD-2026-FLOW-001",
+		"customer_id":         custID,
+		"customer_email":      "bob.miller@example.com",
+		"customer_first_name": "Bob",
+		"customer_last_name":  "Miller",
+		"subtotal":            240.00,
+		"tax_amount":          20.00,
+		"shipping_amount":     15.00,
+		"total":               275.00,
+		"status":              "pending",
+		"payment_status":      "pending",
+		"fulfillment_status":  "unfulfilled",
+	}, http.StatusCreated)
+	orderID := int64(order["id"].(float64))
+
+	orderItem := performJSONRequest(t, router, http.MethodPost, "/api/v1/order-items/", map[string]interface{}{
+		"order_id":           orderID,
+		"product_id":         prodID,
+		"variant_id":         variantID,
+		"product_name":       "Running Shoes Pro",
+		"product_sku":        "SHOE-RUN-01",
+		"quantity":           2,
+		"unit_price":         120.00,
+		"total":              240.00,
+		"fulfillment_status": "unfulfilled",
+	}, http.StatusCreated)
+	orderItemID := int64(orderItem["id"].(float64))
+	if orderItemID == 0 {
+		t.Fatal("expected non-zero order item id")
+	}
+
+	// 4. Payment Recording
+	pmt := performJSONRequest(t, router, http.MethodPost, "/api/v1/payments/", map[string]interface{}{
+		"order_id":       orderID,
+		"transaction_id": "TX-FLOW-998877",
+		"amount":         275.00,
+		"currency":       "USD",
+		"payment_method": "credit_card",
+		"status":         "completed",
+	}, http.StatusCreated)
+	pmtID := int64(pmt["id"].(float64))
+	if pmtID == 0 {
+		t.Fatal("expected non-zero payment id")
+	}
+
+	// 5. Order State Transition: pending -> processing -> shipped -> delivered
+	performJSONRequest(t, router, http.MethodPatch, fmt.Sprintf("/api/v1/orders/%d", orderID), map[string]interface{}{
+		"status":         "processing",
+		"payment_status": "paid",
+	}, http.StatusOK)
+
+	performJSONRequest(t, router, http.MethodPatch, fmt.Sprintf("/api/v1/orders/%d", orderID), map[string]interface{}{
+		"status":             "shipped",
+		"fulfillment_status": "shipped",
+		"carrier":            "FedEx",
+		"tracking_number":    "FDX-99001122",
+	}, http.StatusOK)
+
+	// Transition to delivered and ensure delivered_at is recorded
+	deliveredTime := "2026-09-07T14:30:00Z"
+	deliveredOrder := performJSONRequest(t, router, http.MethodPatch, fmt.Sprintf("/api/v1/orders/%d", orderID), map[string]interface{}{
+		"status":             "delivered",
+		"fulfillment_status": "fulfilled",
+		"delivered_at":       deliveredTime,
+	}, http.StatusOK)
+
+	if got, _ := deliveredOrder["status"].(string); got != "delivered" {
+		t.Fatalf("expected order status %q, got %q", "delivered", got)
+	}
+	if got, _ := deliveredOrder["fulfillment_status"].(string); got != "fulfilled" {
+		t.Fatalf("expected fulfillment status %q, got %q", "fulfilled", got)
+	}
+	if got, _ := deliveredOrder["delivered_at"].(string); !strings.HasPrefix(got, "2026-09-07") {
+		t.Fatalf("expected delivered_at to be set on order, got %q", got)
+	}
+}
+
+func TestBuildEcommerceRouter_APISupportAndReturnFlow(t *testing.T) {
+	router, _ := setupTestEcommerceRouter(t)
+
+	// 1. Fixtures: Customer, Category, Product, Variant, Order, OrderItem
+	cust := performJSONRequest(t, router, http.MethodPost, "/api/v1/customers/", map[string]interface{}{
+		"first_name":    "Charlie",
+		"last_name":     "Davis",
+		"email":         "charlie.davis@example.com",
+		"password_hash": "hashed_pw_support",
+		"is_active":     true,
+	}, http.StatusCreated)
+	custID := int64(cust["id"].(float64))
+
+	cat := performJSONRequest(t, router, http.MethodPost, "/api/v1/categories/", map[string]interface{}{
+		"name": "Audio",
+		"slug": "audio-flow",
+	}, http.StatusCreated)
+	catID := int64(cat["id"].(float64))
+
+	prod := performJSONRequest(t, router, http.MethodPost, "/api/v1/products/", map[string]interface{}{
+		"name":        "Wireless Noise Canceling Headphones",
+		"slug":        "wireless-nc-headphones",
+		"sku":         "AUDIO-NC-001",
+		"description": "Studio-grade noise canceling headphones",
+		"price":       199.99,
+		"category_id": catID,
+	}, http.StatusCreated)
+	prodID := int64(prod["id"].(float64))
+
+	variant := performJSONRequest(t, router, http.MethodPost, "/api/v1/product-variants/", map[string]interface{}{
+		"product_id":     prodID,
+		"sku":            "AUDIO-NC-001-BLK",
+		"name":           "Headphones Black",
+		"stock_quantity": 40,
+	}, http.StatusCreated)
+	variantID := int64(variant["id"].(float64))
+
+	order := performJSONRequest(t, router, http.MethodPost, "/api/v1/orders/", map[string]interface{}{
+		"order_number":        "ORD-SUPPORT-001",
+		"customer_id":         custID,
+		"customer_email":      "charlie.davis@example.com",
+		"customer_first_name": "Charlie",
+		"customer_last_name":  "Davis",
+		"subtotal":            199.99,
+		"tax_amount":          16.00,
+		"shipping_amount":     10.00,
+		"total":               225.99,
+		"status":              "delivered",
+		"payment_status":      "paid",
+		"fulfillment_status":  "fulfilled",
+	}, http.StatusCreated)
+	orderID := int64(order["id"].(float64))
+
+	orderItem := performJSONRequest(t, router, http.MethodPost, "/api/v1/order-items/", map[string]interface{}{
+		"order_id":           orderID,
+		"product_id":         prodID,
+		"variant_id":         variantID,
+		"product_name":       "Wireless Noise Canceling Headphones",
+		"product_sku":        "AUDIO-NC-001",
+		"quantity":           1,
+		"unit_price":         199.99,
+		"total":              199.99,
+		"fulfillment_status": "fulfilled",
+	}, http.StatusCreated)
+	orderItemID := int64(orderItem["id"].(float64))
+
+	// 2. Support Ticket creation
+	ticket := performJSONRequest(t, router, http.MethodPost, "/api/v1/support-tickets/", map[string]interface{}{
+		"ticket_number": "TCK-2026-9001",
+		"customer_id":   custID,
+		"order_id":      orderID,
+		"subject":       "Defective ear cushion on delivered unit",
+		"description":   "Right ear cushion has a tear out of the box.",
+		"status":        "open",
+		"priority":      "high",
+		"category":      "product_issue",
+	}, http.StatusCreated)
+	ticketID := int64(ticket["id"].(float64))
+
+	retrievedTicket := performJSONRequest(t, router, http.MethodGet, fmt.Sprintf("/api/v1/support-tickets/%d", ticketID), nil, http.StatusOK)
+	if got, _ := retrievedTicket["ticket_number"].(string); got != "TCK-2026-9001" {
+		t.Fatalf("expected ticket_number %q, got %q", "TCK-2026-9001", got)
+	}
+
+	// 3. Support Message in ticket thread
+	msg := performJSONRequest(t, router, http.MethodPost, "/api/v1/support-messages/", map[string]interface{}{
+		"ticket_id":   ticketID,
+		"sender_type": "customer",
+		"sender_name": "Charlie Davis",
+		"message":     "Here is the issue description. Would like to request an RMA or replacement.",
+	}, http.StatusCreated)
+	msgID := int64(msg["id"].(float64))
+	if msgID == 0 {
+		t.Fatal("expected non-zero support message id")
+	}
+
+	retrievedMsgs := performJSONRequest(t, router, http.MethodGet, fmt.Sprintf("/api/v1/support-messages/?ticket_id=%d", ticketID), nil, http.StatusOK)
+	msgResults, ok := retrievedMsgs["results"].([]interface{})
+	if !ok || len(msgResults) == 0 {
+		t.Fatalf("expected messages for ticket_id %d, got %v", ticketID, retrievedMsgs["results"])
+	}
+
+	// 4. Return Request creation
+	retReq := performJSONRequest(t, router, http.MethodPost, "/api/v1/return-requests/", map[string]interface{}{
+		"return_number": "RMA-2026-3001",
+		"order_id":      orderID,
+		"customer_id":   custID,
+		"reason":        "defective",
+		"description":   "Torn ear cushion on new item",
+		"status":        "pending",
+		"refund_method": "original",
+		"refund_amount": 215.99,
+	}, http.StatusCreated)
+	retReqID := int64(retReq["id"].(float64))
+
+	// 5. Return Item attachment
+	retItem := performJSONRequest(t, router, http.MethodPost, "/api/v1/return-items/", map[string]interface{}{
+		"return_request_id": retReqID,
+		"order_item_id":     orderItemID,
+		"quantity":          1,
+		"reason":            "defective",
+		"condition":         "opened",
+		"refund_amount":     199.99,
+		"is_restockable":    false,
+	}, http.StatusCreated)
+	retItemID := int64(retItem["id"].(float64))
+	if retItemID == 0 {
+		t.Fatal("expected non-zero return item id")
+	}
+
+	// 6. Approve Return Request
+	approvedRet := performJSONRequest(t, router, http.MethodPatch, fmt.Sprintf("/api/v1/return-requests/%d", retReqID), map[string]interface{}{
+		"status":      "approved",
+		"approved_at": "2026-09-07T15:00:00Z",
+	}, http.StatusOK)
+	if got, _ := approvedRet["status"].(string); got != "approved" {
+		t.Fatalf("expected return request status %q, got %q", "approved", got)
+	}
+
+	// 7. Verify Return Items linked to Return Request
+	filteredItems := performJSONRequest(t, router, http.MethodGet, fmt.Sprintf("/api/v1/return-items/?return_request_id=%d", retReqID), nil, http.StatusOK)
+	itemResults, ok := filteredItems["results"].([]interface{})
+	if !ok || len(itemResults) == 0 {
+		t.Fatalf("expected return items for return_request_id %d, got %v", retReqID, filteredItems["results"])
+	}
 }

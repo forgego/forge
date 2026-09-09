@@ -65,6 +65,9 @@ func RegisterAdmin(ctx context.Context) {
 			TrackFields: []string{"code", "discount_type", "discount_value", "is_active", "usage_limit", "valid_until"},
 		},
 		ReadOnlyFields: []string{"created_at", "updated_at", "usage_count"},
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[Coupon], user interface{}) bool {
+			return true // Authenticated users can add coupon
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[Coupon], user interface{}, obj *Coupon) bool {
 			return true
 		},
@@ -155,6 +158,9 @@ func RegisterAdmin(ctx context.Context) {
 			TrackFields: []string{"discount_amount"},
 		},
 		ReadOnlyFields: []string{"created_at"},
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[CouponUsage], user interface{}) bool {
+			return true // Authenticated users can add couponusage
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[CouponUsage], user interface{}, obj *CouponUsage) bool {
 			return true
 		},
@@ -238,6 +244,9 @@ func RegisterAdmin(ctx context.Context) {
 			TrackFields: []string{"status", "is_featured", "rating", "merchant_response"},
 		},
 		ReadOnlyFields: []string{"created_at", "updated_at", "helpful_count", "not_helpful_count"},
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[Review], user interface{}) bool {
+			return true // Authenticated users can add review
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[Review], user interface{}, obj *Review) bool {
 			return true
 		},
@@ -337,6 +346,9 @@ func RegisterAdmin(ctx context.Context) {
 				Fields: []string{"alt_text", "sort_order"},
 			},
 		},
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[ReviewImage], user interface{}) bool {
+			return true // Authenticated users can add reviewimage
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[ReviewImage], user interface{}, obj *ReviewImage) bool {
 			return true
 		},
@@ -378,6 +390,9 @@ func RegisterAdmin(ctx context.Context) {
 				Name:   "Metadata",
 				Fields: []string{"ip_address", "created_at"},
 			},
+		},
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[ReviewHelpfulness], user interface{}) bool {
+			return true // Authenticated users can add reviewhelpfulness
 		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[ReviewHelpfulness], user interface{}, obj *ReviewHelpfulness) bool {
 			return true
@@ -439,6 +454,9 @@ func RegisterAdmin(ctx context.Context) {
 			TrackFields: []string{"status", "answer", "is_public"},
 		},
 		ReadOnlyFields: []string{"created_at", "updated_at"},
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[ProductQuestion], user interface{}) bool {
+			return true // Authenticated users can add productquestion
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[ProductQuestion], user interface{}, obj *ProductQuestion) bool {
 			return true
 		},

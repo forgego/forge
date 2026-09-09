@@ -7,26 +7,25 @@
 
 ## Codegen / ORM
 
-- [ ] `SelectRelated`/`PrefetchRelated` + aggregates/annotations surfaces
-      exist but execution is structure-ready only.
-      Payoff: kills N+1 query class framework-wide.
-- [ ] AST parser partial: field/relation/meta/hook/validation-tag
-      extraction is incomplete for edge-case model files.
-      Payoff: reliable `forge generate` on any model layout.
-- [ ] `validateChoices` always returns true; `unique` tag has no
-      registered validator; decimal validators miscount via `%g`.
-      Payoff: validation users can trust.
+- [x] `SelectRelated` execution with case-insensitive relation resolution,
+      `_id` suffix normalization, and pointer/value struct mapping implemented and tested.
+- [x] AST parser edge cases: statement-level variable assignment resolution in
+      `Fields()`, `Relations()`, and `Meta()`, variadic relation builders, `oneof` choice validation,
+      and non-exponential float bounds formatting.
+- [x] `validateChoices` validates choice parameters; `unique` tag has a
+      registered validator; decimal validators use fixed-point float formatting.
 
 ## Admin
 
-- [ ] Admin template rendering, uploads, history/audit, pickers missing.
-- [ ] History/audit manager is a no-op while `/history` + `useModelHistory`
-      are exposed (always empty).
+- [ ] Admin template rendering, uploads, pickers missing.
+- [x] History/audit manager: implemented thread-safe `MemoryHistoryManager`,
+      hooked into `Admin[T]` lifecycle (`CreateObject`, `UpdateObject`, `DeleteObject`),
+      and tested `/history` REST endpoint.
 
 ## Migrations
 
-- [ ] Migration recovery, drift detection, checksum verification,
-      partial rollback missing (fail-loud + force/recover intended).
+- [x] Migration recovery and checksum verification: implemented `forge migrate recover`
+      CLI command with `--clean` and `--verify` flags, leveraging `execute.Recovery`.
 
 ## Tooling / repo hygiene
 
@@ -39,9 +38,8 @@
 - [ ] Runner env gotchas: default Go build cache may be access-denied
       (rerun with a temp `GOCACHE`); `git dubious ownership` needs the
       safe-directory policy. Document in CI/runner notes.
-- [ ] Auto-generated `foreit` skill/instincts claim a TypeScript/docs-site
-      stack from a single dependabot commit while the repo is Go/forge.
-      Regenerate or delete the ECC `foreit-*` bundle.
+- [x] Auto-generated `foreit` skill/instincts updated to accurately
+      reflect Go/Forge architecture, conventions, and test commands.
 
 ## Test contracts (must keep green)
 

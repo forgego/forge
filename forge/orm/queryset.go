@@ -571,13 +571,21 @@ func (qs *BaseQuerySet[T]) buildJoinClause(builder *SQLBuilder) {
 
 		// Try to find the FK column
 		// Strategy:
-		// 1. Look for field with DBColumn = rel.Name + "_id" (lowercase)
-		// 2. Look for field with Name = rel.Name + "ID"
+		// 1. Direct match with field DBColumn, Name, or StructFieldName
+		// 2. Look for field with DBColumn = rel.Name + "_id" (lowercase)
+		// 3. Look for field with Name = rel.Name + "ID"
+		// 4. Look for target model name + "_id"
 		fkColumn := ""
 
-		// Try to find field that corresponds to this relation
 		for _, f := range qs.schema.Fields {
-			// Check common naming conventions
+			if strings.EqualFold(f.DBColumn, rel.Name) || strings.EqualFold(f.Name, rel.Name) {
+				fkColumn = f.DBColumn
+				break
+			}
+			if f.StructFieldName == rel.Name {
+				fkColumn = f.DBColumn
+				break
+			}
 			if f.StructFieldName == rel.Name+"ID" {
 				fkColumn = f.DBColumn
 				break
@@ -586,7 +594,6 @@ func (qs *BaseQuerySet[T]) buildJoinClause(builder *SQLBuilder) {
 				fkColumn = f.DBColumn
 				break
 			}
-			// Fallback: if field name ends in ID and matches relation prefix
 			if strings.HasSuffix(f.Name, "ID") && strings.HasPrefix(f.Name, rel.Name) {
 				fkColumn = f.DBColumn
 				break
@@ -594,8 +601,20 @@ func (qs *BaseQuerySet[T]) buildJoinClause(builder *SQLBuilder) {
 		}
 
 		if fkColumn == "" {
-			// Try "user_id" for "User" relation
 			guess := strings.ToLower(rel.Name) + "_id"
+			if f := qs.schema.GetField(guess); f != nil {
+				fkColumn = f.DBColumn
+			}
+		}
+
+		if fkColumn == "" && strings.HasSuffix(strings.ToLower(rel.Name), "_id") {
+			if f := qs.schema.GetField(strings.ToLower(rel.Name)); f != nil {
+				fkColumn = f.DBColumn
+			}
+		}
+
+		if fkColumn == "" {
+			guess := strings.ToLower(rel.TargetModel) + "_id"
 			if f := qs.schema.GetField(guess); f != nil {
 				fkColumn = f.DBColumn
 			}
@@ -613,6 +632,10 @@ func (qs *BaseQuerySet[T]) buildJoinClause(builder *SQLBuilder) {
 
 		qs.joins = append(qs.joins, joinSQL)
 		qs.joinMap[path] = true
+		qs.joinMap[rel.Name] = true
+		qs.joinMap[strings.ToLower(rel.Name)] = true
+		qs.joinMap[rel.TargetModel] = true
+		qs.joinMap[strings.ToLower(rel.TargetModel)] = true
 	}
 }
 
@@ -799,15 +822,16 @@ func (qs *BaseQuerySet[T]) buildFieldMap(columns []string) map[string]scanField 
 			relName := parts[0]
 			relCol := parts[1]
 
-			if !qs.joinMap[relName] {
-				// Might be a manual alias or something else, skip relation logic
-				continue
-			}
-
 			rel := qs.schema.GetRelation(relName)
 			if rel == nil {
 				continue
 			}
+
+			if !qs.joinMap[relName] && !qs.joinMap[rel.Name] && !qs.joinMap[strings.ToLower(rel.Name)] && !qs.joinMap[rel.TargetModel] && !qs.joinMap[strings.ToLower(rel.TargetModel)] {
+				// Might be a manual alias or something else, skip relation logic
+				continue
+			}
+
 			targetSchema, err := GetModelSchemaByName(rel.TargetModel)
 			if err != nil {
 				continue
@@ -826,7 +850,7 @@ func (qs *BaseQuerySet[T]) buildFieldMap(columns []string) map[string]scanField 
 			if targetField != nil {
 				fieldMap[col] = scanField{
 					fieldInfo:    targetField,
-					relationName: relName,
+					relationName: rel.Name,
 				}
 				continue
 			}
@@ -937,14 +961,33 @@ func (qs *BaseQuerySet[T]) prepareScanArgs(instance *T, columns []string, fieldM
 				continue // No PK -> relation is nil
 			}
 
-			// Allocate relation struct
+			// Locate relation field on instance struct
 			relField := instanceValue.FieldByName(relName)
-			// Handle pointer to struct
-			if relField.IsValid() && relField.CanSet() && relField.Kind() == reflect.Ptr {
-				val := reflect.New(relField.Type().Elem())
-				relField.Set(val)
+			if !relField.IsValid() {
+				relField = instanceValue.FieldByName(utils.ToPascal(relName))
+			}
+			if !relField.IsValid() && rel != nil {
+				relField = instanceValue.FieldByName(rel.TargetModel)
+				if !relField.IsValid() {
+					relField = instanceValue.FieldByName(utils.ToPascal(rel.TargetModel))
+				}
+			}
+			if !relField.IsValid() {
+				trimmed := strings.TrimSuffix(strings.TrimSuffix(relName, "_id"), "ID")
+				relField = instanceValue.FieldByName(utils.ToPascal(trimmed))
+			}
 
-				nestedVal := val.Elem()
+			if relField.IsValid() && relField.CanSet() {
+				var nestedVal reflect.Value
+				if relField.Kind() == reflect.Ptr {
+					val := reflect.New(relField.Type().Elem())
+					relField.Set(val)
+					nestedVal = val.Elem()
+				} else if relField.Kind() == reflect.Struct {
+					nestedVal = relField
+				} else {
+					continue
+				}
 
 				// Populate fields
 				for fName, holder := range fields {
@@ -960,6 +1003,9 @@ func (qs *BaseQuerySet[T]) prepareScanArgs(instance *T, columns []string, fieldM
 					structField := nestedVal.FieldByName(fInfo.Name)
 					if fInfo.StructFieldName != "" {
 						structField = nestedVal.FieldByName(fInfo.StructFieldName)
+					}
+					if !structField.IsValid() {
+						structField = nestedVal.FieldByName(utils.ToPascal(fInfo.Name))
 					}
 
 					if structField.IsValid() && structField.CanSet() {

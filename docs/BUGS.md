@@ -15,5 +15,4 @@
 
 ## Ecommerce example
 
-- [ ] `Mark Delivered` must set `delivered_at` (currently only flips status).
-- [ ] Required-field saves must return validation errors, not 500s.
+- All known ecommerce example blocker bugs resolved in `feat/security-hardening`.
