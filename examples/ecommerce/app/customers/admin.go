@@ -45,6 +45,9 @@ func RegisterAdmin(ctx context.Context) {
 		// Read-only fields
 		ReadOnlyFields: []string{"created_at", "updated_at"},
 		// Permission checkers
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[CustomerGroup], user interface{}) bool {
+			return true // Authenticated users can add customergroup
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[CustomerGroup], user interface{}, obj *CustomerGroup) bool {
 			return true
 		},
@@ -190,6 +193,9 @@ func RegisterAdmin(ctx context.Context) {
 		// Read-only fields
 		ReadOnlyFields: []string{"created_at", "updated_at", "password_hash", "verification_token", "reset_password_token", "last_login_at", "last_login_ip", "total_orders", "total_spent", "average_order_value"},
 		// Permission checkers
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[Customer], user interface{}) bool {
+			return true // Authenticated users can add customer
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[Customer], user interface{}, obj *Customer) bool {
 			return true
 		},
@@ -403,6 +409,9 @@ func RegisterAdmin(ctx context.Context) {
 		// Read-only fields
 		ReadOnlyFields: []string{"created_at", "updated_at"},
 		// Permission checkers
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[Address], user interface{}) bool {
+			return true // Authenticated users can add address
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[Address], user interface{}, obj *Address) bool {
 			return true
 		},
@@ -561,6 +570,9 @@ func RegisterAdmin(ctx context.Context) {
 		// Read-only fields
 		ReadOnlyFields: []string{"created_at", "updated_at", "share_token"},
 		// Permission checkers
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[WishList], user interface{}) bool {
+			return true // Authenticated users can add wishlist
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[WishList], user interface{}, obj *WishList) bool {
 			return true
 		},
@@ -688,6 +700,9 @@ func RegisterAdmin(ctx context.Context) {
 		// Read-only fields
 		ReadOnlyFields: []string{"created_at", "updated_at", "price_when_added"},
 		// Permission checkers
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[WishListItem], user interface{}) bool {
+			return true // Authenticated users can add wishlistitem
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[WishListItem], user interface{}, obj *WishListItem) bool {
 			return true
 		},

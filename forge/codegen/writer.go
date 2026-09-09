@@ -55,6 +55,35 @@ func (w *Writer) WriteCombined(definitions []*ModelDefinition, outputDir string)
 	return w.writeTemplate(t, data, filename)
 }
 
+// WriteAPI writes all generated REST API code to an api_gen.go file
+func (w *Writer) WriteAPI(definitions []*ModelDefinition, outputDir string) error {
+	if len(definitions) == 0 {
+		return nil
+	}
+
+	packageName := definitions[0].Package
+
+	t := template.New("api").Funcs(template.FuncMap{
+		"ToLower":  strings.ToLower,
+		"ToSnake":  utils.ToSnake,
+		"ToCamel":  utils.ToCamel,
+		"ToPascal": utils.ToPascal,
+	})
+
+	t, err := t.Parse(apiTemplate)
+	if err != nil {
+		return fmt.Errorf("failed to parse api template: %w", err)
+	}
+
+	data := map[string]interface{}{
+		"Package": packageName,
+		"Models":  definitions,
+	}
+
+	filename := filepath.Join(outputDir, "api_gen.go")
+	return w.writeTemplate(t, data, filename)
+}
+
 // writeTemplate writes a template to a file
 func (w *Writer) writeTemplate(t *template.Template, data interface{}, filename string) error {
 	file, err := os.Create(filename)

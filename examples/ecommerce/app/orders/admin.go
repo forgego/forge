@@ -72,6 +72,9 @@ func RegisterAdmin(ctx context.Context) {
 			TrackFields: []string{"status", "is_abandoned", "total"},
 		},
 		ReadOnlyFields: []string{"created_at", "updated_at", "converted_at"},
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[Cart], user interface{}) bool {
+			return true // Authenticated users can add cart
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[Cart], user interface{}, obj *Cart) bool {
 			return true
 		},
@@ -176,6 +179,9 @@ func RegisterAdmin(ctx context.Context) {
 			TrackFields: []string{"quantity", "unit_price", "discount_amount"},
 		},
 		ReadOnlyFields: []string{"created_at", "updated_at", "total"},
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[CartItem], user interface{}) bool {
+			return true // Authenticated users can add cartitem
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[CartItem], user interface{}, obj *CartItem) bool {
 			return true
 		},
@@ -322,6 +328,9 @@ func RegisterAdmin(ctx context.Context) {
 			TrackFields: []string{"status", "payment_status", "fulfillment_status", "total", "admin_notes"},
 		},
 		ReadOnlyFields: []string{"created_at", "updated_at", "order_number", "paid_at", "shipped_at", "delivered_at", "cancelled_at"},
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[Order], user interface{}) bool {
+			return true // Authenticated users can add order
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[Order], user interface{}, obj *Order) bool {
 			return true
 		},
@@ -547,6 +556,9 @@ func RegisterAdmin(ctx context.Context) {
 			TrackFields: []string{"fulfillment_status", "quantity_fulfilled"},
 		},
 		ReadOnlyFields: []string{"created_at", "updated_at", "total"},
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[OrderItem], user interface{}) bool {
+			return true // Authenticated users can add orderitem
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[OrderItem], user interface{}, obj *OrderItem) bool {
 			return true
 		},
@@ -662,6 +674,9 @@ func RegisterAdmin(ctx context.Context) {
 			TrackFields: []string{"status", "transaction_id"},
 		},
 		ReadOnlyFields: []string{"created_at", "updated_at", "completed_at", "failed_at", "refunded_at"},
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[Payment], user interface{}) bool {
+			return true // Authenticated users can add payment
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[Payment], user interface{}, obj *Payment) bool {
 			return true
 		},
@@ -796,6 +811,9 @@ func RegisterAdmin(ctx context.Context) {
 			TrackFields: []string{"status", "tracking_number"},
 		},
 		ReadOnlyFields: []string{"created_at", "updated_at", "shipped_at", "delivered_at"},
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[Shipment], user interface{}) bool {
+			return true // Authenticated users can add shipment
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[Shipment], user interface{}, obj *Shipment) bool {
 			return true
 		},

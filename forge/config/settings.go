@@ -110,9 +110,9 @@ func LoadSettings(cfg *Config) *Settings {
 			ConnMaxIdleTime: cfg.GetInt("database.conn_max_idle_time", 600),
 		},
 		Security: SecuritySettings{
-			SecretKey:       cfg.GetString("security.secret_key", "change-me-in-production"),
-			CSRFSecretKey:   cfg.GetString("security.csrf_secret_key", "change-me-in-production"),
-			SessionSecret:   cfg.GetString("security.session_secret", "change-me-in-production"),
+			SecretKey:       cfg.GetString("security.secret_key", ""),
+			CSRFSecretKey:   cfg.GetString("security.csrf_secret_key", ""),
+			SessionSecret:   cfg.GetString("security.session_secret", ""),
 			CSRFExemptPaths: cfg.GetStringSlice("security.csrf_exempt_paths", nil),
 		},
 		Admin: AdminSettings{

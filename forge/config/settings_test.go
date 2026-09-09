@@ -141,20 +141,27 @@ func TestLoadSettings_SecuritySettings(t *testing.T) {
 	cfg := NewConfig()
 	settings := LoadSettings(cfg)
 
-	tests := []struct {
-		name     string
-		got      string
-		expected string
-	}{
-		{"SecretKey", settings.Security.SecretKey, "change-me-in-production"},
-		{"CSRFSecretKey", settings.Security.CSRFSecretKey, "change-me-in-production"},
-		{"SessionSecret", settings.Security.SessionSecret, "change-me-in-production"},
+	got := map[string]string{
+		"SecretKey":     settings.Security.SecretKey,
+		"CSRFSecretKey": settings.Security.CSRFSecretKey,
+		"SessionSecret": settings.Security.SessionSecret,
+	}
+	want := map[string]string{
+		"SecretKey":     cfg.GetString("security.secret_key", ""),
+		"CSRFSecretKey": cfg.GetString("security.csrf_secret_key", ""),
+		"SessionSecret": cfg.GetString("security.session_secret", ""),
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.got != tt.expected {
-				t.Errorf("Security.%s = %q, want %q", tt.name, tt.got, tt.expected)
+	for name, v := range got {
+		t.Run(name, func(t *testing.T) {
+			if v == "" {
+				t.Errorf("Security.%s is empty", name)
+			}
+			if v == "change-me-in-production" {
+				t.Errorf("Security.%s ships the placeholder secret", name)
+			}
+			if v != want[name] {
+				t.Errorf("Security.%s = %q, want configured %q", name, v, want[name])
 			}
 		})
 	}

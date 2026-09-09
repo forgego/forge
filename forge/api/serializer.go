@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -162,13 +163,28 @@ func modelToMap(model interface{}) map[string]interface{} {
 			continue
 		}
 
+		if field.Anonymous {
+			anonVal := value
+			if anonVal.Kind() == reflect.Ptr && !anonVal.IsNil() {
+				anonVal = anonVal.Elem()
+			}
+			if anonVal.Kind() == reflect.Struct {
+				embeddedMap := modelToMap(anonVal.Interface())
+				for k, v := range embeddedMap {
+					result[k] = v
+				}
+			}
+			continue
+		}
+
 		// Get JSON tag or use field name
 		jsonTag := field.Tag.Get("json")
 		if jsonTag == "" || jsonTag == "-" {
 			continue
 		}
 
-		key := jsonTag
+		tagParts := strings.Split(jsonTag, ",")
+		key := tagParts[0]
 		if key == "" {
 			key = field.Name
 		}
@@ -195,7 +211,13 @@ func modelToMap(model interface{}) map[string]interface{} {
 			}
 		case reflect.Ptr:
 			if !value.IsNil() {
-				result[key] = modelToMap(value.Elem().Interface())
+				if value.Type().Elem() == reflect.TypeOf(time.Time{}) {
+					if timeVal, ok := value.Interface().(*time.Time); ok && timeVal != nil {
+						result[key] = timeVal.Format(time.RFC3339)
+					}
+				} else {
+					result[key] = modelToMap(value.Elem().Interface())
+				}
 			}
 		default:
 			result[key] = value.Interface()

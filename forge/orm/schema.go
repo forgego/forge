@@ -82,10 +82,20 @@ func (ms *ModelSchema) GetField(name string) *FieldInfo {
 	return nil
 }
 
-// GetRelation retrieves a relation by name
+// GetRelation retrieves a relation by name (case-insensitive with target model fallback)
 func (ms *ModelSchema) GetRelation(name string) *RelationInfo {
 	for i := range ms.Relations {
-		if ms.Relations[i].Name == name {
+		if strings.EqualFold(ms.Relations[i].Name, name) {
+			return &ms.Relations[i]
+		}
+	}
+	trimmedName := strings.TrimSuffix(strings.ToLower(name), "_id")
+	for i := range ms.Relations {
+		trimmedRel := strings.TrimSuffix(strings.ToLower(ms.Relations[i].Name), "_id")
+		if trimmedName == trimmedRel {
+			return &ms.Relations[i]
+		}
+		if strings.EqualFold(ms.Relations[i].TargetModel, name) || strings.EqualFold(ms.Relations[i].RelatedName, name) {
 			return &ms.Relations[i]
 		}
 	}

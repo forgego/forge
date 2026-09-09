@@ -76,6 +76,26 @@ const config = {
             label: 'Docs',
           },
           {
+            to: '/docs/features',
+            label: 'Features',
+            position: 'left',
+          },
+          {
+            to: '/docs/models',
+            label: 'Models & ORM',
+            position: 'left',
+          },
+          {
+            to: '/docs/admin/overview',
+            label: 'Admin',
+            position: 'left',
+          },
+          {
+            to: '/docs/api/overview',
+            label: 'REST API',
+            position: 'left',
+          },
+          {
             to: '/docs/changelog',
             label: 'Changelog',
             position: 'left',
@@ -96,27 +116,30 @@ const config = {
               {label: 'Introduction', to: '/docs/introduction'},
               {label: 'Quick Start', to: '/docs/quickstart'},
               {label: 'Installation', to: '/docs/installation'},
+              {label: 'Features Matrix', to: '/docs/features'},
             ],
           },
           {
             title: 'Build',
             items: [
-              {label: 'Models', to: '/docs/models'},
-              {label: 'Admin UI', to: '/docs/admin/overview'},
-              {label: 'REST API', to: '/docs/api/overview'},
+              {label: 'Models & Schema DSL', to: '/docs/models'},
+              {label: 'ORM & QuerySet', to: '/docs/orm'},
+              {label: 'Migrations & Recovery', to: '/docs/migrations'},
+              {label: 'Admin Console (SPA)', to: '/docs/admin/overview'},
+              {label: 'REST API & OpenAPI', to: '/docs/api/overview'},
             ],
           },
           {
-            title: 'Project',
+            title: 'Project & Community',
             items: [
               {label: 'Changelog', to: '/docs/changelog'},
               {label: 'Community', to: '/docs/community'},
               {label: 'Security', to: '/docs/security'},
-              {label: 'GitHub', href: 'https://github.com/hamidrabedi/foreit'},
+              {label: 'GitHub Repository', href: 'https://github.com/hamidrabedi/foreit'},
             ],
           },
         ],
-        copyright: `Copyright � ${new Date().getFullYear()} forge Framework. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear()} Forge Framework. Built with Docusaurus.`,
       },
       prism: {
         theme: lightCodeTheme,

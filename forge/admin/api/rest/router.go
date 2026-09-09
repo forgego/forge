@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/csv"
 	"encoding/hex"
@@ -63,6 +64,9 @@ func (r *Router) RegisterRoutes(router chi.Router) {
 
 		sub.Group(func(protected chi.Router) {
 			protected.Use(r.authMiddleware)
+
+			// Auth endpoints
+			protected.Post("/logout", r.handleLogout)
 
 			// Configuration endpoint
 			protected.Get("/config", r.handleConfig)
@@ -285,6 +289,10 @@ func (r *Router) handleLogin(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	expectedUsername, expectedPassword := adminCredentials()
+	if expectedUsername == "" || expectedPassword == "" {
+		respondError(w, http.StatusServiceUnavailable, "admin_login_disabled", "Admin login is not configured (set FORGE_ADMIN_USERNAME and FORGE_ADMIN_PASSWORD)", nil)
+		return
+	}
 	if !secureEqual(payload.Username, expectedUsername) || !secureEqual(payload.Password, expectedPassword) {
 		respondError(w, http.StatusUnauthorized, "invalid_credentials", "Invalid username or password", nil)
 		return
@@ -306,25 +314,34 @@ func (r *Router) handleLogin(w http.ResponseWriter, req *http.Request) {
 	})
 }
 
-func adminCredentials() (string, string) {
-	username := strings.TrimSpace(os.Getenv("FORGE_ADMIN_USERNAME"))
-	if username == "" {
-		username = "admin"
+// handleLogout revokes the current session token
+func (r *Router) handleLogout(w http.ResponseWriter, req *http.Request) {
+	token, err := bearerToken(req.Header.Get("Authorization"))
+	if err != nil {
+		respondError(w, http.StatusUnauthorized, "authentication_required", "Authentication required", nil)
+		return
 	}
 
+	r.sessions.Revoke(token)
+	respondJSON(w, http.StatusOK, map[string]string{
+		"message": "logged out successfully",
+	})
+}
+
+func adminCredentials() (string, string) {
+	// No defaults: admin login stays disabled until both variables are set.
+	username := strings.TrimSpace(os.Getenv("FORGE_ADMIN_USERNAME"))
 	password := strings.TrimSpace(os.Getenv("FORGE_ADMIN_PASSWORD"))
-	if password == "" {
-		password = "secret"
-	}
 
 	return username, password
 }
 
 func secureEqual(a, b string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+	// Compare SHA-256 digests so string length is not leaked by an
+	// early length check.
+	ah := sha256.Sum256([]byte(a))
+	bh := sha256.Sum256([]byte(b))
+	return subtle.ConstantTimeCompare(ah[:], bh[:]) == 1
 }
 
 // handleMetaDetail returns detailed metadata for a model
@@ -509,6 +526,10 @@ func (r *Router) handleCreate(admin core.AdminInterface) http.HandlerFunc {
 		// Call implementation
 		obj, err := admin.CreateObject(ctx, data)
 		if err != nil {
+			if isValidationError(err) {
+				respondError(w, http.StatusBadRequest, "validation_error", err.Error(), nil)
+				return
+			}
 			respondError(w, http.StatusInternalServerError, "create_failed", err.Error(), nil)
 			return
 		}
@@ -556,6 +577,10 @@ func (r *Router) handleUpdate(admin core.AdminInterface) http.HandlerFunc {
 		// Call implementation
 		obj, err := admin.UpdateObject(ctx, id, data)
 		if err != nil {
+			if isValidationError(err) {
+				respondError(w, http.StatusBadRequest, "validation_error", err.Error(), nil)
+				return
+			}
 			respondError(w, http.StatusInternalServerError, "update_failed", err.Error(), nil)
 			return
 		}
@@ -606,12 +631,30 @@ func (r *Router) handleReplace(admin core.AdminInterface) http.HandlerFunc {
 
 		obj, err := admin.UpdateObject(ctx, id, data)
 		if err != nil {
+			if isValidationError(err) {
+				respondError(w, http.StatusBadRequest, "validation_error", err.Error(), nil)
+				return
+			}
 			respondError(w, http.StatusInternalServerError, "update_failed", err.Error(), nil)
 			return
 		}
 
 		respondJSON(w, http.StatusOK, obj)
 	}
+}
+
+func isValidationError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "validation") ||
+		strings.Contains(msg, "not null constraint") ||
+		strings.Contains(msg, "violates not-null") ||
+		strings.Contains(msg, "required") ||
+		strings.Contains(msg, "invalid input") ||
+		strings.Contains(msg, "cannot be null") ||
+		strings.Contains(msg, "is required")
 }
 
 // handleDelete deletes an object
@@ -1177,11 +1220,17 @@ type savedViewStore struct {
 type adminSession struct {
 	Username  string
 	ExpiresAt time.Time
+	Active    bool
 }
 
 type adminSessionStore struct {
 	mu       sync.RWMutex
 	sessions map[string]adminSession
+}
+
+func hashSessionToken(token string) string {
+	h := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(h[:])
 }
 
 func newSavedViewStore() *savedViewStore {
@@ -1205,10 +1254,13 @@ func (s *adminSessionStore) Issue(username string, ttl time.Duration) (string, e
 	}
 
 	token := hex.EncodeToString(randomBytes)
+	tokenHash := hashSessionToken(token)
+
 	s.mu.Lock()
-	s.sessions[token] = adminSession{
+	s.sessions[tokenHash] = adminSession{
 		Username:  username,
 		ExpiresAt: time.Now().Add(ttl),
+		Active:    true,
 	}
 	s.mu.Unlock()
 
@@ -1216,21 +1268,41 @@ func (s *adminSessionStore) Issue(username string, ttl time.Duration) (string, e
 }
 
 func (s *adminSessionStore) Validate(token string) (adminSession, bool) {
+	tokenHash := hashSessionToken(token)
+
 	s.mu.RLock()
-	session, ok := s.sessions[token]
+	session, ok := s.sessions[tokenHash]
 	s.mu.RUnlock()
 	if !ok {
 		return adminSession{}, false
 	}
 
+	if !session.Active {
+		return adminSession{}, false
+	}
+
 	if time.Now().After(session.ExpiresAt) {
 		s.mu.Lock()
-		delete(s.sessions, token)
+		delete(s.sessions, tokenHash)
 		s.mu.Unlock()
 		return adminSession{}, false
 	}
 
 	return session, true
+}
+
+func (s *adminSessionStore) Revoke(token string) bool {
+	tokenHash := hashSessionToken(token)
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	session, ok := s.sessions[tokenHash]
+	if !ok || !session.Active {
+		return false
+	}
+	session.Active = false
+	s.sessions[tokenHash] = session
+	return true
 }
 
 func bearerToken(authorizationHeader string) (string, error) {

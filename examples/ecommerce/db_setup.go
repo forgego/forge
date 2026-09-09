@@ -836,5 +836,527 @@ func SetupSchema(database *db.DB) {
 		log.Fatalf("Failed to create stock_transfers table: %v", err)
 	}
 
+	// --- USERS APP ---
+
+	// Users
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS users_user (
+			id SERIAL PRIMARY KEY,
+			username VARCHAR(150) NOT NULL UNIQUE,
+			email VARCHAR(254) NOT NULL,
+			password_hash VARCHAR(255),
+			first_name VARCHAR(150),
+			last_name VARCHAR(150),
+			is_active BOOLEAN DEFAULT TRUE,
+			is_staff BOOLEAN DEFAULT FALSE,
+			is_superuser BOOLEAN DEFAULT FALSE,
+			avatar VARCHAR(500),
+			last_login TIMESTAMP,
+			date_joined TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_user_username ON users_user(username);
+		CREATE INDEX IF NOT EXISTS idx_user_email ON users_user(email);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create users_user table: %v", err)
+	}
+
+	// Auth Groups
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS auth_group (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(150) NOT NULL UNIQUE,
+			description VARCHAR(500),
+			permissions TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_auth_group_name ON auth_group(name);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create auth_group table: %v", err)
+	}
+
+	// --- PROMOTIONS APP ---
+
+	// Promotions
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS promotions (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(200) NOT NULL,
+			code VARCHAR(50) UNIQUE,
+			description TEXT,
+			discount_type VARCHAR(20) NOT NULL,
+			discount_value NUMERIC(10, 2) NOT NULL,
+			min_purchase NUMERIC(10, 2) DEFAULT 0.0,
+			max_discount NUMERIC(10, 2) DEFAULT 0.0,
+			start_date TIMESTAMP NOT NULL,
+			end_date TIMESTAMP,
+			usage_limit INTEGER DEFAULT 0,
+			usage_count INTEGER DEFAULT 0,
+			per_customer_limit INTEGER DEFAULT 0,
+			is_active BOOLEAN DEFAULT TRUE,
+			is_stackable BOOLEAN DEFAULT FALSE,
+			priority INTEGER DEFAULT 0,
+			applies_to VARCHAR(50) DEFAULT 'all',
+			target_entity_ids TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_promotion_code ON promotions(code);
+		CREATE INDEX IF NOT EXISTS idx_promotion_active ON promotions(is_active);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create promotions table: %v", err)
+	}
+
+	// Promotion Rules
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS promotion_rules (
+			id SERIAL PRIMARY KEY,
+			promotion_id INTEGER NOT NULL REFERENCES promotions(id) ON DELETE CASCADE,
+			rule_type VARCHAR(50) NOT NULL,
+			field VARCHAR(100) NOT NULL,
+			operator VARCHAR(20) NOT NULL,
+			value VARCHAR(500) NOT NULL,
+			logic_type VARCHAR(10) DEFAULT 'AND',
+			sort_order INTEGER DEFAULT 0,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_promotion_rule_promotion ON promotion_rules(promotion_id);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create promotion_rules table: %v", err)
+	}
+
+	// Banners
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS banners (
+			id SERIAL PRIMARY KEY,
+			title VARCHAR(200) NOT NULL,
+			description TEXT,
+			image_url VARCHAR(500) NOT NULL,
+			link_url VARCHAR(500),
+			placement VARCHAR(50) DEFAULT 'home_hero',
+			start_date TIMESTAMP NOT NULL,
+			end_date TIMESTAMP,
+			is_active BOOLEAN DEFAULT TRUE,
+			sort_order INTEGER DEFAULT 0,
+			click_count INTEGER DEFAULT 0,
+			view_count INTEGER DEFAULT 0,
+			target_group VARCHAR(50) DEFAULT 'all',
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_banner_active ON banners(is_active);
+		CREATE INDEX IF NOT EXISTS idx_banner_placement ON banners(placement);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create banners table: %v", err)
+	}
+
+	// Newsletter Subscriptions
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS newsletter_subscriptions (
+			id SERIAL PRIMARY KEY,
+			email VARCHAR(255) NOT NULL UNIQUE,
+			first_name VARCHAR(100),
+			last_name VARCHAR(100),
+			customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+			status VARCHAR(20) DEFAULT 'pending',
+			source VARCHAR(50),
+			ip_address VARCHAR(45),
+			confirmed_at TIMESTAMP,
+			unsubscribed_at TIMESTAMP,
+			preferences TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_newsletter_email ON newsletter_subscriptions(email);
+		CREATE INDEX IF NOT EXISTS idx_newsletter_status ON newsletter_subscriptions(status);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create newsletter_subscriptions table: %v", err)
+	}
+
+	// Promotion Usages
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS promotion_usages (
+			id SERIAL PRIMARY KEY,
+			promotion_id INTEGER NOT NULL REFERENCES promotions(id) ON DELETE CASCADE,
+			customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+			order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+			used_at TIMESTAMP NOT NULL,
+			discount_amount NUMERIC(10, 2) NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_promotion_usage_promotion ON promotion_usages(promotion_id);
+		CREATE INDEX IF NOT EXISTS idx_promotion_usage_customer ON promotion_usages(customer_id);
+		CREATE INDEX IF NOT EXISTS idx_promotion_usage_order ON promotion_usages(order_id);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create promotion_usages table: %v", err)
+	}
+
+	// --- SUPPORT APP ---
+
+	// Support Tickets
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS support_tickets (
+			id SERIAL PRIMARY KEY,
+			ticket_number VARCHAR(50) NOT NULL UNIQUE,
+			customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+			subject VARCHAR(300) NOT NULL,
+			description TEXT NOT NULL,
+			status VARCHAR(20) DEFAULT 'open',
+			priority VARCHAR(20) DEFAULT 'normal',
+			category VARCHAR(50),
+			assigned_to INTEGER,
+			order_id INTEGER REFERENCES orders(id) ON DELETE SET NULL,
+			source VARCHAR(50) DEFAULT 'web',
+			resolution TEXT,
+			resolved_at TIMESTAMP,
+			closed_at TIMESTAMP,
+			first_response_at TIMESTAMP,
+			tags TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_ticket_number ON support_tickets(ticket_number);
+		CREATE INDEX IF NOT EXISTS idx_ticket_customer ON support_tickets(customer_id);
+		CREATE INDEX IF NOT EXISTS idx_ticket_status ON support_tickets(status);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create support_tickets table: %v", err)
+	}
+
+	// Support Messages
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS support_messages (
+			id SERIAL PRIMARY KEY,
+			ticket_id INTEGER NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE,
+			sender_type VARCHAR(20) NOT NULL,
+			sender_id INTEGER,
+			sender_name VARCHAR(200),
+			message TEXT NOT NULL,
+			is_internal BOOLEAN DEFAULT FALSE,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_support_message_ticket ON support_messages(ticket_id);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create support_messages table: %v", err)
+	}
+
+	// Return Requests
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS return_requests (
+			id SERIAL PRIMARY KEY,
+			return_number VARCHAR(50) NOT NULL UNIQUE,
+			order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+			customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+			reason VARCHAR(50) NOT NULL,
+			description TEXT,
+			status VARCHAR(20) DEFAULT 'pending',
+			return_method VARCHAR(50),
+			refund_method VARCHAR(50) DEFAULT 'original',
+			refund_amount NUMERIC(10, 2) DEFAULT 0.0,
+			restock_fee NUMERIC(10, 2) DEFAULT 0.0,
+			shipping_label VARCHAR(500),
+			tracking_number VARCHAR(100),
+			approved_at TIMESTAMP,
+			approved_by INTEGER,
+			received_at TIMESTAMP,
+			processed_at TIMESTAMP,
+			refunded_at TIMESTAMP,
+			rejected_at TIMESTAMP,
+			rejection_note TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_return_number ON return_requests(return_number);
+		CREATE INDEX IF NOT EXISTS idx_return_order ON return_requests(order_id);
+		CREATE INDEX IF NOT EXISTS idx_return_customer ON return_requests(customer_id);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create return_requests table: %v", err)
+	}
+
+	// Return Items
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS return_items (
+			id SERIAL PRIMARY KEY,
+			return_request_id INTEGER NOT NULL REFERENCES return_requests(id) ON DELETE CASCADE,
+			order_item_id INTEGER NOT NULL REFERENCES order_items(id) ON DELETE CASCADE,
+			quantity INTEGER NOT NULL,
+			reason VARCHAR(50),
+			condition VARCHAR(50),
+			refund_amount NUMERIC(10, 2) DEFAULT 0.0,
+			is_restockable BOOLEAN DEFAULT TRUE,
+			inspection_note TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_return_item_request ON return_items(return_request_id);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create return_items table: %v", err)
+	}
+
+	// Live Chat Sessions
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS live_chat_sessions (
+			id SERIAL PRIMARY KEY,
+			session_id VARCHAR(100) NOT NULL UNIQUE,
+			customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+			agent_id INTEGER,
+			status VARCHAR(20) DEFAULT 'waiting',
+			started_at TIMESTAMP NOT NULL,
+			ended_at TIMESTAMP,
+			duration INTEGER DEFAULT 0,
+			message_count INTEGER DEFAULT 0,
+			rating INTEGER,
+			feedback TEXT,
+			ip_address VARCHAR(45),
+			user_agent VARCHAR(500),
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_chat_session_id ON live_chat_sessions(session_id);
+		CREATE INDEX IF NOT EXISTS idx_chat_customer ON live_chat_sessions(customer_id);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create live_chat_sessions table: %v", err)
+	}
+
+	// Chat Messages
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS chat_messages (
+			id SERIAL PRIMARY KEY,
+			session_id INTEGER NOT NULL REFERENCES live_chat_sessions(id) ON DELETE CASCADE,
+			sender_type VARCHAR(20) NOT NULL,
+			sender_id INTEGER,
+			message TEXT NOT NULL,
+			is_read BOOLEAN DEFAULT FALSE,
+			read_at TIMESTAMP,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_chat_message_session ON chat_messages(session_id);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create chat_messages table: %v", err)
+	}
+
+	// FAQs
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS faqs (
+			id SERIAL PRIMARY KEY,
+			question TEXT NOT NULL,
+			answer TEXT NOT NULL,
+			category VARCHAR(100),
+			is_public BOOLEAN DEFAULT TRUE,
+			view_count INTEGER DEFAULT 0,
+			helpful_yes INTEGER DEFAULT 0,
+			helpful_no INTEGER DEFAULT 0,
+			sort_order INTEGER DEFAULT 0,
+			tags TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_faq_category ON faqs(category);
+		CREATE INDEX IF NOT EXISTS idx_faq_public ON faqs(is_public);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create faqs table: %v", err)
+	}
+
+	// Attachments
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS attachments (
+			id SERIAL PRIMARY KEY,
+			entity_type VARCHAR(50) NOT NULL,
+			entity_id INTEGER NOT NULL,
+			file_name VARCHAR(255) NOT NULL,
+			file_url VARCHAR(500) NOT NULL,
+			file_size INTEGER DEFAULT 0,
+			mime_type VARCHAR(100),
+			uploaded_by INTEGER,
+			uploader_type VARCHAR(20) DEFAULT 'customer',
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_attachment_entity ON attachments(entity_type, entity_id);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create attachments table: %v", err)
+	}
+
+	// Status Changes
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS status_changes (
+			id SERIAL PRIMARY KEY,
+			entity_type VARCHAR(50) NOT NULL,
+			entity_id INTEGER NOT NULL,
+			from_status VARCHAR(20),
+			to_status VARCHAR(20) NOT NULL,
+			changed_by INTEGER,
+			changer_type VARCHAR(20) DEFAULT 'system',
+			note TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_status_change_entity ON status_changes(entity_type, entity_id);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create status_changes table: %v", err)
+	}
+
+	// --- ENGAGEMENT APP ---
+
+	// Recently Viewed
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS recently_viewed (
+			id SERIAL PRIMARY KEY,
+			customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+			product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+			viewed_at TIMESTAMP NOT NULL,
+			view_count INTEGER DEFAULT 1,
+			session_id VARCHAR(100),
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(customer_id, product_id)
+		);
+		CREATE INDEX IF NOT EXISTS idx_recently_viewed_customer ON recently_viewed(customer_id, viewed_at);
+		CREATE INDEX IF NOT EXISTS idx_recently_viewed_product ON recently_viewed(product_id);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create recently_viewed table: %v", err)
+	}
+
+	// Product Comparisons
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS product_comparisons (
+			id SERIAL PRIMARY KEY,
+			customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+			name VARCHAR(200),
+			is_public BOOLEAN DEFAULT FALSE,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_product_comparison_customer ON product_comparisons(customer_id);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create product_comparisons table: %v", err)
+	}
+
+	// Notifications
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS notifications (
+			id SERIAL PRIMARY KEY,
+			customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+			title VARCHAR(200) NOT NULL,
+			message TEXT NOT NULL,
+			type VARCHAR(50) DEFAULT 'info',
+			priority VARCHAR(20) DEFAULT 'normal',
+			is_read BOOLEAN DEFAULT FALSE,
+			read_at TIMESTAMP,
+			action_url VARCHAR(500),
+			action_label VARCHAR(100),
+			related_type VARCHAR(50),
+			related_id INTEGER,
+			expires_at TIMESTAMP,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_notification_customer ON notifications(customer_id, is_read);
+		CREATE INDEX IF NOT EXISTS idx_notification_type ON notifications(type);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create notifications table: %v", err)
+	}
+
+	// Customer Activities
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS customer_activities (
+			id SERIAL PRIMARY KEY,
+			customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+			activity_type VARCHAR(50) NOT NULL,
+			description TEXT,
+			entity_type VARCHAR(50),
+			entity_id INTEGER,
+			ip_address VARCHAR(45),
+			user_agent VARCHAR(500),
+			session_id VARCHAR(100),
+			metadata TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_customer_activity_customer ON customer_activities(customer_id, created_at);
+		CREATE INDEX IF NOT EXISTS idx_customer_activity_type ON customer_activities(activity_type);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create customer_activities table: %v", err)
+	}
+
+	// Abandoned Cart Reminders
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS abandoned_cart_reminders (
+			id SERIAL PRIMARY KEY,
+			cart_id INTEGER NOT NULL REFERENCES carts(id) ON DELETE CASCADE,
+			customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+			reminder_type VARCHAR(50) DEFAULT 'email',
+			sent_at TIMESTAMP NOT NULL,
+			status VARCHAR(20) DEFAULT 'sent',
+			email_address VARCHAR(255),
+			converted BOOLEAN DEFAULT FALSE,
+			converted_at TIMESTAMP,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_abandoned_cart_reminder_cart ON abandoned_cart_reminders(cart_id);
+		CREATE INDEX IF NOT EXISTS idx_abandoned_cart_reminder_customer ON abandoned_cart_reminders(customer_id);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create abandoned_cart_reminders table: %v", err)
+	}
+
+	// User Segments
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS user_segments (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(200) NOT NULL,
+			description TEXT,
+			conditions TEXT,
+			is_active BOOLEAN DEFAULT TRUE,
+			is_dynamic BOOLEAN DEFAULT TRUE,
+			priority INTEGER DEFAULT 0,
+			member_count INTEGER DEFAULT 0,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_user_segment_active ON user_segments(is_active);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create user_segments table: %v", err)
+	}
+
+	// Segment Rules
+	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
+		CREATE TABLE IF NOT EXISTS segment_rules (
+			id SERIAL PRIMARY KEY,
+			segment_id INTEGER NOT NULL REFERENCES user_segments(id) ON DELETE CASCADE,
+			field VARCHAR(100) NOT NULL,
+			operator VARCHAR(20) NOT NULL,
+			value VARCHAR(500) NOT NULL,
+			logic_type VARCHAR(10) DEFAULT 'AND',
+			sort_order INTEGER DEFAULT 0,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_segment_rule_segment ON segment_rules(segment_id);
+	`))
+	if err != nil {
+		log.Fatalf("Failed to create segment_rules table: %v", err)
+	}
+
 	log.Println("✅ Database schema setup complete")
 }

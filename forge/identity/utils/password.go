@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"strings"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -15,13 +16,24 @@ const (
 	MaxCost = bcrypt.MaxCost
 )
 
+// IsHashed returns true if the given string is already a valid bcrypt hash prefix ($2a$, $2b$, or $2y$)
+func IsHashed(password string) bool {
+	return strings.HasPrefix(password, "$2a$") ||
+		strings.HasPrefix(password, "$2b$") ||
+		strings.HasPrefix(password, "$2y$")
+}
+
 // HashPassword hashes a password using bcrypt
 func HashPassword(password string) (string, error) {
 	return HashPasswordWithCost(password, DefaultCost)
 }
 
-// HashPasswordWithCost hashes a password with a specific cost
+// HashPasswordWithCost hashes a password with a specific cost.
+// If the password is already a bcrypt hash, it returns it unchanged to prevent double-hashing.
 func HashPasswordWithCost(password string, cost int) (string, error) {
+	if IsHashed(password) {
+		return password, nil
+	}
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), cost)
 	if err != nil {
 		return "", fmt.Errorf("failed to hash password: %w", err)

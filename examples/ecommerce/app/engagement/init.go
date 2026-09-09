@@ -15,4 +15,26 @@ func Init(database *db.DB) {
 	registry.RegisterModel(AbandonedCartReminder{})
 	registry.RegisterModel(UserSegment{})
 	registry.RegisterModel(SegmentRule{})
+
+	if RecentlyViewedObjects != nil {
+		RecentlyViewedObjects.SetDB(database)
+	}
+	if ProductComparisonObjects != nil {
+		ProductComparisonObjects.SetDB(database)
+	}
+	if NotificationObjects != nil {
+		NotificationObjects.SetDB(database)
+	}
+	if CustomerActivityObjects != nil {
+		CustomerActivityObjects.SetDB(database)
+	}
+	if AbandonedCartReminderObjects != nil {
+		AbandonedCartReminderObjects.SetDB(database)
+	}
+	if UserSegmentObjects != nil {
+		UserSegmentObjects.SetDB(database)
+	}
+	if SegmentRuleObjects != nil {
+		SegmentRuleObjects.SetDB(database)
+	}
 }

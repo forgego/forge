@@ -2,12 +2,14 @@ package orm
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/internal/testutils"
 	"github.com/forgego/forge/schema"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -121,16 +123,74 @@ func TestSelectRelated_Integration(t *testing.T) {
 	postsRelated, err := qs.SelectRelated("User").All(context.Background())
 	require.NoError(t, err)
 	require.Len(t, postsRelated, 1)
-	
-	// This is expected to fail currently
-	if postsRelated[0].User == nil {
-		t.Log("SelectRelated not implemented yet")
-		// Fail explicitly if we want to confirm it fails, but I know it will.
-		// For TDD, I should assert NotNil
-		assert.NotNil(t, postsRelated[0].User, "User should be populated with SelectRelated")
-		if postsRelated[0].User != nil {
-			assert.Equal(t, "John Doe", postsRelated[0].User.Name)
-			assert.Equal(t, userID, postsRelated[0].User.ID)
-		}
+	require.NotNil(t, postsRelated[0].User, "User should be populated with SelectRelated")
+	assert.Equal(t, "John Doe", postsRelated[0].User.Name)
+	assert.Equal(t, userID, postsRelated[0].User.ID)
+}
+
+func TestSelectRelated_SQLite(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "select_related_test.sqlite")
+
+	database, err := db.NewDB(dbPath)
+	if err != nil {
+		t.Skipf("skipping sqlite test: %v", err)
 	}
+	defer database.Close()
+
+	_, err = database.Exec(`
+		CREATE TABLE users (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			email TEXT UNIQUE,
+			created_at TIMESTAMP
+		);
+		CREATE TABLE posts (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			title TEXT NOT NULL,
+			content TEXT,
+			user_id INTEGER,
+			created_at TIMESTAMP,
+			FOREIGN KEY(user_id) REFERENCES users(id)
+		);
+	`)
+	require.NoError(t, err)
+
+	now := time.Now().Truncate(time.Second)
+	res, err := database.Exec(`INSERT INTO users (name, email, created_at) VALUES (?, ?, ?)`, "Jane Doe", "jane@example.com", now)
+	require.NoError(t, err)
+	userID, err := res.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = database.Exec(`INSERT INTO posts (title, content, user_id, created_at) VALUES (?, ?, ?, ?)`, "SQLite Post", "SQLite Content", userID, now)
+	require.NoError(t, err)
+
+	_, err = GetModelSchema[User]()
+	require.NoError(t, err)
+
+	qs, err := NewQuerySet[Post]("posts")
+	require.NoError(t, err)
+	qs = qs.SetDB(database)
+
+	// 1. Without SelectRelated, User should be nil
+	posts, err := qs.All(context.Background())
+	require.NoError(t, err)
+	require.Len(t, posts, 1)
+	assert.Nil(t, posts[0].User)
+	assert.Equal(t, userID, posts[0].UserID)
+
+	// 2. With SelectRelated("User"), User should be populated
+	postsRelated, err := qs.SelectRelated("User").All(context.Background())
+	require.NoError(t, err)
+	require.Len(t, postsRelated, 1)
+	require.NotNil(t, postsRelated[0].User, "User should be populated with SelectRelated")
+	assert.Equal(t, "Jane Doe", postsRelated[0].User.Name)
+	assert.Equal(t, userID, postsRelated[0].User.ID)
+
+	// 3. With lowercase SelectRelated("user"), User should also be populated (case-insensitivity)
+	postsLower, err := qs.SelectRelated("user").All(context.Background())
+	require.NoError(t, err)
+	require.Len(t, postsLower, 1)
+	require.NotNil(t, postsLower[0].User, "User should be populated with case-insensitive SelectRelated")
+	assert.Equal(t, "Jane Doe", postsLower[0].User.Name)
+	assert.Equal(t, userID, postsLower[0].User.ID)
 }

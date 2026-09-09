@@ -68,6 +68,9 @@ func RegisterAdmin(ctx context.Context) {
 		// Read-only fields
 		ReadOnlyFields: []string{"created_at", "updated_at", "level"},
 		// Custom permission checkers
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[Category], user interface{}) bool {
+			return true // Authenticated users can add category
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[Category], user interface{}, obj *Category) bool {
 			return true // All authenticated users can view categories
 		},
@@ -174,6 +177,9 @@ func RegisterAdmin(ctx context.Context) {
 		// Read-only fields
 		ReadOnlyFields: []string{"created_at", "updated_at"},
 		// Permission checkers
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[Brand], user interface{}) bool {
+			return true // Authenticated users can add brand
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[Brand], user interface{}, obj *Brand) bool {
 			return true
 		},
@@ -339,6 +345,9 @@ func RegisterAdmin(ctx context.Context) {
 		// Read-only fields
 		ReadOnlyFields: []string{"created_at", "updated_at", "published_at", "view_count", "order_count", "rating_average", "rating_count"},
 		// Permission checkers
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[Product], user interface{}) bool {
+			return true // Authenticated users can add product
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[Product], user interface{}, obj *Product) bool {
 			return true
 		},
@@ -562,6 +571,9 @@ func RegisterAdmin(ctx context.Context) {
 		// Read-only fields
 		ReadOnlyFields: []string{"created_at", "updated_at", "reserved_quantity"},
 		// Permission checkers
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[ProductVariant], user interface{}) bool {
+			return true // Authenticated users can add productvariant
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[ProductVariant], user interface{}, obj *ProductVariant) bool {
 			return true
 		},
@@ -672,6 +684,9 @@ func RegisterAdmin(ctx context.Context) {
 		// Read-only fields
 		ReadOnlyFields: []string{"created_at", "updated_at"},
 		// Permission checkers
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[ProductImage], user interface{}) bool {
+			return true // Authenticated users can add productimage
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[ProductImage], user interface{}, obj *ProductImage) bool {
 			return true
 		},
@@ -758,6 +773,9 @@ func RegisterAdmin(ctx context.Context) {
 		// Read-only fields
 		ReadOnlyFields: []string{"created_at"},
 		// Permission checkers
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[ProductAttribute], user interface{}) bool {
+			return true // Authenticated users can add productattribute
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[ProductAttribute], user interface{}, obj *ProductAttribute) bool {
 			return true
 		},
@@ -829,6 +847,9 @@ func RegisterAdmin(ctx context.Context) {
 		// Read-only fields
 		ReadOnlyFields: []string{"created_at"},
 		// Permission checkers
+		HasAddPermission: func(ctx context.Context, admin *admin.Admin[ProductAttributeValue], user interface{}) bool {
+			return true // Authenticated users can add productattributevalue
+		},
 		HasViewPermission: func(ctx context.Context, admin *admin.Admin[ProductAttributeValue], user interface{}, obj *ProductAttributeValue) bool {
 			return true
 		},

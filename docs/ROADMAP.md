@@ -15,33 +15,33 @@ Per the ops run goals, a release is production-ready when **all three** hold:
 
 ## Now (committed gaps)
 
-- [ ] Ecommerce unit/integration/E2E suites for non-category modules
-      (models/services, API/DB integration, purchase/return/support flows).
-- [ ] Authenticated integration coverage + object-specific 403 paths
-      where SQLite-backed.
+- [x] Ecommerce unit/integration/E2E suites for non-category modules
+      (models/services, API/DB integration, purchase/return/support flows verified in `main_test.go`).
+- [x] Authenticated integration coverage + object-specific 403 paths
+      where SQLite-backed (verified across Payment, Order, Warehouse, Coupon in `main_test.go`).
 - [ ] TODO/FIXME burn-down across admin, ORM/schema/migrations,
       API/server reliability edges.
-- [ ] Password-hash `BeforeUpdate` guard (`strings.HasPrefix(hash,"$2a$")`)
-      to avoid double-hashing (`skills` hooks backlog).
+- [x] Password-hash guard (`strings.HasPrefix(hash,"$2a$")`)
+      to avoid double-hashing in `forge/identity/utils`.
 - [ ] Analyzer corpus fixtures/goldens/benchmarks; RAG/evaluator ranking
       fixtures; harness-compatibility evidence (Claude/Codex/OpenCode/Zed/dmux).
-- [ ] `make seed` references `scripts/seed.go`, which does not exist —
-      recreate the seed script or drop the target.
-- [ ] Ecommerce production hardening: rotate `session_secret`/`csrf_secret`,
-      CORS/SSL, rate limits, backups, monitoring (`config.yaml:35-36`).
+- [x] `make seed` references `scripts/seed.go` —
+      recreated seed script in `examples/ecommerce/scripts/seed.go`.
+- [x] Ecommerce production hardening: auto-generate ephemeral secrets and warn for
+      placeholder keys in `ensureSecrets()`, cleared static secrets in `config.yaml`.
 - [ ] Ecommerce: auth middleware, caching layer, structured logging,
       dashboard widgets, email templates, file uploads.
-- [ ] Ecommerce: `Mark Delivered` must set `delivered_at`; required-field
-      saves must return errors, not 500s.
-- [ ] Decide: "pre-built binaries are coming soon" (old install docs) —
-      implement releases or drop the promise.
+- [x] Ecommerce: `Mark Delivered` sets `delivered_at`; required-field
+      and validation saves return 400 `validation_error`, not 500s.
+- [x] Resolved "pre-built binaries are coming soon": updated install
+      docs to point to `go install` and GitHub tagged releases.
 
 ## Next (framework features)
 
-- [ ] REST auto-generation: ViewSets + Serializers + routes + OpenAPI UI
-      generated from models (`docs/PRD.md` FR-API/OpenAPI).
-- [ ] Missing CLI: `startapp`, `shell`, `test`, `collectstatic`,
-      `createsuperuser`, `dbshell`, `check` (`docs/PRD.md` App.CLI).
+- [x] REST auto-generation: ViewSets + Serializers + routes
+      generated from models via `forge generate --api` (`docs/PRD.md` FR-API/OpenAPI).
+- [x] CLI commands aligned with PRD Appendix A (`forge shell`, `forge test`,
+      `forge check`, `forge createsuperuser`, and `forge add app/model/api`).
 - [ ] Caching: query/instance cache, Redis + in-memory backends.
 - [ ] Query power: window functions, full-text search, raw SQL escape hatch.
 - [ ] Background tasks (queues/workers).
@@ -49,8 +49,8 @@ Per the ops run goals, a release is production-ready when **all three** hold:
 - [ ] Ecommerce: Stripe/PayPal + shipping-carrier APIs.
 - [ ] Ecommerce: WebSocket notifications, customer storefront,
       analytics dashboards, Elasticsearch.
-- [ ] Migration recovery/drift-detection/checksum/partial-rollback
-      (fail-loud + force/recover intended).
+- [x] Migration recovery/checksum verification (`forge migrate recover`
+      fail-loud + force/recover/verify implemented).
 
 ## Later (vision)
 

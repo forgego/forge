@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -116,13 +117,16 @@ func (a *Admin[T]) Config() *Config[T] {
 }
 
 // GetMetadata returns the metadata for this admin
-// This is called by API handlers to send to frontend
+// This is called by API handlers to send to frontend.
+// Schema-derived parts are cached; per-request Permissions are computed
+// fresh on a copy so concurrent users never see each other's permissions.
 func (a *Admin[T]) GetMetadata(ctx context.Context, user interface{}) (*Metadata, error) {
 	// Return cached metadata if available
 	if a.metadata != nil {
-		// Update permissions for current user
-		a.metadata.Permissions = a.getPermissionsMetadata(ctx, user)
-		return a.metadata, nil
+		// Copy: never mutate the shared cache per-user
+		meta := *a.metadata
+		meta.Permissions = a.getPermissionsMetadata(ctx, user)
+		return &meta, nil
 	}
 
 	// Build metadata from schema
@@ -401,6 +405,13 @@ func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}
 	if err != nil {
 		return nil, err
 	}
+
+	user, _ := apicore.UserFromContext(ctx)
+	objID := a.getObjectID(&instance)
+	repr := a.getObjectLabel(&instance)
+	changesJSON, _ := json.Marshal(data)
+	_ = a.LogAction(ctx, user, fmt.Sprintf("%v", objID), repr, ActionAdd, string(changesJSON))
+
 	return &instance, nil
 }
 
@@ -436,6 +447,12 @@ func (a *Admin[T]) UpdateObject(ctx context.Context, id interface{}, data map[st
 	if err != nil {
 		return nil, err
 	}
+
+	user, _ := apicore.UserFromContext(ctx)
+	repr := a.getObjectLabel(updated)
+	changesJSON, _ := json.Marshal(data)
+	_ = a.LogAction(ctx, user, fmt.Sprintf("%v", intID), repr, ActionChange, string(changesJSON))
+
 	return updated, nil
 }
 
@@ -449,7 +466,15 @@ func (a *Admin[T]) DeleteObject(ctx context.Context, id interface{}) error {
 	if err != nil {
 		return err
 	}
-	return a.DeleteModel(ctx, instance)
+	repr := a.getObjectLabel(instance)
+	if err := a.DeleteModel(ctx, instance); err != nil {
+		return err
+	}
+
+	user, _ := apicore.UserFromContext(ctx)
+	_ = a.LogAction(ctx, user, fmt.Sprintf("%v", intID), repr, ActionDelete, "")
+
+	return nil
 }
 
 func (a *Admin[T]) ExecuteAction(ctx context.Context, actionName string, ids []interface{}, params map[string]interface{}) (interface{}, error) {
@@ -646,7 +671,7 @@ func (a *Admin[T]) HasAddPermission(ctx context.Context, user interface{}) bool 
 	if a.config.PermissionChecker != nil {
 		return a.config.PermissionChecker.HasPermission(ctx, user, GetPermissionName(a.name, PermAdd))
 	}
-	return true // Default allow
+	return false // Default deny: configure Has*Permission or PermissionChecker to grant access
 }
 
 func (a *Admin[T]) HasChangePermission(ctx context.Context, user interface{}, obj interface{}) bool {
@@ -665,7 +690,7 @@ func (a *Admin[T]) HasChangePermission(ctx context.Context, user interface{}, ob
 	if a.config.PermissionChecker != nil {
 		return a.config.PermissionChecker.HasPermission(ctx, user, GetPermissionName(a.name, PermChange))
 	}
-	return true // Default allow
+	return false // Default deny: configure Has*Permission or PermissionChecker to grant access
 }
 
 func (a *Admin[T]) HasDeletePermission(ctx context.Context, user interface{}, obj interface{}) bool {
@@ -684,7 +709,7 @@ func (a *Admin[T]) HasDeletePermission(ctx context.Context, user interface{}, ob
 	if a.config.PermissionChecker != nil {
 		return a.config.PermissionChecker.HasPermission(ctx, user, GetPermissionName(a.name, PermDelete))
 	}
-	return true // Default allow
+	return false // Default deny: configure Has*Permission or PermissionChecker to grant access
 }
 
 func (a *Admin[T]) HasViewPermission(ctx context.Context, user interface{}, obj interface{}) bool {
@@ -703,7 +728,7 @@ func (a *Admin[T]) HasViewPermission(ctx context.Context, user interface{}, obj 
 	if a.config.PermissionChecker != nil {
 		return a.config.PermissionChecker.HasPermission(ctx, user, GetPermissionName(a.name, PermView))
 	}
-	return true // Default allow
+	return false // Default deny: configure Has*Permission or PermissionChecker to grant access
 }
 
 func (a *Admin[T]) HasModulePermission(ctx context.Context, user interface{}) bool {
@@ -713,7 +738,7 @@ func (a *Admin[T]) HasModulePermission(ctx context.Context, user interface{}) bo
 	if a.config.PermissionChecker != nil {
 		return a.config.PermissionChecker.HasPermission(ctx, user, GetPermissionName(a.name, PermView))
 	}
-	return true // Default allow
+	return false // Default deny: configure Has*Permission or PermissionChecker to grant access
 }
 
 // Interface implementation for type-agnostic access
@@ -812,6 +837,11 @@ func applyConfigDefaults[T any](config *Config[T], s schema.Schema) {
 	if config.ListMaxShowAll == 0 {
 		config.ListMaxShowAll = 100
 	}
+
+	// Set default history manager if not provided
+	if config.HistoryManager == nil {
+		config.HistoryManager = NewMemoryHistoryManager()
+	}
 }
 
 // getObjectID returns the primary key value of an object
@@ -852,12 +882,19 @@ func (a *Admin[T]) getObjectLabel(obj *T) string {
 	}
 
 	// 2. Try ID
-	id := a.getObjectID(obj)
-	if id != nil {
-		return fmt.Sprintf("%s #%v", a.metadata.VerboseName, id)
+	modelLabel := a.name
+	if a.metadata != nil && a.metadata.VerboseName != "" {
+		modelLabel = a.metadata.VerboseName
+	} else if a.config != nil && a.config.VerboseName != "" {
+		modelLabel = a.config.VerboseName
 	}
 
-	return a.metadata.VerboseName
+	id := a.getObjectID(obj)
+	if id != nil {
+		return fmt.Sprintf("%s #%v", modelLabel, id)
+	}
+
+	return modelLabel
 }
 
 // toInt64 converts interface{} to int64

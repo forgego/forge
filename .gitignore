@@ -94,6 +94,8 @@ node_modules/
 .trae/
 .cursor/
 .aider*
+.codegraph/
+session-*.md
 
 # DevContainer (personal preference)
 .devcontainer/
