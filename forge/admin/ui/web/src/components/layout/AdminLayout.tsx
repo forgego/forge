@@ -1,29 +1,34 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "@tanstack/react-router";
-import { useModels, useConfig } from "../../api/hooks/adminHooks";
+import { useModels, useConfig, useLogout } from "../../api/hooks/adminHooks";
 import { Button } from "../ui/button";
 import {
   LayoutDashboard,
   LogOut,
   Menu,
-  Database,
   Bell,
   Package,
   ChevronDown,
   Star,
   ChevronLeft,
   ChevronRight,
+  Keyboard,
+  Search,
+  X,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { ModelIcon } from "../ModelIcon";
 
 import { GlobalSearch } from "./GlobalSearch";
+import { Breadcrumbs } from "./Breadcrumbs";
 import { ThemeCustomizer } from "../../features/theme/ThemeCustomizer";
+import {
+  useShortcutHelp,
+  ShortcutHelpDialog,
+} from "../../hooks/useKeyboardShortcuts";
 
 const normalizeAdminPath = (path?: string) =>
   path?.startsWith("/admin/") ? path.substring(6) : path;
-
-const isExternalIcon = (icon?: string) =>
-  Boolean(icon && (icon.startsWith("http") || icon.startsWith("/") || icon.startsWith("data:")));
 
 export default function AdminLayout({
   children,
@@ -32,10 +37,11 @@ export default function AdminLayout({
 }) {
   const { data: modelsData } = useModels();
   const { data: configData } = useConfig();
+  const logoutMutation = useLogout();
   const navigate = useNavigate();
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [sidebarCompact, setSidebarCompact] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCompact, setSidebarCompact] = useState(false);
   const [pinnedModels, setPinnedModels] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
     const stored = localStorage.getItem("forge.admin.pinnedModels");
@@ -50,10 +56,46 @@ export default function AdminLayout({
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({});
+  const [modelFilter, setModelFilter] = useState("");
+  const { showHelp, setShowHelp } = useShortcutHelp();
+
+  useEffect(() => {
+    const token = localStorage.getItem("admin_token");
+    if (!token && location.pathname !== "/login") {
+      navigate({ to: "/login" });
+    }
+  }, [navigate, location.pathname]);
+
+  // Close the mobile drawer on navigation and on Escape.
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSidebarOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [sidebarOpen]);
+
+  const go = useCallback(
+    (to: string, params?: Record<string, string>) => {
+      setSidebarOpen(false);
+      if (params) {
+        navigate({ to, params } as any);
+      } else {
+        navigate({ to } as any);
+      }
+    },
+    [navigate]
+  );
 
   const handleLogout = () => {
-    localStorage.removeItem("admin_token");
-    navigate({ to: "/login" });
+    logoutMutation.mutate(undefined, {
+      onSettled: () => navigate({ to: "/login" }),
+    });
   };
 
   const isEntryMatch = (entry: any): boolean => {
@@ -77,24 +119,7 @@ export default function AdminLayout({
     return null;
   };
 
-  const renderIconBadge = (icon?: string, label?: string) => {
-    const fallbackText = (label ?? icon ?? "?").charAt(0).toUpperCase();
-    return (
-      <div className="h-8 w-8 rounded-md bg-muted/70 border border-border/60 flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
-        {isExternalIcon(icon) ? (
-          <img
-            src={icon}
-            alt={label ?? "Plugin icon"}
-            className="h-4 w-4 object-contain"
-          />
-        ) : (
-          fallbackText
-        )}
-      </div>
-    );
-  };
-
-  // Recursive Sidebar Item
+  // Recursive Sidebar Item (button-based: keyboard + screen-reader friendly)
   const SidebarItem = ({
     item,
     depth = 0,
@@ -106,34 +131,36 @@ export default function AdminLayout({
   }) => {
     const hasChildren = item.children && item.children.length > 0;
     const [expanded, setExpanded] = useState(false);
+    const active = isMenuEntryActive(item);
 
     // Auto-expand if active child
     useEffect(() => {
-      if (hasChildren && isMenuEntryActive(item)) {
+      if (hasChildren && active) {
         setExpanded(true);
       }
-    }, [location.pathname, item, hasChildren]);
+    }, [location.pathname, hasChildren, active]);
 
-    const handleClick = (e: React.MouseEvent) => {
-      e.stopPropagation();
+    const handleClick = () => {
       if (hasChildren) {
         setExpanded(!expanded);
       } else {
         const path = normalizeAdminPath(item.path);
         if (path) {
-          navigate({ to: path });
+          go(path);
         }
       }
     };
 
     return (
       <div>
-        <div
+        <button
+          type="button"
           onClick={handleClick}
+          aria-current={isEntryMatch(item) ? "page" : undefined}
+          aria-expanded={hasChildren ? expanded : undefined}
           className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer text-sm group select-none mb-1",
-            isMenuEntryActive(item) &&
-              "bg-sidebar-accent text-sidebar-accent-foreground font-medium",
+            "flex w-full items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-accent hover:text-accent-foreground text-sm text-left group select-none mb-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            active && "bg-accent text-accent-foreground font-medium",
             depth > 0 && "text-muted-foreground",
             compact && "justify-center px-2"
           )}
@@ -144,27 +171,30 @@ export default function AdminLayout({
                 : `${depth * 1 + 0.75}rem`,
           }}
           title={compact ? item.label : undefined}
-          aria-label={compact ? item.label : undefined}
         >
           {depth === 0 && (
-            <Package className="h-4 w-4 text-muted-foreground group-hover:text-foreground shrink-0" />
+            <Package className="h-4 w-4 text-muted-foreground group-hover:text-foreground shrink-0" aria-hidden />
           )}
           {compact && depth > 0 ? (
-            <div className="h-6 w-6 rounded-md bg-muted/70 border border-border/60 flex items-center justify-center text-[10px] font-semibold text-muted-foreground group-hover:text-foreground">
+            <span
+              aria-hidden
+              className="h-6 w-6 rounded-md bg-muted/70 border border-border/60 flex items-center justify-center text-[10px] font-semibold text-muted-foreground group-hover:text-foreground"
+            >
               {item.label?.charAt(0).toUpperCase()}
-            </div>
+            </span>
           ) : (
             <span className="flex-1 truncate">{item.label}</span>
           )}
           {hasChildren && !compact && (
             <ChevronDown
+              aria-hidden
               className={cn(
                 "h-3 w-3 transition-transform shrink-0 text-muted-foreground",
                 expanded && "rotate-180"
               )}
             />
           )}
-        </div>
+        </button>
         {hasChildren && expanded && !compact && (
           <div className="space-y-1 pt-1">
             {item.children.map((child: any, idx: number) => (
@@ -183,6 +213,18 @@ export default function AdminLayout({
 
   const models = modelsData?.models || [];
   const plugins = configData?.plugins || [];
+  const sessionUser = (configData as any)?.user as
+    | { name?: string; username?: string; role?: string }
+    | undefined;
+  const userName =
+    sessionUser?.name || sessionUser?.username || "Admin";
+  const userRole = sessionUser?.role || "Super Admin";
+  const userInitials = userName
+    .split(/[\s_.-]+/)
+    .map((part) => part.charAt(0))
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
   const modelByName = useMemo(
     () => new Map(models.map((model: any) => [model.name, model])),
     [models]
@@ -236,7 +278,15 @@ export default function AdminLayout({
     }
 
     const grouped = new Map<string, any[]>();
-    models.forEach((model: any) => {
+    const query = modelFilter.trim().toLowerCase();
+    models
+      .filter(
+        (model: any) =>
+          query === "" ||
+          model.verbose_name_plural?.toLowerCase().includes(query) ||
+          model.name?.toLowerCase().includes(query)
+      )
+      .forEach((model: any) => {
       const configLabel = modelGroupMap.get(model.name);
       const derivedGroup = (() => {
         if (model.name.includes(".")) {
@@ -264,7 +314,7 @@ export default function AdminLayout({
         ),
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [configData, models]);
+  }, [configData, models, modelFilter]);
 
   const pluginSections = useMemo(
     () =>
@@ -324,31 +374,49 @@ export default function AdminLayout({
   const pluginLabel =
     activePluginInfo.plugin?.label || activePluginInfo.plugin?.name;
   const entryLabel = activePluginInfo.entry?.label;
-  const showIconGroup =
-    Boolean(activePluginInfo.plugin?.icon) ||
-    Boolean(activePluginInfo.entry?.icon);
 
   return (
     <div className="min-h-screen bg-background flex">
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm lg:hidden"
+        />
+      )}
       {/* Sidebar */}
       <aside
+        aria-label="Admin navigation"
         className={cn(
-          "fixed inset-y-0 left-0 z-50 bg-card/95 backdrop-blur-sm border-r border-border transition-all duration-300 ease-in-out lg:relative lg:translate-x-0",
-          sidebarCompact ? "lg:w-20" : "lg:w-64",
-          !sidebarOpen && "-translate-x-full lg:hidden"
+          "fixed inset-y-0 left-0 z-50 bg-card border-r border-border transition-all duration-300 ease-in-out lg:static lg:translate-x-0 flex flex-col",
+          sidebarCompact ? "lg:w-20" : "lg:w-72",
+          sidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:translate-x-0"
         )}
       >
-        <div className="h-16 flex items-center px-6 border-b border-border/50">
-          <div className="flex items-center gap-2.5 flex-1">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold shadow-sm">
+        <div className="h-16 flex items-center px-4 border-b border-border/50 shrink-0">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+            <div className="w-8 h-8 shrink-0 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold shadow-sm">
               F
             </div>
             {!sidebarCompact && (
-              <span className="text-lg font-bold tracking-tight text-foreground">
+              <span className="text-lg font-bold tracking-tight text-foreground truncate">
                 Forge Admin
               </span>
             )}
           </div>
+          {!sidebarCompact && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden text-muted-foreground"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close navigation"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -363,35 +431,41 @@ export default function AdminLayout({
             )}
           </Button>
         </div>
-        <div className="p-4 space-y-6 overflow-y-auto max-h-[calc(100vh-140px)] no-scrollbar">
-          <div className="flex items-center justify-between gap-2">
-            <GlobalSearch
-              compact={sidebarCompact}
-              triggerLabel="Command palette"
-              className={sidebarCompact ? "" : "w-full"}
-            />
-            {!sidebarCompact && (
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                Jump to model
-              </span>
-            )}
-          </div>
+        <nav className="p-4 space-y-6 overflow-y-auto flex-1" aria-label="Primary">
           {/* Main Nav */}
           <div className="space-y-1">
             <Link
               to="/"
               data-testid="nav-dashboard"
+              aria-current={location.pathname === "/" ? "page" : undefined}
+              onClick={() => setSidebarOpen(false)}
               className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-accent hover:text-accent-foreground group mb-1",
+                "relative flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all hover:bg-accent hover:text-accent-foreground group mb-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 location.pathname === "/" &&
-                  "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
+                  "bg-primary/[0.08] hover:bg-primary/[0.12] font-medium",
                 sidebarCompact && "justify-center px-2"
               )}
               title={sidebarCompact ? "Dashboard" : undefined}
             >
-              <LayoutDashboard className="h-4 w-4" />
+              {location.pathname === "/" && !sidebarCompact && (
+                <span
+                  aria-hidden
+                  className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-primary"
+                />
+              )}
+              <span
+                aria-hidden
+                className={cn(
+                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors",
+                  location.pathname === "/"
+                    ? "border-primary/30 bg-primary/10 text-primary"
+                    : "border-border/60 bg-muted/50 text-muted-foreground group-hover:text-foreground"
+                )}
+              >
+                <LayoutDashboard className="h-3.5 w-3.5" />
+              </span>
               {!sidebarCompact && (
-                <span className="font-medium text-sm">Dashboard</span>
+                <span className="text-[13px]">Dashboard</span>
               )}
             </Link>
           </div>
@@ -407,31 +481,33 @@ export default function AdminLayout({
               {pinnedModels.map((modelName) => {
                 const model = modelByName.get(modelName);
                 if (!model) return null;
+                const active = location.pathname.startsWith(`/${model.name}`);
                 return (
-                  <div
+                  <button
                     key={model.name}
+                    type="button"
                     data-testid={`nav-pinned-${model.name}`}
-                    onClick={() => {
-                      navigate({
-                        to: "/$model",
-                        params: { model: model.name },
-                      });
-                    }}
+                    onClick={() => go("/$model", { model: model.name })}
+                    aria-current={active ? "page" : undefined}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-accent hover:text-accent-foreground cursor-pointer group mb-1",
-                      location.pathname.startsWith(`/${model.name}`) &&
-                        "bg-accent text-accent-foreground font-medium",
+                      "flex w-full items-center gap-2.5 px-3 py-2 rounded-lg transition-all hover:bg-accent hover:text-accent-foreground group mb-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      active && "bg-primary/[0.08] text-foreground font-medium hover:bg-primary/[0.12]",
                       sidebarCompact && "justify-center px-2"
                     )}
                     title={sidebarCompact ? model.verbose_name_plural : undefined}
                   >
-                    <Star className="h-4 w-4 text-yellow-500" />
+                    <span
+                      aria-hidden
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-500"
+                    >
+                      <Star className="h-3.5 w-3.5" fill="currentColor" />
+                    </span>
                     {!sidebarCompact && (
-                      <span className="text-sm">
+                      <span className="text-[13px] truncate">
                         {model.verbose_name_plural}
                       </span>
                     )}
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -444,6 +520,42 @@ export default function AdminLayout({
                 Content Models
               </h4>
             )}
+            {!sidebarCompact && (
+              <div className="relative px-0">
+                <label htmlFor="sidebar-model-filter" className="sr-only">
+                  Filter models
+                </label>
+                <Search
+                  aria-hidden
+                  className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                />
+                <input
+                  id="sidebar-model-filter"
+                  value={modelFilter}
+                  onChange={(e) => setModelFilter(e.target.value)}
+                  placeholder="Filter models…"
+                  autoComplete="off"
+                  className="h-9 w-full rounded-lg border border-border/60 bg-background pl-8 pr-7 text-[13px] outline-none placeholder:text-muted-foreground focus:border-primary/40 focus:ring-2 focus:ring-ring"
+                />
+                {modelFilter && (
+                  <button
+                    type="button"
+                    aria-label="Clear model filter"
+                    onClick={() => setModelFilter("")}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
+            {groupByModel.length === 0 && (
+              <p className="px-3 py-4 text-xs text-muted-foreground">
+                {modelFilter
+                  ? `No models match “${modelFilter}”.`
+                  : "No models registered."}
+              </p>
+            )}
             {groupByModel.map((group) => (
               <div key={group.label} className="space-y-1">
                 {!sidebarCompact && (
@@ -451,66 +563,100 @@ export default function AdminLayout({
                     {group.label}
                   </h5>
                 )}
-                {group.models.map((model: any) => (
-                  <div
-                    key={model.name}
-                    data-testid={`nav-${model.name}`}
-                    onClick={() => {
-                      navigate({
-                        to: "/$model",
-                        params: { model: model.name },
-                      });
-                    }}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-accent hover:text-accent-foreground cursor-pointer group mb-1",
-                      location.pathname.startsWith(`/${model.name}`) &&
-                        "bg-accent text-accent-foreground font-medium",
-                      sidebarCompact && "justify-center px-2"
-                    )}
-                    title={
-                      sidebarCompact ? model.verbose_name_plural : undefined
-                    }
-                  >
-                    {sidebarCompact ? (
-                      <div className="h-7 w-7 rounded-md bg-muted/70 border border-border/60 flex items-center justify-center text-xs font-semibold text-muted-foreground group-hover:text-foreground">
-                        {model.verbose_name_plural
-                          .split(" ")
-                          .map((part: string) => part[0])
-                          .join("")
-                          .slice(0, 2)
-                          .toUpperCase()}
-                      </div>
-                    ) : (
-                      <>
-                        <Database className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                        <span className="text-sm flex-1 truncate">
-                          {model.verbose_name_plural}
-                        </span>
-                      </>
-                    )}
-                    {!sidebarCompact && (
+                {group.models.map((model: any) => {
+                  const active = location.pathname.startsWith(`/${model.name}`);
+                  const pinned = pinnedModels.includes(model.name);
+                  return (
+                    <div
+                      key={model.name}
+                      className="group relative"
+                    >
                       <button
                         type="button"
-                        aria-label={
-                          pinnedModels.includes(model.name)
-                            ? `Unpin ${model.verbose_name_plural}`
-                            : `Pin ${model.verbose_name_plural}`
-                        }
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          togglePinnedModel(model.name);
-                        }}
+                        data-testid={`nav-${model.name}`}
+                        onClick={() => go("/$model", { model: model.name })}
+                        aria-current={active ? "page" : undefined}
                         className={cn(
-                          "opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-primary",
-                          pinnedModels.includes(model.name) &&
-                            "opacity-100 text-yellow-500"
+                          "relative flex w-full items-center gap-2.5 px-3 py-2 rounded-lg transition-all hover:bg-accent hover:text-accent-foreground mb-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group",
+                          active && "bg-primary/[0.08] text-foreground font-medium hover:bg-primary/[0.12]",
+                          sidebarCompact && "justify-center px-2"
                         )}
+                        title={
+                          sidebarCompact ? model.verbose_name_plural : undefined
+                        }
                       >
-                        <Star className="h-4 w-4" />
+                        {active && !sidebarCompact && (
+                          <span
+                            aria-hidden
+                            className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-primary"
+                          />
+                        )}
+                        {sidebarCompact ? (
+                          <span
+                            aria-hidden
+                            className={cn(
+                              "flex h-8 w-8 items-center justify-center rounded-lg border transition-colors",
+                              active
+                                ? "border-primary/30 bg-primary/10 text-primary"
+                                : "border-border/60 bg-muted/60 text-muted-foreground group-hover:text-foreground"
+                            )}
+                          >
+                            <ModelIcon name={model.icon} className="h-4 w-4" />
+                          </span>
+                        ) : (
+                          <>
+                            <span
+                              aria-hidden
+                              className={cn(
+                                "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors",
+                                active
+                                  ? "border-primary/30 bg-primary/10 text-primary"
+                                  : "border-border/60 bg-muted/50 text-muted-foreground group-hover:text-foreground"
+                              )}
+                            >
+                              <ModelIcon name={model.icon} className="h-3.5 w-3.5" />
+                            </span>
+                            <span className="text-[13px] flex-1 truncate">
+                              {model.verbose_name_plural}
+                            </span>
+                            {typeof model.count === "number" && (
+                              <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground/80">
+                                {model.count > 999
+                                  ? `${(model.count / 1000).toFixed(1)}k`
+                                  : model.count}
+                              </span>
+                            )}
+                          </>
+                        )}
                       </button>
-                    )}
-                  </div>
-                ))}
+                      {!sidebarCompact && (
+                        <button
+                          type="button"
+                          aria-label={
+                            pinned
+                              ? `Unpin ${model.verbose_name_plural}`
+                              : `Pin ${model.verbose_name_plural}`
+                          }
+                          aria-pressed={pinned}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            togglePinnedModel(model.name);
+                          }}
+                          className={cn(
+                            "absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1.5 text-muted-foreground hover:text-primary hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 focus-visible:opacity-100",
+                            pinned && "opacity-100 text-yellow-500"
+                          )}
+                        >
+                          <Star
+                            className="h-4 w-4"
+                            fill={pinned ? "currentColor" : "none"}
+                            aria-hidden
+                          />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
@@ -536,18 +682,19 @@ export default function AdminLayout({
                         }))
                       }
                       className={cn(
-                        "flex items-center w-full gap-2 px-3 py-2 rounded-md text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-all",
+                        "flex items-center w-full gap-2 px-3 py-2 rounded-md text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                         sidebarCompact && "justify-center px-2"
                       )}
                       title={sidebarCompact ? section.label : undefined}
                       aria-expanded={isExpanded}
                     >
-                      <Package className="h-3.5 w-3.5" />
-                      {!sidebarCompact && <span>{section.label}</span>}
+                      <Package className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      {!sidebarCompact && <span className="truncate">{section.label}</span>}
                       {!sidebarCompact && (
                         <ChevronDown
+                          aria-hidden
                           className={cn(
-                            "ml-auto h-3 w-3 transition-transform",
+                            "ml-auto h-3 w-3 transition-transform shrink-0",
                             isExpanded && "rotate-180"
                           )}
                         />
@@ -569,19 +716,21 @@ export default function AdminLayout({
               })}
             </div>
           )}
-        </div>
+        </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-card/50 backdrop-blur-sm border-t border-border">
+        <div className="p-4 border-t border-border shrink-0">
           <Button
             variant="ghost"
+            data-testid="logout-button"
             className={cn(
               "w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10",
               sidebarCompact ? "justify-center px-2" : "justify-start"
             )}
             onClick={handleLogout}
+            disabled={logoutMutation.isPending}
             title={sidebarCompact ? "Logout" : undefined}
           >
-            <LogOut className={cn("h-4 w-4", !sidebarCompact && "mr-3")} />
+            <LogOut className={cn("h-4 w-4", !sidebarCompact && "mr-3")} aria-hidden />
             {!sidebarCompact && (
               <span className="text-sm font-medium">Logout</span>
             )}
@@ -590,102 +739,91 @@ export default function AdminLayout({
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-h-screen overflow-hidden bg-muted/20">
-        <header className="h-16 border-b border-border/50 flex items-center px-6 bg-card/80 backdrop-blur-md sticky top-0 z-40 shrink-0 gap-4">
+      <main className="flex-1 flex flex-col min-h-screen min-w-0 bg-muted/20">
+        <header className="h-16 border-b border-border/50 flex items-center px-4 sm:px-6 bg-card/80 backdrop-blur-md sticky top-0 z-30 shrink-0 gap-3">
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden text-muted-foreground"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="lg:hidden text-muted-foreground shrink-0"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open navigation"
           >
             <Menu className="h-5 w-5" />
           </Button>
 
-          <GlobalSearch models={models} />
+          <div className="min-w-0 flex-1 max-w-md">
+            <GlobalSearch models={models} />
+          </div>
 
           {showPluginHeader && (
-            <div className="hidden md:flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              <span>Plugin</span>
-              <ChevronRight className="h-3 w-3" />
-              <span className="text-foreground normal-case text-sm font-medium">
+            <nav
+              aria-label="Breadcrumb"
+              className="hidden xl:flex items-center gap-1.5 text-xs text-muted-foreground min-w-0"
+            >
+              <span className="font-semibold uppercase tracking-wider">Plugin</span>
+              <ChevronRight className="h-3 w-3 shrink-0" aria-hidden />
+              <span className="text-foreground text-sm font-medium truncate">
                 {pluginLabel}
               </span>
               {entryLabel && (
                 <>
-                  <ChevronRight className="h-3 w-3" />
-                  <span className="text-muted-foreground normal-case text-sm">
-                    {entryLabel}
-                  </span>
+                  <ChevronRight className="h-3 w-3 shrink-0" aria-hidden />
+                  <span className="text-sm truncate">{entryLabel}</span>
                 </>
               )}
-            </div>
+            </nav>
           )}
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => setShowHelp(true)}
+              title="Keyboard Shortcuts (?)"
+              aria-label="Keyboard Shortcuts"
+            >
+              <Keyboard className="h-4 w-4" />
+            </Button>
             <ThemeCustomizer />
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-full relative text-muted-foreground hover:text-foreground"
+              className="rounded-full text-muted-foreground hover:text-foreground"
+              title="Notifications"
+              aria-label="Notifications (none)"
             >
               <Bell className="h-4 w-4" />
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-destructive rounded-full border-2 border-card" />
             </Button>
-            <div className="h-6 w-[1px] bg-border mx-2" />
-            <div className="flex items-center gap-3 pl-2">
-              <div className="text-right hidden sm:block">
+            <div className="h-6 w-[1px] bg-border mx-1 sm:mx-2" aria-hidden />
+            <div className="flex items-center gap-3 pl-1 sm:pl-2">
+              <div className="text-right hidden md:block">
                 <p className="text-sm font-semibold leading-none text-foreground">
-                  Admin User
+                  {userName}
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-1 uppercase font-bold tracking-wider">
-                  Super Admin
+                  {userRole}
                 </p>
               </div>
-              <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary text-xs font-bold ring-2 ring-background">
-                AU
+              <div
+                className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary text-xs font-bold"
+                title={`${userName} (${userRole})`}
+                aria-hidden
+              >
+                {userInitials}
               </div>
             </div>
           </div>
         </header>
 
         {/* Content Area */}
-        <div className="flex-1 p-6 lg:p-8 overflow-auto">
-          <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
-            {showPluginHeader && (
-              <div className="rounded-lg border border-border bg-card/80 px-4 py-3 shadow-sm">
-                <div className="flex flex-wrap items-center gap-3">
-                  {showIconGroup && (
-                    <div className="flex items-center -space-x-2">
-                      {renderIconBadge(
-                        activePluginInfo.plugin?.icon,
-                        pluginLabel
-                      )}
-                      {activePluginInfo.entry?.icon &&
-                        renderIconBadge(
-                          activePluginInfo.entry?.icon,
-                          entryLabel
-                        )}
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                      Plugin
-                    </p>
-                    <p className="text-lg font-semibold text-foreground truncate">
-                      {pluginLabel}
-                    </p>
-                    {entryLabel && (
-                      <p className="text-sm text-muted-foreground truncate">
-                        {entryLabel}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+        <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
+          <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+            <Breadcrumbs />
             {children}
           </div>
         </div>
+        <ShortcutHelpDialog open={showHelp} onOpenChange={setShowHelp} />
       </main>
     </div>
   );

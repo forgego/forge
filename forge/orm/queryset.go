@@ -191,6 +191,14 @@ func (qs *BaseQuerySet[T]) getDialect() (interface {
 	return nil, fmt.Errorf("database connection not set on QuerySet")
 }
 
+// rebindSQL adapts a SQL query for the active database driver (e.g. converting ILIKE to LIKE for SQLite).
+func (qs *BaseQuerySet[T]) rebindSQL(query string) string {
+	if r, ok := qs.db.(interface{ RebindPlaceholders(string) string }); ok && r != nil {
+		return r.RebindPlaceholders(query)
+	}
+	return query
+}
+
 // clone creates a deep copy
 func (qs *BaseQuerySet[T]) clone() *BaseQuerySet[T] {
 	clone := &BaseQuerySet[T]{
@@ -539,7 +547,7 @@ func (qs *BaseQuerySet[T]) buildSQL() (string, []interface{}, error) {
 	sql := strings.Join(parts, " ")
 	args := builder.Args()
 
-	return sql, args, nil
+	return qs.rebindSQL(sql), args, nil
 }
 
 // buildJoinClause builds the JOIN clause
@@ -1198,7 +1206,7 @@ func (qs *BaseQuerySet[T]) Count(ctx context.Context) (int64, error) {
 	}
 
 	var count int64
-	err = db.QueryRowContext(ctx, sql, builder.Args()...).Scan(&count)
+	err = db.QueryRowContext(ctx, qs.rebindSQL(sql), builder.Args()...).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("count query failed: %w", err)
 	}
@@ -1265,7 +1273,7 @@ func (qs *BaseQuerySet[T]) Update(ctx context.Context, updates UpdateMap) (int64
 	}
 
 	// Execute
-	result, err := db.ExecContext(ctx, updateSQL, allArgs...)
+	result, err := db.ExecContext(ctx, qs.rebindSQL(updateSQL), allArgs...)
 	if err != nil {
 		return 0, fmt.Errorf("update query failed: %w", err)
 	}
@@ -1324,7 +1332,7 @@ func (qs *BaseQuerySet[T]) Delete(ctx context.Context) (int64, error) {
 	args := builder.Args()
 
 	// Execute
-	result, err := db.ExecContext(ctx, deleteSQL, args...)
+	result, err := db.ExecContext(ctx, qs.rebindSQL(deleteSQL), args...)
 	if err != nil {
 		return 0, fmt.Errorf("delete query failed: %w", err)
 	}

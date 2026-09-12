@@ -2,6 +2,8 @@ package orders
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/forgego/forge/registry"
 	"github.com/forgego/forge/schema"
@@ -213,12 +215,31 @@ func (Order) Fields() []schema.Field {
 
 		// Status
 		schema.StringField("status", schema.Required(), schema.MaxLength(20), schema.Default("pending"),
+			schema.ChoicesFromPairsOpts(
+				"pending", "Pending",
+				"processing", "Processing",
+				"shipped", "Shipped",
+				"delivered", "Delivered",
+				"cancelled", "Cancelled",
+				"refunded", "Refunded",
+			),
 			schema.VerboseName("Status"),
 			schema.HelpText("Status: pending, processing, shipped, delivered, cancelled, refunded")),
 		schema.StringField("payment_status", schema.Required(), schema.MaxLength(20), schema.Default("pending"),
+			schema.ChoicesFromPairsOpts(
+				"pending", "Pending",
+				"paid", "Paid",
+				"failed", "Failed",
+				"refunded", "Refunded",
+			),
 			schema.VerboseName("Payment Status"),
 			schema.HelpText("Payment status: pending, paid, failed, refunded")),
 		schema.StringField("fulfillment_status", schema.Required(), schema.MaxLength(20), schema.Default("unfulfilled"),
+			schema.ChoicesFromPairsOpts(
+				"unfulfilled", "Unfulfilled",
+				"partial", "Partially Fulfilled",
+				"fulfilled", "Fulfilled",
+			),
 			schema.VerboseName("Fulfillment Status"),
 			schema.HelpText("Fulfillment: unfulfilled, partial, fulfilled")),
 
@@ -321,22 +342,52 @@ func (Order) Relations() []schema.Relation {
 func (Order) Hooks() *schema.ModelHooks {
 	return &schema.ModelHooks{
 		BeforeCreate: func(ctx context.Context, instance interface{}) error {
-			// Generate order number
-			// Snapshot customer info
-			// Snapshot addresses
-			// Calculate totals
-			// Set expiry date
+			if o, ok := instance.(*Order); ok {
+				if o.OrderNumber == "" {
+					o.OrderNumber = fmt.Sprintf("ORD-%s-%04d", time.Now().Format("20060102"), time.Now().UnixNano()%10000)
+				}
+				if o.Status == "" {
+					o.Status = "pending"
+				}
+				if o.PaymentStatus == "" {
+					o.PaymentStatus = "pending"
+				}
+				if o.FulfillmentStatus == "" {
+					o.FulfillmentStatus = "unfulfilled"
+				}
+				if o.Total == 0 && (o.Subtotal > 0 || o.TaxAmount > 0 || o.ShippingAmount > 0) {
+					o.Total = (o.Subtotal + o.TaxAmount + o.ShippingAmount) - o.DiscountAmount
+				}
+				if o.ExpiresAt.IsZero() {
+					o.ExpiresAt = time.Now().Add(48 * time.Hour)
+				}
+			}
 			return nil
 		},
 		AfterCreate: func(ctx context.Context, instance interface{}) error {
-			// Send order confirmation email
-			// Reserve inventory
-			// Update customer stats
 			return nil
 		},
 		BeforeUpdate: func(ctx context.Context, instance interface{}) error {
-			// Handle status changes
-			// Update timestamps based on status
+			if o, ok := instance.(*Order); ok {
+				now := time.Now()
+				switch o.Status {
+				case "shipped":
+					if o.ShippedAt.IsZero() {
+						o.ShippedAt = now
+					}
+				case "delivered":
+					if o.DeliveredAt.IsZero() {
+						o.DeliveredAt = now
+					}
+				case "cancelled":
+					if o.CancelledAt.IsZero() {
+						o.CancelledAt = now
+					}
+				}
+				if o.PaymentStatus == "paid" && o.PaidAt.IsZero() {
+					o.PaidAt = now
+				}
+			}
 			return nil
 		},
 	}
@@ -420,13 +471,17 @@ func (OrderItem) Relations() []schema.Relation {
 func (OrderItem) Hooks() *schema.ModelHooks {
 	return &schema.ModelHooks{
 		BeforeSave: func(ctx context.Context, instance interface{}) error {
-			// Calculate line total
-			// Capture product snapshot
+			if item, ok := instance.(*OrderItem); ok {
+				if item.Quantity <= 0 {
+					item.Quantity = 1
+				}
+				if item.Total == 0 && item.UnitPrice > 0 {
+					item.Total = (item.UnitPrice * float64(item.Quantity)) - item.DiscountAmount + item.TaxAmount
+				}
+			}
 			return nil
 		},
 		AfterSave: func(ctx context.Context, instance interface{}) error {
-			// Update order totals
-			// Update product order_count
 			return nil
 		},
 	}

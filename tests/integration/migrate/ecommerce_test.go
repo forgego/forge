@@ -43,7 +43,7 @@ func TestFullEcommerceSchemaMigration(t *testing.T) {
 	require.NoError(t, os.MkdirAll(migrationsDir, 0755))
 
 	// Path to ecommerce models
-	modelsDir := filepath.Join("..", "..", "..", "examples", "ecommerce", "models")
+	modelsDir := filepath.Join("testdata", "ecommerce_models")
 
 	// Generate migration from all ecommerce models
 	err = helpers.CreateMigrationFromModels(t, modelsDir, migrationsDir, "initial_ecommerce_schema")

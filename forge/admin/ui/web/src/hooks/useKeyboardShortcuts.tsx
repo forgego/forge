@@ -1,19 +1,63 @@
-import { useEffect, useRef } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Keyboard } from "lucide-react";
 
-interface KeyboardShortcut {
+export interface KeyboardShortcut {
   key: string;
   ctrl?: boolean;
   shift?: boolean;
   alt?: boolean;
-  action: () => void;
-  description?: string;
+  action?: () => void;
+  description: string;
 }
 
 interface UseKeyboardShortcutsOptions {
   enabled?: boolean;
   global?: boolean;
 }
+
+export const DEFAULT_ADMIN_SHORTCUTS: KeyboardShortcut[] = [
+  {
+    key: "k",
+    ctrl: true,
+    description: "Quick Search",
+  },
+  {
+    key: "/",
+    description: "Focus Search (outside inputs)",
+  },
+  {
+    key: "h",
+    ctrl: true,
+    description: "Go to Dashboard",
+  },
+  {
+    key: "n",
+    ctrl: true,
+    shift: true,
+    description: "Create New Record",
+  },
+  {
+    key: "s",
+    ctrl: true,
+    description: "Save Active Form",
+  },
+  {
+    key: "?",
+    description: "Show Keyboard Shortcuts",
+  },
+  {
+    key: "Escape",
+    description: "Close Modal / Cancel",
+  },
+];
 
 export function useKeyboardShortcuts(
   shortcuts: KeyboardShortcut[],
@@ -30,19 +74,23 @@ export function useKeyboardShortcuts(
     if (!enabled || !global) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger shortcuts when typing in input fields
+      // Plain (non-modifier) shortcuts don't fire while typing; Ctrl/Cmd
+      // combos (save, search) still work from inside inputs.
       const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      ) {
+      const isTyping =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable;
+      if (isTyping && !e.ctrlKey && !e.metaKey) {
         return;
       }
 
       for (const shortcut of shortcutsRef.current) {
-        const ctrlMatch = shortcut.ctrl ? e.ctrlKey || e.metaKey : !e.ctrlKey && !e.metaKey;
-        const shiftMatch = shortcut.shift ? e.shiftKey : !e.shiftMatch;
+        if (!shortcut.action) continue;
+        const ctrlMatch = shortcut.ctrl
+          ? e.ctrlKey || e.metaKey
+          : !e.ctrlKey && !e.metaKey;
+        const shiftMatch = shortcut.shift ? e.shiftKey : !e.shiftKey;
         const altMatch = shortcut.alt ? e.altKey : !e.altKey;
 
         if (
@@ -58,8 +106,8 @@ export function useKeyboardShortcuts(
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [enabled, global]);
 }
 
@@ -69,47 +117,54 @@ export function useAdminShortcuts() {
 
   const shortcuts: KeyboardShortcut[] = [
     {
-      key: 'h',
+      key: "h",
       ctrl: true,
-      action: () => navigate({ to: '/' }),
-      description: 'Go to Dashboard',
+      action: () => navigate({ to: "/" }),
+      description: "Go to Dashboard",
     },
     {
-      key: 'n',
+      key: "n",
       ctrl: true,
       shift: true,
       action: () => {
         const path = window.location.pathname;
-        if (!path.includes('/new')) {
-          navigate({ to: `${path}/new` });
+        // Never hijack the browser's new-window shortcut outside the admin.
+        if (!path.startsWith("/admin") && path !== "/") return;
+        if (!path.includes("/create")) {
+          navigate({ to: `${path}/create` });
         }
       },
-      description: 'Create new object',
+      description: "Create New Record",
     },
     {
-      key: 'Escape',
-      action: () => {
-        navigate({ to: '/' });
-      },
-      description: 'Go back to Dashboard',
+      key: "Escape",
+      description: "Close Modal / Cancel",
     },
     {
-      key: '/',
+      key: "/",
       ctrl: true,
       action: () => {
-        document.querySelector<HTMLInputElement>('[data-testid="search-input"]')?.focus();
+        document
+          .querySelector<HTMLInputElement>('[data-testid="search-input"]')
+          ?.focus();
       },
-      description: 'Focus search',
+      description: "Focus Search",
     },
     {
-      key: 's',
+      key: "s",
       ctrl: true,
       action: () => {
-        // Trigger save if in form
-        const saveButton = document.querySelector<HTMLButtonElement>('[data-testid="save-button"]');
+        // Skip when a modal is open: Ctrl+S there must not submit the
+        // form behind the dialog.
+        if (document.querySelector('[role="dialog"], [role="alertdialog"]')) {
+          return;
+        }
+        const saveButton = document.querySelector<HTMLButtonElement>(
+          '[data-testid="save-button"], [data-testid="submit-button"]'
+        );
         saveButton?.click();
       },
-      description: 'Save form',
+      description: "Save Form",
     },
   ];
 
@@ -120,53 +175,55 @@ export function useAdminShortcuts() {
 export function ShortcutHelpDialog({
   open,
   onOpenChange,
-  shortcuts,
+  shortcuts = DEFAULT_ADMIN_SHORTCUTS,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  shortcuts: KeyboardShortcut[];
+  shortcuts?: KeyboardShortcut[];
 }) {
   const formatKey = (shortcut: KeyboardShortcut) => {
     const parts: string[] = [];
-    if (shortcut.ctrl) parts.push('Ctrl');
-    if (shortcut.alt) parts.push('Alt');
-    if (shortcut.shift) parts.push('Shift');
+    if (shortcut.ctrl) parts.push("⌘/Ctrl");
+    if (shortcut.alt) parts.push("Alt");
+    if (shortcut.shift) parts.push("Shift");
     parts.push(shortcut.key.toUpperCase());
-    return parts.join(' + ');
+    return parts.join(" + ");
   };
 
   return (
-    <div
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity ${
-        open ? 'opacity-100' : 'opacity-0 pointer-events-none'
-      }`}
-      onClick={() => onOpenChange(false)}
-    >
-      <div
-        className="bg-background rounded-lg p-6 w-full max-w-md shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-lg font-semibold mb-4">Keyboard Shortcuts</h2>
-        <div className="space-y-2">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <div className="flex items-center gap-2">
+            <Keyboard className="h-5 w-5 text-primary" />
+            <DialogTitle>Keyboard Shortcuts</DialogTitle>
+          </div>
+          <DialogDescription>
+            Speed up your administrative workflows with instant keyboard commands.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="divide-y divide-border/40 py-2">
           {shortcuts.map((shortcut, index) => (
             <div
               key={index}
-              className="flex items-center justify-between py-2 border-b last:border-0"
+              className="flex items-center justify-between py-2.5 text-xs"
             >
-              <span className="text-sm text-muted-foreground">
+              <span className="text-muted-foreground font-medium">
                 {shortcut.description}
               </span>
-              <kbd className="px-2 py-1 bg-muted rounded text-sm font-mono">
+              <kbd className="px-2 py-1 bg-muted/80 border border-border/60 rounded text-[11px] font-mono font-semibold text-foreground shadow-xs">
                 {formatKey(shortcut)}
               </kbd>
             </div>
           ))}
         </div>
-        <div className="mt-4 text-xs text-muted-foreground text-center">
-          Press ? to show this dialog
+
+        <div className="text-[11px] text-muted-foreground text-center pt-2 border-t border-border/40">
+          Press <kbd className="px-1.5 py-0.5 bg-muted rounded font-mono">?</kbd> anywhere to open this cheat sheet
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -176,19 +233,27 @@ export function useShortcutHelp() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === '?' && !e.target) {
-        setShowHelp(true);
+      const target = e.target as HTMLElement;
+      const isInput =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable;
+
+      if (!isInput) {
+        if (e.key === "?" || (e.key === "/" && (e.ctrlKey || e.metaKey))) {
+          e.preventDefault();
+          setShowHelp((prev) => !prev);
+        }
       }
-      if (e.key === 'Escape') {
+
+      if (e.key === "Escape") {
         setShowHelp(false);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   return { showHelp, setShowHelp };
 }
-
-import { useState } from 'react';

@@ -2,20 +2,21 @@ import { test, expect, type APIRequestContext, type Page } from '@playwright/tes
 import fs from 'node:fs';
 import path from 'node:path';
 
-const adminUser = 'admin';
-const adminPass = 'password';
+const adminUser = process.env.FORGE_ADMIN_USERNAME || 'admin';
+const adminPass = process.env.FORGE_ADMIN_PASSWORD || 'admin123';
 const rootDir = path.resolve(process.cwd(), '..');
+const serverBaseUrl = process.env.FORGE_SERVER_BASE_URL || 'http://localhost:8020';
 
 test.describe('Ecommerce Framework Features', () => {
   test('REST API resources are reachable', async ({ request }) => {
     const resources = discoverAPIResources();
     expect(resources.length).toBeGreaterThan(0);
 
-    const health = await request.get('http://localhost:8000/health');
+    const health = await request.get(`${serverBaseUrl}/health`);
     expect(health.ok()).toBeTruthy();
 
     for (const resource of resources) {
-      const resp = await request.get(`http://localhost:8000/api/v1/${resource}/`);
+      const resp = await request.get(`${serverBaseUrl}/api/v1/${resource}/`);
       expect(resp.ok(), `list endpoint failed for ${resource}`).toBeTruthy();
     }
   });
@@ -24,12 +25,12 @@ test.describe('Ecommerce Framework Features', () => {
     await loginUI(page);
     const token = await loginAPI(request);
 
-    const configResp = await request.get('http://localhost:8000/admin/api/config', {
+    const configResp = await request.get(`${serverBaseUrl}/admin/api/config`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(configResp.ok()).toBeTruthy();
 
-    const metaResp = await request.get('http://localhost:8000/admin/api/meta', {
+    const metaResp = await request.get(`${serverBaseUrl}/admin/api/meta`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(metaResp.ok()).toBeTruthy();
@@ -40,7 +41,7 @@ test.describe('Ecommerce Framework Features', () => {
     const target = models.find((m: any) => m?.name === 'categories') ?? models[0];
     const modelName = target.name as string;
 
-    const modelMetaResp = await request.get(`http://localhost:8000/admin/api/meta/${modelName}`, {
+    const modelMetaResp = await request.get(`${serverBaseUrl}/admin/api/meta/${modelName}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(modelMetaResp.ok()).toBeTruthy();
@@ -50,22 +51,26 @@ test.describe('Ecommerce Framework Features', () => {
     const unique = `e2e-${Date.now()}`;
     const payload = await buildCreatePayload(modelMeta, displayField, unique);
 
-    const createResp = await request.post(`http://localhost:8000/admin/api/${modelName}`, {
+    const createResp = await request.post(`${serverBaseUrl}/admin/api/${modelName}`, {
       headers: { Authorization: `Bearer ${token}` },
       data: payload,
     });
+    if (!createResp.ok()) {
+      const b = await createResp.text();
+      throw new Error(`POST /admin/api/${modelName} failed: status=${createResp.status()} body=${b} payload=${JSON.stringify(payload)}`);
+    }
     expect(createResp.ok()).toBeTruthy();
     const created = await createResp.json();
     const createdID = created.id;
     expect(createdID).toBeTruthy();
 
-    const detailResp = await request.get(`http://localhost:8000/admin/api/${modelName}/${createdID}/`, {
+    const detailResp = await request.get(`${serverBaseUrl}/admin/api/${modelName}/${createdID}/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(detailResp.ok()).toBeTruthy();
 
     const updatedValue = `${payload[displayField]}-updated`;
-    const patchResp = await request.patch(`http://localhost:8000/admin/api/${modelName}/${createdID}/`, {
+    const patchResp = await request.patch(`${serverBaseUrl}/admin/api/${modelName}/${createdID}/`, {
       headers: { Authorization: `Bearer ${token}` },
       data: { [displayField]: updatedValue },
     });
@@ -74,13 +79,13 @@ test.describe('Ecommerce Framework Features', () => {
       throw new Error(`PATCH failed: status=${patchResp.status()} body=${patchBody}`);
     }
 
-    const searchResp = await request.get('http://localhost:8000/admin/api/search', {
+    const searchResp = await request.get(`${serverBaseUrl}/admin/api/search`, {
       headers: { Authorization: `Bearer ${token}` },
       params: { q: updatedValue },
     });
     expect(searchResp.ok()).toBeTruthy();
 
-    const savedViewResp = await request.post(`http://localhost:8000/admin/api/saved-views/${modelName}`, {
+    const savedViewResp = await request.post(`${serverBaseUrl}/admin/api/saved-views/${modelName}`, {
       headers: { Authorization: `Bearer ${token}` },
       data: {
         name: `view-${unique}`,
@@ -91,18 +96,18 @@ test.describe('Ecommerce Framework Features', () => {
     });
     expect(savedViewResp.ok()).toBeTruthy();
 
-    const savedViewListResp = await request.get(`http://localhost:8000/admin/api/saved-views/${modelName}`, {
+    const savedViewListResp = await request.get(`${serverBaseUrl}/admin/api/saved-views/${modelName}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(savedViewListResp.ok()).toBeTruthy();
 
-    const exportResp = await request.get(`http://localhost:8000/admin/api/${modelName}/export`, {
+    const exportResp = await request.get(`${serverBaseUrl}/admin/api/${modelName}/export`, {
       headers: { Authorization: `Bearer ${token}` },
       params: { format: 'json' },
     });
     expect(exportResp.ok()).toBeTruthy();
 
-    const autocompleteResp = await request.get(`http://localhost:8000/admin/api/${modelName}/autocomplete`, {
+    const autocompleteResp = await request.get(`${serverBaseUrl}/admin/api/${modelName}/autocomplete`, {
       headers: { Authorization: `Bearer ${token}` },
       params: { q: updatedValue, limit: '5' },
     });
@@ -113,20 +118,79 @@ test.describe('Ecommerce Framework Features', () => {
       );
     }
 
-    const deleteResp = await request.delete(`http://localhost:8000/admin/api/${modelName}/${createdID}/`, {
+    const deleteResp = await request.delete(`${serverBaseUrl}/admin/api/${modelName}/${createdID}/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(deleteResp.status()).toBe(204);
   });
+
+  test('storefront homepage, openapi spec, and showcase endpoints', async ({ page, request }) => {
+    // 1. OpenAPI Specification endpoint
+    const openapiResp = await request.get(`${serverBaseUrl}/api/openapi.json`);
+    expect(openapiResp.ok()).toBeTruthy();
+    const openapi = await openapiResp.json();
+    expect(openapi.openapi).toBe('3.0.3');
+    expect(openapi.info.title).toContain('Forge Ecommerce Reference API');
+    expect(openapi.paths['/api/v1/catalog/search']).toBeDefined();
+    expect(openapi.paths['/api/v1/orders/checkout']).toBeDefined();
+
+    // 2. Catalog Stats endpoint (ORM Aggregations)
+    const statsResp = await request.get(`${serverBaseUrl}/api/v1/catalog/stats`);
+    expect(statsResp.ok()).toBeTruthy();
+    const stats = await statsResp.json();
+    expect(stats.total_products).toBeGreaterThanOrEqual(0);
+
+    // 3. Faceted Search endpoint
+    const searchResp = await request.get(`${serverBaseUrl}/api/v1/catalog/search`, {
+      params: { q: 'pro', in_stock: 'true' },
+    });
+    expect(searchResp.ok()).toBeTruthy();
+    const searchData = await searchResp.json();
+    expect(Array.isArray(searchData.results)).toBeTruthy();
+
+    // 4. Order Checkout Flow with Lifecycle Hooks
+    const checkoutResp = await request.post(`${serverBaseUrl}/api/v1/orders/checkout`, {
+      data: {
+        customer_id: 1,
+        shipping_address: '100 Tech Blvd, Silicon Valley, CA',
+        billing_address: '100 Tech Blvd, Silicon Valley, CA',
+        payment_method: 'credit_card',
+        items: [
+          {
+            product_id: 1,
+            quantity: 1,
+            unit_price: 199.99,
+          },
+        ],
+      },
+    });
+    expect(checkoutResp.status()).toBe(201);
+    const orderData = await checkoutResp.json();
+    expect(orderData.order_number).toMatch(/^ORD-\d{8}-[A-F0-9]{4}$/);
+    expect(orderData.status).toBe('success');
+    expect(orderData.order_status).toBe('pending');
+    expect(orderData.total_amount).toBeGreaterThan(0);
+
+    // 5. Storefront UI in browser
+    await page.goto(`${serverBaseUrl}/`);
+    await expect(page.locator('h1')).toContainText('Full-Stack Go Framework');
+    await expect(page.locator('.brand')).toContainText('Forge');
+    await expect(page.locator('#productGrid')).toBeVisible();
+    await expect(page.locator('#api-console')).toBeVisible();
+
+    // Test API console button click
+    await page.click('button:has-text("Execute Query")');
+    await expect(page.locator('#apiStatus')).toBeVisible({ timeout: 10000 });
+  });
 });
 
 async function loginUI(page: Page) {
-  await page.addInitScript(() => {
+  await page.goto('login');
+  await page.evaluate(() => {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin-tabs');
   });
 
-  await page.goto('login');
   await page.fill('[data-testid="username-input"]', adminUser);
   await page.fill('[data-testid="password-input"]', adminPass);
   await page.click('[data-testid="login-button"]');
@@ -134,7 +198,7 @@ async function loginUI(page: Page) {
 }
 
 async function loginAPI(request: APIRequestContext) {
-  const response = await request.post('http://localhost:8000/admin/api/login', {
+  const response = await request.post(`${serverBaseUrl}/admin/api/login`, {
     data: { username: adminUser, password: adminPass },
   });
   expect(response.ok()).toBeTruthy();

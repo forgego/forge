@@ -227,6 +227,9 @@ admin:
 security:
   session_secret: change-me-in-production
   csrf_secret_key: change-me-in-production
+  csrf_exempt_paths:
+    - /admin/api
+    - /api
 `
 
 	configPath := filepath.Join(projectPath, "config", "config.yaml")

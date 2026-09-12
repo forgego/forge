@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 )
 
 // SetupTestDB creates a connection to the test PostgreSQL database
@@ -41,7 +41,9 @@ func SetupTestDB(t *testing.T) *sql.DB {
 		var exists bool
 		err = defaultDB.QueryRow("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = $1)", dbname).Scan(&exists)
 		if err == nil && !exists {
-			_, err = defaultDB.Exec("CREATE DATABASE " + dbname)
+			// Identifier is quoted: DDL names cannot be query parameters.
+			// nosemgrep: go.lang.security.audit.database.string-formatted-query.string-formatted-query, go.lang.security.audit.database.string-formatted-query
+			_, err = defaultDB.Exec("CREATE DATABASE " + pq.QuoteIdentifier(dbname))
 			if err != nil {
 				t.Logf("Failed to create database %s: %v", dbname, err)
 			}
@@ -91,7 +93,10 @@ func CleanupDB(t *testing.T, database *sql.DB) {
 	}
 
 	for _, table := range tables {
-		_, err := database.Exec(fmt.Sprintf("TRUNCATE TABLE %s CASCADE", table))
+		// Table names come from information_schema (not user input) and are
+		// quoted; TRUNCATE takes no row parameters.
+		// nosemgrep: go.lang.security.audit.database.string-formatted-query.string-formatted-query, go.lang.security.audit.database.string-formatted-query
+		_, err := database.Exec(fmt.Sprintf("TRUNCATE TABLE %s CASCADE", pq.QuoteIdentifier(table)))
 		if err != nil {
 			t.Logf("Failed to truncate table %s: %v", table, err)
 		}

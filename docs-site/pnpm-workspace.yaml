@@ -1,0 +1,5 @@
+# Keep pnpm's dependency resolutions aligned with package.json npm overrides.
+overrides:
+  qs: ^6.16.0
+  serialize-javascript: ^7.1.1
+  'sockjs>uuid': ^11.1.1

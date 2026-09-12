@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
-	"strings"
 
+	"examples/ecommerce/app/dbsetup"
+	"examples/ecommerce/app/seeder"
 	"github.com/forgego/forge/config"
 	"github.com/forgego/forge/db"
 	_ "github.com/mattn/go-sqlite3"
@@ -44,53 +45,13 @@ func main() {
 	}
 	defer database.Close()
 
-	// Seed categories
-	categories := []struct {
-		name, slug, description string
-		sortOrder               int
-	}{
-		{"Electronics", "electronics", "Electronic devices and gadgets", 1},
-		{"Clothing", "clothing", "Men and Women apparel", 2},
-		{"Home & Kitchen", "home-kitchen", "Furniture, cookware, and appliances", 3},
-		{"Books", "books", "Physical and digital reading material", 4},
+	// Ensure schema exists first
+	dbsetup.SetupSchema(database)
+
+	// Run full data seeder
+	if err := seeder.Seed(ctx, database); err != nil {
+		log.Fatalf("Failed to seed database: %v", err)
 	}
 
-	for _, c := range categories {
-		_, err := database.ExecContext(ctx, `
-			INSERT INTO categories (name, slug, description, sort_order, is_active)
-			VALUES ($1, $2, $3, $4, true)
-			ON CONFLICT (slug) DO NOTHING;
-		`, c.name, c.slug, c.description, c.sortOrder)
-		if err != nil && !strings.Contains(err.Error(), "syntax error") {
-			_, _ = database.ExecContext(ctx, `
-				INSERT OR IGNORE INTO categories (name, slug, description, sort_order, is_active)
-				VALUES (?, ?, ?, ?, 1);
-			`, c.name, c.slug, c.description, c.sortOrder)
-		}
-	}
-
-	// Seed brands
-	brands := []struct {
-		name, slug, description string
-	}{
-		{"Acme Corp", "acme-corp", "Universal supplier of roadrunner gear"},
-		{"Stark Tech", "stark-tech", "Advanced consumer electronics"},
-		{"Wayne Enterprises", "wayne-enterprises", "High reliability lifestyle goods"},
-	}
-
-	for _, b := range brands {
-		_, err := database.ExecContext(ctx, `
-			INSERT INTO brands (name, slug, description, is_active)
-			VALUES ($1, $2, $3, true)
-			ON CONFLICT (slug) DO NOTHING;
-		`, b.name, b.slug, b.description)
-		if err != nil && !strings.Contains(err.Error(), "syntax error") {
-			_, _ = database.ExecContext(ctx, `
-				INSERT OR IGNORE INTO brands (name, slug, description, is_active)
-				VALUES (?, ?, ?, 1);
-			`, b.name, b.slug, b.description)
-		}
-	}
-
-	log.Println("✅ Database seeded successfully!")
+	log.Println("🎉 Database seeded successfully with all models and relations!")
 }

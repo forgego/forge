@@ -26,7 +26,7 @@ export default function FormPlaygroundPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="glass-lite border-border/50">
+          <Card className="">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <FormInput className="h-4 w-4 text-primary" />
@@ -67,7 +67,7 @@ export default function FormPlaygroundPage() {
             </CardContent>
           </Card>
 
-          <Card className="glass-lite border-border/50">
+          <Card className="">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Clock className="h-4 w-4 text-primary" />
@@ -103,7 +103,7 @@ export default function FormPlaygroundPage() {
             </CardContent>
           </Card>
 
-          <Card className="glass-lite border-border/50 lg:col-span-2">
+          <Card className=" lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Palette className="h-4 w-4 text-primary" />

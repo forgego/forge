@@ -553,6 +553,7 @@ func (r *userRepository) Count(ctx context.Context, filters *UserFilters) (int64
 		args = append(args, searchPattern, searchPattern, searchPattern, searchPattern)
 	}
 
+	// nosemgrep: go.lang.security.audit.database.string-formatted-query.string-formatted-query, go.lang.security.audit.database.string-formatted-query
 	query := "SELECT COUNT(*) FROM users WHERE " + strings.Join(conditions, " AND ")
 
 	var count int64

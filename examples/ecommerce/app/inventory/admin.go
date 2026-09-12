@@ -316,17 +316,30 @@ func RegisterAdmin(ctx context.Context) {
 				},
 			},
 			{
-				Name:  "adjust_quantity",
-				Label: "Adjust Quantity",
+				Name:  "restock_50",
+				Label: "Restock Selected (+50 units)",
 				Handler: func(ctx context.Context, instances []*Stock) error {
-					// Adjustment logic
+					for _, stock := range instances {
+						stock.Quantity += 50
+						stock.AvailableQuantity += 50
+						if err := StockObjects.Update(ctx, stock); err != nil {
+							return err
+						}
+					}
 					return nil
 				},
 			},
 			{
-				Name:  "update_reorder_point",
-				Label: "Update Reorder Point",
+				Name:  "mark_out_of_stock",
+				Label: "Mark Out of Stock",
 				Handler: func(ctx context.Context, instances []*Stock) error {
+					for _, stock := range instances {
+						stock.Quantity = 0
+						stock.AvailableQuantity = 0
+						if err := StockObjects.Update(ctx, stock); err != nil {
+							return err
+						}
+					}
 					return nil
 				},
 			},

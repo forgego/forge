@@ -248,7 +248,7 @@ func (b *PostgreSQLBuilder) BuildModifyColumn(c *core.ModifyColumn) (string, err
 	if c.NewColumn.Required && !c.OldColumn.Required {
 		statements = append(statements, fmt.Sprintf("ALTER TABLE %s ALTER COLUMN \"%s\" SET NOT NULL;",
 			c.Table, c.NewColumn.Name))
-	} else if !c.NewColumn.Required && c.OldColumn.Required {
+	} else if !c.NewColumn.Required && c.OldColumn.Required && !c.NewColumn.PrimaryKey && !c.NewColumn.AutoIncrement {
 		statements = append(statements, fmt.Sprintf("ALTER TABLE %s ALTER COLUMN \"%s\" DROP NOT NULL;",
 			c.Table, c.NewColumn.Name))
 	}

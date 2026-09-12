@@ -21,6 +21,7 @@ import (
 
 	"github.com/forgego/forge/admin/core"
 	apicore "github.com/forgego/forge/api/core"
+	"github.com/forgego/forge/validate"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -30,8 +31,11 @@ import (
 type Router struct {
 	registry *core.Registry
 	prefix   string
-	views    *savedViewStore
-	sessions *adminSessionStore
+	// adminPrefix is the public mount path of the admin UI, used for
+	// absolute URLs in search results. Defaults to "/admin".
+	adminPrefix string
+	views       *savedViewStore
+	sessions    *adminSessionStore
 }
 
 // NewRouter creates a new admin API router
@@ -39,9 +43,29 @@ func NewRouter(registry *core.Registry) *Router {
 	return &Router{
 		registry: registry,
 		prefix:   "/api",
-		views:    newSavedViewStore(),
-		sessions: newAdminSessionStore(),
+		// adminPrefix is the public path the admin UI is served from. It is
+		// used to build absolute URLs (e.g. in global search results).
+		adminPrefix: "/admin",
+		views:       newSavedViewStore(),
+		sessions:    newAdminSessionStore(),
 	}
+}
+
+// WithAdminPrefix sets the public path prefix of the admin UI (default
+// "/admin") so generated URLs stay correct on custom mount points.
+func (r *Router) WithAdminPrefix(prefix string) *Router {
+	prefix = strings.TrimSpace(prefix)
+	if prefix == "" {
+		prefix = "/admin"
+	}
+	if !strings.HasPrefix(prefix, "/") {
+		prefix = "/" + prefix
+	}
+	r.adminPrefix = strings.TrimRight(prefix, "/")
+	if r.adminPrefix == "" {
+		r.adminPrefix = "/"
+	}
+	return r
 }
 
 // RegisterRoutes registers all admin routes
@@ -51,7 +75,11 @@ func (r *Router) RegisterRoutes(router chi.Router) {
 		sub.Use(middleware.Logger)
 		sub.Use(middleware.Recoverer)
 		sub.Use(cors.Handler(cors.Options{
-			AllowedOrigins:   []string{"*"}, // Admin panel may be served from any origin; restrict via reverse proxy in production
+			// Echo back the request origin instead of "*": the Fetch spec
+			// forbids wildcard origins on credentialed requests, so browsers
+			// would otherwise drop cookies/Authorization on cross-origin
+			// admin deployments. Restrict via reverse proxy in production.
+			AllowOriginFunc:  func(r *http.Request, origin string) bool { return true },
 			AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 			AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 			ExposedHeaders:   []string{"Link"},
@@ -81,11 +109,12 @@ func (r *Router) RegisterRoutes(router chi.Router) {
 			// Plugin page endpoint
 			protected.Get("/plugins/{plugin}/pages/{page}", r.handlePluginPage)
 
-			// Saved views
-			protected.Route("/saved-views/{model}", func(viewRouter chi.Router) {
-				viewRouter.Get("/", r.handleSavedViewsList)
-				viewRouter.Post("/", r.handleSavedViewSave)
-			})
+		// Saved views
+		protected.Route("/saved-views/{model}", func(viewRouter chi.Router) {
+			viewRouter.Get("/", r.handleSavedViewsList)
+			viewRouter.Post("/", r.handleSavedViewSave)
+			viewRouter.Delete("/{id}", r.handleSavedViewDelete)
+		})
 
 			// Model routes (registered dynamically)
 			r.registerModelRoutes(protected)
@@ -119,34 +148,42 @@ func (r *Router) authMiddleware(next http.Handler) http.Handler {
 // registerModelRoutes registers routes for each model
 func (r *Router) registerModelRoutes(router chi.Router) {
 	for name, admin := range r.registry.GetAll() {
-		basePath := fmt.Sprintf("/%s", name)
+		basePaths := []string{fmt.Sprintf("/%s", name)}
+		if admin.ModelType() != nil {
+			structName := admin.ModelType().Name()
+			if structName != "" && structName != name {
+				basePaths = append(basePaths, fmt.Sprintf("/%s", structName))
+			}
+		}
 
-		router.Route(basePath, func(sub chi.Router) {
-			// List and create
-			sub.Get("/", r.handleList(admin))
-			sub.Get("/export", r.handleExport(admin))
-			sub.Post("/", r.handleCreate(admin))
+		for _, basePath := range basePaths {
+			router.Route(basePath, func(sub chi.Router) {
+				// List and create
+				sub.Get("/", r.handleList(admin))
+				sub.Get("/export", r.handleExport(admin))
+				sub.Post("/", r.handleCreate(admin))
 
-			// Detail, update, delete
-			sub.Route("/{id}", func(subDetail chi.Router) {
-				subDetail.Get("/", r.handleDetail(admin))
-				subDetail.Get("/history", r.handleHistory(admin))
-				subDetail.Patch("/", r.handleUpdate(admin))
-				subDetail.Put("/", r.handleReplace(admin))
-				subDetail.Delete("/", r.handleDelete(admin))
+				// Detail, update, delete
+				sub.Route("/{id}", func(subDetail chi.Router) {
+					subDetail.Get("/", r.handleDetail(admin))
+					subDetail.Get("/history", r.handleHistory(admin))
+					subDetail.Patch("/", r.handleUpdate(admin))
+					subDetail.Put("/", r.handleReplace(admin))
+					subDetail.Delete("/", r.handleDelete(admin))
+				})
+
+				// Bulk operations
+				sub.Post("/bulk-create", r.handleBulkCreate(admin))
+				sub.Post("/bulk-update", r.handleBulkUpdate(admin))
+				sub.Delete("/bulk-delete", r.handleBulkDelete(admin))
+
+				// Actions
+				sub.Post("/action/{action}", r.handleAction(admin))
+
+				// Autocomplete
+				sub.Get("/autocomplete", r.handleAutocomplete(admin))
 			})
-
-			// Bulk operations
-			sub.Post("/bulk-create", r.handleBulkCreate(admin))
-			sub.Post("/bulk-update", r.handleBulkUpdate(admin))
-			sub.Delete("/bulk-delete", r.handleBulkDelete(admin))
-
-			// Actions
-			sub.Post("/action/{action}", r.handleAction(admin))
-
-			// Autocomplete
-			sub.Get("/autocomplete", r.handleAutocomplete(admin))
-		})
+		}
 	}
 }
 
@@ -527,7 +564,7 @@ func (r *Router) handleCreate(admin core.AdminInterface) http.HandlerFunc {
 		obj, err := admin.CreateObject(ctx, data)
 		if err != nil {
 			if isValidationError(err) {
-				respondError(w, http.StatusBadRequest, "validation_error", err.Error(), nil)
+				respondError(w, http.StatusBadRequest, "validation_error", err.Error(), validationDetails(err))
 				return
 			}
 			respondError(w, http.StatusInternalServerError, "create_failed", err.Error(), nil)
@@ -578,7 +615,7 @@ func (r *Router) handleUpdate(admin core.AdminInterface) http.HandlerFunc {
 		obj, err := admin.UpdateObject(ctx, id, data)
 		if err != nil {
 			if isValidationError(err) {
-				respondError(w, http.StatusBadRequest, "validation_error", err.Error(), nil)
+				respondError(w, http.StatusBadRequest, "validation_error", err.Error(), validationDetails(err))
 				return
 			}
 			respondError(w, http.StatusInternalServerError, "update_failed", err.Error(), nil)
@@ -632,7 +669,7 @@ func (r *Router) handleReplace(admin core.AdminInterface) http.HandlerFunc {
 		obj, err := admin.UpdateObject(ctx, id, data)
 		if err != nil {
 			if isValidationError(err) {
-				respondError(w, http.StatusBadRequest, "validation_error", err.Error(), nil)
+				respondError(w, http.StatusBadRequest, "validation_error", err.Error(), validationDetails(err))
 				return
 			}
 			respondError(w, http.StatusInternalServerError, "update_failed", err.Error(), nil)
@@ -641,6 +678,56 @@ func (r *Router) handleReplace(admin core.AdminInterface) http.HandlerFunc {
 
 		respondJSON(w, http.StatusOK, obj)
 	}
+}
+
+// bulkFailure responds for a bulk operation in which every item failed.
+// Client-caused failures (bad input, not found, permission denied,
+// validation) map to 4xx; only unexpected storage errors stay 500.
+func bulkFailure(w http.ResponseWriter, code, message string, errs []bulkItemError) {
+	status := http.StatusBadRequest
+	allPermissionDenied := len(errs) > 0
+	for _, e := range errs {
+		switch e.Code {
+		case "permission_denied":
+			continue
+		case "invalid_item", "invalid_id", "not_found":
+			allPermissionDenied = false
+			continue
+		default:
+			allPermissionDenied = false
+			if !isValidationError(errors.New(e.Message)) {
+				status = http.StatusInternalServerError
+			}
+		}
+	}
+	if allPermissionDenied {
+		status = http.StatusForbidden
+	}
+	respondError(w, status, code, message, map[string]interface{}{
+		"errors": errs,
+	})
+}
+
+// validationDetails converts field validation errors into the per-field
+// details map the admin UI renders next to each input.
+func validationDetails(err error) map[string]interface{} {
+	var verrs *validation.ValidationErrors
+	if !errors.As(err, &verrs) {
+		return nil
+	}
+	grouped := make(map[string][]string, len(verrs.Errors))
+	for _, e := range verrs.Errors {
+		field := e.Field
+		if field == "" {
+			field = "non_field_errors"
+		}
+		grouped[field] = append(grouped[field], e.Message)
+	}
+	details := make(map[string]interface{}, len(grouped))
+	for field, messages := range grouped {
+		details[field] = messages
+	}
+	return details
 }
 
 func isValidationError(err error) bool {
@@ -743,7 +830,6 @@ func (r *Router) handleBulkCreate(admin core.AdminInterface) http.HandlerFunc {
 
 		objects := make([]interface{}, 0, len(rawObjects))
 		errors := make([]bulkItemError, 0)
-		hasCreateFailure := false
 
 		for i, rawObject := range rawObjects {
 			data, ok := rawObject.(map[string]interface{})
@@ -764,10 +850,9 @@ func (r *Router) handleBulkCreate(admin core.AdminInterface) http.HandlerFunc {
 				continue
 			}
 
-			obj, err := admin.CreateObject(ctx, data)
-			if err != nil {
-				hasCreateFailure = true
-				errors = append(errors, bulkItemError{
+		obj, err := admin.CreateObject(ctx, data)
+		if err != nil {
+			errors = append(errors, bulkItemError{
 					Index:   i,
 					Code:    "create_failed",
 					Message: err.Error(),
@@ -777,18 +862,10 @@ func (r *Router) handleBulkCreate(admin core.AdminInterface) http.HandlerFunc {
 			objects = append(objects, obj)
 		}
 
-		if len(objects) == 0 {
-			if hasCreateFailure {
-				respondError(w, http.StatusInternalServerError, "create_failed", "Failed to create any objects", map[string]interface{}{
-					"errors": errors,
-				})
-				return
-			}
-			respondError(w, http.StatusBadRequest, "invalid_body", "No valid objects to create", map[string]interface{}{
-				"errors": errors,
-			})
-			return
-		}
+	if len(objects) == 0 {
+		bulkFailure(w, "create_failed", "Failed to create any objects", errors)
+		return
+	}
 
 		status := http.StatusCreated
 		if len(errors) > 0 {
@@ -838,7 +915,6 @@ func (r *Router) handleBulkUpdate(admin core.AdminInterface) http.HandlerFunc {
 
 		objects := make([]interface{}, 0, len(payload.IDs))
 		errors := make([]bulkItemError, 0)
-		hasUpdateFailure := false
 
 		for i, rawID := range payload.IDs {
 			id, err := normalizeBulkID(rawID)
@@ -869,10 +945,9 @@ func (r *Router) handleBulkUpdate(admin core.AdminInterface) http.HandlerFunc {
 				continue
 			}
 
-			obj, err := admin.UpdateObject(ctx, id, payload.Data)
-			if err != nil {
-				hasUpdateFailure = true
-				errors = append(errors, bulkItemError{
+		obj, err := admin.UpdateObject(ctx, id, payload.Data)
+		if err != nil {
+			errors = append(errors, bulkItemError{
 					Index:   i,
 					Code:    "update_failed",
 					Message: err.Error(),
@@ -882,18 +957,10 @@ func (r *Router) handleBulkUpdate(admin core.AdminInterface) http.HandlerFunc {
 			objects = append(objects, obj)
 		}
 
-		if len(objects) == 0 {
-			if hasUpdateFailure {
-				respondError(w, http.StatusInternalServerError, "update_failed", "Failed to update any objects", map[string]interface{}{
-					"errors": errors,
-				})
-				return
-			}
-			respondError(w, http.StatusBadRequest, "invalid_body", "No valid objects to update", map[string]interface{}{
-				"errors": errors,
-			})
-			return
-		}
+	if len(objects) == 0 {
+		bulkFailure(w, "update_failed", "Failed to update any objects", errors)
+		return
+	}
 
 		status := http.StatusOK
 		if len(errors) > 0 {
@@ -967,7 +1034,6 @@ func (r *Router) handleBulkDelete(admin core.AdminInterface) http.HandlerFunc {
 
 		deleted := 0
 		errors := make([]bulkItemError, 0)
-		hasDeleteFailure := false
 
 		for i, rawID := range payload.IDs {
 			id, err := normalizeBulkID(rawID)
@@ -999,7 +1065,6 @@ func (r *Router) handleBulkDelete(admin core.AdminInterface) http.HandlerFunc {
 			}
 
 			if err := admin.DeleteObject(ctx, id); err != nil {
-				hasDeleteFailure = true
 				errors = append(errors, bulkItemError{
 					Index:   i,
 					Code:    "delete_failed",
@@ -1011,18 +1076,10 @@ func (r *Router) handleBulkDelete(admin core.AdminInterface) http.HandlerFunc {
 			deleted++
 		}
 
-		if deleted == 0 {
-			if hasDeleteFailure {
-				respondError(w, http.StatusInternalServerError, "delete_failed", "Failed to delete any objects", map[string]interface{}{
-					"errors": errors,
-				})
-				return
-			}
-			respondError(w, http.StatusBadRequest, "invalid_body", "No valid objects to delete", map[string]interface{}{
-				"errors": errors,
-			})
-			return
-		}
+	if deleted == 0 {
+		bulkFailure(w, "delete_failed", "Failed to delete any objects", errors)
+		return
+	}
 
 		if len(errors) > 0 {
 			respondJSON(w, http.StatusMultiStatus, map[string]interface{}{
@@ -1107,6 +1164,14 @@ func (r *Router) handleAutocomplete(admin core.AdminInterface) http.HandlerFunc 
 				limit = l
 			}
 		}
+		// Clamp so a bad `limit` can neither blow up memory nor kill results.
+		const maxAutocompleteLimit = 50
+		if limit < 1 {
+			limit = 10
+		}
+		if limit > maxAutocompleteLimit {
+			limit = maxAutocompleteLimit
+		}
 
 		results, err := admin.Autocomplete(ctx, query, limit)
 		if err != nil {
@@ -1125,6 +1190,7 @@ func (r *Router) handleAutocomplete(admin core.AdminInterface) http.HandlerFunc 
 // handleGlobalSearch handles global search across all models
 func (r *Router) handleGlobalSearch(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
+	user, _ := apicore.UserFromContext(ctx)
 	query := req.URL.Query().Get("q")
 
 	if query == "" {
@@ -1132,10 +1198,31 @@ func (r *Router) handleGlobalSearch(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Optional `models` param (comma-separated) restricts the search scope.
+	allowedModels := make(map[string]bool)
+	if modelsParam := strings.TrimSpace(req.URL.Query().Get("models")); modelsParam != "" {
+		for _, name := range strings.Split(modelsParam, ",") {
+			if trimmed := strings.TrimSpace(name); trimmed != "" {
+				allowedModels[trimmed] = true
+			}
+		}
+	}
+
 	allAdmins := r.registry.GetAll()
 	results := make([]core.SearchResultGroup, 0)
 
+	adminBase := r.adminPrefix
+	if adminBase == "" {
+		adminBase = "/admin"
+	}
+
 	for name, admin := range allAdmins {
+		if len(allowedModels) > 0 && !allowedModels[name] {
+			continue
+		}
+		if !admin.HasViewPermission(ctx, user, nil) {
+			continue
+		}
 		items, err := admin.Autocomplete(ctx, query, 5)
 		if err != nil || len(items) == 0 {
 			continue
@@ -1151,7 +1238,7 @@ func (r *Router) handleGlobalSearch(w http.ResponseWriter, req *http.Request) {
 			group.Items = append(group.Items, core.SearchResultItem{
 				ID:    item.Value,
 				Title: item.Label,
-				URL:   fmt.Sprintf("/admin/%s/%v", name, item.Value),
+				URL:   fmt.Sprintf("%s/%s/%v/view", strings.TrimRight(adminBase, "/"), name, item.Value),
 			})
 		}
 
@@ -1337,7 +1424,7 @@ func (s *savedViewStore) list(userID, model string) []savedView {
 	return append([]savedView{}, modelViews...)
 }
 
-func (s *savedViewStore) upsert(userID, model string, request savedViewRequest) savedView {
+func (s *savedViewStore) upsert(userID, model string, request savedViewRequest) (savedView, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.views[userID] == nil {
@@ -1354,7 +1441,7 @@ func (s *savedViewStore) upsert(userID, model string, request savedViewRequest) 
 			updated.UpdatedAt = time.Now()
 			views[i] = updated
 			s.views[userID][model] = views
-			return updated
+			return updated, false
 		}
 	}
 
@@ -1368,11 +1455,41 @@ func (s *savedViewStore) upsert(userID, model string, request savedViewRequest) 
 		UpdatedAt: time.Now(),
 	}
 	s.views[userID][model] = append(views, newView)
-	return newView
+	return newView, true
+}
+
+// delete removes a saved view by ID. It reports whether a view was removed.
+func (s *savedViewStore) delete(userID, model, id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	userViews, ok := s.views[userID]
+	if !ok {
+		return false
+	}
+	views := userViews[model]
+	for i, view := range views {
+		if view.ID == id {
+			userViews[model] = append(views[:i], views[i+1:]...)
+			return true
+		}
+	}
+	return false
 }
 
 func userKey(user interface{}) string {
 	if user == nil {
+		return "anonymous"
+	}
+
+	// The admin auth middleware stores the user as a map.
+	if m, ok := user.(map[string]interface{}); ok {
+		for _, key := range []string{"username", "name", "id", "email"} {
+			if v, exists := m[key]; exists {
+				if s := fmt.Sprintf("%v", v); s != "" && s != "<nil>" {
+					return s
+				}
+			}
+		}
 		return "anonymous"
 	}
 
@@ -1440,8 +1557,36 @@ func (r *Router) handleSavedViewSave(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	view := r.views.upsert(userKey(user), modelName, request)
+	view, created := r.views.upsert(userKey(user), modelName, request)
+	if created {
+		respondJSON(w, http.StatusCreated, view)
+		return
+	}
 	respondJSON(w, http.StatusOK, view)
+}
+
+func (r *Router) handleSavedViewDelete(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	modelName := chi.URLParam(req, "model")
+	viewID := chi.URLParam(req, "id")
+	user, _ := apicore.UserFromContext(ctx)
+
+	admin, err := r.registry.Get(modelName)
+	if err != nil {
+		respondError(w, http.StatusNotFound, "model_not_found", err.Error(), nil)
+		return
+	}
+	if !admin.HasViewPermission(ctx, user, nil) {
+		respondError(w, http.StatusForbidden, "permission_denied", "You don't have permission to view this model", nil)
+		return
+	}
+
+	if !r.views.delete(userKey(user), modelName, viewID) {
+		respondError(w, http.StatusNotFound, "view_not_found", "Saved view not found", nil)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // Helper types and functions

@@ -1,11 +1,17 @@
 import { test, expect } from '@playwright/test';
 
+// Admin CRUD smoke flow. Requires a running backend for the dev proxy
+// (vite `server.proxy` -> http://localhost:8080) with a `categories`
+// model (name/slug required, is_active boolean, activate action).
+// NOTE: the ecommerce reference app is covered more thoroughly by
+// examples/ecommerce/ui-tests/tests/admin-redesign.spec.ts against the
+// production bundle; this spec keeps the vite-dev path honest.
+const MODEL = process.env.FORGE_E2E_MODEL || 'categories';
+
 test.describe('Admin CRUD Flow', () => {
   test.beforeEach(async ({ page }) => {
-    // Ensure we start clean (token affects routing via API client interceptor)
     await page.addInitScript(() => {
       localStorage.removeItem('admin_token');
-      localStorage.removeItem('admin-tabs');
     });
   });
 
@@ -13,38 +19,36 @@ test.describe('Admin CRUD Flow', () => {
     // 1) Login
     await page.goto('/login');
     await page.fill('[data-testid="username-input"]', 'admin');
-    await page.fill('[data-testid="password-input"]', 'password');
+    await page.fill('[data-testid="password-input"]', 'admin123');
     await page.click('[data-testid="login-button"]');
 
     await expect(page).toHaveURL('/');
     await expect(page.getByTestId('nav-dashboard')).toBeVisible();
 
-    // 2) Navigate to Example Models via sidebar
-    await page.click('[data-testid="nav-examplemodels"]');
-    await expect(page).toHaveURL('/admin/examplemodels');
+    // 2) Navigate to the model via sidebar
+    await page.click(`[data-testid="nav-${MODEL}"]`);
+    await expect(page).toHaveURL(new RegExp(`/${MODEL}$`));
 
     // List loads
     await expect(page.locator('table')).toBeVisible();
 
     // 3) Create new
     await page.click('[data-testid="create-button"]');
-    await expect(page).toHaveURL('/admin/examplemodels/new');
+    await expect(page).toHaveURL(new RegExp(`/${MODEL}/create$`));
 
     const unique = Date.now();
-    const createdName = `E2E User ${unique}`;
-    const createdEmail = `e2e_${unique}@example.com`;
+    const createdName = `E2E Category ${unique}`;
 
     await page.fill('#name', createdName);
-    await page.fill('#email', createdEmail);
-    await page.check('#is_active');
+    await page.fill('#slug', `e2e-${unique}`);
     await page.click('[data-testid="submit-button"]');
 
-    await expect(page).toHaveURL('/admin/examplemodels');
+    await expect(page).toHaveURL(new RegExp(`/${MODEL}$`));
     await expect(page.locator('table')).toContainText(createdName);
 
-    // Capture new id from row's edit button
+    // Capture new id from the row's edit button (actions are always
+    // present in the DOM; no hover needed).
     const row = page.locator('tr', { hasText: createdName });
-    await row.hover();
     const editBtn = row.locator('[data-testid^="edit-"]');
     const editTestId = (await editBtn.getAttribute('data-testid')) || '';
     const id = editTestId.replace('edit-', '');
@@ -52,40 +56,38 @@ test.describe('Admin CRUD Flow', () => {
 
     // 4) Edit
     await editBtn.click();
-    await expect(page).toHaveURL(new RegExp(`/admin/examplemodels/${id}$`));
+    await expect(page).toHaveURL(new RegExp(`/${MODEL}/${id}$`));
 
     const updatedName = `${createdName} Updated`;
     await page.fill('#name', updatedName);
-    await page.uncheck('#is_active');
     await page.click('[data-testid="submit-button"]');
 
-    await expect(page).toHaveURL('/admin/examplemodels');
+    await expect(page).toHaveURL(new RegExp(`/${MODEL}$`));
     await expect(page.locator('table')).toContainText(updatedName);
 
-    // 5) Bulk action: activate selected
-    await page.check(`[data-testid="select-${id}"]`);
-    await expect(page.getByTestId('bulk-toolbar')).toBeVisible();
-    await page.click('[data-testid="bulk-action-activate_selected"]');
+    // 5) Bulk action (activate requires confirmation in the reference app)
+    await page.click(`[data-testid="select-${id}"]`);
+    await expect(page.getByTestId('bulk-toolbar')).toContainText('1 selected');
+    await page.click('[data-testid="bulk-action-activate"]');
+    const actionDialog = page.getByTestId('bulk-action-dialog');
+    if (await actionDialog.isVisible()) {
+      await page.getByTestId('bulk-action-dialog-confirm').click();
+    }
+    await expect(page.getByTestId('bulk-toolbar')).toContainText(/Select rows/);
 
-    // Wait for action success handler to clear selection (toolbar disappears)
-    await expect(page.getByTestId('bulk-toolbar')).toBeHidden();
-
-    // 6) Filter: show inactive only, ensure our row disappears (it should be active after bulk activation)
+    // 6) Filter: inactive only hides the active row, then reset shows it.
     await page.click('[data-testid="filter-button"]');
     await page.selectOption('[data-testid="filter-is_active"]', 'false');
     await expect(page.locator('table')).not.toContainText(updatedName);
-
-    // Filter: show active only, our row should be present after bulk activation
-    await page.selectOption('[data-testid="filter-is_active"]', 'true');
+    await page.getByTestId('reset-filters').click();
     await expect(page.locator('table')).toContainText(updatedName);
 
-    // 7) Delete
-    page.once('dialog', (dialog) => dialog.accept());
+    // 7) Delete via the Radix confirmation dialog
     const updatedRow = page.locator('tr', { hasText: updatedName });
-    await updatedRow.hover();
     await updatedRow.locator(`[data-testid="delete-${id}"]`).click();
+    await expect(page.getByTestId('delete-dialog')).toBeVisible();
+    await page.getByTestId('delete-dialog-confirm').click();
 
-    // After deletion, it should disappear
     await expect(page.locator('table')).not.toContainText(updatedName);
   });
 });

@@ -44,11 +44,18 @@ Forge inspects the underlying `schema.Field` to automatically render the appropr
 
 ## Saved Views
 
-Administrators can save frequently used combinations of filters, search queries, and column orderings as **Saved Views**:
+Administrators can save frequently used combinations of search keywords,
+filters, and sort order as **Saved Views**. Views are stored per user on the
+server (`GET/POST /admin/api/saved-views/{model}`):
 
-1. **Creating a View**: Apply any combination of search keywords and filters, click **Save View**, and name it (e.g. *"Pending High-Value Orders"*).
-2. **Accessing Views**: Saved views are pinned as tabs at the top of the table for instant 1-click access.
-3. **Sharing**: Every saved view is reflected in the URL hash, making it easy to copy and share specific filtered views directly with colleagues.
+1. **Creating a view**: apply any combination of search, filters, and sorting,
+   click **Save view**, and name it (e.g. *"Pending High-Value Orders"*).
+   Saving a name that already exists updates that view (`200 OK`);
+   new names return `201 Created`.
+2. **Applying a view**: pick it from the **Saved views** dropdown; search,
+   filters, and sorting are restored.
+3. **Deleting a view**: with a view selected, click the trash button
+   (`DELETE /admin/api/saved-views/{model}/{id}` → `204`).
 
 ---
 

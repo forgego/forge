@@ -202,7 +202,7 @@ const COMPARISONS = [
 ];
 
 export default function Home() {
-  useDocusaurusContext();
+  const { siteConfig } = useDocusaurusContext();
   const [activeTab, setActiveTab] = useState(CODE_TABS[0].id);
 
   const selectedCode = CODE_TABS.find((t) => t.id === activeTab) || CODE_TABS[0];

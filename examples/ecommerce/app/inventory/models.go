@@ -162,13 +162,15 @@ func (Stock) Relations() []schema.Relation {
 func (Stock) Hooks() *schema.ModelHooks {
 	return &schema.ModelHooks{
 		BeforeSave: func(ctx context.Context, instance interface{}) error {
-			// Calculate available_quantity
-			// Check for low stock alert
+			if s, ok := instance.(*Stock); ok {
+				s.AvailableQuantity = s.Quantity - s.ReservedQuantity
+				if s.AvailableQuantity < 0 {
+					s.AvailableQuantity = 0
+				}
+			}
 			return nil
 		},
 		AfterSave: func(ctx context.Context, instance interface{}) error {
-			// Update product variant total stock
-			// Trigger low stock alert if needed
 			return nil
 		},
 	}

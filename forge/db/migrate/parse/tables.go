@@ -116,6 +116,31 @@ func (p *TableParser) parseColumnDefinition(colDef string) (generator.FieldDefin
 		Options: make(map[string]interface{}),
 	}
 
+	// Extract options from sqlType like VARCHAR(255), NUMERIC(10, 2)
+	upperSQLType := strings.ToUpper(sqlType)
+	if openIdx := strings.Index(upperSQLType, "("); openIdx > 0 {
+		if closeIdx := strings.Index(upperSQLType, ")"); closeIdx > openIdx {
+			inner := upperSQLType[openIdx+1 : closeIdx]
+			if strings.HasPrefix(upperSQLType, "VARCHAR") || strings.HasPrefix(upperSQLType, "CHAR") {
+				if maxLen, err := strconv.Atoi(strings.TrimSpace(inner)); err == nil {
+					field.Options["max_length"] = maxLen
+				}
+			} else if strings.HasPrefix(upperSQLType, "NUMERIC") || strings.HasPrefix(upperSQLType, "DECIMAL") {
+				parts := strings.Split(inner, ",")
+				if len(parts) >= 1 {
+					if maxDigits, err := strconv.Atoi(strings.TrimSpace(parts[0])); err == nil {
+						field.Options["max_digits"] = maxDigits
+					}
+				}
+				if len(parts) >= 2 {
+					if decimalPlaces, err := strconv.Atoi(strings.TrimSpace(parts[1])); err == nil {
+						field.Options["decimal_places"] = decimalPlaces
+					}
+				}
+			}
+		}
+	}
+
 	// Check for PRIMARY KEY
 	if strings.Contains(strings.ToUpper(remaining), "PRIMARY KEY") {
 		field.PrimaryKey = true
@@ -127,6 +152,20 @@ func (p *TableParser) parseColumnDefinition(colDef string) (generator.FieldDefin
 		strings.Contains(strings.ToUpper(remaining), "AUTO_INCREMENT") ||
 		strings.Contains(strings.ToUpper(remaining), "GENERATED ALWAYS AS IDENTITY") {
 		field.AutoIncrement = true
+	}
+
+	// Check for GENERATED ALWAYS AS (expr)
+	upperRemaining := strings.ToUpper(remaining)
+	if strings.Contains(upperRemaining, "GENERATED ALWAYS AS") && !strings.Contains(upperRemaining, "IDENTITY") {
+		field.Options["generated"] = true
+		startIdx := strings.Index(remaining, "(")
+		endIdx := strings.LastIndex(remaining, ")")
+		if startIdx != -1 && endIdx != -1 && endIdx > startIdx {
+			field.Options["generated_expr"] = strings.TrimSpace(remaining[startIdx+1 : endIdx])
+		}
+		if strings.Contains(upperRemaining, "STORED") {
+			field.Options["generated_stored"] = true
+		}
 	}
 
 	// Check for NOT NULL

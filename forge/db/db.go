@@ -236,10 +236,53 @@ func (db *DB) Rebind(query string) string {
 	return db.RebindPlaceholders(query)
 }
 
-var paramRegex = regexp.MustCompile(`\$([0-9]+)`)
+var (
+	paramRegex = regexp.MustCompile(`\$([0-9]+)`)
+	ilikeRegex = regexp.MustCompile(`(?i)\bILIKE\b`)
+)
 
 func rebindPostgresToSQLite(query string) string {
+	query = ilikeRegex.ReplaceAllString(query, "LIKE")
 	return paramRegex.ReplaceAllString(query, "?$1")
+}
+
+// QueryContext executes a query that returns rows, rebinding placeholders and dialect for the driver.
+func (db *DB) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	if db.DB == nil {
+		return nil, errors.New("database connection not initialized")
+	}
+	return db.DB.QueryContext(ctx, db.RebindPlaceholders(query), args...)
+}
+
+// QueryRowContext executes a query that is expected to return at most one row, rebinding placeholders and dialect for the driver.
+func (db *DB) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	if db.DB == nil {
+		return nil
+	}
+	return db.DB.QueryRowContext(ctx, db.RebindPlaceholders(query), args...)
+}
+
+// ExecContext executes a query without returning any rows, rebinding placeholders and dialect for the driver.
+func (db *DB) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	if db.DB == nil {
+		return nil, errors.New("database connection not initialized")
+	}
+	return db.DB.ExecContext(ctx, db.RebindPlaceholders(query), args...)
+}
+
+// Query executes a query that returns rows, rebinding placeholders and dialect for the driver.
+func (db *DB) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	return db.QueryContext(context.Background(), query, args...)
+}
+
+// QueryRow executes a query that returns at most one row, rebinding placeholders and dialect for the driver.
+func (db *DB) QueryRow(query string, args ...interface{}) *sql.Row {
+	return db.QueryRowContext(context.Background(), query, args...)
+}
+
+// Exec executes a query without returning rows, rebinding placeholders and dialect for the driver.
+func (db *DB) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return db.ExecContext(context.Background(), query, args...)
 }
 
 // Ping verifies the database connection is still alive.

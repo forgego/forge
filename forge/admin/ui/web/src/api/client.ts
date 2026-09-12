@@ -8,6 +8,9 @@ import type {
   ModelFormData,
   BulkActionRequest,
   BulkActionResponse,
+  BulkCreateResponse,
+  BulkUpdateResponse,
+  BulkDeleteResponse,
   SearchRequest,
   SearchResponse,
   AutocompleteResponse,
@@ -51,9 +54,16 @@ export class AdminAPIClient {
       (response) => response,
       (error: AxiosError<ErrorResponse>) => {
         if (error.response?.status === 401) {
-          // Handle unauthorized
-          localStorage.removeItem("admin_token");
-          window.location.href = "/login";
+          // Do not redirect if this is the login request itself
+          const isLoginRequest = error.config?.url?.endsWith("/login");
+          if (!isLoginRequest) {
+            localStorage.removeItem("admin_token");
+            const currentPath = window.location.pathname;
+            if (!currentPath.endsWith("/login")) {
+              const adminPrefix = currentPath.startsWith("/admin") ? "/admin" : "";
+              window.location.href = `${adminPrefix}/login`;
+            }
+          }
         }
         return Promise.reject(error);
       }
@@ -72,8 +82,9 @@ export class AdminAPIClient {
   }
 
   // Generic GET request for dynamic routes (e.g. plugins)
-  async get(url: string): Promise<any> {
-    return this.client.get(url);
+  async get<T = any>(url: string): Promise<T> {
+    const response = await this.client.get(url);
+    return response.data as T;
   }
 
   async getModels(): Promise<{ models: ModelListMetadata[] }> {
@@ -140,20 +151,29 @@ export class AdminAPIClient {
     const response = await this.client.post("/login", credentials);
     return response.data;
   }
+
+  async logout(): Promise<{ message?: string }> {
+    try {
+      const response = await this.client.post("/logout");
+      return response.data ?? {};
+    } finally {
+      localStorage.removeItem("admin_token");
+    }
+  }
   // Bulk operations
   async bulkCreate<T = any>(
     model: string,
     data: ModelFormData[]
-  ): Promise<{ created: number; objects: T[] }> {
+  ): Promise<BulkCreateResponse<T>> {
     const response = await this.client.post(`/${model}/bulk-create`, data);
     return response.data;
   }
 
-  async bulkUpdate(
+  async bulkUpdate<T = any>(
     model: string,
     ids: (string | number)[],
     data: Partial<ModelFormData>
-  ): Promise<{ updated: number }> {
+  ): Promise<BulkUpdateResponse<T>> {
     const response = await this.client.post(`/${model}/bulk-update`, {
       ids,
       data,
@@ -161,8 +181,20 @@ export class AdminAPIClient {
     return response.data;
   }
 
-  async bulkDelete(model: string, ids: (string | number)[]): Promise<void> {
-    await this.client.delete(`/${model}/bulk-delete`, { data: { ids } });
+  // Bulk delete returns 204 (full success, empty body) or 207 with a
+  // {deleted, errors} payload on partial success. Always normalized to
+  // a BulkDeleteResponse so callers can surface partial failures.
+  async bulkDelete(
+    model: string,
+    ids: (string | number)[]
+  ): Promise<BulkDeleteResponse> {
+    const response = await this.client.delete(`/${model}/bulk-delete`, {
+      data: { ids },
+    });
+    if (response.status === 204 || response.data == null || response.data === "") {
+      return { deleted: ids.length };
+    }
+    return response.data as BulkDeleteResponse;
   }
 
   // Actions
@@ -198,17 +230,13 @@ export class AdminAPIClient {
     return response.data;
   }
 
-  // File upload
-  async uploadFile(model: string, file: File): Promise<UploadResponse> {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const response = await this.client.post(`/${model}/upload`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-    return response.data;
+  // File upload is not implemented by the admin REST API (no /upload
+  // route exists). Kept as an explicit stub so misuse fails loudly
+  // instead of 404ing silently.
+  async uploadFile(_model: string, _file: File): Promise<UploadResponse> {
+    throw new Error(
+      "File upload is not supported by the admin API. Implement an upload endpoint or a custom widget first."
+    );
   }
 
   // Export list results
@@ -238,12 +266,54 @@ export class AdminAPIClient {
         ) {
           return;
         }
+        if (Array.isArray(value)) {
+          if (value.length > 0) {
+            searchParams.set(key, value.join(","));
+          }
+          return;
+        }
+        if (typeof value === "object") {
+          searchParams.set(key, JSON.stringify(value));
+          return;
+        }
         searchParams.set(key, String(value));
       });
     }
 
     const query = searchParams.toString();
     return `${this.baseURL}/${model}/export${query ? `?${query}` : ""}`;
+  }
+
+  // Download an export as a file. Uses an authenticated fetch (blob)
+  // instead of window.open so the Bearer token is sent and popup
+  // blockers cannot swallow the download.
+  async downloadExport(
+    model: string,
+    format: "csv" | "json",
+    params?: ListParams
+  ): Promise<{ blob: Blob; filename: string }> {
+    const url = this.getExportURL(model, format, params);
+    const token = localStorage.getItem("admin_token");
+    const response = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
+    });
+    if (!response.ok) {
+      let message = `Export failed (${response.status})`;
+      try {
+        const data = await response.json();
+        if (data?.error?.message) message = data.error.message;
+      } catch {
+        /* keep default message */
+      }
+      throw new Error(message);
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get("Content-Disposition") || "";
+    const match = disposition.match(/filename="?([^";]+)"?/);
+    const filename =
+      match?.[1] || `${model}-export.${format === "csv" ? "csv" : "json"}`;
+    return { blob, filename };
   }
 
   // Saved views
@@ -258,6 +328,10 @@ export class AdminAPIClient {
   ): Promise<SavedView> {
     const response = await this.client.post(`/saved-views/${model}`, request);
     return response.data;
+  }
+
+  async deleteSavedView(model: string, id: string): Promise<void> {
+    await this.client.delete(`/saved-views/${model}/${id}`);
   }
 
   // Helper to construct URLs

@@ -186,7 +186,7 @@ func TestMigrationStatus(t *testing.T) {
 	// Get detailed status
 	detailedStatus, err := runner.GetDetailedStatus(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, uint(2), detailedStatus.Current)
+	assert.Equal(t, "2", detailedStatus.Current)
 	assert.False(t, detailedStatus.Dirty)
 	assert.Len(t, detailedStatus.Applied, 2, "two migrations should be applied")
 	assert.Len(t, detailedStatus.Pending, 1, "one migration should be pending")
@@ -202,7 +202,7 @@ func TestMigrationStatus(t *testing.T) {
 
 	detailedStatus, err = runner.GetDetailedStatus(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, uint(3), detailedStatus.Current)
+	assert.Equal(t, "3", detailedStatus.Current)
 	assert.Len(t, detailedStatus.Applied, 3, "all migrations should be applied")
 	assert.Len(t, detailedStatus.Pending, 0, "no pending migrations")
 }

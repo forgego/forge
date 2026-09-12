@@ -1,15 +1,15 @@
 import { test, expect } from '@playwright/test';
 
-const username = 'admin';
-const password = 'password';
+const username = process.env.FORGE_ADMIN_USERNAME || 'admin';
+const password = process.env.FORGE_ADMIN_PASSWORD || 'admin123';
 
 async function login(page) {
-  await page.addInitScript(() => {
+  await page.goto('login');
+  await page.evaluate(() => {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin-tabs');
   });
 
-  await page.goto('login');
   await page.fill('[data-testid="username-input"]', username);
   await page.fill('[data-testid="password-input"]', password);
   await page.click('[data-testid="login-button"]');
@@ -21,7 +21,10 @@ test.describe('Ecommerce Admin UI', () => {
   test('login and load all model list pages', async ({ page }) => {
     await login(page);
 
-    const metaResp = await page.request.get('api/meta');
+    const token = await page.evaluate(() => localStorage.getItem('admin_token'));
+    const metaResp = await page.request.get('api/meta', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     expect(metaResp.ok()).toBeTruthy();
     const meta = await metaResp.json();
     const models = meta.models || [];

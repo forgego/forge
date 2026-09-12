@@ -46,6 +46,11 @@ type mockAdmin struct {
 	lastActionParams     map[string]interface{}
 	historyEntries       []core.LogEntry
 	historyErr           error
+	denyView             bool
+	autocompleteItems    []core.AutocompleteItem
+	autocompleteErr      error
+	lastAutocompleteQuery string
+	lastAutocompleteLimit int
 }
 
 type mockUpdateCall struct {
@@ -80,7 +85,7 @@ func (m *mockAdmin) HasDeletePermission(ctx context.Context, user interface{}, o
 	return true
 }
 func (m *mockAdmin) HasViewPermission(ctx context.Context, user interface{}, obj interface{}) bool {
-	return true
+	return !m.denyView
 }
 func (m *mockAdmin) HasModulePermission(ctx context.Context, user interface{}) bool {
 	return m.moduleAllowed
@@ -151,7 +156,12 @@ func (m *mockAdmin) ExecuteAction(ctx context.Context, actionName string, ids []
 	return nil, nil
 }
 func (m *mockAdmin) Autocomplete(ctx context.Context, query string, limit int) ([]core.AutocompleteItem, error) {
-	return nil, nil
+	m.lastAutocompleteQuery = query
+	m.lastAutocompleteLimit = limit
+	if m.autocompleteErr != nil {
+		return nil, m.autocompleteErr
+	}
+	return m.autocompleteItems, nil
 }
 
 func TestHandleMetaList_UsesModelCountFromListObjects(t *testing.T) {
@@ -1019,3 +1029,257 @@ func TestHandleHistory_ReturnsAuditLog(t *testing.T) {
 	assert.Equal(t, "add", entryMap["action"])
 }
 
+
+func withURLParams(req *http.Request, params map[string]string) *http.Request {
+	routeCtx := chi.NewRouteContext()
+	for key, value := range params {
+		routeCtx.URLParams.Add(key, value)
+	}
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx)
+	return req.WithContext(ctx)
+}
+
+func registerViewableModel(t *testing.T, registry *core.Registry, admin *mockAdmin) {
+	t.Helper()
+	require.NoError(t, registry.Register(admin))
+}
+
+func TestHandleSavedViewSave_CreatesViewWith201(t *testing.T) {
+	registry := core.NewRegistry()
+	registerViewableModel(t, registry, &mockAdmin{modelName: "products"})
+	router := NewRouter(registry)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/saved-views/products", bytes.NewBufferString(`{"name":"Active","filters":{"active":"true"}}`))
+	req = withURLParams(req, map[string]string{"model": "products"})
+	rec := httptest.NewRecorder()
+
+	router.handleSavedViewSave(rec, req)
+	require.Equal(t, http.StatusCreated, rec.Code)
+
+	var view savedView
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &view))
+	assert.Equal(t, "Active", view.Name)
+	require.NotEmpty(t, view.ID)
+}
+
+func TestHandleSavedViewSave_UpsertsSameNameWith200(t *testing.T) {
+	registry := core.NewRegistry()
+	registerViewableModel(t, registry, &mockAdmin{modelName: "products"})
+	router := NewRouter(registry)
+
+	save := func(body string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/api/saved-views/products", bytes.NewBufferString(body))
+		req = withURLParams(req, map[string]string{"model": "products"})
+		rec := httptest.NewRecorder()
+		router.handleSavedViewSave(rec, req)
+		return rec
+	}
+
+	first := save(`{"name":"Active","filters":{"a":"1"}}`)
+	require.Equal(t, http.StatusCreated, first.Code)
+	var firstView savedView
+	require.NoError(t, json.Unmarshal(first.Body.Bytes(), &firstView))
+
+	second := save(`{"name":"active","filters":{"a":"2"}}`)
+	require.Equal(t, http.StatusOK, second.Code)
+	var secondView savedView
+	require.NoError(t, json.Unmarshal(second.Body.Bytes(), &secondView))
+	assert.Equal(t, firstView.ID, secondView.ID)
+}
+
+func TestHandleSavedViewSave_RejectsMissingName(t *testing.T) {
+	registry := core.NewRegistry()
+	registerViewableModel(t, registry, &mockAdmin{modelName: "products"})
+	router := NewRouter(registry)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/saved-views/products", bytes.NewBufferString(`{"filters":{}}`))
+	req = withURLParams(req, map[string]string{"model": "products"})
+	rec := httptest.NewRecorder()
+
+	router.handleSavedViewSave(rec, req)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestHandleSavedViewDelete_DeletesView(t *testing.T) {
+	registry := core.NewRegistry()
+	registerViewableModel(t, registry, &mockAdmin{modelName: "products"})
+	router := NewRouter(registry)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/saved-views/products", bytes.NewBufferString(`{"name":"Temp"}`))
+	req = withURLParams(req, map[string]string{"model": "products"})
+	rec := httptest.NewRecorder()
+	router.handleSavedViewSave(rec, req)
+	require.Equal(t, http.StatusCreated, rec.Code)
+	var view savedView
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &view))
+
+	delReq := httptest.NewRequest(http.MethodDelete, "/api/saved-views/products/"+view.ID, nil)
+	delReq = withURLParams(delReq, map[string]string{"model": "products", "id": view.ID})
+	delRec := httptest.NewRecorder()
+	router.handleSavedViewDelete(delRec, delReq)
+	require.Equal(t, http.StatusNoContent, delRec.Code)
+
+	againRec := httptest.NewRecorder()
+	router.handleSavedViewDelete(againRec, delReq)
+	require.Equal(t, http.StatusNotFound, againRec.Code)
+}
+
+func TestUserKey_UsesMapUsername(t *testing.T) {
+	assert.Equal(t, "alice", userKey(map[string]interface{}{"username": "alice", "role": "superuser"}))
+	assert.Equal(t, "anonymous", userKey(nil))
+}
+
+func TestHandleAutocomplete_ClampsLimit(t *testing.T) {
+	admin := &mockAdmin{}
+	router := NewRouter(core.NewRegistry())
+
+	for _, tc := range []struct {
+		limit    string
+		expected int
+	}{
+		{"9999", 50},
+		{"-5", 10},
+		{"abc", 10},
+		{"", 10},
+		{"25", 25},
+	} {
+		url := "/api/products/autocomplete?q=x"
+		if tc.limit != "" {
+			url += "&limit=" + tc.limit
+		}
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		rec := httptest.NewRecorder()
+		router.handleAutocomplete(admin)(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, tc.expected, admin.lastAutocompleteLimit, "limit=%q", tc.limit)
+		assert.Equal(t, "x", admin.lastAutocompleteQuery)
+	}
+}
+
+func TestHandleGlobalSearch_RespectsModelsParam(t *testing.T) {
+	registry := core.NewRegistry()
+	registerViewableModel(t, registry, &mockAdmin{
+		modelName: "products",
+		autocompleteItems: []core.AutocompleteItem{
+			{Value: 7, Label: "Laptop Pro"},
+		},
+	})
+	registerViewableModel(t, registry, &mockAdmin{
+		modelName: "orders",
+		autocompleteItems: []core.AutocompleteItem{
+			{Value: 9, Label: "Order 9"},
+		},
+	})
+	router := NewRouter(registry)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/search?q=lap&models=products", nil)
+	rec := httptest.NewRecorder()
+	router.handleGlobalSearch(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var payload core.SearchResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
+	require.Len(t, payload.Results, 1)
+	assert.Equal(t, "products", payload.Results[0].Model)
+	require.Len(t, payload.Results[0].Items, 1)
+	assert.Equal(t, "/admin/products/7/view", payload.Results[0].Items[0].URL)
+}
+
+func TestHandleGlobalSearch_SkipsDeniedModels(t *testing.T) {
+	registry := core.NewRegistry()
+	registerViewableModel(t, registry, &mockAdmin{
+		modelName: "products",
+		denyView:  true,
+		autocompleteItems: []core.AutocompleteItem{
+			{Value: 7, Label: "Laptop Pro"},
+		},
+	})
+	router := NewRouter(registry)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/search?q=lap", nil)
+	rec := httptest.NewRecorder()
+	router.handleGlobalSearch(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var payload core.SearchResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
+	assert.Empty(t, payload.Results)
+}
+
+func TestHandleGlobalSearch_UsesAdminPrefix(t *testing.T) {
+	registry := core.NewRegistry()
+	registerViewableModel(t, registry, &mockAdmin{
+		modelName: "products",
+		autocompleteItems: []core.AutocompleteItem{
+			{Value: 7, Label: "Laptop Pro"},
+		},
+	})
+	router := NewRouter(registry).WithAdminPrefix("/custom-admin")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/search?q=lap", nil)
+	rec := httptest.NewRecorder()
+	router.handleGlobalSearch(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var payload core.SearchResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
+	require.Len(t, payload.Results, 1)
+	assert.Equal(t, "/custom-admin/products/7/view", payload.Results[0].Items[0].URL)
+}
+
+func TestWithAdminPrefix_Normalizes(t *testing.T) {
+	router := NewRouter(core.NewRegistry())
+	assert.Equal(t, "/admin", router.adminPrefix)
+	router.WithAdminPrefix("custom/")
+	assert.Equal(t, "/custom", router.adminPrefix)
+	router.WithAdminPrefix("")
+	assert.Equal(t, "/admin", router.adminPrefix)
+}
+
+func TestHandleBulkCreate_AllValidationFailuresReturn400(t *testing.T) {
+	admin := &mockAdmin{
+		createObjectFn: func(data map[string]interface{}) (interface{}, error) {
+			return nil, fmt.Errorf("validation failed: name is required")
+		},
+	}
+	router := NewRouter(core.NewRegistry())
+
+	req := httptest.NewRequest(http.MethodPost, "/api/products/bulk-create", bytes.NewBufferString(`[{"name":""}]`))
+	rec := httptest.NewRecorder()
+
+	router.handleBulkCreate(admin)(rec, req)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestHandleBulkDelete_AllNotFoundReturn400(t *testing.T) {
+	admin := &mockAdmin{
+		getObjectFn: func(id interface{}) (interface{}, error) {
+			return nil, assert.AnError
+		},
+	}
+	router := NewRouter(core.NewRegistry())
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/products/bulk-delete", bytes.NewBufferString(`{"ids":[1,2]}`))
+	rec := httptest.NewRecorder()
+
+	router.handleBulkDelete(admin)(rec, req)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestHandleBulkDelete_AllPermissionDeniedReturn403(t *testing.T) {
+	admin := &mockAdmin{
+		getObjectFn: func(id interface{}) (interface{}, error) {
+			return map[string]interface{}{"id": id}, nil
+		},
+		hasDeletePermission: func(obj interface{}) bool {
+			return obj == nil
+		},
+	}
+	router := NewRouter(core.NewRegistry())
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/products/bulk-delete", bytes.NewBufferString(`{"ids":[1]}`))
+	rec := httptest.NewRecorder()
+
+	router.handleBulkDelete(admin)(rec, req)
+	require.Equal(t, http.StatusForbidden, rec.Code)
+}

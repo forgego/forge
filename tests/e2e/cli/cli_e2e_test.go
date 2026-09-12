@@ -83,7 +83,7 @@ func TestCLIApplyMigration(t *testing.T) {
 
 	// Start Postgres container
 	opts := testhelpers.DefaultPostgresOpts()
-	db, dsn, cleanup, err := testhelpers.StartPostgresContainer(ctx, opts)
+	db, _, cleanup, err := testhelpers.StartPostgresContainer(ctx, opts)
 	require.NoError(t, err)
 	defer cleanup()
 	defer db.Close()
@@ -110,7 +110,13 @@ func TestCLIApplyMigration(t *testing.T) {
 
 	// Run apply
 	env := map[string]string{
-		"DATABASE_URL": dsn,
+		"FORGE_DATABASE_DRIVER":   "postgres",
+		"FORGE_DATABASE_HOST":     opts.Host,
+		"FORGE_DATABASE_PORT":     opts.Port,
+		"FORGE_DATABASE_USER":     opts.User,
+		"FORGE_DATABASE_PASSWORD": opts.Password,
+		"FORGE_DATABASE_NAME":     opts.DBName,
+		"FORGE_DATABASE_SSLMODE":  "disable",
 	}
 	stdout, stderr, err := testhelpers.RunCLI(ctx, workdir, env, []string{"migrate", "up"}, 15*time.Second)
 
@@ -118,6 +124,8 @@ func TestCLIApplyMigration(t *testing.T) {
 	if err != nil {
 		t.Logf("stderr: %s", stderr)
 	}
+
+	require.NoError(t, err, "stdout: %s; stderr: %s", stdout, stderr)
 
 	// Verify table was created
 	testhelpers.AssertTableExists(ctx, t, db, "postgres", "users")
@@ -133,7 +141,7 @@ func TestCLIStatus(t *testing.T) {
 	defer cancel()
 
 	opts := testhelpers.DefaultPostgresOpts()
-	_, dsn, cleanup, err := testhelpers.StartPostgresContainer(ctx, opts)
+	_, _, cleanup, err := testhelpers.StartPostgresContainer(ctx, opts)
 	require.NoError(t, err)
 	defer cleanup()
 
@@ -141,9 +149,17 @@ func TestCLIStatus(t *testing.T) {
 	defer cleanupWd()
 
 	env := map[string]string{
-		"DATABASE_URL": dsn,
+		"FORGE_DATABASE_DRIVER":   "postgres",
+		"FORGE_DATABASE_HOST":     opts.Host,
+		"FORGE_DATABASE_PORT":     opts.Port,
+		"FORGE_DATABASE_USER":     opts.User,
+		"FORGE_DATABASE_PASSWORD": opts.Password,
+		"FORGE_DATABASE_NAME":     opts.DBName,
+		"FORGE_DATABASE_SSLMODE":  "disable",
 	}
 	stdout, _, err := testhelpers.RunCLI(ctx, workdir, env, []string{"migrate", "status"}, 10*time.Second)
+
+	require.NoError(t, err)
 
 	// Status command should produce output
 	assert.NotEmpty(t, stdout, "status output should not be empty")

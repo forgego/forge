@@ -18,6 +18,9 @@ type Config struct {
 // NewConfig creates a new configuration instance
 func NewConfig() *Config {
 	v := viper.New()
+	v.SetEnvPrefix("FORGE")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
 	v.SetConfigType("yaml")
 	v.SetConfigName("config")
 	v.AddConfigPath(".")

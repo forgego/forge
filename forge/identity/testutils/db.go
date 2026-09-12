@@ -32,6 +32,7 @@ func createTestDatabase(ctx context.Context, defaultDB *sql.DB) (string, error) 
 
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		dbName := generateTestDBName()
+		// nosemgrep: go.lang.security.audit.database.string-formatted-query.string-formatted-query, go.lang.security.audit.database.string-formatted-query
 		query := fmt.Sprintf("CREATE DATABASE %s", pq.QuoteIdentifier(dbName))
 		if _, err := defaultDB.ExecContext(ctx, query); err != nil {
 			if isDuplicateDatabaseError(err) {
@@ -169,7 +170,8 @@ func SetupTestDB(t *testing.T) *db.DB {
 			return
 		}
 		defer cleanupDB.Close()
-		// Use WITH (FORCE) to drop even if connections remain
+		// Use WITH (FORCE) to drop even if connections remain.
+		// nosemgrep: go.lang.security.audit.database.string-formatted-query.string-formatted-query, go.lang.security.audit.database.string-formatted-query
 		query := fmt.Sprintf("DROP DATABASE IF EXISTS %s WITH (FORCE)", pq.QuoteIdentifier(dbName))
 		_, _ = cleanupDB.ExecContext(context.Background(), query)
 	})

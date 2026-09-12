@@ -144,6 +144,7 @@ func (s *Site) Handler() http.Handler {
 
 	// 1. Register API Routes
 	apiRouter := rest.NewRouter(s.registry)
+	apiRouter.WithAdminPrefix(s.uiConfig.Prefix)
 	apiRouter.RegisterRoutes(r)
 
 	// 2. Serve Static UI Assets
@@ -156,7 +157,7 @@ func (s *Site) Handler() http.Handler {
 
 	if s.uiConfig.Source == UISourceStatic && s.uiConfig.StaticDir != "" {
 		// Serve from local directory
-		handler := server.StaticFiles("", s.uiConfig.StaticDir, server.WithPrefix(prefix), server.WithIndexFiles("index.html"), server.WithFallback("index.html"))
+		handler := server.StaticFiles("", s.uiConfig.StaticDir, server.WithPrefix(prefix), server.WithIndexFiles("index.html"), server.WithFallback("index.html"), server.WithDisableCache(true))
 		r.Handle(routePattern, handler)
 		if prefix == "" {
 			r.Handle("/", handler)

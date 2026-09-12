@@ -32,6 +32,7 @@ permissions:
   contents: read
   security-events: write
   actions: read
+  pull-requests: read
 
 jobs:
   changes:
@@ -45,10 +46,10 @@ jobs:
       docker: ${{ steps.force.outputs.docker || steps.filter.outputs.docker }}
       workflows: ${{ steps.force.outputs.workflows || steps.filter.outputs.workflows }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
-      - uses: dorny/paths-filter@v4
+      - uses: dorny/paths-filter@v4.0.3
         id: filter
         if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
         with:
@@ -85,12 +86,13 @@ jobs:
     needs: changes
     if: needs.changes.outputs.go == 'true' || needs.changes.outputs.workflows == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
       
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7.0.0
         with:
-          go-version: '1.25'
+          go-version: '1.27.1'
+          cache-dependency-path: '**/go.sum'
       
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
@@ -113,19 +115,20 @@ jobs:
     needs: changes
     if: needs.changes.outputs.go == 'true' || needs.changes.outputs.workflows == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
       
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7.0.0
         with:
-          go-version: '1.25'
+          go-version: '1.27.1'
+          cache-dependency-path: '**/go.sum'
       
       - name: Run Gosec Security Scanner
         continue-on-error: true
-        uses: securego/gosec@master
-        with:
-          args: '-fmt sarif -out gosec-results.sarif -exclude-dir=tests ./...'
-          working-directory: forge
+        working-directory: forge
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@v2.29.0
+          gosec -fmt sarif -out ../gosec-results.sarif -exclude-dir=tests ./...
       
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v4
@@ -139,29 +142,46 @@ jobs:
     needs: changes
     if: |
       needs.changes.outputs.workflows == 'true' ||
-      (matrix.directory == 'docs-site' && needs.changes.outputs.docs == 'true') ||
-      (matrix.directory == 'forge/admin/ui/web' && needs.changes.outputs.admin_ui == 'true')
+      needs.changes.outputs.docs == 'true' ||
+      needs.changes.outputs.admin_ui == 'true'
     strategy:
       matrix:
         directory: ['forge/admin/ui/web', 'docs-site']
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
       
-      - uses: actions/setup-node@v6
+      - name: Check if directory should be audited
+        id: check_run
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] || \
+             [ "${{ github.event_name }}" = "workflow_dispatch" ] || \
+             [ "${{ needs.changes.outputs.workflows }}" = "true" ] || \
+             [ "${{ matrix.directory }}" = "docs-site" -a "${{ needs.changes.outputs.docs }}" = "true" ] || \
+             [ "${{ matrix.directory }}" = "forge/admin/ui/web" -a "${{ needs.changes.outputs.admin_ui }}" = "true" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v7.0.0
+        if: steps.check_run.outputs.should_run == 'true'
         with:
-          node-version: '22'
+          node-version: '26.8.1'
           cache: 'npm'
           cache-dependency-path: ${{ matrix.directory }}/package-lock.json
       
       - name: Install dependencies
+        if: steps.check_run.outputs.should_run == 'true'
         working-directory: ${{ matrix.directory }}
         run: npm ci
       
       - name: Run npm audit
+        if: steps.check_run.outputs.should_run == 'true'
         working-directory: ${{ matrix.directory }}
-        run: npm audit --audit-level=moderate
+        run: npx -y better-npm-audit audit --level=moderate
       
       - name: Check for outdated packages
+        if: steps.check_run.outputs.should_run == 'true'
         working-directory: ${{ matrix.directory }}
         run: npm outdated || true
 
@@ -172,7 +192,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.go == 'true' || needs.changes.outputs.workflows == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
       
       - name: Run Snyk to check for vulnerabilities
         uses: snyk/actions/golang@master
@@ -180,9 +200,8 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --severity-threshold=high
+          args: --severity-threshold=high --file=forge/go.mod
           command: test
-          working-directory: forge
 
   trivy:
     name: Trivy Security Scanner
@@ -196,16 +215,17 @@ jobs:
       needs.changes.outputs.docker == 'true' ||
       needs.changes.outputs.workflows == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
       
       - name: Run Trivy vulnerability scanner in repo mode
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
+          trivyignores: '.trivyignore'
       
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
@@ -219,18 +239,19 @@ jobs:
     needs: changes
     if: github.event_name != 'schedule' && (needs.changes.outputs.docker == 'true' || needs.changes.outputs.examples == 'true' || needs.changes.outputs.workflows == 'true')
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
       
       - name: Build Docker image
-        run: docker build -t forge-ecommerce:test -f examples/ecommerce/Dockerfile examples/ecommerce
+        run: docker build -t forge-ecommerce:test -f examples/ecommerce/Dockerfile .
       
       - name: Run Trivy vulnerability scanner on image
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'forge-ecommerce:test'
           format: 'sarif'
           output: 'trivy-docker-results.sarif'
           severity: 'CRITICAL,HIGH'
+          trivyignores: '.trivyignore'
       
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
@@ -244,13 +265,15 @@ jobs:
     needs: changes
     if: needs.changes.outputs.go == 'true' || needs.changes.outputs.examples == 'true' || needs.changes.outputs.workflows == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
       
       - name: Run OSV Scanner
-        uses: google/osv-scanner-action@v1
+        uses: google/osv-scanner-action/osv-scanner-action@v2.5.1
         continue-on-error: true
         with:
           scan-args: |-
+            scan
+            source
             --recursive
             --skip-git
             ./forge
@@ -268,12 +291,12 @@ jobs:
       needs.changes.outputs.docker == 'true' ||
       needs.changes.outputs.workflows == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
       
       - name: TruffleHog OSS
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@v3.97.4
         with:
           path: ./
           base: ${{ github.event.repository.default_branch }}
@@ -286,12 +309,13 @@ jobs:
     needs: changes
     if: needs.changes.outputs.go == 'true' || needs.changes.outputs.workflows == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
       
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7.0.0
         with:
-          go-version: '1.25'
+          go-version: '1.27.1'
+          cache-dependency-path: '**/go.sum'
       
       - name: Install go-licenses
         run: go install github.com/google/go-licenses@latest
@@ -308,12 +332,12 @@ jobs:
       security-events: write
       id-token: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
       
       - name: Run analysis
-        uses: ossf/scorecard-action@v2
+        uses: ossf/scorecard-action@v2.4.4
         with:
           results_file: results.sarif
           results_format: sarif

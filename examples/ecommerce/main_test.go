@@ -18,6 +18,7 @@ import (
 	"strings"
 	"testing"
 
+	"examples/ecommerce/app/seeder"
 	"github.com/forgego/forge/admin"
 	"github.com/forgego/forge/admin/components"
 	"github.com/forgego/forge/admin/core"
@@ -172,6 +173,71 @@ func TestBuildEcommerceRouter_HTTPReachability(t *testing.T) {
 				}
 				if !strings.Contains(body, `"results"`) {
 					return newTestErr("expected products list payload, got %q", body)
+				}
+				return nil
+			},
+		},
+		{
+			name: "storefront home page",
+			path: "/",
+			check: func(status int, body string) error {
+				if status != http.StatusOK {
+					return newTestErr("expected / status 200, got %d", status)
+				}
+				if !strings.Contains(body, "Forge Framework") || !strings.Contains(body, "Live Interactive Storefront") {
+					return newTestErr("expected storefront page content, got %q", body)
+				}
+				return nil
+			},
+		},
+		{
+			name: "openapi spec endpoint",
+			path: "/api/openapi.json",
+			check: func(status int, body string) error {
+				if status != http.StatusOK {
+					return newTestErr("expected /api/openapi.json status 200, got %d", status)
+				}
+				if !strings.Contains(body, `"openapi":"3.0.3"`) {
+					return newTestErr("expected OpenAPI 3.0 spec, got %q", body)
+				}
+				return nil
+			},
+		},
+		{
+			name: "catalog aggregated stats",
+			path: "/api/v1/catalog/stats",
+			check: func(status int, body string) error {
+				if status != http.StatusOK {
+					return newTestErr("expected /api/v1/catalog/stats status 200, got %d", status)
+				}
+				if !strings.Contains(body, `"total_products"`) {
+					return newTestErr("expected catalog stats payload, got %q", body)
+				}
+				return nil
+			},
+		},
+		{
+			name: "catalog faceted search",
+			path: "/api/v1/catalog/search?q=pro",
+			check: func(status int, body string) error {
+				if status != http.StatusOK {
+					return newTestErr("expected /api/v1/catalog/search status 200, got %d", status)
+				}
+				if !strings.Contains(body, `"results"`) {
+					return newTestErr("expected search results payload, got %q", body)
+				}
+				return nil
+			},
+		},
+		{
+			name: "orders analytics summary",
+			path: "/api/v1/orders/summary",
+			check: func(status int, body string) error {
+				if status != http.StatusOK {
+					return newTestErr("expected /api/v1/orders/summary status 200, got %d", status)
+				}
+				if !strings.Contains(body, `"total_orders"`) {
+					return newTestErr("expected orders summary payload, got %q", body)
 				}
 				return nil
 			},
@@ -2081,3 +2147,199 @@ func TestBuildEcommerceRouter_APISupportAndReturnFlow(t *testing.T) {
 		t.Fatalf("expected return items for return_request_id %d, got %v", retReqID, filteredItems["results"])
 	}
 }
+
+func TestBuildEcommerceRouter_FullFrameworkWithSeedData(t *testing.T) {
+	ctx := context.Background()
+	t.Setenv("FORGE_ADMIN_USERNAME", "admin")
+	t.Setenv("FORGE_ADMIN_PASSWORD", "admin123")
+
+	dbPath := filepath.Join(t.TempDir(), "ecommerce_seed_test.sqlite")
+	cfg := config.NewConfig()
+	cfg.Set("database.driver", "sqlite3")
+	cfg.Set("database.sqlite_path", dbPath)
+	cfg.Set("admin.path", "/admin")
+	cfg.Set("admin.static_dir", "../../forge/admin/ui/dist")
+	cfg.Set("api.path", "/api/v1")
+	cfg.Set("api.enabled", true)
+
+	database, err := db.NewDB(dbPath)
+	if err != nil {
+		if strings.Contains(err.Error(), "go-sqlite3 requires cgo") {
+			t.Skip("sqlite driver unavailable")
+		}
+		t.Fatalf("failed to create sqlite db: %v", err)
+	}
+	defer database.Close()
+
+	admin.DefaultSite = admin.NewSite("default")
+	router := buildEcommerceRouter(ctx, cfg, database)
+
+	// Run seeder
+	if err := seeder.Seed(ctx, database); err != nil {
+		t.Fatalf("seeder failed: %v", err)
+	}
+
+	// 1. Check Public API Products
+	prodsRes := performJSONRequest(t, router, http.MethodGet, "/api/v1/products/", nil, http.StatusOK)
+	results, ok := prodsRes["results"].([]interface{})
+	if !ok || len(results) < 10 {
+		t.Fatalf("expected at least 10 products from seed, got %v", prodsRes)
+	}
+
+	// 2. Check Public API Categories
+	catsRes := performJSONRequest(t, router, http.MethodGet, "/api/v1/categories/", nil, http.StatusOK)
+	catResults, ok := catsRes["results"].([]interface{})
+	if !ok || len(catResults) < 10 {
+		t.Fatalf("expected at least 10 categories from seed, got %v", catsRes)
+	}
+
+	// 3. Check Coupons
+	couponsRes := performJSONRequest(t, router, http.MethodGet, "/api/v1/coupons/", nil, http.StatusOK)
+	couponResults, ok := couponsRes["results"].([]interface{})
+	if !ok || len(couponResults) < 3 {
+		t.Fatalf("expected coupons from seed, got %v", couponsRes)
+	}
+
+	// 4. Admin Login
+	loginBody := bytes.NewBufferString(`{"username":"admin","password":"admin123"}`)
+	loginReq := httptest.NewRequest(http.MethodPost, "/admin/api/login", loginBody)
+	loginRec := httptest.NewRecorder()
+	router.ServeHTTP(loginRec, loginReq)
+	if loginRec.Code != http.StatusOK {
+		t.Fatalf("expected admin login 200, got %d: %s", loginRec.Code, loginRec.Body.String())
+	}
+	var loginResp map[string]interface{}
+	if err := json.Unmarshal(loginRec.Body.Bytes(), &loginResp); err != nil {
+		t.Fatalf("invalid login response json: %v", err)
+	}
+	token, _ := loginResp["token"].(string)
+	if token == "" {
+		t.Fatal("expected non-empty token")
+	}
+
+	// 5. Admin API Products List with Token
+	adminProdReq := httptest.NewRequest(http.MethodGet, "/admin/api/products/", nil)
+	adminProdReq.Header.Set("Authorization", "Bearer "+token)
+	adminProdRec := httptest.NewRecorder()
+	router.ServeHTTP(adminProdRec, adminProdReq)
+	if adminProdRec.Code != http.StatusOK {
+		t.Fatalf("expected admin products 200, got %d: %s", adminProdRec.Code, adminProdRec.Body.String())
+	}
+
+	// 6. Admin History Endpoint for Product 1
+	histReq := httptest.NewRequest(http.MethodGet, "/admin/api/products/1/history", nil)
+	histReq.Header.Set("Authorization", "Bearer "+token)
+	histRec := httptest.NewRecorder()
+	router.ServeHTTP(histRec, histReq)
+	if histRec.Code != http.StatusOK {
+		t.Fatalf("expected admin history 200, got %d: %s", histRec.Code, histRec.Body.String())
+	}
+	var histResp map[string]interface{}
+	if err := json.Unmarshal(histRec.Body.Bytes(), &histResp); err != nil {
+		t.Fatalf("invalid history response json: %v", err)
+	}
+	entries, ok := histResp["entries"].([]interface{})
+	if !ok || len(entries) == 0 {
+		t.Fatalf("expected seeded audit history entries for product 1, got %v", histResp)
+	}
+
+	// 7. Admin UI Static serving
+	uiReq := httptest.NewRequest(http.MethodGet, "/admin/", nil)
+	uiRec := httptest.NewRecorder()
+	router.ServeHTTP(uiRec, uiReq)
+	if uiRec.Code != http.StatusOK {
+		t.Fatalf("expected admin UI 200, got %d: %s", uiRec.Code, uiRec.Body.String())
+	}
+	if !strings.Contains(uiRec.Body.String(), "<div id=\"root\"></div>") && !strings.Contains(uiRec.Body.String(), "Forge Admin") {
+		t.Fatalf("expected admin UI html body, got %s", uiRec.Body.String())
+	}
+}
+
+func TestBuildEcommerceRouter_CheckoutEndpointFlow(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "ecommerce-checkout-test.sqlite")
+	cfg := config.NewConfig()
+	cfg.Set("database.driver", "sqlite3")
+	cfg.Set("database.sqlite_path", dbPath)
+	cfg.Set("admin.path", "/admin")
+	cfg.Set("api.path", "/api/v1")
+	cfg.Set("api.enabled", true)
+
+	database, err := db.NewDB(dbPath)
+	if err != nil {
+		t.Fatalf("failed to create sqlite db: %v", err)
+	}
+	defer database.Close()
+
+	admin.DefaultSite = admin.NewSite("default")
+	router := buildEcommerceRouter(context.Background(), cfg, database)
+
+	// 1. Create a customer
+	cust := performJSONRequest(t, router, http.MethodPost, "/api/v1/customers/", map[string]interface{}{
+		"email":         "alex@example.com",
+		"first_name":    "Alex",
+		"last_name":     "Engineer",
+		"password_hash": "hashed_pwd_abc123",
+		"is_active":     true,
+	}, http.StatusCreated)
+	custID := int64(cust["id"].(float64))
+
+	// 2. Create a category
+	cat := performJSONRequest(t, router, http.MethodPost, "/api/v1/categories/", map[string]interface{}{
+		"name": "Computing",
+		"slug": "computing",
+	}, http.StatusCreated)
+	catID := int64(cat["id"].(float64))
+
+	// 3. Create a product
+	prod := performJSONRequest(t, router, http.MethodPost, "/api/v1/products/", map[string]interface{}{
+		"name":           "Developer Laptop 16",
+		"slug":           "developer-laptop-16",
+		"sku":            "DEV-LAPTOP-16",
+		"description":    "Top-spec engineer workstation",
+		"category_id":    catID,
+		"price":          1999.00,
+		"stock_quantity": 50,
+	}, http.StatusCreated)
+	prodID := int64(prod["id"].(float64))
+
+	// 4. Post checkout
+	checkoutPayload := map[string]interface{}{
+		"customer_id":         custID,
+		"customer_email":      "alex@example.com",
+		"customer_first_name": "Alex",
+		"customer_last_name":  "Engineer",
+		"customer_phone":      "+1-555-0188",
+		"shipping_city":       "San Francisco",
+		"shipping_state":      "CA",
+		"items": []map[string]interface{}{
+			{
+				"product_id":   prodID,
+				"product_name": "Developer Laptop 16",
+				"sku":          "DEV-LAPTOP-16",
+				"quantity":     2,
+				"unit_price":   1999.00,
+			},
+		},
+	}
+
+	orderRes := performJSONRequest(t, router, http.MethodPost, "/api/v1/orders/checkout", checkoutPayload, http.StatusCreated)
+	if orderRes["status"] != "success" {
+		t.Fatalf("expected order checkout status success, got %v", orderRes["status"])
+	}
+	orderNum, _ := orderRes["order_number"].(string)
+	if !strings.HasPrefix(orderNum, "ORD-") {
+		t.Fatalf("expected order number with prefix ORD-, got %q", orderNum)
+	}
+	total, _ := orderRes["total"].(float64)
+	if total <= 0 {
+		t.Fatalf("expected positive total, got %v", total)
+	}
+
+	// 4. Verify orders summary endpoint
+	summaryRes := performJSONRequest(t, router, http.MethodGet, "/api/v1/orders/summary", nil, http.StatusOK)
+	if totalOrders, _ := summaryRes["total_orders"].(float64); totalOrders < 1 {
+		t.Fatalf("expected at least 1 total order in summary, got %v", totalOrders)
+	}
+}
+
+

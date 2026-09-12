@@ -15,7 +15,7 @@ import { Checkbox } from "../components/ui/checkbox";
 import { SearchableSelect } from "../components/ui/searchable-select";
 import { Card, CardContent } from "../components/ui/card";
 import { Loader2, Save, X, Plus } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
 import { useUIComponent } from "../hooks/useUIComponent";
 import { cn } from "../lib/utils";
@@ -26,6 +26,105 @@ import { ConfirmationDialog } from "../components/ui/confirmation-dialog";
 
 interface ModelFormPageProps {
   mode: "create" | "edit";
+}
+
+// Backend metadata uses Go-flavored type names (Bool, Int64, String, Text,
+// Float64, Time, ...) while widgets carry the UI intent (checkbox, number,
+// textarea, ...). resolveFieldKind normalizes both into a single form kind
+// so typed inputs (checkbox, number, date, select) actually render instead
+// of falling through to plain text inputs.
+export type FieldKind =
+  | "boolean"
+  | "number"
+  | "date"
+  | "datetime"
+  | "time"
+  | "text"
+  | "textarea"
+  | "choice"
+  | "password"
+  | "email"
+  | "url"
+  | "tel"
+  | "color"
+  | "json"
+  | "fk"
+  | "m2m";
+
+const INT_TYPES = new Set([
+  "integer", "int", "int8", "int16", "int32", "int64",
+  "uint", "uint8", "uint16", "uint32", "uint64",
+]);
+const FLOAT_TYPES = new Set([
+  "float", "float32", "float64", "double", "decimal", "numeric", "number",
+]);
+const FK_TYPES = new Set([
+  "foreign_key", "foreignkey", "fk", "one_to_one", "onetoone", "many_to_one",
+]);
+const M2M_TYPES = new Set(["many_to_many", "manytomany", "m2m"]);
+
+export function resolveFieldKind(field: any, relation?: any): FieldKind {
+  const t = String(field?.type ?? "").toLowerCase();
+  const w = String(field?.widget ?? "").toLowerCase();
+  const relType = String(relation?.type ?? "").toLowerCase();
+
+  if (Array.isArray(field?.choices) && field.choices.length > 0) return "choice";
+  if (FK_TYPES.has(t) || FK_TYPES.has(relType)) return "fk";
+  if (M2M_TYPES.has(t) || M2M_TYPES.has(relType)) return "m2m";
+  if (t === "boolean" || t === "bool" || ["checkbox", "switch", "toggle"].includes(w)) {
+    return "boolean";
+  }
+  if (w === "number" || INT_TYPES.has(t) || FLOAT_TYPES.has(t)) return "number";
+  if (w === "date" || t === "date") return "date";
+  if (w === "datetime" || w === "datetime-local" || ["datetime", "timestamp", "timestamptz"].includes(t)) {
+    return "datetime";
+  }
+  if (w === "time" || t === "time") return "time";
+  if (w === "password" || t === "password") return "password";
+  if (w === "email" || t === "email") return "email";
+  if (w === "url" || t === "url") return "url";
+  if (w === "tel" || t === "tel" || t === "phone") return "tel";
+  if (w === "color" || t === "color") return "color";
+  if (w === "select" || t === "choice" || t === "enum") return "choice";
+  if (["json", "jsonb", "object", "dict", "map"].includes(t) || w === "json") return "json";
+  if (w === "textarea" || w === "rich_text" || t === "text") return "textarea";
+  return "text";
+}
+
+export function isIntegerField(field: any): boolean {
+  const t = String(field?.type ?? "").toLowerCase();
+  const w = String(field?.widget ?? "").toLowerCase();
+  if (w === "number") return INT_TYPES.has(t) || !FLOAT_TYPES.has(t);
+  return INT_TYPES.has(t);
+}
+
+// Override slot for a single field. Extracted as a component so the
+// useUIComponent hook call has a stable call order (calling it inside
+// renderField would violate the Rules of Hooks as field counts change).
+function FieldOverride({
+  overrideKey,
+  field,
+  value,
+  onChange,
+  metadata,
+}: {
+  overrideKey: string;
+  field: any;
+  value: any;
+  onChange: (val: any) => void;
+  metadata: any;
+}) {
+  const CustomField = useUIComponent(overrideKey, null as any);
+  if (!CustomField) return null;
+  return (
+    // eslint-disable-next-line react-hooks/static-components -- useUIComponent returns a stable registry ref
+    <CustomField
+      field={field}
+      value={value}
+      onChange={onChange}
+      metadata={metadata}
+    />
+  );
 }
 
 export default function ModelFormPage({ mode }: ModelFormPageProps) {
@@ -39,6 +138,9 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const inlineOriginalRef = useRef<Record<string, any[]>>({});
+  // Submitting via requestSubmit() (instead of calling handleSubmit directly)
+  // preserves native required/maxlength validation on the header save button.
+  const formRef = useRef<HTMLFormElement>(null);
 
   const modelName = model as string;
   const objectId = (id as string) || "";
@@ -75,6 +177,15 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
       relatedField: inlineConfig.related_field || relation.related_field,
     };
   });
+
+  // Field name -> relation (resolves FK/M2M widgets for plain fields).
+  const relationsByName = useMemo(
+    () =>
+      new Map(
+        (metadata?.relations ?? []).map((relation: any) => [relation.name, relation])
+      ),
+    [metadata?.relations]
+  );
 
   const inlineMetadataQueries = useQueries({
     queries: inlineRelationDetails.map((detail) => ({
@@ -167,7 +278,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
     }
   };
 
-  // Resolve Overrides
+  // Resolve Overrides (top-level: stable hook order)
   const FormHeader = useUIComponent(
     metadata?.ui_overrides?.["form.header"] || "",
     "div"
@@ -176,10 +287,42 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
     metadata?.ui_overrides?.["form.footer"] || "",
     "div"
   );
+  const FormBody = useUIComponent(
+    metadata?.ui_overrides?.["form.body"] || "",
+    null as any
+  );
+
+  const validateJsonFields = (): boolean => {
+    if (!metadata) return true;
+    const errors: Record<string, string[]> = {};
+    for (const field of metadata.fields) {
+      if (field.type !== "json") continue;
+      const raw = formData[field.name];
+      if (raw === undefined || raw === null || raw === "") continue;
+      if (typeof raw === "string") {
+        try {
+          JSON.parse(raw);
+        } catch {
+          errors[field.name] = ["Must be valid JSON"];
+        }
+      }
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors((prev) => ({ ...prev, ...errors }));
+      toast({
+        title: "Invalid JSON",
+        description: "One or more JSON fields contain invalid JSON.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFieldErrors({});
+    if (!validateJsonFields()) return;
 
     try {
       if (mode === "create") {
@@ -337,24 +480,17 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
   const renderField = (field: any) => {
     if (field.read_only && mode === "create") return null;
 
-    const value = formData[field.name] || "";
+    // Preserve 0/false: only null/undefined become "".
+    const value = formData[field.name] ?? "";
     const fieldOverride = metadata.ui_overrides?.[`field.${field.name}`];
-    const CustomField = useUIComponent(fieldOverride || "", null as any);
     const isReadOnly = field.read_only;
     const isSwitchWidget =
       field.widget === "switch" || field.widget === "toggle";
-    const resolvedTextType =
-      field.widget === "email" ||
-      field.widget === "url" ||
-      field.widget === "tel" ||
-      field.widget === "color" ||
-      field.widget === "time"
-        ? field.widget
-        : "text";
 
-    if (CustomField) {
+    if (fieldOverride) {
       return (
-        <CustomField
+        <FieldOverride
+          overrideKey={fieldOverride}
           field={field}
           value={value}
           onChange={(val: any) => handleChange(field.name, val)}
@@ -363,7 +499,10 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
       );
     }
 
-    switch (field.type) {
+    const relation = relationsByName.get(field.name);
+    const kind = resolveFieldKind(field, relation);
+
+    switch (kind) {
       case "boolean":
         if (isSwitchWidget) {
           return (
@@ -396,22 +535,26 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
           </div>
         );
 
+      case "textarea":
+        return (
+          <textarea
+            id={field.name}
+            value={value}
+            onChange={(e) => handleChange(field.name, e.target.value)}
+            className="flex min-h-[120px] w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+            required={field.required}
+            disabled={isReadOnly}
+          />
+        );
+
       case "text":
-        if (field.widget === "textarea") {
-          return (
-            <textarea
-              id={field.name}
-              value={value}
-              onChange={(e) => handleChange(field.name, e.target.value)}
-              className="flex min-h-[120px] w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all"
-              required={field.required}
-              disabled={isReadOnly}
-            />
-          );
-        }
+      case "email":
+      case "url":
+      case "tel":
+      case "color":
         return (
           <Input
-            type={resolvedTextType}
+            type={kind}
             id={field.name}
             value={value}
             onChange={(e) => handleChange(field.name, e.target.value)}
@@ -423,10 +566,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
           />
         );
 
-      case "integer":
-      case "float":
-      case "decimal":
-        const step = field.type === "integer" ? 1 : "any";
+      case "number":
         return (
           <Input
             type="number"
@@ -442,7 +582,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             required={field.required}
             min={field.min_value}
             max={field.max_value}
-            step={step}
+            step={isIntegerField(field) ? 1 : "any"}
             disabled={isReadOnly}
           />
         );
@@ -473,7 +613,32 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
           />
         );
 
+      case "time":
+        return (
+          <Input
+            type="time"
+            id={field.name}
+            value={value}
+            onChange={(e) => handleChange(field.name, e.target.value)}
+            className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
+            required={field.required}
+            disabled={isReadOnly}
+          />
+        );
+
       case "choice":
+        if (!field.choices?.length) {
+          return (
+            <Input
+              id={field.name}
+              value={value}
+              onChange={(e) => handleChange(field.name, e.target.value)}
+              className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
+              required={field.required}
+              disabled={isReadOnly}
+            />
+          );
+        }
         return (
           <select
             id={field.name}
@@ -525,11 +690,10 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
           />
         );
 
-      case "foreign_key":
-      case "one_to_one":
+      case "fk":
         return (
           <SearchableSelect
-            model={field.related_model}
+            model={relation?.related_model || field.related_model}
             value={value}
             onChange={(val) => handleChange(field.name, val)}
             placeholder={`Select ${field.label}...`}
@@ -538,7 +702,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
           />
         );
 
-      case "many_to_many":
+      case "m2m":
         const m2mValue = Array.isArray(value) ? value : [];
         return (
           <div className="space-y-4">
@@ -556,6 +720,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
                   </span>
                   <button
                     type="button"
+                    aria-label={`Remove ${field.label} item ${idx + 1}`}
                     onClick={() => {
                       const newValue = m2mValue.filter(
                         (_: any, i: number) => i !== idx
@@ -607,20 +772,14 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
   const renderInlineField = (
     field: any,
     value: any,
-    onChange: (val: any) => void
+    onChange: (val: any) => void,
+    relation?: any
   ) => {
     const isReadOnly = field.read_only;
     const isSwitchWidget =
       field.widget === "switch" || field.widget === "toggle";
-    const resolvedTextType =
-      field.widget === "email" ||
-      field.widget === "url" ||
-      field.widget === "tel" ||
-      field.widget === "color" ||
-      field.widget === "time"
-        ? field.widget
-        : "text";
-    switch (field.type) {
+    const kind = resolveFieldKind(field, relation);
+    switch (kind) {
       case "boolean":
         if (isSwitchWidget) {
           return (
@@ -652,22 +811,25 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             </label>
           </div>
         );
+      case "textarea":
+        return (
+          <textarea
+            id={field.name}
+            value={value || ""}
+            onChange={(e) => onChange(e.target.value)}
+            className="flex min-h-[120px] w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+            required={field.required}
+            disabled={isReadOnly}
+          />
+        );
       case "text":
-        if (field.widget === "textarea") {
-          return (
-            <textarea
-              id={field.name}
-              value={value || ""}
-              onChange={(e) => onChange(e.target.value)}
-              className="flex min-h-[120px] w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all"
-              required={field.required}
-              disabled={isReadOnly}
-            />
-          );
-        }
+      case "email":
+      case "url":
+      case "tel":
+      case "color":
         return (
           <Input
-            type={resolvedTextType}
+            type={kind}
             id={field.name}
             value={value || ""}
             onChange={(e) => onChange(e.target.value)}
@@ -678,10 +840,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             disabled={isReadOnly}
           />
         );
-      case "integer":
-      case "float":
-      case "decimal":
-        const step = field.type === "integer" ? 1 : "any";
+      case "number":
         return (
           <Input
             type="number"
@@ -696,7 +855,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             required={field.required}
             min={field.min_value}
             max={field.max_value}
-            step={step}
+            step={isIntegerField(field) ? 1 : "any"}
             disabled={isReadOnly}
           />
         );
@@ -724,7 +883,31 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             disabled={isReadOnly}
           />
         );
+      case "time":
+        return (
+          <Input
+            type="time"
+            id={field.name}
+            value={value || ""}
+            onChange={(e) => onChange(e.target.value)}
+            className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
+            required={field.required}
+            disabled={isReadOnly}
+          />
+        );
       case "choice":
+        if (!field.choices?.length) {
+          return (
+            <Input
+              id={field.name}
+              value={value || ""}
+              onChange={(e) => onChange(e.target.value)}
+              className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
+              required={field.required}
+              disabled={isReadOnly}
+            />
+          );
+        }
         return (
           <select
             id={field.name}
@@ -769,11 +952,10 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             disabled={isReadOnly}
           />
         );
-      case "foreign_key":
-      case "one_to_one":
+      case "fk":
         return (
           <SearchableSelect
-            model={field.related_model}
+            model={relation?.related_model || field.related_model}
             value={value}
             onChange={(val) => onChange(val)}
             placeholder={`Select ${field.label}...`}
@@ -781,7 +963,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             disabled={isReadOnly}
           />
         );
-      case "many_to_many": {
+      case "m2m": {
         const m2mValue = Array.isArray(value) ? value : [];
         return (
           <div className="space-y-4">
@@ -799,6 +981,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
                   </span>
                   <button
                     type="button"
+                    aria-label={`Remove ${field.label} item ${idx + 1}`}
                     onClick={() => {
                       const newValue = m2mValue.filter(
                         (_: any, i: number) => i !== idx
@@ -814,7 +997,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
               ))}
             </div>
             <SearchableSelect
-              model={field.related_model}
+              model={relation?.related_model || field.related_model}
               value={null}
               onChange={(val) => {
                 if (!val) return;
@@ -881,6 +1064,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
           <div className="flex items-center gap-2">
             <Button
               type="button"
+              data-testid="cancel-button"
               variant="ghost"
               onClick={handleCancel}
               className="text-muted-foreground hover:text-foreground"
@@ -888,8 +1072,9 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
               Cancel
             </Button>
             <Button
+              type="button"
               data-testid="submit-button"
-              onClick={handleSubmit}
+              onClick={() => formRef.current?.requestSubmit()}
               disabled={createMutation.isPending || updateMutation.isPending}
               className="bg-primary hover:bg-primary/90 min-w-[120px]"
             >
@@ -903,77 +1088,66 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
           </div>
         </FormHeader>
 
-        <Card className="glass-lite border-border/50 shadow-xl shadow-black/5 overflow-hidden max-w-4xl mx-auto">
-          <CardContent className="p-8">
-            <form onSubmit={handleSubmit} className="space-y-8">
-              {(() => {
-                const FormBody = useUIComponent(
-                  metadata?.ui_overrides?.["form.body"] || "",
-                  null as any
-                );
+        <Card className="overflow-hidden max-w-4xl mx-auto">
+          <CardContent className="p-4 sm:p-8">
+            <form ref={formRef} onSubmit={handleSubmit} className="space-y-8">
+              {FormBody ? (
+                // eslint-disable-next-line react-hooks/static-components -- useUIComponent returns a stable registry ref
+                <FormBody
+                  fields={metadata.fields}
+                  formData={formData}
+                  errors={fieldErrors}
+                  onChange={handleChange}
+                  renderField={renderField}
+                  metadata={metadata}
+                  mode={mode}
+                />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                  {metadata.fields.map((field) => {
+                    if (field.read_only && mode === "create") return null;
+                    if (field.name === "id") return null;
 
-                if (FormBody) {
-                  return (
-                    // eslint-disable-next-line react-hooks/static-components -- useUIComponent returns a stable registry ref
-                    <FormBody
-                      fields={metadata.fields}
-                      formData={formData}
-                      errors={fieldErrors}
-                      onChange={handleChange}
-                      renderField={renderField}
-                      metadata={metadata}
-                      mode={mode}
-                    />
-                  );
-                }
+                    const isFullWidth =
+                      field.type === "text" && field.widget === "textarea";
 
-                return (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                    {metadata.fields.map((field) => {
-                      if (field.read_only && mode === "create") return null;
-                      if (field.name === "id") return null;
-
-                      const isFullWidth =
-                        field.type === "text" && field.widget === "textarea";
-
-                      return (
-                        <div
-                          key={field.name}
-                          className={cn(
-                            "space-y-2",
-                            isFullWidth && "md:col-span-2"
-                          )}
-                        >
-                          <div className="flex items-center justify-between px-1">
-                            <label
-                              htmlFor={field.name}
-                              className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80"
-                            >
-                              {field.label}{" "}
-                              {field.required && (
-                                <span className="text-destructive font-normal">
-                                  *
-                                </span>
-                              )}
-                            </label>
-                          </div>
-                          {renderField(field)}
-                          {fieldErrors[field.name] && (
-                            <p className="text-xs text-destructive font-medium animate-in slide-in-from-top-1">
-                              {fieldErrors[field.name].join(", ")}
-                            </p>
-                          )}
-                          {field.help_text && (
-                            <p className="text-[11px] text-muted-foreground px-1 leading-relaxed">
-                              {field.help_text}
-                            </p>
-                          )}
+                    return (
+                      <div
+                        key={field.name}
+                        className={cn(
+                          "space-y-2",
+                          isFullWidth && "md:col-span-2"
+                        )}
+                      >
+                        <div className="flex items-center justify-between px-1">
+                          <label
+                            htmlFor={field.name}
+                            className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80"
+                          >
+                            {field.label}{" "}
+                            {field.required && (
+                              <span className="text-destructive font-normal">
+                                *
+                              </span>
+                            )}
+                          </label>
                         </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
+                        {renderField(field)}
+                        {fieldErrors[field.name] && (
+                          <p className="text-xs text-destructive font-medium animate-in slide-in-from-top-1">
+                            {fieldErrors[field.name].join(", ")}
+                          </p>
+                        )}
+                        {field.help_text && (
+                          <p className="text-[11px] text-muted-foreground px-1 leading-relaxed">
+                            {field.help_text}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* eslint-disable-next-line react-hooks/static-components -- useUIComponent returns a stable registry ref */}
               <FormFooter className="pt-4 border-t border-border/50 flex justify-end">
@@ -995,8 +1169,8 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
         </Card>
 
         {mode === "edit" && (
-          <Card className="glass-lite border-border/50 shadow-xl shadow-black/5 overflow-hidden max-w-4xl mx-auto">
-            <CardContent className="p-8 space-y-6">
+          <Card className="overflow-hidden max-w-4xl mx-auto">
+            <CardContent className="p-4 sm:p-8 space-y-6">
               <div>
                 <h2 className="text-xl font-semibold text-foreground/90">
                   History
@@ -1077,13 +1251,16 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
             detail.inlineConfig,
             detail.relatedField
           );
+          const inlineRelByName = new Map(
+            (inlineMeta?.relations ?? []).map((rel: any) => [rel.name, rel])
+          );
 
           return (
             <Card
               key={detail.relation.name}
-              className="glass-lite border-border/50 shadow-xl shadow-black/5 overflow-hidden max-w-4xl mx-auto"
+              className="overflow-hidden max-w-4xl mx-auto"
             >
-              <CardContent className="p-8 space-y-6">
+              <CardContent className="p-4 sm:p-8 space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-xl font-semibold text-foreground">
@@ -1150,7 +1327,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
                           <div key={field.name} className="space-y-2">
                             <div className="flex items-center justify-between px-1">
                               <label
-                                htmlFor={field.name}
+                                htmlFor={`${detail.relation.name}-${rowIndex}-${field.name}`}
                                 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80"
                               >
                                 {field.label}{" "}
@@ -1162,7 +1339,12 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
                               </label>
                             </div>
                             {renderInlineField(
-                              field,
+                              // Prefix the DOM id namespace so inline inputs
+                              // never collide with main-form ids.
+                              {
+                                ...field,
+                                name: `${detail.relation.name}-${rowIndex}-${field.name}`,
+                              },
                               row?.[field.name],
                               (value) =>
                                 updateInlineRow(
@@ -1170,7 +1352,8 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
                                   rowIndex,
                                   field.name,
                                   value
-                                )
+                                ),
+                              inlineRelByName.get(field.name)
                             )}
                             {field.help_text && (
                               <p className="text-[11px] text-muted-foreground px-1 leading-relaxed">
@@ -1191,6 +1374,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
         <ConfirmationDialog
           open={showExitDialog}
           onOpenChange={setShowExitDialog}
+          testId="exit-dialog"
           title="Unsaved Changes"
           description="You have unsaved changes. Are you sure you want to leave? Your changes will be lost."
           confirmLabel="Leave"

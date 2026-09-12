@@ -134,6 +134,8 @@ interface ConfirmationDialogProps {
   cancelLabel?: string;
   onConfirm: () => void;
   variant?: "default" | "destructive";
+  /** Base test id. Confirm/cancel buttons get `${testId}-confirm` / `${testId}-cancel`. */
+  testId?: string;
 }
 
 export function ConfirmationDialog({
@@ -145,17 +147,21 @@ export function ConfirmationDialog({
   cancelLabel = "Cancel",
   onConfirm,
   variant = "default",
+  testId,
 }: ConfirmationDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent data-testid={testId}>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
+          <AlertDialogCancel data-testid={testId ? `${testId}-cancel` : undefined}>
+            {cancelLabel}
+          </AlertDialogCancel>
           <AlertDialogAction
+            data-testid={testId ? `${testId}-confirm` : undefined}
             onClick={(e) => {
               e.preventDefault();
               onConfirm();
@@ -163,7 +169,7 @@ export function ConfirmationDialog({
             }}
             className={
               variant === "destructive"
-                ? "bg-destructive hover:bg-destructive/90"
+                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 : ""
             }
           >

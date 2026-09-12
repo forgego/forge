@@ -524,23 +524,58 @@ func ViewSetHandler(vs ViewSet, actions []string) http.HandlerFunc {
 	}
 }
 
+type customRoute struct {
+	method  string
+	path    string
+	handler http.HandlerFunc
+}
+
 // Router is a router for viewsets (DRF-like)
 type Router struct {
-	prefix string
-	routes map[string]ViewSet
+	prefix       string
+	routes       map[string]ViewSet
+	customRoutes []customRoute
 }
 
 // NewRouter creates a new API router
 func NewRouter(prefix string) *Router {
 	return &Router{
-		prefix: prefix,
-		routes: make(map[string]ViewSet),
+		prefix:       prefix,
+		routes:       make(map[string]ViewSet),
+		customRoutes: make([]customRoute, 0),
 	}
 }
 
 // Register registers a viewset with a resource name
 func (r *Router) Register(resource string, vs ViewSet) {
 	r.routes[resource] = vs
+}
+
+// Get registers a custom GET route on the API router
+func (r *Router) Get(path string, handler http.HandlerFunc) {
+	r.customRoutes = append(r.customRoutes, customRoute{
+		method:  http.MethodGet,
+		path:    path,
+		handler: handler,
+	})
+}
+
+// Post registers a custom POST route on the API router
+func (r *Router) Post(path string, handler http.HandlerFunc) {
+	r.customRoutes = append(r.customRoutes, customRoute{
+		method:  http.MethodPost,
+		path:    path,
+		handler: handler,
+	})
+}
+
+// Handle registers a custom route with a specific method on the API router
+func (r *Router) Handle(method, path string, handler http.HandlerFunc) {
+	r.customRoutes = append(r.customRoutes, customRoute{
+		method:  method,
+		path:    path,
+		handler: handler,
+	})
 }
 
 // RegisterRoutes registers all routes on a chi router
@@ -559,6 +594,13 @@ func (r *Router) RegisterRoutes(router *forgehttp.Router) {
 			sub.Patch("/{id}", vs.PartialUpdate)
 			sub.Delete("/{id}", vs.Destroy)
 		})
+	}
+
+	// Register custom routes
+	for _, cr := range r.customRoutes {
+		cleanPath := "/" + strings.TrimPrefix(cr.path, "/")
+		fullPath := r.prefix + cleanPath
+		router.Method(cr.method, fullPath, cr.handler)
 	}
 }
 

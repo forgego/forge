@@ -328,6 +328,9 @@ func (p *ASTParser) extractFieldFromCall(call *ast.CallExpr) *FieldDefinition {
 	} else if pk, ok := options["primary_key"].(bool); ok {
 		primaryKey = pk
 	}
+	if primaryKey {
+		required = true
+	}
 
 	autoIncrement := false
 	if ai, ok := options["auto_increment"].(bool); ok {
@@ -638,6 +641,48 @@ func (p *ASTParser) extractOptionFromMethod(methodName string, call *ast.CallExp
 				options["decimal_places"] = *decimalPlaces
 			}
 		}
+	case "DBDefault":
+		if len(call.Args) > 0 {
+			if dbDefault := p.extractStringArg(call); dbDefault != "" {
+				options["db_default"] = dbDefault
+			}
+		}
+	case "GeneratedColumn":
+		options["generated"] = true
+		if len(call.Args) > 0 {
+			if expr := p.extractStringArg(call); expr != "" {
+				options["generated_expr"] = expr
+			}
+		}
+		if len(call.Args) > 1 {
+			if stored := p.extractBoolArgAt(call, 1); stored != nil {
+				options["generated_stored"] = *stored
+			}
+		}
+	case "DBComment":
+		if len(call.Args) > 0 {
+			if comment := p.extractStringArg(call); comment != "" {
+				options["db_comment"] = comment
+			}
+		}
+	case "DBCollation":
+		if len(call.Args) > 0 {
+			if collation := p.extractStringArg(call); collation != "" {
+				options["db_collation"] = collation
+			}
+		}
+	case "DBTablespace":
+		if len(call.Args) > 0 {
+			if tablespace := p.extractStringArg(call); tablespace != "" {
+				options["db_tablespace"] = tablespace
+			}
+		}
+	case "DBType":
+		if len(call.Args) > 0 {
+			if dbType := p.extractStringArg(call); dbType != "" {
+				options["db_type"] = dbType
+			}
+		}
 	}
 }
 
@@ -675,11 +720,16 @@ func (p *ASTParser) extractFloatArg(call *ast.CallExpr) *float64 {
 
 // extractBoolArg extracts a boolean argument from a function call
 func (p *ASTParser) extractBoolArg(call *ast.CallExpr) *bool {
-	if len(call.Args) == 0 {
+	return p.extractBoolArgAt(call, 0)
+}
+
+// extractBoolArgAt extracts a boolean argument at the given index from a function call
+func (p *ASTParser) extractBoolArgAt(call *ast.CallExpr, index int) *bool {
+	if len(call.Args) <= index {
 		return nil
 	}
 
-	if ident, ok := call.Args[0].(*ast.Ident); ok {
+	if ident, ok := call.Args[index].(*ast.Ident); ok {
 		if ident.Name == "true" {
 			val := true
 			return &val
@@ -1041,11 +1091,10 @@ func (p *ASTParser) extractRelationOptionFromMethod(methodName string, call *ast
 			if sel, ok := call.Args[0].(*ast.SelectorExpr); ok {
 				// Handle schema.CascadeCASCADE, etc.
 				if pkgIdent, ok := sel.X.(*ast.Ident); ok && pkgIdent.Name == "schema" {
-					// Extract the constant name (e.g., "CascadeCASCADE")
-					options["on_delete"] = sel.Sel.Name
+					options["on_delete"] = strings.TrimPrefix(sel.Sel.Name, "Cascade")
 				}
 			} else if val := p.extractStringFromExpr(call.Args[0]); val != "" {
-				options["on_delete"] = val
+				options["on_delete"] = strings.TrimPrefix(val, "Cascade")
 			}
 		}
 	case "OnUpdate":
@@ -1053,10 +1102,10 @@ func (p *ASTParser) extractRelationOptionFromMethod(methodName string, call *ast
 			if sel, ok := call.Args[0].(*ast.SelectorExpr); ok {
 				// Handle schema.CascadeCASCADE, etc.
 				if pkgIdent, ok := sel.X.(*ast.Ident); ok && pkgIdent.Name == "schema" {
-					options["on_update"] = sel.Sel.Name
+					options["on_update"] = strings.TrimPrefix(sel.Sel.Name, "Cascade")
 				}
 			} else if val := p.extractStringFromExpr(call.Args[0]); val != "" {
-				options["on_update"] = val
+				options["on_update"] = strings.TrimPrefix(val, "Cascade")
 			}
 		}
 	case "RelatedName":
