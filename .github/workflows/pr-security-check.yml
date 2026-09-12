@@ -31,10 +31,10 @@ jobs:
       deps: ${{ steps.filter.outputs.deps }}
       workflows: ${{ steps.filter.outputs.workflows }}
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: dorny/paths-filter@v4.0.3
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
           filters: |
@@ -61,12 +61,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: changes
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       
       - name: Set up Go
-        uses: actions/setup-go@v7.0.0
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: '1.27.1'
           cache-dependency-path: '**/go.sum'
@@ -88,7 +88,7 @@ jobs:
           cat vuln-report.txt
       
       - name: Check for secrets
-        uses: trufflesecurity/trufflehog@v3.97.4
+        uses: trufflesecurity/trufflehog@363923b901c911a9164f50b6c423f47c15372b1c # v3.97.4
         with:
           path: ./
           base: ${{ github.event.pull_request.base.sha }}
@@ -118,7 +118,7 @@ jobs:
       
       - name: Comment on PR
         if: steps.sensitive_files.outputs.sensitive_files_changed == 'true' || steps.govulncheck.outputs.vulnerabilities_found == 'true'
-        uses: actions/github-script@v9.0.0
+        uses: actions/github-script@d746ffe35508b1917358783b479e04febd2b8f71 # v9.0.0
         env:
           SENSITIVE_FILES: ${{ steps.sensitive_files.outputs.files }}
         with:
@@ -156,10 +156,10 @@ jobs:
     needs: changes
     if: needs.changes.outputs.deps == 'true' || needs.changes.outputs.workflows == 'true'
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       
       - name: Dependency Review
-        uses: actions/dependency-review-action@v5.0.0
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: moderate
           deny-licenses: GPL-2.0, GPL-3.0
@@ -171,10 +171,10 @@ jobs:
     needs: changes
     if: needs.changes.outputs.go == 'true' || needs.changes.outputs.workflows == 'true'
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       
       - name: Set up Go
-        uses: actions/setup-go@v7.0.0
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: '1.27.1'
           cache-dependency-path: '**/go.sum'
@@ -188,7 +188,7 @@ jobs:
         run: staticcheck ./...
       
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v9.3.0
+        uses: golangci/golangci-lint-action@d583c34f0599d37dbac4a198b9c83201be380893 # v9.3.0
         with:
           version: v2.13.2
           working-directory: forge
@@ -206,7 +206,7 @@ jobs:
       matrix:
         directory: ['forge/admin/ui/web', 'docs-site']
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       
       - name: Check if directory should be audited
         id: check_run
@@ -219,7 +219,7 @@ jobs:
             echo "should_run=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/setup-node@v7.0.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         if: steps.check_run.outputs.should_run == 'true'
         with:
           node-version: '26.8.1'
