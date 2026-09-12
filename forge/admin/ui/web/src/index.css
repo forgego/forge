@@ -3,8 +3,8 @@
 
 @layer base {
   :root {
-    /* Shadcn/ui "Zinc" Inspired Light Palette */
-    --background: 0 0% 100%;
+    /* Warm paper background (light), ink (dark) — Filament-style surfaces */
+    --background: 220 14% 96.5%;
     --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
     --card-foreground: 240 10% 3.9%;
@@ -54,6 +54,10 @@
   * {
     @apply border-border;
   }
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
   body {
     @apply bg-background text-foreground antialiased;
     font-family:
@@ -76,5 +80,16 @@
 
   .premium-shadow {
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

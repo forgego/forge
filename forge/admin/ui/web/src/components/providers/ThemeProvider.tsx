@@ -3,14 +3,14 @@ import { useThemeStore } from "@/store/themeStore"
 import { primaries } from "@/lib/themes"
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const { theme, primary, radius } = useThemeStore()
+  const { theme, resolvedTheme, primary, radius } = useThemeStore()
 
-  // Handle Dark Mode
+  // Handle Dark Mode (resolved: "system" follows the OS preference)
   useEffect(() => {
     const root = window.document.documentElement
     root.classList.remove("light", "dark")
-    root.classList.add(theme)
-  }, [theme])
+    root.classList.add(resolvedTheme)
+  }, [resolvedTheme])
 
   // Handle Primary Color and Radius
   useEffect(() => {
@@ -18,14 +18,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const primaryColor = primaries.find((p) => p.name === primary)
 
     if (primaryColor) {
-      const cssVars = theme === "dark" ? primaryColor.cssVars.dark : primaryColor.cssVars.light
+      const cssVars = resolvedTheme === "dark" ? primaryColor.cssVars.dark : primaryColor.cssVars.light
       Object.entries(cssVars).forEach(([key, value]) => {
         root.style.setProperty(key, value)
       })
     }
-    
+
     root.style.setProperty("--radius", `${radius}rem`)
-  }, [theme, primary, radius])
+  }, [theme, resolvedTheme, primary, radius])
 
   return <>{children}</>
 }

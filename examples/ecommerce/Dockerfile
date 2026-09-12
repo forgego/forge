@@ -1,58 +1,35 @@
-# Build stage
-FROM golang:1.21-alpine AS builder
+# Build from the repository root so the local Forge module is available.
+FROM node:26.8.1-alpine AS admin
+WORKDIR /src/forge/admin/ui/web
+COPY forge/admin/ui/web/package*.json ./
+RUN npm ci
+COPY forge/admin/ui/web/ ./
+RUN npm run build
 
-# Install build dependencies
-RUN apk add --no-cache git make gcc musl-dev
-
-# Set working directory
-WORKDIR /app
-
-# Copy go mod files
-COPY go.mod go.sum ./
-
-# Download dependencies
+FROM golang:1.27.1-alpine AS builder
+RUN apk add --no-cache gcc musl-dev
+WORKDIR /src
+COPY forge/go.mod forge/go.sum ./forge/
+COPY examples/ecommerce/go.mod examples/ecommerce/go.sum ./examples/ecommerce/
+WORKDIR /src/examples/ecommerce
 RUN go mod download
+COPY forge/ /src/forge/
+COPY examples/ecommerce/ ./
+COPY --from=admin /src/forge/admin/ui/dist /src/forge/admin/ui/dist
+RUN CGO_ENABLED=1 go build -tags embed -o /out/ecommerce .
 
-# Copy source code
-COPY . .
-
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o ecommerce main.go
-
-# Final stage
 FROM alpine:latest
-
-# Install runtime dependencies
-RUN apk --no-cache add ca-certificates postgresql-client
-
-# Create app user
-RUN addgroup -g 1000 app && \
-    adduser -D -u 1000 -G app app
-
-# Set working directory
+RUN apk add --no-cache ca-certificates && \
+    addgroup -g 1000 app && adduser -D -u 1000 -G app app
 WORKDIR /home/app
-
-# Copy binary from builder
-COPY --from=builder /app/ecommerce .
-
-# Copy config, templates, and static files
-COPY --from=builder /app/config ./config
-COPY --from=builder /app/templates ./templates
-COPY --from=builder /app/static ./static
-COPY --from=builder /app/migrations ./migrations
-
-# Change ownership
-RUN chown -R app:app /home/app
-
-# Switch to app user
+COPY --from=builder --chown=app:app /out/ecommerce ./
+COPY --from=builder --chown=app:app /src/examples/ecommerce/config ./config
+COPY --from=builder --chown=app:app /src/examples/ecommerce/templates ./templates
+COPY --from=builder --chown=app:app /src/examples/ecommerce/static ./static
+RUN chown app:app /home/app
 USER app
-
-# Expose port
-EXPOSE 8000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost:8000/health || exit 1
-
-# Run the application
+ENV FORGE_SERVER_HOST=0.0.0.0 FORGE_SERVER_PORT=8020
+EXPOSE 8020
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost:8020/health || exit 1
 CMD ["./ecommerce"]

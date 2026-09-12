@@ -1,0 +1,12 @@
+{
+  "1138808": {
+    "active": true,
+    "expiry": 1893456000000,
+    "notes": "Upstream Docusaurus dependency image-size: no fixed release available yet (CVE-2025-71330)"
+  },
+  "1138809": {
+    "active": true,
+    "expiry": 1893456000000,
+    "notes": "Upstream Docusaurus dependency image-size: no fixed release available yet (CVE-2025-71329)"
+  }
+}

@@ -2,10 +2,22 @@ package catalog
 
 import (
 	"context"
+	"fmt"
+	"regexp"
+	"strings"
+	"time"
 
 	"github.com/forgego/forge/registry"
 	"github.com/forgego/forge/schema"
 )
+
+var slugRegex = regexp.MustCompile(`[^a-z0-9]+`)
+
+func slugify(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	s = slugRegex.ReplaceAllString(s, "-")
+	return strings.Trim(s, "-")
+}
 
 // Category represents a product category with hierarchical support
 type Category struct {
@@ -77,8 +89,14 @@ func (Category) Relations() []schema.Relation {
 func (Category) Hooks() *schema.ModelHooks {
 	return &schema.ModelHooks{
 		BeforeSave: func(ctx context.Context, instance interface{}) error {
-			// Auto-generate slug from name if not provided
-			// Calculate hierarchy level
+			if c, ok := instance.(*Category); ok {
+				if c.Slug == "" && c.Name != "" {
+					c.Slug = slugify(c.Name)
+				}
+				if c.ParentID > 0 && c.Level == 0 {
+					c.Level = 1
+				}
+			}
 			return nil
 		},
 	}
@@ -240,14 +258,20 @@ func (Product) Relations() []schema.Relation {
 func (Product) Hooks() *schema.ModelHooks {
 	return &schema.ModelHooks{
 		BeforeSave: func(ctx context.Context, instance interface{}) error {
-			// Auto-generate slug if not provided
-			// Validate price > 0
-			// Set published_at if becoming active
+			if p, ok := instance.(*Product); ok {
+				if p.Slug == "" && p.Name != "" {
+					p.Slug = slugify(p.Name)
+				}
+				if p.Price < 0 {
+					return fmt.Errorf("product price cannot be negative: %f", p.Price)
+				}
+				if p.IsActive && p.PublishedAt.IsZero() {
+					p.PublishedAt = time.Now()
+				}
+			}
 			return nil
 		},
 		AfterSave: func(ctx context.Context, instance interface{}) error {
-			// Update search index
-			// Clear cache
 			return nil
 		},
 	}

@@ -13,10 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ModelRouteRouteImport } from './routes/$model/route'
 import { Route as FormPlaygroundRouteImport } from './routes/form-playground'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as RegistryRouteImport } from './routes/registry'
 import { Route as StyleGuideRouteImport } from './routes/style-guide'
 import { Route as ModelIndexRouteImport } from './routes/$model/index'
 import { Route as ModelIdRouteImport } from './routes/$model/$id'
 import { Route as ModelCreateRouteImport } from './routes/$model/create'
+import { Route as ModelIdIndexRouteImport } from './routes/$model/$id/index'
 import { Route as ModelIdViewRouteImport } from './routes/$model/$id.view'
 import { Route as PluginsPluginIdPagesPageIdRouteImport } from './routes/plugins/$pluginId/pages/$pageId'
 
@@ -40,6 +42,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RegistryRoute = RegistryRouteImport.update({
+  id: '/registry',
+  path: '/registry',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StyleGuideRoute = StyleGuideRouteImport.update({
   id: '/style-guide',
   path: '/style-guide',
@@ -60,6 +67,11 @@ const ModelCreateRoute = ModelCreateRouteImport.update({
   path: '/create',
   getParentRoute: () => ModelRouteRoute,
 } as any)
+const ModelIdIndexRoute = ModelIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ModelIdRoute,
+} as any)
 const ModelIdViewRoute = ModelIdViewRouteImport.update({
   id: '/view',
   path: '/view',
@@ -77,22 +89,25 @@ export interface FileRoutesByFullPath {
   '/$model': typeof ModelRouteRouteWithChildren
   '/form-playground': typeof FormPlaygroundRoute
   '/login': typeof LoginRoute
+  '/registry': typeof RegistryRoute
   '/style-guide': typeof StyleGuideRoute
   '/$model/$id': typeof ModelIdRouteWithChildren
   '/$model/create': typeof ModelCreateRoute
   '/$model/': typeof ModelIndexRoute
   '/$model/$id/view': typeof ModelIdViewRoute
+  '/$model/$id/': typeof ModelIdIndexRoute
   '/plugins/$pluginId/pages/$pageId': typeof PluginsPluginIdPagesPageIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/form-playground': typeof FormPlaygroundRoute
   '/login': typeof LoginRoute
+  '/registry': typeof RegistryRoute
   '/style-guide': typeof StyleGuideRoute
-  '/$model/$id': typeof ModelIdRouteWithChildren
   '/$model/create': typeof ModelCreateRoute
   '/$model': typeof ModelIndexRoute
   '/$model/$id/view': typeof ModelIdViewRoute
+  '/$model/$id': typeof ModelIdIndexRoute
   '/plugins/$pluginId/pages/$pageId': typeof PluginsPluginIdPagesPageIdRoute
 }
 export interface FileRoutesById {
@@ -101,11 +116,13 @@ export interface FileRoutesById {
   '/$model': typeof ModelRouteRouteWithChildren
   '/form-playground': typeof FormPlaygroundRoute
   '/login': typeof LoginRoute
+  '/registry': typeof RegistryRoute
   '/style-guide': typeof StyleGuideRoute
   '/$model/$id': typeof ModelIdRouteWithChildren
   '/$model/create': typeof ModelCreateRoute
   '/$model/': typeof ModelIndexRoute
   '/$model/$id/view': typeof ModelIdViewRoute
+  '/$model/$id/': typeof ModelIdIndexRoute
   '/plugins/$pluginId/pages/$pageId': typeof PluginsPluginIdPagesPageIdRoute
 }
 export interface FileRouteTypes {
@@ -115,22 +132,25 @@ export interface FileRouteTypes {
     | '/$model'
     | '/form-playground'
     | '/login'
+    | '/registry'
     | '/style-guide'
     | '/$model/$id'
     | '/$model/create'
     | '/$model/'
     | '/$model/$id/view'
+    | '/$model/$id/'
     | '/plugins/$pluginId/pages/$pageId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/form-playground'
     | '/login'
+    | '/registry'
     | '/style-guide'
-    | '/$model/$id'
     | '/$model/create'
     | '/$model'
     | '/$model/$id/view'
+    | '/$model/$id'
     | '/plugins/$pluginId/pages/$pageId'
   id:
     | '__root__'
@@ -138,11 +158,13 @@ export interface FileRouteTypes {
     | '/$model'
     | '/form-playground'
     | '/login'
+    | '/registry'
     | '/style-guide'
     | '/$model/$id'
     | '/$model/create'
     | '/$model/'
     | '/$model/$id/view'
+    | '/$model/$id/'
     | '/plugins/$pluginId/pages/$pageId'
   fileRoutesById: FileRoutesById
 }
@@ -151,6 +173,7 @@ export interface RootRouteChildren {
   ModelRouteRoute: typeof ModelRouteRouteWithChildren
   FormPlaygroundRoute: typeof FormPlaygroundRoute
   LoginRoute: typeof LoginRoute
+  RegistryRoute: typeof RegistryRoute
   StyleGuideRoute: typeof StyleGuideRoute
   PluginsPluginIdPagesPageIdRoute: typeof PluginsPluginIdPagesPageIdRoute
 }
@@ -185,6 +208,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/registry': {
+      id: '/registry'
+      path: '/registry'
+      fullPath: '/registry'
+      preLoaderRoute: typeof RegistryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/style-guide': {
       id: '/style-guide'
       path: '/style-guide'
@@ -213,6 +243,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModelCreateRouteImport
       parentRoute: typeof ModelRouteRoute
     }
+    '/$model/$id/': {
+      id: '/$model/$id/'
+      path: '/'
+      fullPath: '/$model/$id/'
+      preLoaderRoute: typeof ModelIdIndexRouteImport
+      parentRoute: typeof ModelIdRoute
+    }
     '/$model/$id/view': {
       id: '/$model/$id/view'
       path: '/view'
@@ -232,10 +269,12 @@ declare module '@tanstack/react-router' {
 
 interface ModelIdRouteChildren {
   ModelIdViewRoute: typeof ModelIdViewRoute
+  ModelIdIndexRoute: typeof ModelIdIndexRoute
 }
 
 const ModelIdRouteChildren: ModelIdRouteChildren = {
   ModelIdViewRoute: ModelIdViewRoute,
+  ModelIdIndexRoute: ModelIdIndexRoute,
 }
 
 const ModelIdRouteWithChildren =
@@ -262,6 +301,7 @@ const rootRouteChildren: RootRouteChildren = {
   ModelRouteRoute: ModelRouteRouteWithChildren,
   FormPlaygroundRoute: FormPlaygroundRoute,
   LoginRoute: LoginRoute,
+  RegistryRoute: RegistryRoute,
   StyleGuideRoute: StyleGuideRoute,
   PluginsPluginIdPagesPageIdRoute: PluginsPluginIdPagesPageIdRoute,
 }

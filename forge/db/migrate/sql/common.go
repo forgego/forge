@@ -57,16 +57,17 @@ func orderChanges(changes []core.Change) []core.Change {
 
 // mapCascadeType maps cascade type strings to SQL
 func mapCascadeType(cascade string) string {
-	switch cascade {
+	cascade = strings.TrimPrefix(cascade, "Cascade")
+	switch strings.ToUpper(cascade) {
 	case "CASCADE":
 		return "CASCADE"
-	case "SET_NULL", "SET NULL":
+	case "SET_NULL", "SET NULL", "SETNULL":
 		return "SET NULL"
-	case "PROTECT":
+	case "PROTECT", "RESTRICT":
 		return "RESTRICT"
-	case "SET_DEFAULT", "SET DEFAULT":
+	case "SET_DEFAULT", "SET DEFAULT", "SETDEFAULT":
 		return "SET DEFAULT"
-	case "DO_NOTHING", "NO ACTION":
+	case "DO_NOTHING", "NO ACTION", "NOACTION":
 		return "NO ACTION"
 	default:
 		return "NO ACTION"

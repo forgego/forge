@@ -168,8 +168,10 @@ func TestORMCRUDWithRelations(t *testing.T) {
 	fa, err := bookManager.FieldAccessor()
 	require.NoError(t, err)
 
-	priceField := orm.FieldFor[Book, float64](fa, "price")
-	titleField := orm.FieldFor[Book, string](fa, "title")
+	priceField, err := orm.FieldFor[Book, float64](fa, "price")
+	require.NoError(t, err)
+	titleField, err := orm.FieldFor[Book, string](fa, "title")
+	require.NoError(t, err)
 
 	filtered, err := bookManager.Filter(priceField.Gt(10.0))
 	require.NoError(t, err)
@@ -180,7 +182,7 @@ func TestORMCRUDWithRelations(t *testing.T) {
 	require.Len(t, results, 1)
 	require.Equal(t, "Compiler", results[0].Title)
 
-	ordered, err := bookManager.Filter(titleField.Contains("a"))
+	ordered, err := bookManager.Filter(titleField.Contains("i"))
 	require.NoError(t, err)
 
 	ordered = ordered.OrderBy(orm.Asc("title"))

@@ -205,11 +205,51 @@ func (d *Detector) fieldChanged(current, previous generator.FieldDefinition) boo
 	if !reflect.DeepEqual(current.Default, previous.Default) {
 		return true
 	}
-	// Use reflect.DeepEqual for options map comparison
-	if !reflect.DeepEqual(current.Options, previous.Options) {
-		return true
+	// Only compare schema-relevant options that affect DDL
+	schemaOptionKeys := []string{
+		"max_length",
+		"max_digits",
+		"decimal_places",
+		"db_type",
+		"db_column",
+		"db_default",
+		"generated",
+		"generated_expr",
+		"generated_stored",
+	}
+	for _, key := range schemaOptionKeys {
+		currVal, currHas := current.Options[key]
+		prevVal, prevHas := previous.Options[key]
+		if currHas != prevHas {
+			if currHas && isZeroOrNil(currVal) && !prevHas {
+				continue
+			}
+			if prevHas && isZeroOrNil(prevVal) && !currHas {
+				continue
+			}
+			return true
+		}
+		if currHas && prevHas && !reflect.DeepEqual(currVal, prevVal) {
+			return true
+		}
 	}
 	return false
+}
+
+func isZeroOrNil(v interface{}) bool {
+	if v == nil {
+		return true
+	}
+	switch val := v.(type) {
+	case int:
+		return val == 0
+	case string:
+		return val == ""
+	case bool:
+		return !val
+	default:
+		return false
+	}
 }
 
 // detectIndexChanges detects index changes

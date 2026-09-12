@@ -7,6 +7,23 @@ export const info = {
 
 export const primaries = [
   {
+    name: "iris",
+    label: "Iris (Indigo)",
+    active: "243 75% 58%",
+    cssVars: {
+      light: {
+        "--primary": "243 75% 58%",
+        "--primary-foreground": "240 100% 99%",
+        "--ring": "243 75% 58%",
+      },
+      dark: {
+        "--primary": "244 80% 70%",
+        "--primary-foreground": "245 50% 12%",
+        "--ring": "244 80% 70%",
+      },
+    },
+  },
+  {
     name: "default",
     label: "Default (Blue)",
     active: "221 83% 53%",

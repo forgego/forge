@@ -131,7 +131,7 @@ export interface ErrorResponse {
 }
 
 export interface BulkActionRequest {
-  ids: number[];
+  ids: (string | number)[];
   params?: Record<string, any>;
 }
 
@@ -143,8 +143,27 @@ export interface BulkActionResponse {
 }
 
 export interface BulkActionError {
-  id: number;
+  index?: number;
+  id?: string | number;
+  code?: string;
   message: string;
+}
+
+export interface BulkCreateResponse<T = any> {
+  created: number;
+  objects: T[];
+  errors?: BulkActionError[];
+}
+
+export interface BulkUpdateResponse<T = any> {
+  updated: number;
+  objects: T[];
+  errors?: BulkActionError[];
+}
+
+export interface BulkDeleteResponse {
+  deleted: number;
+  errors?: BulkActionError[];
 }
 
 export interface SearchRequest {
@@ -163,7 +182,7 @@ export interface SearchResultGroup {
 }
 
 export interface SearchResultItem {
-  id: number;
+  id: string | number;
   title: string;
   highlight?: string;
   url: string;

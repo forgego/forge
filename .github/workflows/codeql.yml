@@ -33,6 +33,7 @@ on:
 
 permissions:
   actions: read
+  pull-requests: read
   contents: read
   security-events: write
 
@@ -45,10 +46,10 @@ jobs:
       js: ${{ steps.force.outputs.js || steps.filter.outputs.js }}
       workflows: ${{ steps.force.outputs.workflows || steps.filter.outputs.workflows }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
-      - uses: dorny/paths-filter@v4
+      - uses: dorny/paths-filter@v4.0.3
         id: filter
         if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
         with:
@@ -82,7 +83,7 @@ jobs:
     timeout-minutes: 360
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
       
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
@@ -106,7 +107,7 @@ jobs:
     timeout-minutes: 360
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
       
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4

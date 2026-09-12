@@ -6,10 +6,7 @@ import { Loader2 } from "lucide-react";
 import apiClient from "../api/client";
 
 export default function PluginPage() {
-  const params: any = useParams({
-    from: "/admin/plugins/$pluginId/pages/$pageId",
-  } as any);
-  const { pluginId, pageId } = params;
+  const { pluginId, pageId } = useParams({ strict: false }) as any;
 
   const {
     data: pageComponent,

@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"html"
 	"io"
 	"io/fs"
 	"net/http"
@@ -178,9 +179,12 @@ func StaticFS(pattern string, filesystem fs.FS, options ...StaticOption) http.Ha
 		// If it's a directory, try index files or show listing
 		if stat.IsDir() {
 			if opts.ShowIndexes {
-				// Directory listing (simplified - in production, use a proper template)
+				// Directory listing (simplified - in production, use a proper template).
+				// The request path is HTML-escaped: it is reflected into the
+				// response and must never break out of the markup.
+				safePath := html.EscapeString(urlPath)
 				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-				fmt.Fprintf(w, "<html><head><title>Index of %s</title></head><body><h1>Index of %s</h1><ul>", urlPath, urlPath)
+				fmt.Fprintf(w, "<html><head><title>Index of %s</title></head><body><h1>Index of %s</h1><ul>", safePath, safePath)
 				// Note: This is a simplified listing. For production, use a proper directory listing implementation.
 				fmt.Fprintf(w, "</ul></body></html>")
 				return

@@ -117,7 +117,7 @@ superuser:
 # Build for production
 build:
 	@echo "🏗️  Building production binary..."
-	go build -o ecommerce -ldflags="-s -w" main.go
+	go build -o ecommerce -ldflags="-s -w" .
 	@echo "✅ Build complete: ./ecommerce"
 
 # Full setup (for new developers)

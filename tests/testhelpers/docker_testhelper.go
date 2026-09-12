@@ -323,7 +323,11 @@ func startDirectPostgresConnection(ctx context.Context, opts PostgresOpts) (*sql
 	}
 	password := opts.Password
 	if password == "" {
-		password = "postgres"
+		if envPass := os.Getenv("POSTGRES_PASSWORD"); envPass != "" {
+			password = envPass
+		} else {
+			password = "123"
+		}
 	}
 	dbName := opts.DBName
 	if dbName == "" {

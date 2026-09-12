@@ -1,16 +1,16 @@
-import { useLocation, useNavigate } from '@tanstack/react-router';
-import { ChevronRight, Home, Database, Plus, Edit, Eye, Trash2 } from 'lucide-react';
+import { useNavigate, useParams, useLocation } from '@tanstack/react-router';
+import { ChevronRight, Home, Database, Plus, Edit, Eye, Sparkles, Layers } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
 
-interface BreadcrumbItem {
+export interface BreadcrumbItem {
   label: string;
   path?: string;
   icon?: React.ReactNode;
   action?: () => void;
 }
 
-interface BreadcrumbsProps {
+export interface BreadcrumbsProps {
   model?: string;
   modelLabel?: string;
   mode?: 'list' | 'create' | 'edit' | 'detail';
@@ -19,17 +19,33 @@ interface BreadcrumbsProps {
 }
 
 export function Breadcrumbs({
-  model,
-  modelLabel,
-  mode,
+  model: propModel,
+  modelLabel: propModelLabel,
+  mode: propMode,
   customItems,
   className,
 }: BreadcrumbsProps) {
-  const location = useLocation();
   const navigate = useNavigate();
+  const params = useParams({ strict: false }) as Record<string, string>;
+  const location = useLocation();
 
-  const getModeIcon = (mode: string) => {
-    switch (mode) {
+  const model = propModel || params?.model;
+  const modelLabel =
+    propModelLabel ||
+    (model ? model.charAt(0).toUpperCase() + model.slice(1) : undefined);
+
+  const pathname = location?.pathname || '';
+
+  const derivedMode: 'list' | 'create' | 'edit' | 'detail' = (() => {
+    if (propMode) return propMode;
+    if (pathname.endsWith('/create') || pathname.endsWith('/new')) return 'create';
+    if (pathname.endsWith('/view')) return 'detail';
+    if (params?.id) return 'edit';
+    return 'list';
+  })();
+
+  const getModeIcon = (m: string) => {
+    switch (m) {
       case 'create':
         return <Plus className="h-3.5 w-3.5" />;
       case 'edit':
@@ -41,8 +57,8 @@ export function Breadcrumbs({
     }
   };
 
-  const getModeLabel = (mode: string) => {
-    switch (mode) {
+  const getModeLabel = (m: string) => {
+    switch (m) {
       case 'create':
         return 'Create';
       case 'edit':
@@ -66,18 +82,29 @@ export function Breadcrumbs({
     ];
 
     if (model) {
+      const isList = derivedMode === 'list';
       items.push({
-        label: modelLabel || model.charAt(0).toUpperCase() + model.slice(1),
-        path: `/${model}`,
+        label: modelLabel || model,
+        path: isList ? undefined : `/${model}`,
         icon: <Database className="h-3.5 w-3.5" />,
       });
 
-      if (mode && mode !== 'list') {
+      if (!isList) {
         items.push({
-          label: getModeLabel(mode),
-          icon: getModeIcon(mode),
+          label: getModeLabel(derivedMode),
+          icon: getModeIcon(derivedMode),
         });
       }
+    } else if (pathname === '/style-guide') {
+      items.push({
+        label: 'Design System',
+        icon: <Sparkles className="h-3.5 w-3.5" />,
+      });
+    } else if (pathname === '/form-playground') {
+      items.push({
+        label: 'Form Playground',
+        icon: <Layers className="h-3.5 w-3.5" />,
+      });
     }
 
     return items;
@@ -86,35 +113,36 @@ export function Breadcrumbs({
   const breadcrumbs = buildBreadcrumbs();
 
   return (
-    <nav className={cn("flex items-center gap-1 text-sm", className)}>
+    <nav aria-label="Breadcrumbs" className={cn("flex items-center gap-1 text-xs", className)}>
       {breadcrumbs.map((item, index) => {
         const isLast = index === breadcrumbs.length - 1;
 
         return (
           <div key={index} className="flex items-center gap-1">
             {index > 0 && (
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
             )}
-            {isLast ? (
-              <span className="flex items-center gap-1.5 font-medium text-foreground">
+            {isLast || !item.path ? (
+              <span className="flex items-center gap-1.5 font-semibold text-foreground">
                 {item.icon}
-                {item.label}
+                <span>{item.label}</span>
               </span>
-            ) : item.path ? (
+            ) : (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-1.5 text-muted-foreground hover:text-foreground"
-                onClick={() => navigate({ to: item.path })}
+                className="h-6 px-1.5 text-xs text-muted-foreground hover:text-foreground font-normal"
+                onClick={() => {
+                  if (item.action) {
+                    item.action();
+                  } else if (item.path) {
+                    navigate({ to: item.path });
+                  }
+                }}
               >
                 {item.icon}
                 <span className="ml-1">{item.label}</span>
               </Button>
-            ) : (
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                {item.icon}
-                <span className="ml-1">{item.label}</span>
-              </span>
             )}
           </div>
         );
@@ -128,7 +156,6 @@ export function useBreadcrumbs() {
   const navigate = useNavigate();
 
   const setBreadcrumb = (items: BreadcrumbItem[]) => {
-    // This could be used with a store if needed
     console.log('Breadcrumbs set:', items);
   };
 

@@ -31,28 +31,43 @@ func Init(database *db.DB) {
 		panic(err)
 	}
 	ShippingMethodManager.SetDB(database)
+	if ShippingMethodObjects != nil {
+		ShippingMethodObjects.SetDB(database)
+	}
 
 	PaymentMethodManager, err = orm.NewManager[PaymentMethod]("payment_methods")
 	if err != nil {
 		panic(err)
 	}
 	PaymentMethodManager.SetDB(database)
+	if PaymentMethodObjects != nil {
+		PaymentMethodObjects.SetDB(database)
+	}
 
 	TaxRateManager, err = orm.NewManager[TaxRate]("tax_rates")
 	if err != nil {
 		panic(err)
 	}
 	TaxRateManager.SetDB(database)
+	if TaxRateObjects != nil {
+		TaxRateObjects.SetDB(database)
+	}
 
 	CurrencyManager, err = orm.NewManager[Currency]("currencies")
 	if err != nil {
 		panic(err)
 	}
 	CurrencyManager.SetDB(database)
+	if CurrencyObjects != nil {
+		CurrencyObjects.SetDB(database)
+	}
 
 	ExchangeRateManager, err = orm.NewManager[ExchangeRate]("exchange_rates")
 	if err != nil {
 		panic(err)
 	}
 	ExchangeRateManager.SetDB(database)
+	if ExchangeRateObjects != nil {
+		ExchangeRateObjects.SetDB(database)
+	}
 }

@@ -1,155 +1,29 @@
-# golangci-lint configuration for forge
-# See https://golangci-lint.run/usage/configuration/ for full options
-
+# golangci-lint v2; preserve the existing focused CI checks.
+version: "2"
 run:
-  # Timeout for analysis
-  deadline: 5m
-
-  # Include test files
+  timeout: 5m
   tests: true
-
-# Linters configuration
 linters:
-  # Disable all linters by default
-  disable-all: true
-
-  # Enable a focused set of linters for CI signal
+  default: none
   enable:
-    - typecheck # Like the front-end of a Go compiler
-    - misspell # Finds commonly misspelled words
-    - ineffassign # Detects ineffectual assignments
-
-# Linters settings
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-
-  gocyclo:
-    min-complexity: 15
-
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-
-  gofumpt:
-    extra-rules: true
-
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-    disabled-checks:
-      - dupImport # goimports handles this
-      - ifElseChain
-      - octalLiteral
-      - whyNoLint
-      - wrapperFunc
-      - paramTypeCombine # Style preference, not critical
-      - singleCaseSwitch # Switch is idiomatic for type assertions
-      - rangeValCopy # Performance micro-optimization, not critical
-      - unnamedResult # Style preference
-      - builtinShadow # Common pattern, clear in context
-      - hugeParam # Value semantics are fine for small structs
-      - emptyStringTest # Both are valid
-
-  gosec:
-    # Exclude some rules that are too strict for framework code
-    excludes:
-      - G104 # Errors unhandled (we handle errors in many places)
-      - G107 # Potential HTTP request made with variable url
-      - G402 # TLS InsecureSkipVerify set true
-      - G404 # Use of weak random number generator
-
-  shadow:
-    strict: false
-
-  misspell:
-    locale: US
-
-  prealloc:
-    simple: true
-    range-loops: true
-    for-loops: false
-
-  staticcheck:
-    checks: ["all", "-SA1019"] # Exclude deprecated API warnings
-
-  unused:
-    check-exported: false
-
-# Issues configuration
+    - misspell
+    - ineffassign
+  settings:
+    misspell:
+      locale: US
+  exclusions:
+    generated: lax
+    paths:
+      - vendor
+      - examples
+      - cmd/forge
+      - '.*\.gen\.go$'
 issues:
-  # Maximum issues count per one linter
   max-issues-per-linter: 50
-
-  # Maximum count of issues with the same text
   max-same-issues: 3
-
-  # Exclude directories
-  exclude-dirs:
-    - vendor
-    - examples
-    - cmd/forge
-
-  # Exclude files
-  exclude-files:
-    - ".*\\.gen\\.go$" # Skip generated files
-
-  # Exclude some issues
-  exclude-rules:
-    # Exclude some linters from test files
-    - path: _test\.go$
-      linters:
-        - errcheck
-        - gosec
-        - goconst
-
-    # Exclude generated files
-    - path: ".*\\.gen\\.go$"
-      linters:
-        - all
-
-    # Exclude some common false positives
-    - text: "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*printf?|os\\.(Un)?Setenv). is not checked"
-      linters:
-        - errcheck
-
-    # Exclude complexity warnings for framework code
-    - text: "cyclomatic complexity .* of func .* is high"
-      linters:
-        - gocyclo
-
-# Severity configuration
 severity:
-  # Default value is empty string.
-  # The value should be one of: error, warning, info
-  default-severity: error
-
-  # The default value is empty.
-  # The value should be one of: error, warning, info
-  case-sensitive: false
-
-  # The default value is `-`.
-  # The value should be a valid regexp pattern, and must be a valid RE2 regexp.
+  default: error
   rules:
     - linters:
-        - errcheck
-      severity: error
-    - linters:
-        - gosec
-      severity: error
-    - linters:
-        - govet
-      severity: error
-    - linters:
-        - staticcheck
-      severity: error
-    - linters:
         - misspell
-      severity: warning
-    - linters:
-        - gocyclo
       severity: warning

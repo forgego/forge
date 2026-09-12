@@ -38,7 +38,7 @@ export function StatsCard({
   };
 
   return (
-    <Card className="glass-lite border-border/50 shadow-sm overflow-hidden group hover:shadow-md transition-all duration-300">
+    <Card className="overflow-hidden group hover:shadow-md transition-all duration-300">
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div className={cn("p-2 rounded-lg transition-transform group-hover:scale-110 duration-300", colorMap[color])}>

@@ -12,6 +12,7 @@ import (
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
+	"github.com/forgego/forge/validate"
 	"github.com/go-viper/mapstructure/v2"
 )
 
@@ -271,24 +272,25 @@ func (a *Admin[T]) ListObjects(ctx context.Context, params ListParams) (*Paginat
 				} else {
 					expr = f.Eq(value)
 				}
-			case "in":
-				// value should be slice or comma-separated string
-				// For now assume value is single string from query param
-				if s, ok := value.(string); ok {
-					parts := strings.Split(s, ",")
-					if len(parts) > 0 {
-						// We need to convert parts to interface{}
-						args := make([]interface{}, len(parts))
-						for i, v := range parts {
-							args[i] = v
-						}
-						expr = f.In(args...)
-					} else {
-						expr = f.Eq(value)
+		case "in":
+			// value should be slice or comma-separated string
+			// For now assume value is single string from query param
+			if s, ok := value.(string); ok {
+				parts := strings.Split(s, ",")
+				args := make([]interface{}, 0, len(parts))
+				for _, v := range parts {
+					if trimmed := strings.TrimSpace(v); trimmed != "" {
+						args = append(args, trimmed)
 					}
+				}
+				if len(args) > 0 {
+					expr = f.In(args...)
 				} else {
 					expr = f.Eq(value)
 				}
+			} else {
+				expr = f.Eq(value)
+			}
 			case "isnull":
 				if s, ok := value.(string); ok && (s == "true" || s == "1") {
 					expr = f.IsNull()
@@ -303,10 +305,11 @@ func (a *Admin[T]) ListObjects(ctx context.Context, params ListParams) (*Paginat
 		}
 	}
 
-	// Apply ordering
-	if len(params.Ordering) > 0 {
-		ordering := make([]any, len(params.Ordering))
-		for i, v := range params.Ordering {
+	// Apply ordering (request ordering wins; unknown fields are dropped
+	// so a bad `ordering` param can never produce a SQL error)
+	if validOrdering := sanitizeOrdering(params.Ordering, a.orderableFields()); len(validOrdering) > 0 {
+		ordering := make([]any, len(validOrdering))
+		for i, v := range validOrdering {
 			ordering[i] = v
 		}
 		qs = qs.OrderBy(ordering...)
@@ -318,17 +321,30 @@ func (a *Admin[T]) ListObjects(ctx context.Context, params ListParams) (*Paginat
 		qs = qs.OrderBy(ordering...)
 	}
 
+	// Apply pagination (guard against zero/negative/huge values so
+	// direct callers can never produce a negative offset or div-by-zero)
+	page := params.Page
+	if page < 1 {
+		page = 1
+	}
+	limit := params.PageSize
+	if limit <= 0 {
+		limit = a.config.ListPerPage
+	}
+	if limit <= 0 {
+		limit = 25
+	}
+	const maxListLimit = 1000
+	if limit > maxListLimit {
+		limit = maxListLimit
+	}
+	offset := (page - 1) * limit
+
 	// Apply pagination
 	count, err := qs.Count(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	limit := params.PageSize
-	if limit == 0 {
-		limit = a.config.ListPerPage
-	}
-	offset := (params.Page - 1) * limit
 
 	results, err := qs.Limit(limit).Offset(offset).All(ctx)
 	if err != nil {
@@ -340,10 +356,67 @@ func (a *Admin[T]) ListObjects(ctx context.Context, params ListParams) (*Paginat
 	return &PaginatedResponse{
 		Count:      count,
 		PageSize:   limit,
-		Page:       params.Page,
+		Page:       page,
 		TotalPages: totalPages,
 		Results:    results,
 	}, nil
+}
+
+// orderableFields returns the set of schema field names that may be used
+// for ordering (plus the conventional "id"/"pk" aliases).
+func (a *Admin[T]) orderableFields() map[string]bool {
+	fields := make(map[string]bool)
+	if a.schema != nil {
+		for _, f := range a.schema.Fields() {
+			if f.Name != "" {
+				fields[f.Name] = true
+			}
+		}
+	}
+	fields["id"] = true
+	fields["pk"] = true
+	return fields
+}
+
+// sanitizeOrdering drops ordering keys that reference unknown fields or
+// contain unsafe characters, so user input can never break the query.
+func sanitizeOrdering(ordering []string, valid map[string]bool) []string {
+	sanitized := make([]string, 0, len(ordering))
+	for _, key := range ordering {
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+		desc := strings.HasPrefix(key, "-")
+		name := strings.TrimPrefix(key, "-")
+		if !isSafeOrderField(name) {
+			continue
+		}
+		if !valid[name] {
+			continue
+		}
+		if desc {
+			sanitized = append(sanitized, "-"+name)
+		} else {
+			sanitized = append(sanitized, name)
+		}
+	}
+	return sanitized
+}
+
+// isSafeOrderField reports whether name is a plain field identifier.
+func isSafeOrderField(name string) bool {
+	if name == "" {
+		return false
+	}
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '.' {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func (a *Admin[T]) Autocomplete(ctx context.Context, query string, limit int) ([]AutocompleteItem, error) {
@@ -392,7 +465,39 @@ func (a *Admin[T]) GetObject(ctx context.Context, id interface{}) (interface{}, 
 	return instance, nil
 }
 
-func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}) (interface{}, error) {
+// validateData checks incoming mutation data against the schema field
+// definitions. With partial=false (create) missing required fields are
+// rejected; with partial=true (PATCH) only provided fields are checked.
+func (a *Admin[T]) validateData(data map[string]interface{}, partial bool) error {
+	if a.schema == nil {
+		return nil
+	}
+	fv := validation.NewFieldValidator(validation.NewValidator())
+	errs := &validation.ValidationErrors{}
+	for _, field := range a.schema.Fields() {
+		value, present := data[field.Name]
+		if !present {
+			if !partial && field.Required {
+				errs.Add(field.Name, "is required")
+			}
+			continue
+		}
+		if err := fv.ValidateField(field, value); err != nil {
+			errs.Add(field.Name, err.Error())
+		}
+	}
+	if errs.HasErrors() {
+		return errs
+	}
+	return nil
+}
+
+func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}) (interface{}, error) {	// Validate incoming data against the schema before touching the DB.
+	// Full validation: missing required fields are rejected.
+	if err := a.validateData(data, false); err != nil {
+		return nil, err
+	}
+
 	// Create new instance
 	var instance T
 
@@ -401,8 +506,7 @@ func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}
 		return nil, fmt.Errorf("failed to decode data: %w", err)
 	}
 
-	err := a.SaveModel(ctx, &instance, true)
-	if err != nil {
+	if err := a.SaveModel(ctx, &instance, true); err != nil {
 		return nil, err
 	}
 
@@ -418,6 +522,12 @@ func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}
 func (a *Admin[T]) UpdateObject(ctx context.Context, id interface{}, data map[string]interface{}) (interface{}, error) {
 	intID, err := toInt64(id)
 	if err != nil {
+		return nil, err
+	}
+
+	// Partial validation: provided fields must be valid, but omitted
+	// required fields are fine (PATCH semantics).
+	if err := a.validateData(data, true); err != nil {
 		return nil, err
 	}
 
@@ -456,8 +566,7 @@ func (a *Admin[T]) UpdateObject(ctx context.Context, id interface{}, data map[st
 	return updated, nil
 }
 
-func (a *Admin[T]) DeleteObject(ctx context.Context, id interface{}) error {
-	intID, err := toInt64(id)
+func (a *Admin[T]) DeleteObject(ctx context.Context, id interface{}) error {	intID, err := toInt64(id)
 	if err != nil {
 		return err
 	}
@@ -662,6 +771,47 @@ func (a *Admin[T]) resolveUserID(user interface{}) interface{} {
 	return fmt.Sprintf("%v", user)
 }
 
+func isSuperuser(user interface{}) bool {
+	if user == nil {
+		return false
+	}
+	switch u := user.(type) {
+	case map[string]interface{}:
+		if role, ok := u["role"].(string); ok && (role == "superuser" || role == "admin") {
+			return true
+		}
+		if isSuper, ok := u["is_superuser"].(bool); ok && isSuper {
+			return true
+		}
+	case map[string]string:
+		if u["role"] == "superuser" || u["role"] == "admin" {
+			return true
+		}
+	}
+
+	val := reflect.ValueOf(user)
+	if val.Kind() == reflect.Ptr {
+		if val.IsNil() {
+			return false
+		}
+		val = val.Elem()
+	}
+	if val.Kind() == reflect.Struct {
+		for _, fieldName := range []string{"IsSuperuser", "IsAdmin", "Role"} {
+			f := val.FieldByName(fieldName)
+			if f.IsValid() {
+				if f.Kind() == reflect.Bool && f.Bool() {
+					return true
+				}
+				if f.Kind() == reflect.String && (f.String() == "superuser" || f.String() == "admin") {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 // Permission methods
 
 func (a *Admin[T]) HasAddPermission(ctx context.Context, user interface{}) bool {
@@ -670,6 +820,9 @@ func (a *Admin[T]) HasAddPermission(ctx context.Context, user interface{}) bool 
 	}
 	if a.config.PermissionChecker != nil {
 		return a.config.PermissionChecker.HasPermission(ctx, user, GetPermissionName(a.name, PermAdd))
+	}
+	if isSuperuser(user) {
+		return true
 	}
 	return false // Default deny: configure Has*Permission or PermissionChecker to grant access
 }
@@ -690,6 +843,9 @@ func (a *Admin[T]) HasChangePermission(ctx context.Context, user interface{}, ob
 	if a.config.PermissionChecker != nil {
 		return a.config.PermissionChecker.HasPermission(ctx, user, GetPermissionName(a.name, PermChange))
 	}
+	if isSuperuser(user) {
+		return true
+	}
 	return false // Default deny: configure Has*Permission or PermissionChecker to grant access
 }
 
@@ -708,6 +864,9 @@ func (a *Admin[T]) HasDeletePermission(ctx context.Context, user interface{}, ob
 	}
 	if a.config.PermissionChecker != nil {
 		return a.config.PermissionChecker.HasPermission(ctx, user, GetPermissionName(a.name, PermDelete))
+	}
+	if isSuperuser(user) {
+		return true
 	}
 	return false // Default deny: configure Has*Permission or PermissionChecker to grant access
 }
@@ -728,6 +887,9 @@ func (a *Admin[T]) HasViewPermission(ctx context.Context, user interface{}, obj 
 	if a.config.PermissionChecker != nil {
 		return a.config.PermissionChecker.HasPermission(ctx, user, GetPermissionName(a.name, PermView))
 	}
+	if isSuperuser(user) {
+		return true
+	}
 	return false // Default deny: configure Has*Permission or PermissionChecker to grant access
 }
 
@@ -738,7 +900,13 @@ func (a *Admin[T]) HasModulePermission(ctx context.Context, user interface{}) bo
 	if a.config.PermissionChecker != nil {
 		return a.config.PermissionChecker.HasPermission(ctx, user, GetPermissionName(a.name, PermView))
 	}
-	return false // Default deny: configure Has*Permission or PermissionChecker to grant access
+	if isSuperuser(user) {
+		return true
+	}
+	return a.HasViewPermission(ctx, user, nil) ||
+		a.HasAddPermission(ctx, user) ||
+		a.HasChangePermission(ctx, user, nil) ||
+		a.HasDeletePermission(ctx, user, nil)
 }
 
 // Interface implementation for type-agnostic access

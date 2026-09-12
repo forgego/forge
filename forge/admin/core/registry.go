@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -36,15 +37,31 @@ func (r *Registry) Register(admin AdminInterface) error {
 
 // Get retrieves an admin by model name
 func (r *Registry) Get(modelName string) (AdminInterface, error) {
+	if modelName == "" {
+		return nil, fmt.Errorf("admin for model %q not found", modelName)
+	}
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	admin, ok := r.admins[modelName]
-	if !ok {
-		return nil, fmt.Errorf("admin for model %q not found", modelName)
+	if ok {
+		return admin, nil
 	}
 
-	return admin, nil
+	for name, a := range r.admins {
+		if strings.EqualFold(name, modelName) {
+			return a, nil
+		}
+		if a.ModelType() != nil {
+			typeName := a.ModelType().Name()
+			if typeName != "" && strings.EqualFold(typeName, modelName) {
+				return a, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("admin for model %q not found", modelName)
 }
 
 // GetAll returns all registered admins
@@ -63,11 +80,28 @@ func (r *Registry) GetAll() map[string]AdminInterface {
 
 // Has checks if an admin is registered
 func (r *Registry) Has(modelName string) bool {
+	if modelName == "" {
+		return false
+	}
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	_, ok := r.admins[modelName]
-	return ok
+	if _, ok := r.admins[modelName]; ok {
+		return true
+	}
+	for name, a := range r.admins {
+		if strings.EqualFold(name, modelName) {
+			return true
+		}
+		if a.ModelType() != nil {
+			typeName := a.ModelType().Name()
+			if typeName != "" && strings.EqualFold(typeName, modelName) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // Unregister removes an admin from the registry

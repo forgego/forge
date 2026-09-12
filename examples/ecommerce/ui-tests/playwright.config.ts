@@ -12,8 +12,9 @@ export default defineConfig({
   expect: {
     timeout: 20_000,
   },
+  workers: 1,
   use: {
-    baseURL: 'http://localhost:8000/admin/',
+    baseURL: 'http://localhost:8020/admin/',
     channel: 'chrome',
     trace: 'off',
     screenshot: 'only-on-failure',
@@ -22,7 +23,7 @@ export default defineConfig({
   webServer: {
     command: 'go run -tags embed .',
     cwd: rootDir,
-    url: 'http://localhost:8000/admin/',
+    url: 'http://localhost:8020/admin/',
     timeout: 180_000,
     reuseExistingServer: true,
   },

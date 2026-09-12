@@ -24,18 +24,19 @@ services:
   # Application
   app:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: examples/ecommerce/Dockerfile
     container_name: ecommerce_app
     ports:
-      - "8000:8000"
+      - "8020:8020"
     environment:
-      - DATABASE_HOST=postgres
-      - DATABASE_PORT=5432
-      - DATABASE_USER=postgres
-      - DATABASE_PASSWORD=postgres
-      - DATABASE_NAME=ecommerce_db
-      - DATABASE_SSLMODE=disable
+      - FORGE_DATABASE_DRIVER=postgres
+      - FORGE_DATABASE_HOST=postgres
+      - FORGE_DATABASE_PORT=5432
+      - FORGE_DATABASE_USER=postgres
+      - FORGE_DATABASE_PASSWORD=postgres
+      - FORGE_DATABASE_NAME=ecommerce_db
+      - FORGE_DATABASE_SSLMODE=disable
     depends_on:
       postgres:
         condition: service_healthy

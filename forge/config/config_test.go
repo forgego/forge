@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -255,5 +256,26 @@ func TestPoolConfig_Struct(t *testing.T) {
 	}
 	if poolConfig.ConnMaxIdleTime != 5*time.Minute {
 		t.Errorf("ConnMaxIdleTime = %v, want 5m", poolConfig.ConnMaxIdleTime)
+	}
+}
+
+func TestNewConfig_EnvironmentOverrides(t *testing.T) {
+	t.Setenv("FORGE_SERVER_HOST", "0.0.0.0")
+	t.Setenv("FORGE_SERVER_PORT", "8020")
+	t.Setenv("FORGE_DATABASE_DRIVER", "sqlite")
+	secret := strings.Repeat("a", 64)
+	t.Setenv("FORGE_SECURITY_SESSION_SECRET", secret)
+	cfg := NewConfig()
+	if got := cfg.GetString("server.host", ""); got != "0.0.0.0" {
+		t.Errorf("host = %q", got)
+	}
+	if got := cfg.GetInt("server.port", 0); got != 8020 {
+		t.Errorf("port = %d", got)
+	}
+	if got := cfg.GetDriver(); got != "sqlite" {
+		t.Errorf("driver = %q", got)
+	}
+	if got := cfg.GetString("security.session_secret", ""); got != secret {
+		t.Error("configured session secret was replaced")
 	}
 }

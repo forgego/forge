@@ -32,7 +32,7 @@ interface ChartWidgetProps {
 export function ChartWidget({
   title,
   data,
-  dataKey = 'value',
+  dataKey: _dataKey = 'value',
   xAxisKey = 'name',
   lines,
   areas,
@@ -43,7 +43,7 @@ export function ChartWidget({
   showGrid = true,
   format = 'none',
 }: ChartWidgetProps) {
-  const formatValue = (value: number) => {
+  const formatValue = (value: number): string => {
     switch (format) {
       case 'currency':
         return new Intl.NumberFormat('en-US', {
@@ -57,7 +57,7 @@ export function ChartWidget({
       case 'percent':
         return `${value.toFixed(1)}%`;
       default:
-        return value;
+        return String(value);
     }
   };
 
@@ -177,7 +177,7 @@ export function ChartWidget({
   };
 
   return (
-    <Card className="glass-lite border-border/50 shadow-sm">
+    <Card className="">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-bold">{title}</CardTitle>
       </CardHeader>

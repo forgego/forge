@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"github.com/forgego/forge/admin"
@@ -471,12 +472,18 @@ func RegisterAdmin(ctx context.Context) {
 				},
 			},
 			{
-				Name:         "update_price",
-				Label:        "Update Price",
-				Icon:         "DollarSign",
-				Confirmation: "Update price for selected products?",
+				Name:         "apply_discount_10",
+				Label:        "Apply 10% Discount",
+				Icon:         "Percent",
+				Confirmation: "Apply 10% discount to selected products?",
 				Handler: func(ctx context.Context, instances []*Product) error {
-					// Implementation would include price adjustment logic
+					for _, p := range instances {
+						p.CompareAtPrice = p.Price
+						p.Price = math.Round(p.Price*0.90*100) / 100
+						if err := ProductObjects.Update(ctx, p); err != nil {
+							return err
+						}
+					}
 					return nil
 				},
 			},

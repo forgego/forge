@@ -11,6 +11,7 @@ import type {
   ModelFormData,
   BulkActionRequest,
   BulkActionResponse,
+  BulkDeleteResponse,
   SearchRequest,
   SearchResponse,
   AutocompleteResponse,
@@ -110,6 +111,49 @@ export function useSavedViews(
   });
 }
 
+// Merges our cache invalidation with a caller-provided onSuccess.
+// (Spreading caller options last would silently drop invalidation.)
+function withInvalidation<TData, TError, TVariables>(
+  invalidate: () => void,
+  options?: UseMutationOptions<TData, TError, TVariables>
+): UseMutationOptions<TData, TError, TVariables> {
+  const { onSuccess, ...rest } = options ?? {};
+  return {
+    ...rest,
+    onSuccess: (data, variables, onMutateResult, context) => {
+      invalidate();
+      (onSuccess as any)?.(data, variables, onMutateResult, context);
+    },
+  };
+}
+
+// Logout mutation (clears local token even if the request fails)
+export function useLogout(options?: UseMutationOptions<{ message?: string }, Error, void>) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => adminAPI.logout(),
+    ...withInvalidation(() => queryClient.clear(), options),
+  });
+}
+
+export function useDeleteSavedView(
+  model: string,
+  options?: UseMutationOptions<void, Error, string>
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => adminAPI.deleteSavedView(model, id),
+    ...withInvalidation(
+      () =>
+        queryClient.invalidateQueries({
+          queryKey: adminKeys.savedViews(model),
+        }),
+      options
+    ),
+  });
+}
 export function useSaveSavedView(
   model: string,
   options?: UseMutationOptions<SavedView, Error, SavedViewRequest>
@@ -119,12 +163,13 @@ export function useSaveSavedView(
   return useMutation({
     mutationFn: (request: SavedViewRequest) =>
       adminAPI.saveSavedView(model, request),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: adminKeys.savedViews(model),
-      });
-    },
-    ...options,
+    ...withInvalidation(
+      () =>
+        queryClient.invalidateQueries({
+          queryKey: adminKeys.savedViews(model),
+        }),
+      options
+    ),
   });
 }
 
@@ -165,10 +210,10 @@ export function useCreateObject<T = any>(
 
   return useMutation({
     mutationFn: (data: ModelFormData) => adminAPI.createObject<T>(model, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.model(model) });
-    },
-    ...options,
+    ...withInvalidation(
+      () => queryClient.invalidateQueries({ queryKey: adminKeys.model(model) }),
+      options
+    ),
   });
 }
 
@@ -183,6 +228,7 @@ export function useUpdateObject<T = any>(
 ) {
   const queryClient = useQueryClient();
 
+  const { onSuccess, ...restOptions } = options ?? {};
   return useMutation({
     mutationFn: ({
       id,
@@ -191,13 +237,14 @@ export function useUpdateObject<T = any>(
       id: string | number;
       data: Partial<ModelFormData>;
     }) => adminAPI.updateObject<T>(model, id, data),
-    onSuccess: (_, variables) => {
+    ...restOptions,
+    onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({
         queryKey: adminKeys.modelDetail(model, variables.id),
       });
       queryClient.invalidateQueries({ queryKey: adminKeys.model(model) });
+      (onSuccess as any)?.(data, variables, context);
     },
-    ...options,
   });
 }
 
@@ -210,26 +257,26 @@ export function useDeleteObject(
 
   return useMutation({
     mutationFn: (id: string | number) => adminAPI.deleteObject(model, id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.model(model) });
-    },
-    ...options,
+    ...withInvalidation(
+      () => queryClient.invalidateQueries({ queryKey: adminKeys.model(model) }),
+      options
+    ),
   });
 }
 
-// Bulk delete mutation
+// Bulk delete mutation (207-aware: partial failures surface in data)
 export function useBulkDelete(
   model: string,
-  options?: UseMutationOptions<void, Error, (string | number)[]>
+  options?: UseMutationOptions<BulkDeleteResponse, Error, (string | number)[]>
 ) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (ids: (string | number)[]) => adminAPI.bulkDelete(model, ids),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.model(model) });
-    },
-    ...options,
+    ...withInvalidation(
+      () => queryClient.invalidateQueries({ queryKey: adminKeys.model(model) }),
+      options
+    ),
   });
 }
 
@@ -244,10 +291,10 @@ export function useExecuteAction(
   return useMutation({
     mutationFn: (request: BulkActionRequest) =>
       adminAPI.executeAction(model, action, request),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.model(model) });
-    },
-    ...options,
+    ...withInvalidation(
+      () => queryClient.invalidateQueries({ queryKey: adminKeys.model(model) }),
+      options
+    ),
   });
 }
 

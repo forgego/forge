@@ -49,7 +49,7 @@ func TestIncrementalEcommerceMigrations(t *testing.T) {
 	defer database.Close()
 
 	// Path to ecommerce models
-	baseModelsDir := filepath.Join("..", "..", "..", "examples", "ecommerce", "models")
+	baseModelsDir := filepath.Join("testdata", "ecommerce_models")
 
 	// Phase 1: Create core customer and address models
 	t.Run("Phase1_CoreModels", func(t *testing.T) {

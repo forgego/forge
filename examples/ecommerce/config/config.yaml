@@ -14,7 +14,7 @@ database:
 
 server:
   host: localhost
-  port: 8000
+  port: 8020
   read_timeout: 30
   write_timeout: 30
   idle_timeout: 120
@@ -25,6 +25,9 @@ admin:
   path: /admin/
   title: Forge Ecommerce Admin
   items_per_page: 20
+  username: admin
+  password: admin123
+  static_dir: ../../forge/admin/ui/dist
 
 api:
   enabled: true
@@ -49,7 +52,7 @@ logging:
 cors:
   allowed_origins:
     - http://localhost:3000
-    - http://localhost:8000
+    - http://localhost:8020
   allowed_methods:
     - GET
     - POST

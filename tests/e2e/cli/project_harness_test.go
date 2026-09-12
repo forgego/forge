@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -83,7 +84,16 @@ func patchGeneratedProject(projectDir string) error {
 	if strings.Contains(string(content), "replace github.com/forgego/forge =>") {
 		return nil
 	}
-	return os.WriteFile(goModPath, append(content, []byte(replaceLine)...), 0644)
+	if err := os.WriteFile(goModPath, append(content, []byte(replaceLine)...), 0644); err != nil {
+		return err
+	}
+
+	cmd := exec.Command("go", "mod", "tidy")
+	cmd.Dir = projectDir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("go mod tidy failed: %s: %w", string(out), err)
+	}
+	return nil
 }
 
 func repoRoot() (string, error) {
@@ -138,6 +148,9 @@ func updateServerPort(t *testing.T, configPath, port string) {
 
 	updated := strings.Replace(string(content), "port: 8000", "port: "+port, 1)
 	require.NotEqual(t, string(content), updated)
+	if !strings.Contains(updated, "csrf_exempt_paths") {
+		updated += "\nsecurity:\n  csrf_exempt_paths:\n    - /admin/api\n    - /api\n"
+	}
 	require.NoError(t, os.WriteFile(configPath, []byte(updated), 0644))
 }
 
@@ -198,7 +211,15 @@ func main() {
 	}
 }
 `
-	return os.WriteFile(mainPath, []byte(mainContent), 0644)
+	if err := os.WriteFile(mainPath, []byte(mainContent), 0644); err != nil {
+		return err
+	}
+	cmd := exec.Command("go", "mod", "tidy")
+	cmd.Dir = projectDir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("go mod tidy failed: %s: %w", string(out), err)
+	}
+	return nil
 }
 
 func startServer(t *testing.T, ctx context.Context, projectDir string) (*exec.Cmd, *bytes.Buffer) {
@@ -206,6 +227,10 @@ func startServer(t *testing.T, ctx context.Context, projectDir string) (*exec.Cm
 	serverCtx, _ := context.WithCancel(ctx)
 	cmd := exec.CommandContext(serverCtx, "go", "run", "cmd/server/main.go")
 	cmd.Dir = projectDir
+	cmd.Env = append(os.Environ(),
+		"FORGE_ADMIN_USERNAME=admin",
+		"FORGE_ADMIN_PASSWORD=secret",
+	)
 
 	var logs bytes.Buffer
 	cmd.Stdout = &logs
@@ -237,8 +262,28 @@ func waitForHealthy(t *testing.T, port string) {
 
 func checkAdmin(t *testing.T, port string) {
 	t.Helper()
+	// First login to obtain an admin session token
+	loginURL := fmt.Sprintf("http://127.0.0.1:%s/admin/api/login", port)
+	loginBody := bytes.NewBufferString(`{"username":"admin","password":"secret"}`)
+	loginResp, err := http.Post(loginURL, "application/json", loginBody)
+	require.NoError(t, err)
+	defer loginResp.Body.Close()
+	require.Equal(t, http.StatusOK, loginResp.StatusCode)
+
+	var loginPayload struct {
+		Token string `json:"token"`
+	}
+	require.NoError(t, json.NewDecoder(loginResp.Body).Decode(&loginPayload))
+	require.NotEmpty(t, loginPayload.Token)
+
+	// Now check the protected admin config endpoint
 	url := fmt.Sprintf("http://127.0.0.1:%s/admin/api/config", port)
-	resp, err := http.Get(url)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+loginPayload.Token)
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
