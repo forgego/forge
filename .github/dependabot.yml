@@ -3,6 +3,8 @@ updates:
   # Go dependencies - forge
   - package-ecosystem: "gomod"
     directory: "/forge"
+    cooldown:
+      default-days: 7
     schedule:
       interval: "weekly"
       day: "monday"
@@ -26,6 +28,8 @@ updates:
   # Go dependencies - examples/ecommerce
   - package-ecosystem: "gomod"
     directory: "/examples/ecommerce"
+    cooldown:
+      default-days: 7
     schedule:
       interval: "weekly"
       day: "monday"
@@ -41,6 +45,8 @@ updates:
   # Go dependencies - tests
   - package-ecosystem: "gomod"
     directory: "/tests"
+    cooldown:
+      default-days: 7
     schedule:
       interval: "weekly"
       day: "monday"
@@ -56,6 +62,8 @@ updates:
   # NPM dependencies - admin UI
   - package-ecosystem: "npm"
     directory: "/forge/admin/ui/web"
+    cooldown:
+      default-days: 7
     schedule:
       interval: "weekly"
       day: "monday"
@@ -90,6 +98,8 @@ updates:
   # NPM dependencies - docs site
   - package-ecosystem: "npm"
     directory: "/docs-site"
+    cooldown:
+      default-days: 7
     schedule:
       interval: "weekly"
       day: "monday"
@@ -113,6 +123,8 @@ updates:
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
+    cooldown:
+      default-days: 7
     schedule:
       interval: "weekly"
       day: "monday"

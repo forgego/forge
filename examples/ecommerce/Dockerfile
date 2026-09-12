@@ -20,6 +20,7 @@ RUN CGO_ENABLED=1 go build -tags embed -o /out/ecommerce .
 
 FROM alpine:latest
 RUN apk add --no-cache ca-certificates && \
+    apk upgrade --no-cache libssl3 libcrypto3 && \
     addgroup -g 1000 app && adduser -D -u 1000 -G app app
 WORKDIR /home/app
 COPY --from=builder --chown=app:app /out/ecommerce ./
