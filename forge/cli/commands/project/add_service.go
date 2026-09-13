@@ -128,6 +128,10 @@ func (c *AddServiceCommand) Execute(ctx *core.Context, args []string) error {
 		return fmt.Errorf("failed to write service code: %w", err)
 	}
 
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("failed to close service file: %w", err)
+	}
+
 	fmt.Printf("✓ Added service %s\n", serviceName)
 	fmt.Printf("  Type: %s, Package: %s\n", serviceType, packageName)
 

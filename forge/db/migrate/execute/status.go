@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -244,6 +245,9 @@ func parseVersion(versionStr string) (uint, error) {
 	version, err := strconv.ParseUint(versionStr, 10, 64)
 	if err != nil {
 		return 0, err
+	}
+	if version > math.MaxUint {
+		return 0, fmt.Errorf("version exceeds maximum uint: %s", versionStr)
 	}
 	return uint(version), nil
 }

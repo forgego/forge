@@ -3,6 +3,7 @@ package execute
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -78,7 +79,7 @@ func sortMigrationFilesByVersion(files []string) []string {
 		version, name := extractVersionAndName(basename)
 		if version != "" {
 			v, err := strconv.ParseUint(version, 10, 64)
-			if err == nil {
+			if err == nil && v <= math.MaxUint {
 				filesWithVersions = append(filesWithVersions, fileWithVersion{
 					path:    file,
 					version: uint(v),
@@ -118,4 +119,3 @@ func extractVersionAndName(filename string) (version, name string) {
 	}
 	return "", basename
 }
-

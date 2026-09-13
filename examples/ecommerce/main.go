@@ -73,7 +73,7 @@ func main() {
 				}
 			}
 		} else {
-			log.Printf("Postgres not reachable at %s. Falling back to SQLite at %s", defaultDSN, sqlitePath)
+			log.Printf("Postgres not reachable at %s:%d. Falling back to SQLite at %s", dbHost, dbPort, sqlitePath)
 			driver = "sqlite3"
 		}
 	}
@@ -353,11 +353,11 @@ func normalizePath(value string, fallback string) string {
 	if path == "" {
 		path = fallback
 	}
-	if !strings.HasPrefix(path, "/") {
-		path = "/" + path
+	if !strings.HasPrefix(path, "/") || strings.HasPrefix(path, "//") || strings.HasPrefix(path, "/\\") {
+		path = "/" + strings.TrimLeft(path, "/\\")
 	}
 	path = strings.TrimRight(path, "/")
-	if path == "" {
+	if path == "" || strings.HasPrefix(path, "//") || strings.HasPrefix(path, "/\\") {
 		return "/"
 	}
 	return path

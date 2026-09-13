@@ -303,12 +303,16 @@ func generateFieldCode(field FieldDefinition) string {
 }
 
 // appendToModelsFile appends model code to models.go
-func appendToModelsFile(filePath string, modelCode string) error {
+func appendToModelsFile(filePath string, modelCode string) (err error) {
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		if cerr := file.Close(); err == nil {
+			err = cerr
+		}
+	}()
 
 	_, err = file.WriteString(modelCode)
 	return err

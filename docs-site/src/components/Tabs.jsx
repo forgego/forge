@@ -4,8 +4,6 @@ import clsx from 'clsx';
 export default function Tabs({ children, defaultValue, values, groupId }) {
   const [selectedValue, setSelectedValue] = useState(defaultValue || values[0]?.value);
 
-  const selectedTab = values.find((v) => v.value === selectedValue);
-
   return (
     <div className="tabs-container">
       <div className="tabs-list" role="tablist">

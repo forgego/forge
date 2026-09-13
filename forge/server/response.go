@@ -222,22 +222,22 @@ func parseRangeHeader(s string, size int64) ([]responseByteRange, error) {
 	}
 
 	s = s[6:]
-		ranges := []responseByteRange{}
+	ranges := []responseByteRange{}
 
-		for _, ra := range strings.Split(s, ",") {
-			ra = strings.TrimSpace(ra)
-			if ra == "" {
-				continue
-			}
+	for _, ra := range strings.Split(s, ",") {
+		ra = strings.TrimSpace(ra)
+		if ra == "" {
+			continue
+		}
 
-			i := strings.Index(ra, "-")
-			if i < 0 {
-				return nil, fmt.Errorf("invalid range")
-			}
+		i := strings.Index(ra, "-")
+		if i < 0 {
+			return nil, fmt.Errorf("invalid range")
+		}
 
-			start, end := strings.TrimSpace(ra[:i]), strings.TrimSpace(ra[i+1:])
+		start, end := strings.TrimSpace(ra[:i]), strings.TrimSpace(ra[i+1:])
 
-			var br responseByteRange
+		var br responseByteRange
 		if start == "" {
 			// Suffix range
 			if end == "" {
@@ -340,4 +340,3 @@ func detectResponseContentType(filename string) string {
 		return "application/octet-stream"
 	}
 }
-

@@ -128,7 +128,9 @@ func buildTraversalFunction(parts []string, sourceSchema *ModelSchema, targetSch
 func hashPath(path string) uint64 {
 	var hash uint64 = 5381
 	for _, c := range path {
-		hash = ((hash << 5) + hash) + uint64(c)
+		if c >= 0 {
+			hash = ((hash << 5) + hash) + uint64(c)
+		}
 	}
 	return hash
 }
@@ -158,6 +160,3 @@ func toPascalCasePath(s string) string {
 	}
 	return result
 }
-
-
-

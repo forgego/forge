@@ -78,7 +78,7 @@ func AssertJSONBColumn(ctx context.Context, t *testing.T, db *sql.DB, tableName 
 
 	// Try to insert test data (if table allows it)
 	insertQuery := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1) ON CONFLICT DO NOTHING", tableName, columnName)
-	_, err = db.ExecContext(ctx, insertQuery, string(jsonBytes))
+	_, _ = db.ExecContext(ctx, insertQuery, string(jsonBytes))
 	// We don't fail if insert fails - the column might have constraints
 	// The important part is that the type is correct
 }
@@ -245,4 +245,3 @@ func AssertCoveringIndex(ctx context.Context, t *testing.T, db *sql.DB, tableNam
 		}
 	}
 }
-

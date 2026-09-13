@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import Layout from '@theme/Layout';
 import Link from '@docusaurus/Link';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import SEOHead from '@site/src/components/SEOHead';
 import styles from './index.module.css';
 
@@ -202,7 +201,6 @@ const COMPARISONS = [
 ];
 
 export default function Home() {
-  const { siteConfig } = useDocusaurusContext();
   const [activeTab, setActiveTab] = useState(CODE_TABS[0].id);
 
   const selectedCode = CODE_TABS.find((t) => t.id === activeTab) || CODE_TABS[0];

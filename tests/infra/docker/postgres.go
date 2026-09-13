@@ -85,21 +85,11 @@ func DefaultPostgresOptsWithTest(testName string) PostgresOpts {
 			opts.DBName = fmt.Sprintf("testdb_%d", time.Now().UnixNano())
 		}
 	}
-	opts.DBName = truncateDBName(opts.DBName)
-	return opts
-
-	// Use DOCKER_HOST from environment if set
 	if dockerHost := os.Getenv("DOCKER_HOST"); dockerHost != "" {
 		opts.DockerHost = dockerHost
 	}
 
-	// Always generate unique DB name for Docker tests to avoid conflicts
-	if testName != "" {
-		opts.DBName = fmt.Sprintf("testdb_%s_%d", sanitizeTestName(testName), time.Now().UnixNano())
-	} else {
-		opts.DBName = fmt.Sprintf("testdb_%d", time.Now().UnixNano())
-	}
-
+	opts.DBName = truncateDBName(opts.DBName)
 	return opts
 }
 
@@ -263,7 +253,7 @@ func StartPostgresContainer(ctx context.Context, opts PostgresOpts) (*sql.DB, st
 
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		opts.User, opts.Password, host, port, opts.DBName)
-	fmt.Printf("[DEBUG] DSN: %s\n", dsn)
+	fmt.Printf("[DEBUG] DSN: postgres://%s:***@%s:%s/%s?sslmode=disable\n", opts.User, host, port, opts.DBName)
 
 	cleanup := func() error {
 		return pool.Purge(resource)

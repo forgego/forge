@@ -20,11 +20,11 @@ const (
 	OpNotIn          Operator = "NOT IN"
 	OpIsNull         Operator = "IS NULL"
 	OpIsNotNull      Operator = "IS NOT NULL"
-	OpContains       Operator = "LIKE"  // '%value%'
-	OpStartsWith     Operator = "LIKE"  // 'value%'
-	OpEndsWith       Operator = "LIKE"  // '%value'
-	OpIContains      Operator = "ILIKE" // '%value%' (case-insensitive)
-	OpIExact         Operator = "ILIKE" // 'value' (case-insensitive exact)
+	OpContains       Operator = "LIKE"        // '%value%'
+	OpStartsWith     Operator = "STARTS_WITH" // 'value%'
+	OpEndsWith       Operator = "ENDS_WITH"   // '%value'
+	OpIContains      Operator = "ILIKE"       // '%value%' (case-insensitive)
+	OpIExact         Operator = "IEXACT"      // 'value' (case-insensitive exact)
 	OpRange          Operator = "BETWEEN"
 	OpYear           Operator = "EXTRACT(YEAR FROM"
 	OpMonth          Operator = "EXTRACT(MONTH FROM"
@@ -288,6 +288,3 @@ var (
 func normalizeRegistryName(name string) string {
 	return strings.ToLower(strings.TrimSpace(name))
 }
-
-
-

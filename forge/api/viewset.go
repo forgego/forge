@@ -69,13 +69,13 @@ func (vs *BaseViewSet) getManager() reflect.Value {
 	if vs.Queryset != nil {
 		qsValue := reflect.ValueOf(vs.Queryset)
 		qsType := qsValue.Type()
-		
+
 		// Use cached method lookup instead of MethodByName
 		if _, ok := globalCache.GetMethod(qsType, "Create"); ok {
 			return qsValue
 		}
 	}
-	
+
 	// Fallback to finding manager from model instance
 	// This creates a new instance of the model type to search for manager
 	modelType := reflect.TypeOf(vs.Model)
@@ -753,16 +753,9 @@ func applyOrdering(qs reflect.Value, r *http.Request) reflect.Value {
 }
 
 // getManagerFromModel gets the manager for a model using reflection
-func getManagerFromModel(instance interface{}) reflect.Value {
+func getManagerFromModel(_ interface{}) reflect.Value {
 	// This is a simplified approach - assumes model has package-level manager
 	// Full implementation would use model registry
-	modelType := reflect.TypeOf(instance)
-	if modelType.Kind() == reflect.Ptr {
-		modelType = modelType.Elem()
-	}
-
-	// Try to find package-level manager variable
-	// This requires the model to be in a package with a manager variable
 	// For MVP, return invalid value - full implementation needed
 	return reflect.Value{}
 }

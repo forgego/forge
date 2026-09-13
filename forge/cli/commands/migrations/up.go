@@ -3,6 +3,7 @@ package migrations
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -84,7 +85,7 @@ func (c *UpCommand) Execute(ctx *core.Context, args []string) error {
 			basename := filepath.Base(match)
 			versionStr := strings.Split(basename, "_")[0]
 			version, err := strconv.ParseUint(versionStr, 10, 64)
-			if err == nil && uint(version) > currentVersion {
+			if err == nil && version <= math.MaxUint && uint(version) > currentVersion {
 				pendingMigrations = append(pendingMigrations, match)
 			}
 		}
@@ -154,4 +155,3 @@ func (c *UpCommand) Execute(ctx *core.Context, args []string) error {
 	fmt.Println("✓ Migrations applied successfully")
 	return nil
 }
-
