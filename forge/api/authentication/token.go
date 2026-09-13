@@ -1,15 +1,20 @@
 package authentication
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 )
+
+// ErrInvalidToken is returned when a token is not recognized.
+var ErrInvalidToken = errors.New("invalid token")
 
 // TokenAuthentication authenticates requests using a token in the Authorization header
 // Format: Authorization: Token <token>
 type TokenAuthentication struct {
 	// TokenLookup is a function that looks up a user by token
-	// Should return (user, nil) if token is valid, (nil, nil) if not found, (nil, error) if error
+	// Should return (user, nil) if token is valid, (nil, nil) if not found, (nil, error) if error.
+	// An unknown token (nil, nil) is rejected with ErrInvalidToken.
 	TokenLookup func(token string) (interface{}, error)
 }
 
@@ -49,7 +54,7 @@ func (a *TokenAuthentication) Authenticate(r *http.Request) (*AuthResult, error)
 	}
 
 	if user == nil {
-		return nil, nil // Token not found, not an error (try next auth class)
+		return nil, ErrInvalidToken // token supplied but not recognised: reject instead of falling through
 	}
 
 	// Success

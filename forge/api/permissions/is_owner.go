@@ -20,9 +20,6 @@ type IsOwnerOrReadOnly struct {
 
 // NewIsOwnerOrReadOnly creates a new IsOwnerOrReadOnly permission
 func NewIsOwnerOrReadOnly(ownerField string) *IsOwnerOrReadOnly {
-	if ownerField == "" {
-		ownerField = "user_id"
-	}
 	return &IsOwnerOrReadOnly{
 		OwnerField:  ownerField,
 		UserIDField: "id",
