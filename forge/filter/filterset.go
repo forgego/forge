@@ -16,6 +16,7 @@ type FilterSet[T any] struct {
 	security  *SecurityConfig
 	optimizer *QueryOptimizer
 	queryset  orm.QuerySet[T]
+	sink      func(*FilterNode)
 }
 
 // GetSecurityConfig returns the security configuration
@@ -141,6 +142,14 @@ func (fs *FilterSet[T]) SetAST(ast *FilterNode) *FilterSet[T] {
 	return fs
 }
 
+func (fs *FilterSet[T]) addNode(n *FilterNode) {
+	if fs.sink != nil {
+		fs.sink(n)
+		return
+	}
+	fs.ast = combineWithAnd(fs.ast, n)
+}
+
 // GetFilters returns all filters from the filter set
 func (fs *FilterSet[T]) GetFilters() map[string]Filter[T] {
 	return fs.filters
@@ -154,6 +163,7 @@ func (fs *FilterSet[T]) Copy() *FilterSet[T] {
 		security:  fs.security,
 		optimizer: fs.optimizer,
 		queryset:  fs.queryset,
+		sink:      fs.sink,
 	}
 
 	// Copy filters
@@ -174,6 +184,15 @@ type FilterBuilder[T any] struct {
 	fs        *FilterSet[T]
 	fieldPath string
 	err       error
+	combine   func(*FilterNode)
+}
+
+func (fb *FilterBuilder[T]) add(n *FilterNode) {
+	if fb.combine != nil {
+		fb.combine(n)
+		return
+	}
+	fb.fs.addNode(n)
 }
 
 // Contains creates a contains filter
@@ -183,7 +202,7 @@ func (fb *FilterBuilder[T]) Contains(value string) *FilterSet[T] {
 	}
 
 	node := NewFieldNode(fb.fieldPath, "contains", value)
-	fb.fs.ast = combineWithAnd(fb.fs.ast, node)
+	fb.add(node)
 	return fb.fs
 }
 
@@ -194,8 +213,13 @@ func (fb *FilterBuilder[T]) Equals(value interface{}) *FilterSet[T] {
 	}
 
 	node := NewFieldNode(fb.fieldPath, "exact", value)
-	fb.fs.ast = combineWithAnd(fb.fs.ast, node)
+	fb.add(node)
 	return fb.fs
+}
+
+// Exact creates an exact match filter (alias for Equals)
+func (fb *FilterBuilder[T]) Exact(value interface{}) *FilterSet[T] {
+	return fb.Equals(value)
 }
 
 // In creates an IN filter
@@ -205,7 +229,7 @@ func (fb *FilterBuilder[T]) In(values ...interface{}) *FilterSet[T] {
 	}
 
 	node := NewFieldNode(fb.fieldPath, "in", values)
-	fb.fs.ast = combineWithAnd(fb.fs.ast, node)
+	fb.add(node)
 	return fb.fs
 }
 
@@ -216,8 +240,13 @@ func (fb *FilterBuilder[T]) Greater(value interface{}) *FilterSet[T] {
 	}
 
 	node := NewFieldNode(fb.fieldPath, "gt", value)
-	fb.fs.ast = combineWithAnd(fb.fs.ast, node)
+	fb.add(node)
 	return fb.fs
+}
+
+// Gt creates a greater than filter (alias for Greater)
+func (fb *FilterBuilder[T]) Gt(value interface{}) *FilterSet[T] {
+	return fb.Greater(value)
 }
 
 // Less creates a less than filter
@@ -227,8 +256,13 @@ func (fb *FilterBuilder[T]) Less(value interface{}) *FilterSet[T] {
 	}
 
 	node := NewFieldNode(fb.fieldPath, "lt", value)
-	fb.fs.ast = combineWithAnd(fb.fs.ast, node)
+	fb.add(node)
 	return fb.fs
+}
+
+// Lt creates a less than filter (alias for Less)
+func (fb *FilterBuilder[T]) Lt(value interface{}) *FilterSet[T] {
+	return fb.Less(value)
 }
 
 // IsNull creates an IS NULL filter
@@ -238,7 +272,7 @@ func (fb *FilterBuilder[T]) IsNull() *FilterSet[T] {
 	}
 
 	node := NewFieldNode(fb.fieldPath, "isnull", true)
-	fb.fs.ast = combineWithAnd(fb.fs.ast, node)
+	fb.add(node)
 	return fb.fs
 }
 
@@ -246,12 +280,12 @@ func (fb *FilterBuilder[T]) IsNull() *FilterSet[T] {
 func (fs *FilterSet[T]) AndGroup(fn func(*QueryBuilder[T])) *FilterSet[T] {
 	builder := NewQueryBuilder[T](fs)
 	fn(builder)
-	
+
 	if len(builder.nodes) > 0 {
 		andNode := NewAndNode(builder.nodes...)
-		fs.ast = combineWithAnd(fs.ast, andNode)
+		fs.addNode(andNode)
 	}
-	
+
 	return fs
 }
 
@@ -259,12 +293,12 @@ func (fs *FilterSet[T]) AndGroup(fn func(*QueryBuilder[T])) *FilterSet[T] {
 func (fs *FilterSet[T]) OrGroup(fn func(*QueryBuilder[T])) *FilterSet[T] {
 	builder := NewQueryBuilder[T](fs)
 	fn(builder)
-	
+
 	if len(builder.nodes) > 0 {
 		orNode := NewOrNode(builder.nodes...)
-		fs.ast = combineWithAnd(fs.ast, orNode)
+		fs.addNode(orNode)
 	}
-	
+
 	return fs
 }
 
@@ -284,10 +318,17 @@ type QueryBuilder[T any] struct {
 
 // NewQueryBuilder creates a new query builder
 func NewQueryBuilder[T any](fs *FilterSet[T]) *QueryBuilder[T] {
-	return &QueryBuilder[T]{
-		fs:    fs,
-		nodes: make([]*FilterNode, 0),
+	qb := &QueryBuilder[T]{nodes: make([]*FilterNode, 0)}
+	child := &FilterSet[T]{
+		schema:    fs.schema,
+		filters:   fs.filters,
+		security:  fs.security,
+		optimizer: fs.optimizer,
+		queryset:  fs.queryset,
 	}
+	child.sink = func(n *FilterNode) { qb.nodes = append(qb.nodes, n) }
+	qb.fs = child
+	return qb
 }
 
 // Where starts a filter for a field path
@@ -302,8 +343,26 @@ func (qb *QueryBuilder[T]) Filter(fieldPath string) *FilterBuilder[T] {
 
 // OrFilter creates an OR filter
 func (qb *QueryBuilder[T]) OrFilter(fieldPath string) *FilterBuilder[T] {
-	// This would create a filter that gets added to an OR group
-	// For now, just use Where
-	return qb.Where(fieldPath)
+	fb := qb.fs.Where(fieldPath)
+	fb.combine = func(n *FilterNode) {
+		if len(qb.nodes) == 0 {
+			qb.nodes = append(qb.nodes, n)
+			return
+		}
+		last := qb.nodes[len(qb.nodes)-1]
+		qb.nodes[len(qb.nodes)-1] = NewOrNode(last, n)
+	}
+	return fb
 }
 
+// AndGroup creates an AND group within the query builder
+func (qb *QueryBuilder[T]) AndGroup(fn func(*QueryBuilder[T])) *QueryBuilder[T] {
+	qb.fs.AndGroup(fn)
+	return qb
+}
+
+// OrGroup creates an OR group within the query builder
+func (qb *QueryBuilder[T]) OrGroup(fn func(*QueryBuilder[T])) *QueryBuilder[T] {
+	qb.fs.OrGroup(fn)
+	return qb
+}
