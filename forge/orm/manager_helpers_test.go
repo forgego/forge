@@ -12,7 +12,7 @@ func TestBuildInsertSQL_UsesSchemaFieldsAndSkipsOptionalZeroValues(t *testing.T)
 		Name: "Widget",
 	}
 
-	sql, values, columns, err := BuildInsertSQL(instance, "test_table")
+	sql, values, columns, err := BuildInsertSQL(instance, "test_table", "id")
 	require.NoError(t, err)
 
 	assert.Equal(t, "INSERT INTO test_table (name) VALUES ($1) RETURNING id", sql)
@@ -25,7 +25,7 @@ func TestBuildInsertSQL_RequiredFieldIncludedEvenWhenZeroValue(t *testing.T) {
 		Name: "",
 	}
 
-	sql, values, columns, err := BuildInsertSQL(instance, "test_table")
+	sql, values, columns, err := BuildInsertSQL(instance, "test_table", "id")
 	require.NoError(t, err)
 
 	assert.Equal(t, "INSERT INTO test_table (name) VALUES ($1) RETURNING id", sql)
@@ -39,7 +39,7 @@ func TestBuildBulkInsertSQL_ConsistentColumns(t *testing.T) {
 		testModel{Name: "B"},
 	}
 
-	sql, values, columns, err := BuildBulkInsertSQL(instances, "test_table")
+	sql, values, columns, err := BuildBulkInsertSQL(instances, "test_table", "id")
 	require.NoError(t, err)
 
 	assert.Equal(t, `"name"`, EscapeIdentifier(columns[0]))
@@ -54,7 +54,7 @@ func TestBuildBulkInsertSQL_RejectsInconsistentColumns(t *testing.T) {
 		testModel{Name: "B", Email: "b@example.com"},
 	}
 
-	_, _, _, err := BuildBulkInsertSQL(instances, "test_table")
+	_, _, _, err := BuildBulkInsertSQL(instances, "test_table", "id")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "requires consistent columns")
 }

@@ -193,7 +193,7 @@ func (ub *UpdateBuilder[T]) Increment(fieldName string, amount interface{}) *Upd
 	// Create a raw SQL expression for field + value
 	// This bypasses type checking issues with CombinedExpression
 	// Format: "field" + $1
-	fieldSQL := EscapeIdentifier(fieldName)
+	fieldSQL := EscapeIdentifier(fieldInfo.DBColumn)
 	placeholder := fmt.Sprintf("$%d", 1) // Will be replaced by SQL builder
 
 	// Store as a special expression that represents field + value
@@ -245,7 +245,7 @@ func (ub *UpdateBuilder[T]) Decrement(fieldName string, amount interface{}) *Upd
 	}
 
 	// Create a raw SQL expression for field - value
-	fieldSQL := EscapeIdentifier(fieldName)
+	fieldSQL := EscapeIdentifier(fieldInfo.DBColumn)
 	placeholder := fmt.Sprintf("$%d", 1)
 
 	rawExpr := &RawExpression{

@@ -142,6 +142,11 @@ func (m *Manager[T]) Create(ctx context.Context, instance *T) error {
 	if m.db == nil {
 		return errors.NewConfigurationError("database connection not set", "db")
 	}
+	if m.schema != nil {
+		if f := m.schema.GetField(m.primaryKeyColumn()); f != nil && f.Type != nil && !isIntKind(f.Type.Kind()) {
+			return errors.NewNotImplementedError("non-integer primary keys")
+		}
+	}
 
 	if err := m.runHooks(ctx, instance, "BeforeCreate"); err != nil {
 		return err
@@ -154,7 +159,7 @@ func (m *Manager[T]) Create(ctx context.Context, instance *T) error {
 	}
 
 	// Build and execute INSERT
-	sql, args, _, err := BuildInsertSQL(instance, m.tableName)
+	sql, args, _, err := BuildInsertSQL(instance, m.tableName, m.primaryKeyColumn())
 	if err != nil {
 		return fmt.Errorf("failed to build insert SQL: %w", err)
 	}
@@ -164,7 +169,9 @@ func (m *Manager[T]) Create(ctx context.Context, instance *T) error {
 		return err
 	}
 
-	m.setID(instance, id)
+	if err := m.setID(instance, id); err != nil {
+		return err
+	}
 
 	if err := m.runHooks(ctx, instance, "AfterCreate"); err != nil {
 		return err
@@ -202,7 +209,7 @@ func (m *Manager[T]) BulkCreate(ctx context.Context, instances []*T) error {
 	}
 
 	// Build and execute bulk INSERT
-	sql, args, _, err := BuildBulkInsertSQL(instancesInterface, m.tableName)
+	sql, args, _, err := BuildBulkInsertSQL(instancesInterface, m.tableName, m.primaryKeyColumn())
 	if err != nil {
 		return fmt.Errorf("failed to build bulk insert SQL: %w", err)
 	}
@@ -215,7 +222,9 @@ func (m *Manager[T]) BulkCreate(ctx context.Context, instances []*T) error {
 	// Set IDs
 	for i, instance := range instances {
 		if i < len(ids) {
-			m.setID(instance, ids[i])
+			if err := m.setID(instance, ids[i]); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -395,50 +404,68 @@ func (m *Manager[T]) getID(instance *T) (int64, error) {
 	return 0, fmt.Errorf("ID must be int64, got %T", idValue)
 }
 
-func (m *Manager[T]) setID(instance *T, id int64) {
+func isIntKind(k reflect.Kind) bool {
+	return (k >= reflect.Int && k <= reflect.Int64) || (k >= reflect.Uint && k <= reflect.Uint64)
+}
+
+func (m *Manager[T]) setID(instance *T, id int64) error {
 	if modelWithID, ok := any(instance).(ModelWithID); ok {
 		modelWithID.SetID(id)
-		return
+		return nil
 	}
 
-	// Fallback to reflection (including embedded structs)
-	instanceValue := reflect.ValueOf(instance).Elem()
-	var setInValue func(v reflect.Value) bool
-	setInValue = func(v reflect.Value) bool {
-		t := v.Type()
-		for i := 0; i < t.NumField(); i++ {
-			field := t.Field(i)
-			fieldValue := v.Field(i)
-
-			if field.Anonymous {
-				switch fieldValue.Kind() {
-				case reflect.Struct:
-					if setInValue(fieldValue) {
-						return true
-					}
-				case reflect.Ptr:
-					if fieldValue.IsNil() {
-						continue
-					}
-					if fieldValue.Elem().Kind() == reflect.Struct {
-						if setInValue(fieldValue.Elem()) {
-							return true
-						}
-					}
-				}
-			}
-
-			for _, name := range []string{"ID", "Id", "id"} {
-				if field.Name == name && fieldValue.CanSet() && fieldValue.Kind() == reflect.Int64 {
-					fieldValue.SetInt(id)
-					return true
-				}
+	pkCol := m.primaryKeyColumn()
+	candidates := make([]string, 0, 4)
+	if m.schema != nil {
+		if f := m.schema.GetField(pkCol); f != nil {
+			if f.StructFieldName != "" {
+				candidates = append(candidates, f.StructFieldName)
+			} else if f.Name != "" {
+				candidates = append(candidates, f.Name)
 			}
 		}
+	}
+	candidates = append(candidates, "ID", "Id", "id")
+
+	instanceValue := reflect.ValueOf(instance).Elem()
+	for _, name := range candidates {
+		if setIntField(instanceValue, name, id) {
+			return nil
+		}
+	}
+	return fmt.Errorf("cannot set primary key %s on %T", pkCol, instance)
+}
+
+func setIntField(val reflect.Value, targetName string, id int64) bool {
+	if val.Kind() == reflect.Ptr {
+		if val.IsNil() {
+			return false
+		}
+		val = val.Elem()
+	}
+	if val.Kind() != reflect.Struct {
 		return false
 	}
-
-	_ = setInValue(instanceValue)
+	t := val.Type()
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		fieldValue := val.Field(i)
+		if field.Anonymous {
+			if setIntField(fieldValue, targetName, id) {
+				return true
+			}
+			continue
+		}
+		if field.Name == targetName && fieldValue.CanSet() && isIntKind(fieldValue.Kind()) {
+			if fieldValue.Kind() >= reflect.Uint && fieldValue.Kind() <= reflect.Uint64 {
+				fieldValue.SetUint(uint64(id))
+			} else {
+				fieldValue.SetInt(id)
+			}
+			return true
+		}
+	}
+	return false
 }
 
 func (m *Manager[T]) validate(instance *T) error {
