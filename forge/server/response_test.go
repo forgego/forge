@@ -325,3 +325,34 @@ func TestContentTypeDetection(t *testing.T) {
 		assert.Equal(t, expectedType, detectResponseContentType(filename))
 	}
 }
+
+func TestResponse_Redirect(t *testing.T) {
+	t.Run("NewResponse without request relative redirect", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		r := NewResponse(rec)
+		assert.NotPanics(t, func() {
+			r.Redirect("/login", http.StatusFound)
+		})
+		assert.Equal(t, http.StatusFound, rec.Code)
+		assert.Equal(t, "/login", rec.Header().Get("Location"))
+	})
+
+	t.Run("NewResponse without request absolute redirect", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		r := NewResponse(rec)
+		assert.NotPanics(t, func() {
+			r.Redirect("https://example.com/x", http.StatusMovedPermanently)
+		})
+		assert.Equal(t, http.StatusMovedPermanently, rec.Code)
+		assert.Equal(t, "https://example.com/x", rec.Header().Get("Location"))
+	})
+
+	t.Run("NewResponseWithRequest relative path resolution", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/a/b", nil)
+		r := NewResponseWithRequest(rec, req)
+		r.Redirect("c", http.StatusFound)
+		assert.Equal(t, http.StatusFound, rec.Code)
+		assert.Equal(t, "/a/c", rec.Header().Get("Location"))
+	})
+}

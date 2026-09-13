@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -76,8 +77,12 @@ func (r *Response) HTML(html string) error {
 }
 
 // Redirect sends a redirect response
-func (r *Response) Redirect(url string, code int) {
-	http.Redirect(r, r.Request(), url, code)
+func (r *Response) Redirect(target string, code int) {
+	req := r.request
+	if req == nil {
+		req = &http.Request{Method: http.MethodGet, URL: &url.URL{Path: "/"}, Header: http.Header{}}
+	}
+	http.Redirect(r, req, target, code)
 }
 
 // Cookie sets a cookie
