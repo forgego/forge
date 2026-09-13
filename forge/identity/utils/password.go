@@ -60,4 +60,3 @@ func NeedsRehash(hash string, cost int) bool {
 	}
 	return actualCost != cost
 }
-

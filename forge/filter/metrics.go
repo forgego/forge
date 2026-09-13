@@ -8,18 +8,18 @@ import (
 
 // Metrics tracks filter system metrics
 type Metrics struct {
-	executions      int64
-	executionTime   []time.Duration
-	denials         int64
-	savedCount      int64
+	executions       int64
+	executionTime    []time.Duration
+	denials          int64
+	savedCount       int64
 	costDistribution []int
-	mu              sync.RWMutex
+	mu               sync.RWMutex
 }
 
 // NewMetrics creates a new metrics tracker
 func NewMetrics() *Metrics {
 	return &Metrics{
-		executionTime:   make([]time.Duration, 0),
+		executionTime:    make([]time.Duration, 0),
 		costDistribution: make([]int, 0),
 	}
 }
@@ -81,7 +81,7 @@ func (m *Metrics) GetStats() map[string]interface{} {
 
 	return map[string]interface{}{
 		"executions":        m.executions,
-		"average_time":       avgTime.String(),
+		"average_time":      avgTime.String(),
 		"denials":           m.denials,
 		"saved_count":       m.savedCount,
 		"average_cost":      avgCost,
@@ -91,7 +91,7 @@ func (m *Metrics) GetStats() map[string]interface{} {
 
 // AlertChecker checks for alert conditions
 type AlertChecker struct {
-	slowQueryThreshold time.Duration
+	slowQueryThreshold  time.Duration
 	highDenialThreshold int64
 }
 
@@ -131,4 +131,3 @@ func (ac *AlertChecker) CheckDenials(metrics *Metrics) []string {
 
 	return alerts
 }
-

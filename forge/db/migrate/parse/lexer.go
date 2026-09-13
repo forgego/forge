@@ -363,4 +363,3 @@ func (l *Lexer) error(pos int, format string, args ...interface{}) error {
 	}
 	return fmt.Errorf(format, append([]interface{}{line, col}, args...)...)
 }
-

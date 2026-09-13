@@ -31,4 +31,3 @@ func RegisterAllCommands() {
 	registry.RegisterGroup("migrate", migrations.NewMigrateGroup())
 	registry.RegisterGroup("add", project.NewAddGroup())
 }
-

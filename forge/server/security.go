@@ -259,35 +259,35 @@ func DefaultHTMLPolicy() *HTMLPolicy {
 // SanitizeHTML sanitizes HTML content according to policy
 func (x *XSS) SanitizeHTML(htmlContent string) string {
 	policy := DefaultHTMLPolicy()
-	
+
 	// Strip comments
 	if policy.StripComments {
 		commentRe := regexp.MustCompile(`<!--.*?-->`)
 		htmlContent = commentRe.ReplaceAllString(htmlContent, "")
 	}
-	
+
 	// Strip script tags and their content
 	if policy.StripScripts {
 		scriptRe := regexp.MustCompile(`(?i)<script[^>]*>.*?</script>`)
 		htmlContent = scriptRe.ReplaceAllString(htmlContent, "")
 	}
-	
+
 	// Strip event handlers (onclick, onerror, etc.)
 	eventHandlerRe := regexp.MustCompile(`(?i)\s*on\w+\s*=\s*["'][^"']*["']`)
 	htmlContent = eventHandlerRe.ReplaceAllString(htmlContent, "")
-	
+
 	// Strip javascript: URLs
 	jsUrlRe := regexp.MustCompile(`(?i)javascript:`)
 	htmlContent = jsUrlRe.ReplaceAllString(htmlContent, "")
-	
+
 	// Strip data: URLs (can be used for XSS)
 	dataUrlRe := regexp.MustCompile(`(?i)data:text/html`)
 	htmlContent = dataUrlRe.ReplaceAllString(htmlContent, "")
-	
+
 	// Strip style tags with expression()
 	styleExprRe := regexp.MustCompile(`(?i)<style[^>]*>.*?expression\(.*?\).*?</style>`)
 	htmlContent = styleExprRe.ReplaceAllString(htmlContent, "")
-	
+
 	// Remove iframe, embed, object tags
 	// Note: Go regexp doesn't support backreferences, so we handle each tag separately
 	dangerousTags := []string{"iframe", "embed", "object", "applet", "meta", "link", "base"}
@@ -296,13 +296,13 @@ func (x *XSS) SanitizeHTML(htmlContent string) string {
 		pattern := fmt.Sprintf(`(?i)<%s[^>]*>.*?</%s>`, tag, tag)
 		tagRe := regexp.MustCompile(pattern)
 		htmlContent = tagRe.ReplaceAllString(htmlContent, "")
-		
+
 		// Remove self-closing tags
 		selfPattern := fmt.Sprintf(`(?i)<%s[^>]*/>`, tag)
 		selfRe := regexp.MustCompile(selfPattern)
 		htmlContent = selfRe.ReplaceAllString(htmlContent, "")
 	}
-	
+
 	return htmlContent
 }
 
@@ -344,4 +344,3 @@ func (x *XSS) SanitizeInput(input string) string {
 
 	return input
 }
-

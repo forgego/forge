@@ -170,4 +170,3 @@ func TestContentNegotiator_ParseAcceptHeader(t *testing.T) {
 	assert.NotNil(t, renderer2)
 	assert.Equal(t, "application/json", renderer2.MediaType()) // First match
 }
-

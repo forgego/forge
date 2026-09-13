@@ -300,4 +300,3 @@ type ColumnInfo struct {
 	Nullable bool
 	Default  *string
 }
-

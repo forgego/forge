@@ -33,4 +33,3 @@ func (pl ParserList) GetMediaTypes() []string {
 	}
 	return types
 }
-

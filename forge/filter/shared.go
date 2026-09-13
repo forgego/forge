@@ -56,4 +56,3 @@ type RBACFilterStorage interface {
 	CanAccess(userID, filterID string) (bool, error)
 	SetAccess(filterID, userID string, canAccess bool) error
 }
-

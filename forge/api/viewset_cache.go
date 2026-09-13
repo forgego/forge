@@ -131,7 +131,7 @@ func GetGlobalCache() *MethodCache {
 // CachedMethodCall represents a cached method with its receiver type.
 // It can be used to call methods without repeated lookups.
 type CachedMethodCall struct {
-	method reflect.Method
+	method       reflect.Method
 	receiverType reflect.Type
 }
 

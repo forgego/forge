@@ -136,4 +136,3 @@ func (s *EnhancedSerializer) ToRepresentation(data interface{}) (map[string]inte
 
 	return result, nil
 }
-

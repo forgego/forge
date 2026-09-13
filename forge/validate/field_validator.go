@@ -271,4 +271,3 @@ func (fv *FieldValidator) ValidateModel(model interface{}, fields []schema.Field
 
 	return nil
 }
-

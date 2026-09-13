@@ -114,4 +114,3 @@ func (r *Response) JSON() map[string]interface{} {
 func (r *Response) Status() int {
 	return r.StatusCode
 }
-

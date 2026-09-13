@@ -37,4 +37,3 @@ func (e *MultiExporter) GetWriters() []zapcore.WriteSyncer {
 func (e *MultiExporter) GetLevel() zapcore.Level {
 	return e.level
 }
-

@@ -41,4 +41,3 @@ func (h *SamplingHook) Process(entry zapcore.Entry, fields []zapcore.Field) (zap
 
 	return entry, fields, false
 }
-

@@ -224,4 +224,3 @@ func (v *Validator) checkCircularDependency(dep core.Dependency, visited, visiti
 	// For now, this is a basic check
 	return nil
 }
-

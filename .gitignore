@@ -116,6 +116,12 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite3-shm
+*.sqlite3-wal
+*.db-shm
+*.db-wal
 
 # Test coverage
 coverage.txt

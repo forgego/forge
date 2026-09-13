@@ -89,4 +89,3 @@ func (f *OrderingFilter) GetSchema(r *http.Request, view interface{}) map[string
 		},
 	}
 }
-

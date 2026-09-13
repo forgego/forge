@@ -11,7 +11,7 @@ func FormatValue(value interface{}) string {
 	if value == nil {
 		return "-"
 	}
-	
+
 	switch v := value.(type) {
 	case string:
 		return v
@@ -38,7 +38,7 @@ func FormatDate(value interface{}) string {
 	if value == nil {
 		return "-"
 	}
-	
+
 	switch v := value.(type) {
 	case time.Time:
 		return v.Format("2006-01-02")
@@ -58,7 +58,7 @@ func FormatDateTime(value interface{}) string {
 	if value == nil {
 		return "-"
 	}
-	
+
 	switch v := value.(type) {
 	case time.Time:
 		return v.Format("2006-01-02 15:04:05")
@@ -78,7 +78,7 @@ func FormatCurrency(value interface{}, currency string) string {
 	if value == nil {
 		return "-"
 	}
-	
+
 	var amount float64
 	switch v := value.(type) {
 	case float64:
@@ -92,11 +92,11 @@ func FormatCurrency(value interface{}, currency string) string {
 	default:
 		return fmt.Sprintf("%v", value)
 	}
-	
+
 	if currency == "" {
 		currency = "$"
 	}
-	
+
 	return fmt.Sprintf("%s%.2f", currency, amount)
 }
 
@@ -137,4 +137,3 @@ func Pluralize(count int, singular, plural string) string {
 	}
 	return plural
 }
-

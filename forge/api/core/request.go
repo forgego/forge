@@ -57,4 +57,3 @@ func (r *Request) WithContext(ctx context.Context) *Request {
 		auth:    r.auth,
 	}
 }
-

@@ -33,4 +33,3 @@ func (c *Context) WithDatabase(database *db.DB) *Context {
 	c.Database = database
 	return c
 }
-

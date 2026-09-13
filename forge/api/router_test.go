@@ -120,4 +120,3 @@ func TestEnhancedRouter_RegisterRoutesEnhanced(t *testing.T) {
 	httpRouter.ServeHTTP(w2, req2)
 	assert.Equal(t, http.StatusOK, w2.Code)
 }
-

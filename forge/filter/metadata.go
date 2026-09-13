@@ -7,26 +7,26 @@ import (
 
 // FilterSetMetadata provides metadata about available filters in a FilterSet
 type FilterSetMetadata struct {
-	AvailableFilters  map[string]FilterInfo
+	AvailableFilters   map[string]FilterInfo
 	AvailableOperators map[string][]string
-	FieldTypes        map[string]string
+	FieldTypes         map[string]string
 }
 
 // FilterInfo contains information about a filter
 type FilterInfo struct {
-	Type        string
-	Lookups     []string
-	FieldPath   string
-	Label       string
-	HelpText    string
-	Required    bool
-	WidgetType  string
+	Type       string
+	Lookups    []string
+	FieldPath  string
+	Label      string
+	HelpText   string
+	Required   bool
+	WidgetType string
 }
 
 // GetMetadata returns filter metadata for a FilterSet
 func (fs *FilterSet[T]) GetMetadata(ctx context.Context) (*FilterSetMetadata, error) {
 	metadata := &FilterSetMetadata{
-		AvailableFilters:  make(map[string]FilterInfo),
+		AvailableFilters:   make(map[string]FilterInfo),
 		AvailableOperators: make(map[string][]string),
 		FieldTypes:         make(map[string]string),
 	}
@@ -107,4 +107,3 @@ func (fs *FilterSet[T]) GetAvailableFilters() []string {
 	}
 	return names
 }
-

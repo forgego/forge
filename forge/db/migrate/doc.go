@@ -11,4 +11,3 @@
 //
 // The root package provides the public API facade and core types.
 package migrate
-

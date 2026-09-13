@@ -23,4 +23,3 @@ func (d Driver) IsSQLite() bool {
 func (d Driver) String() string {
 	return string(d)
 }
-

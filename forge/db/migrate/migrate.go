@@ -79,4 +79,3 @@ type (
 func NewMigrationPlan(version, name string, changes []Change) *MigrationPlan {
 	return core.NewMigrationPlan(version, name, changes)
 }
-

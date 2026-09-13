@@ -75,4 +75,3 @@ func SetLogger(logger *log.Logger) {
 func GetLogger() *log.Logger {
 	return defaultLogger
 }
-

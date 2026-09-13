@@ -15,7 +15,7 @@ type ViewSetConfig struct {
 	Searchable   []string
 	Ordering     []string
 	PerPage      int
-	
+
 	// Internal viewset created lazily
 	viewSet *ConfigurableViewSet
 }
@@ -32,10 +32,10 @@ func NewConfigurableViewSet(config *ViewSetConfig) *ConfigurableViewSet {
 	serializerFactory := func() Serializer {
 		return config.Serializer.New()
 	}
-	
+
 	// Create base viewset with nil queryset (will be handled dynamically)
 	base := NewBaseViewSet(serializerFactory, config.Queryset, config.Model)
-	
+
 	return &ConfigurableViewSet{
 		BaseViewSet: base,
 		config:      config,

@@ -70,4 +70,3 @@ func (h *FilterHook) Process(entry zapcore.Entry, fields []zapcore.Field) (zapco
 
 	return entry, fields, true
 }
-

@@ -92,6 +92,3 @@ func TestModelSchema_Fields(t *testing.T) {
 
 	assert.NotNil(t, schema.Fields)
 }
-
-
-

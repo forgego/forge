@@ -126,19 +126,19 @@ func TestParser_SecurityValidation(t *testing.T) {
 		config := DefaultSecurityConfig()
 		config.AllowedFields["User"] = []string{"username", "email"}
 		parser := NewParser(WithSecurity(config))
-		
+
 		// Allowed field
 		err := parser.validateFieldAccess("username", nil)
 		if err != nil {
 			t.Errorf("Expected username to be allowed, got: %v", err)
 		}
-		
+
 		// Another allowed field
 		err = parser.validateFieldAccess("email", nil)
 		if err != nil {
 			t.Errorf("Expected email to be allowed, got: %v", err)
 		}
-		
+
 		// Non-allowed field
 		err = parser.validateFieldAccess("password", nil)
 		if err == nil {
@@ -150,7 +150,7 @@ func TestParser_SecurityValidation(t *testing.T) {
 		config := DefaultSecurityConfig()
 		config.AllowedFields["User"] = []string{"*"}
 		parser := NewParser(WithSecurity(config))
-		
+
 		err := parser.validateFieldAccess("any_field", nil)
 		if err != nil {
 			t.Errorf("Expected any_field to be allowed with wildcard, got: %v", err)

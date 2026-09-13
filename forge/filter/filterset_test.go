@@ -28,7 +28,6 @@ func (MockModel) Meta() schema.Meta {
 	return schema.Meta{TableName: "mock_models"}
 }
 
-
 func TestFilterSet_NewFilterSet(t *testing.T) {
 	fs, err := NewFilterSet[MockModel]()
 	if err != nil {

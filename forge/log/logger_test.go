@@ -109,4 +109,3 @@ func TestBuilderWithFile(t *testing.T) {
 	}
 	defer logger.Sync()
 }
-

@@ -185,4 +185,3 @@ func (f *MultipleModelChoiceFilter[T, TRelated]) ToAST(fieldPath string, value i
 
 	return filter.NewFieldNode(fieldPath, "in", value), nil
 }
-

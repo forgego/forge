@@ -18,4 +18,3 @@ const (
 	DefaultModelsDir      = "./models"
 	DefaultOutputDir      = "./models"
 )
-

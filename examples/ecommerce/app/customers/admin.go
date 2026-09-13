@@ -26,15 +26,15 @@ func RegisterAdmin(ctx context.Context) {
 		// Fieldsets
 		Fieldsets: []admin.Fieldset[CustomerGroup]{
 			{
-				Name: "Group Information",
+				Name:   "Group Information",
 				Fields: []string{"name", "code", "description"},
 			},
 			{
-				Name: "Pricing",
+				Name:   "Pricing",
 				Fields: []string{"discount_percentage"},
 			},
 			{
-				Name:  "Status",
+				Name:   "Status",
 				Fields: []string{"is_active"},
 			},
 		},
@@ -124,36 +124,36 @@ func RegisterAdmin(ctx context.Context) {
 		// Fieldsets for comprehensive customer management
 		Fieldsets: []admin.Fieldset[Customer]{
 			{
-				Name: "Personal Information",
+				Name:   "Personal Information",
 				Fields: []string{"email", "first_name", "last_name", "phone", "date_of_birth", "gender"},
 			},
 			{
-				Name: "Account",
+				Name:   "Account",
 				Fields: []string{"customer_group_id", "is_active", "is_verified", "accepts_marketing"},
 			},
 			{
-				Name: "Business Information",
-				Fields: []string{"company_name", "tax_id"},
+				Name:      "Business Information",
+				Fields:    []string{"company_name", "tax_id"},
 				Collapsed: true,
 			},
 			{
-				Name: "Security",
-				Fields: []string{"last_login_at", "last_login_ip"},
-				Collapsed: true,
+				Name:        "Security",
+				Fields:      []string{"last_login_at", "last_login_ip"},
+				Collapsed:   true,
 				Description: "Security and access information (read-only)",
 			},
 			{
-				Name: "Statistics",
-				Fields: []string{"total_orders", "total_spent", "average_order_value"},
-				Collapsed: true,
+				Name:        "Statistics",
+				Fields:      []string{"total_orders", "total_spent", "average_order_value"},
+				Collapsed:   true,
 				Description: "Customer statistics (read-only)",
 			},
 			{
-				Name:  "Preferences",
+				Name:   "Preferences",
 				Fields: []string{"preferred_language", "preferred_currency"},
 			},
 			{
-				Name:  "Notes",
+				Name:   "Notes",
 				Fields: []string{"notes"},
 			},
 		},
@@ -377,28 +377,28 @@ func RegisterAdmin(ctx context.Context) {
 		// Fieldsets
 		Fieldsets: []admin.Fieldset[Address]{
 			{
-				Name: "Customer",
+				Name:   "Customer",
 				Fields: []string{"customer_id"},
 			},
 			{
-				Name: "Contact Information",
+				Name:   "Contact Information",
 				Fields: []string{"first_name", "last_name", "company_name", "phone"},
 			},
 			{
-				Name: "Address",
+				Name:   "Address",
 				Fields: []string{"address_line1", "address_line2", "city", "state_province", "postal_code", "country_code", "country_name"},
 			},
 			{
-				Name: "Geolocation",
-				Fields: []string{"latitude", "longitude"},
+				Name:      "Geolocation",
+				Fields:    []string{"latitude", "longitude"},
 				Collapsed: true,
 			},
 			{
-				Name: "Preferences",
+				Name:   "Preferences",
 				Fields: []string{"is_default_shipping", "is_default_billing", "address_type"},
 			},
 			{
-				Name:  "Delivery",
+				Name:   "Delivery",
 				Fields: []string{"delivery_instructions"},
 			},
 		},
@@ -539,11 +539,11 @@ func RegisterAdmin(ctx context.Context) {
 		// Fieldsets
 		Fieldsets: []admin.Fieldset[WishList]{
 			{
-				Name: "Wish List",
+				Name:   "Wish List",
 				Fields: []string{"customer_id", "name", "description"},
 			},
 			{
-				Name: "Visibility",
+				Name:   "Visibility",
 				Fields: []string{"is_public", "is_default", "share_token"},
 			},
 		},
@@ -685,11 +685,11 @@ func RegisterAdmin(ctx context.Context) {
 		// Fieldsets
 		Fieldsets: []admin.Fieldset[WishListItem]{
 			{
-				Name: "Item",
+				Name:   "Item",
 				Fields: []string{"wish_list_id", "product_id", "variant_id"},
 			},
 			{
-				Name: "Details",
+				Name:   "Details",
 				Fields: []string{"desired_quantity", "priority", "price_when_added", "notes"},
 			},
 		},

@@ -16,4 +16,3 @@ func (p *Permission) GetFullCodename() string {
 	}
 	return p.Codename
 }
-

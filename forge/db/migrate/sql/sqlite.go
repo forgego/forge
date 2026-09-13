@@ -288,4 +288,3 @@ func (b *SQLiteBuilder) BuildModifyForeignKey(c *core.ModifyForeignKey) (string,
 func (b *SQLiteBuilder) BuildAddConstraint(c *core.AddConstraint) (string, error) {
 	return b.baseBuilder.BuildAddConstraint(c)
 }
-

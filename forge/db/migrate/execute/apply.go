@@ -28,4 +28,3 @@ type MigrationStatus struct {
 	Current    string
 	Next       string
 }
-

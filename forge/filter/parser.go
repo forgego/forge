@@ -172,25 +172,25 @@ func parseBool(s string) bool {
 // isValidLookup checks if a lookup type is valid
 func isValidLookup(lookup string) bool {
 	validLookups := map[string]bool{
-		"exact":      true,
-		"iexact":     true,
-		"contains":   true,
-		"icontains":  true,
-		"startswith": true,
+		"exact":       true,
+		"iexact":      true,
+		"contains":    true,
+		"icontains":   true,
+		"startswith":  true,
 		"istartswith": true,
-		"endswith":   true,
-		"iendswith":  true,
-		"in":         true,
-		"range":      true,
-		"gt":         true,
-		"gte":        true,
-		"lt":         true,
-		"lte":        true,
-		"isnull":     true,
-		"isnotnull":  true,
-		"year":       true,
-		"month":      true,
-		"day":        true,
+		"endswith":    true,
+		"iendswith":   true,
+		"in":          true,
+		"range":       true,
+		"gt":          true,
+		"gte":         true,
+		"lt":          true,
+		"lte":         true,
+		"isnull":      true,
+		"isnotnull":   true,
+		"year":        true,
+		"month":       true,
+		"day":         true,
 	}
 	return validLookups[lookup]
 }
@@ -296,5 +296,3 @@ func (p *Parser) ParseFilterNode(r *http.Request, schema interface{}) (*FilterNo
 	// Combine all nodes with AND
 	return NewAndNode(nodes...), nil
 }
-
-

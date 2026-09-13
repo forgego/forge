@@ -23,4 +23,3 @@ func NewThrottled(message string, retryAfter time.Duration) *Throttled {
 		RetryAfter: retryAfter,
 	}
 }
-

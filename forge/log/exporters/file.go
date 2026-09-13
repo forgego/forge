@@ -194,4 +194,3 @@ func (w *rotatingFileWriter) openFile() error {
 	w.file = file
 	return nil
 }
-

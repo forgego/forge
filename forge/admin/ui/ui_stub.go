@@ -9,6 +9,7 @@ import (
 )
 
 // stub contains a minimal placeholder UI for non-embedded builds.
+//
 //go:embed stub/*
 var stub embed.FS
 

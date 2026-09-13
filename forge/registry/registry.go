@@ -85,11 +85,11 @@ func Global() *ModelRegistry {
 //
 // Deprecated: Use Global() instead to avoid package name redundancy. GetRegistry will be removed in v3.0.
 // Migration:
-//   // Old
-//   registry := registry.GetRegistry()
-//   // New
-//   registry := registry.Global()
+//
+//	// Old
+//	registry := registry.GetRegistry()
+//	// New
+//	registry := registry.Global()
 func GetRegistry() *ModelRegistry {
 	return Global()
 }
-

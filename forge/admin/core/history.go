@@ -115,4 +115,3 @@ func (m *DefaultHistoryManager) LogAction(ctx context.Context, entry LogEntry) e
 func (m *DefaultHistoryManager) GetHistory(ctx context.Context, modelName string, objectID string) ([]LogEntry, error) {
 	return m.getMem().GetHistory(ctx, modelName, objectID)
 }
-

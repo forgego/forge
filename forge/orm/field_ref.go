@@ -88,6 +88,3 @@ func NewRelationExpression(name string) RelationExpression {
 func (r RelationExpression) RelationPath() string {
 	return r.relationName
 }
-
-
-

@@ -88,4 +88,3 @@ func CreateDefaultViewSet(serializer func() Serializer, queryset, model interfac
 
 	return vs
 }
-

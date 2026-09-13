@@ -18,7 +18,7 @@ func NewQueryOptimizer() *QueryOptimizer {
 
 // QueryPlan represents an optimized query plan
 type QueryPlan struct {
-	Strategy      string  // "join", "exists", "subquery"
+	Strategy      string // "join", "exists", "subquery"
 	EstimatedCost int
 	EstimatedRows int64
 	SQLPreview    string
@@ -157,9 +157,9 @@ func (o *QueryOptimizer) generateSQLPreview(ast *FilterNode, strategy string) st
 // Helper functions
 
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && 
-		(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || 
-		containsInMiddle(s, substr)))
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) &&
+		(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
+			containsInMiddle(s, substr)))
 }
 
 func containsInMiddle(s, substr string) bool {
@@ -194,4 +194,3 @@ func splitPath(path string) []string {
 	}
 	return parts
 }
-

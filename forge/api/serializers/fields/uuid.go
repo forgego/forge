@@ -40,4 +40,3 @@ func (f *UUIDField) Validate(value interface{}) error {
 
 	return nil
 }
-

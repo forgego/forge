@@ -115,4 +115,3 @@ func TestFilterBackendList_ApplyFilters(t *testing.T) {
 
 	assert.NotNil(t, result)
 }
-

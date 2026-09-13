@@ -35,6 +35,3 @@ func RelatedFieldFor[T any, TModel any, V any](fa *FieldAccessor[T], relationNam
 	fieldPath := relationName + "__" + fieldName
 	return NewField[V](fieldPath, fa.table), nil
 }
-
-
-

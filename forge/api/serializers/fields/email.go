@@ -61,4 +61,3 @@ func isValidEmail(email string) bool {
 
 	return true
 }
-

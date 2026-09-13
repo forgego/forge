@@ -57,4 +57,3 @@ func (c *TestCommand) Execute(ctx *core.Context, args []string) error {
 
 	return nil
 }
-

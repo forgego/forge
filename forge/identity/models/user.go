@@ -105,4 +105,3 @@ func (u *User) GetDisplayName() string {
 	}
 	return u.Username
 }
-

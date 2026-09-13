@@ -104,4 +104,3 @@ func TestVersioningList_DetermineVersion(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "3", version3)
 }
-

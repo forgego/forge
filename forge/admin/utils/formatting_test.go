@@ -205,11 +205,11 @@ func TestSafeHTML(t *testing.T) {
 
 func TestPluralize(t *testing.T) {
 	tests := []struct {
-		name      string
-		count     int
-		singular  string
-		plural    string
-		expected  string
+		name     string
+		count    int
+		singular string
+		plural   string
+		expected string
 	}{
 		{"zero", 0, "item", "items", "items"},
 		{"one", 1, "item", "items", "item"},

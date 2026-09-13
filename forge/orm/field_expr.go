@@ -200,6 +200,3 @@ func (f FieldExpr[T]) Day(n int) QueryExpr {
 		value: n,
 	}
 }
-
-
-

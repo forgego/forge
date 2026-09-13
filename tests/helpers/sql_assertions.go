@@ -205,4 +205,3 @@ func CleanupTables(ctx context.Context, t *testing.T, db *sql.DB, dialect string
 		t.Fatalf("unsupported dialect for cleanup: %s", dialect)
 	}
 }
-

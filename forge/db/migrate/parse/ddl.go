@@ -341,7 +341,7 @@ func (p *DDLParser) parseDropIndex(sql string) ([]core.Change, error) {
 
 	indexName := matches[2]
 	tableName := ""
-	
+
 	// Try to get table name from various patterns
 	if len(matches) > 3 && matches[3] != "" {
 		// ON table_name pattern (PostgreSQL)
@@ -420,4 +420,3 @@ func denormalizeCascadeAction(action string) string {
 		return "NO ACTION"
 	}
 }
-

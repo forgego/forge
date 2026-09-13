@@ -277,4 +277,3 @@ func isValidOutputType(outputType OutputType) bool {
 		return false
 	}
 }
-

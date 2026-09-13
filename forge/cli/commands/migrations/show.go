@@ -8,8 +8,8 @@ import (
 
 	"github.com/forgego/forge/cli/core"
 	"github.com/forgego/forge/codegen"
-	dbstate "github.com/forgego/forge/db/migrate/state"
 	"github.com/forgego/forge/db/migrate"
+	dbstate "github.com/forgego/forge/db/migrate/state"
 	"github.com/spf13/cobra"
 )
 
@@ -192,4 +192,3 @@ func (c *ShowCommand) Execute(ctx *core.Context, args []string) error {
 
 	return nil
 }
-

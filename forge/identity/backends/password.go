@@ -94,4 +94,3 @@ func (b *passwordBackend) GetUser(ctx context.Context, identifier string) (*mode
 	// This is used for token-based authentication
 	return nil, nil
 }
-

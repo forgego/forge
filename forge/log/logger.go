@@ -235,4 +235,3 @@ func (l *Logger) GetConfig() *LoggingConfig {
 func (l *Logger) Sync() error {
 	return l.Logger.Sync()
 }
-

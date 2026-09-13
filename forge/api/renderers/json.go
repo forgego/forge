@@ -27,4 +27,3 @@ func (r *JSONRenderer) MediaType() string {
 func (r *JSONRenderer) RenderToWriter(w io.Writer, data interface{}) error {
 	return json.NewEncoder(w).Encode(data)
 }
-

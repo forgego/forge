@@ -144,7 +144,7 @@ func TestPrefetchRelated_Integration(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, articlesTags, 1)
 	assert.Len(t, articlesTags[0].Tags, 2)
-	
+
 	// Verify tags
 	tagNames := make(map[string]bool)
 	for _, tag := range articlesTags[0].Tags {

@@ -222,9 +222,9 @@ func TestUser_EmailVerification(t *testing.T) {
 	now := time.Now()
 
 	user := &User{
-		EmailVerified:    true,
-		EmailVerifiedAt:  &now,
-		PhoneVerified:    true,
+		EmailVerified:   true,
+		EmailVerifiedAt: &now,
+		PhoneVerified:   true,
 	}
 
 	if !user.EmailVerified {

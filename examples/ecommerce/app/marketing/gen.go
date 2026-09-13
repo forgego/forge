@@ -2,41 +2,40 @@
 package marketing
 
 import (
-	"time"
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
 	validate "github.com/forgego/forge/validate"
+	"time"
 )
-
 
 // CouponGenerated struct definition
 type CouponGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	Code string `json:"code" db:"code" validate:"required,max=50"`
-	Name string `json:"name" db:"name" validate:"required,max=200"`
-	Description string `json:"description" db:"description" validate:""`
-	DiscountType string `json:"discount_type" db:"discount_type" validate:"required,max=20"`
-	DiscountValue float64 `json:"discount_value" db:"discount_value" validate:"required"`
-	MinimumPurchaseAmount float64 `json:"minimum_purchase_amount" db:"minimum_purchase_amount" validate:""`
-	MaximumDiscountAmount float64 `json:"maximum_discount_amount" db:"maximum_discount_amount" validate:""`
-	UsageLimit int32 `json:"usage_limit" db:"usage_limit" validate:""`
-	UsageLimitPerCustomer int32 `json:"usage_limit_per_customer" db:"usage_limit_per_customer" validate:""`
-	UsageCount int32 `json:"usage_count" db:"usage_count" validate:""`
-	AppliesToAllProducts bool `json:"applies_to_all_products" db:"applies_to_all_products" validate:""`
-	ProductIds string `json:"product_ids" db:"product_ids" validate:"max=500"`
-	CategoryIds string `json:"category_ids" db:"category_ids" validate:"max=500"`
-	ExcludedProductIds string `json:"excluded_product_ids" db:"excluded_product_ids" validate:"max=500"`
-	AppliesToAllCustomers bool `json:"applies_to_all_customers" db:"applies_to_all_customers" validate:""`
-	CustomerGroupIds string `json:"customer_group_ids" db:"customer_group_ids" validate:"max=500"`
-	CustomerEmailList string `json:"customer_email_list" db:"customer_email_list" validate:""`
-	ValidFrom time.Time `json:"valid_from" db:"valid_from" validate:"required"`
-	ValidUntil time.Time `json:"valid_until" db:"valid_until" validate:""`
-	IsActive bool `json:"is_active" db:"is_active" validate:""`
-	IsPublic bool `json:"is_public" db:"is_public" validate:""`
-	Priority int32 `json:"priority" db:"priority" validate:""`
-	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id                    int64     `json:"id" db:"id" validate:""`
+	Code                  string    `json:"code" db:"code" validate:"required,max=50"`
+	Name                  string    `json:"name" db:"name" validate:"required,max=200"`
+	Description           string    `json:"description" db:"description" validate:""`
+	DiscountType          string    `json:"discount_type" db:"discount_type" validate:"required,max=20"`
+	DiscountValue         float64   `json:"discount_value" db:"discount_value" validate:"required"`
+	MinimumPurchaseAmount float64   `json:"minimum_purchase_amount" db:"minimum_purchase_amount" validate:""`
+	MaximumDiscountAmount float64   `json:"maximum_discount_amount" db:"maximum_discount_amount" validate:""`
+	UsageLimit            int32     `json:"usage_limit" db:"usage_limit" validate:""`
+	UsageLimitPerCustomer int32     `json:"usage_limit_per_customer" db:"usage_limit_per_customer" validate:""`
+	UsageCount            int32     `json:"usage_count" db:"usage_count" validate:""`
+	AppliesToAllProducts  bool      `json:"applies_to_all_products" db:"applies_to_all_products" validate:""`
+	ProductIds            string    `json:"product_ids" db:"product_ids" validate:"max=500"`
+	CategoryIds           string    `json:"category_ids" db:"category_ids" validate:"max=500"`
+	ExcludedProductIds    string    `json:"excluded_product_ids" db:"excluded_product_ids" validate:"max=500"`
+	AppliesToAllCustomers bool      `json:"applies_to_all_customers" db:"applies_to_all_customers" validate:""`
+	CustomerGroupIds      string    `json:"customer_group_ids" db:"customer_group_ids" validate:"max=500"`
+	CustomerEmailList     string    `json:"customer_email_list" db:"customer_email_list" validate:""`
+	ValidFrom             time.Time `json:"valid_from" db:"valid_from" validate:"required"`
+	ValidUntil            time.Time `json:"valid_until" db:"valid_until" validate:""`
+	IsActive              bool      `json:"is_active" db:"is_active" validate:""`
+	IsPublic              bool      `json:"is_public" db:"is_public" validate:""`
+	Priority              int32     `json:"priority" db:"priority" validate:""`
+	CreatedAt             time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt             time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the Coupon model
@@ -51,73 +50,70 @@ var CouponObjects, _ = orm.NewManager[Coupon]("coupons")
 
 // CouponFields provides type-safe field access for Coupon
 type CouponFields struct {
-	Id orm.Field[int64]
-	Code orm.Field[string]
-	Name orm.Field[string]
-	Description orm.Field[string]
-	DiscountType orm.Field[string]
-	DiscountValue orm.Field[float64]
+	Id                    orm.Field[int64]
+	Code                  orm.Field[string]
+	Name                  orm.Field[string]
+	Description           orm.Field[string]
+	DiscountType          orm.Field[string]
+	DiscountValue         orm.Field[float64]
 	MinimumPurchaseAmount orm.Field[float64]
 	MaximumDiscountAmount orm.Field[float64]
-	UsageLimit orm.Field[int32]
+	UsageLimit            orm.Field[int32]
 	UsageLimitPerCustomer orm.Field[int32]
-	UsageCount orm.Field[int32]
-	AppliesToAllProducts orm.Field[bool]
-	ProductIds orm.Field[string]
-	CategoryIds orm.Field[string]
-	ExcludedProductIds orm.Field[string]
+	UsageCount            orm.Field[int32]
+	AppliesToAllProducts  orm.Field[bool]
+	ProductIds            orm.Field[string]
+	CategoryIds           orm.Field[string]
+	ExcludedProductIds    orm.Field[string]
 	AppliesToAllCustomers orm.Field[bool]
-	CustomerGroupIds orm.Field[string]
-	CustomerEmailList orm.Field[string]
-	ValidFrom orm.Field[time.Time]
-	ValidUntil orm.Field[time.Time]
-	IsActive orm.Field[bool]
-	IsPublic orm.Field[bool]
-	Priority orm.Field[int32]
-	CreatedAt orm.Field[time.Time]
-	UpdatedAt orm.Field[time.Time]
+	CustomerGroupIds      orm.Field[string]
+	CustomerEmailList     orm.Field[string]
+	ValidFrom             orm.Field[time.Time]
+	ValidUntil            orm.Field[time.Time]
+	IsActive              orm.Field[bool]
+	IsPublic              orm.Field[bool]
+	Priority              orm.Field[int32]
+	CreatedAt             orm.Field[time.Time]
+	UpdatedAt             orm.Field[time.Time]
 }
 
 var CouponFieldsInstance = CouponFields{
-	Id: orm.NewField[int64]("id", "coupons"),
-	Code: orm.NewField[string]("code", "coupons"),
-	Name: orm.NewField[string]("name", "coupons"),
-	Description: orm.NewField[string]("description", "coupons"),
-	DiscountType: orm.NewField[string]("discount_type", "coupons"),
-	DiscountValue: orm.NewField[float64]("discount_value", "coupons"),
+	Id:                    orm.NewField[int64]("id", "coupons"),
+	Code:                  orm.NewField[string]("code", "coupons"),
+	Name:                  orm.NewField[string]("name", "coupons"),
+	Description:           orm.NewField[string]("description", "coupons"),
+	DiscountType:          orm.NewField[string]("discount_type", "coupons"),
+	DiscountValue:         orm.NewField[float64]("discount_value", "coupons"),
 	MinimumPurchaseAmount: orm.NewField[float64]("minimum_purchase_amount", "coupons"),
 	MaximumDiscountAmount: orm.NewField[float64]("maximum_discount_amount", "coupons"),
-	UsageLimit: orm.NewField[int32]("usage_limit", "coupons"),
+	UsageLimit:            orm.NewField[int32]("usage_limit", "coupons"),
 	UsageLimitPerCustomer: orm.NewField[int32]("usage_limit_per_customer", "coupons"),
-	UsageCount: orm.NewField[int32]("usage_count", "coupons"),
-	AppliesToAllProducts: orm.NewField[bool]("applies_to_all_products", "coupons"),
-	ProductIds: orm.NewField[string]("product_ids", "coupons"),
-	CategoryIds: orm.NewField[string]("category_ids", "coupons"),
-	ExcludedProductIds: orm.NewField[string]("excluded_product_ids", "coupons"),
+	UsageCount:            orm.NewField[int32]("usage_count", "coupons"),
+	AppliesToAllProducts:  orm.NewField[bool]("applies_to_all_products", "coupons"),
+	ProductIds:            orm.NewField[string]("product_ids", "coupons"),
+	CategoryIds:           orm.NewField[string]("category_ids", "coupons"),
+	ExcludedProductIds:    orm.NewField[string]("excluded_product_ids", "coupons"),
 	AppliesToAllCustomers: orm.NewField[bool]("applies_to_all_customers", "coupons"),
-	CustomerGroupIds: orm.NewField[string]("customer_group_ids", "coupons"),
-	CustomerEmailList: orm.NewField[string]("customer_email_list", "coupons"),
-	ValidFrom: orm.NewField[time.Time]("valid_from", "coupons"),
-	ValidUntil: orm.NewField[time.Time]("valid_until", "coupons"),
-	IsActive: orm.NewField[bool]("is_active", "coupons"),
-	IsPublic: orm.NewField[bool]("is_public", "coupons"),
-	Priority: orm.NewField[int32]("priority", "coupons"),
-	CreatedAt: orm.NewField[time.Time]("created_at", "coupons"),
-	UpdatedAt: orm.NewField[time.Time]("updated_at", "coupons"),
+	CustomerGroupIds:      orm.NewField[string]("customer_group_ids", "coupons"),
+	CustomerEmailList:     orm.NewField[string]("customer_email_list", "coupons"),
+	ValidFrom:             orm.NewField[time.Time]("valid_from", "coupons"),
+	ValidUntil:            orm.NewField[time.Time]("valid_until", "coupons"),
+	IsActive:              orm.NewField[bool]("is_active", "coupons"),
+	IsPublic:              orm.NewField[bool]("is_public", "coupons"),
+	Priority:              orm.NewField[int32]("priority", "coupons"),
+	CreatedAt:             orm.NewField[time.Time]("created_at", "coupons"),
+	UpdatedAt:             orm.NewField[time.Time]("updated_at", "coupons"),
 }
-
-
-
 
 // CouponUsageGenerated struct definition
 type CouponUsageGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	CouponId int64 `json:"coupon_id" db:"coupon_id" validate:"required"`
-	OrderId int64 `json:"order_id" db:"order_id" validate:"required"`
-	CustomerId int64 `json:"customer_id" db:"customer_id" validate:"required"`
-	DiscountAmount float64 `json:"discount_amount" db:"discount_amount" validate:"required"`
-	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	Id             int64     `json:"id" db:"id" validate:""`
+	CouponId       int64     `json:"coupon_id" db:"coupon_id" validate:"required"`
+	OrderId        int64     `json:"order_id" db:"order_id" validate:"required"`
+	CustomerId     int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	DiscountAmount float64   `json:"discount_amount" db:"discount_amount" validate:"required"`
+	CreatedAt      time.Time `json:"created_at" db:"created_at" validate:""`
 }
 
 // Validate validates the CouponUsage model
@@ -132,49 +128,46 @@ var CouponUsageObjects, _ = orm.NewManager[CouponUsage]("coupon_usage")
 
 // CouponUsageFields provides type-safe field access for CouponUsage
 type CouponUsageFields struct {
-	Id orm.Field[int64]
-	CouponId orm.Field[int64]
-	OrderId orm.Field[int64]
-	CustomerId orm.Field[int64]
+	Id             orm.Field[int64]
+	CouponId       orm.Field[int64]
+	OrderId        orm.Field[int64]
+	CustomerId     orm.Field[int64]
 	DiscountAmount orm.Field[float64]
-	CreatedAt orm.Field[time.Time]
+	CreatedAt      orm.Field[time.Time]
 }
 
 var CouponUsageFieldsInstance = CouponUsageFields{
-	Id: orm.NewField[int64]("id", "coupon_usage"),
-	CouponId: orm.NewField[int64]("coupon_id", "coupon_usage"),
-	OrderId: orm.NewField[int64]("order_id", "coupon_usage"),
-	CustomerId: orm.NewField[int64]("customer_id", "coupon_usage"),
+	Id:             orm.NewField[int64]("id", "coupon_usage"),
+	CouponId:       orm.NewField[int64]("coupon_id", "coupon_usage"),
+	OrderId:        orm.NewField[int64]("order_id", "coupon_usage"),
+	CustomerId:     orm.NewField[int64]("customer_id", "coupon_usage"),
 	DiscountAmount: orm.NewField[float64]("discount_amount", "coupon_usage"),
-	CreatedAt: orm.NewField[time.Time]("created_at", "coupon_usage"),
+	CreatedAt:      orm.NewField[time.Time]("created_at", "coupon_usage"),
 }
-
-
-
 
 // ReviewGenerated struct definition
 type ReviewGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	ProductId int64 `json:"product_id" db:"product_id" validate:"required"`
-	CustomerId int64 `json:"customer_id" db:"customer_id" validate:"required"`
-	OrderId int64 `json:"order_id" db:"order_id" validate:""`
-	Title string `json:"title" db:"title" validate:"required,max=255"`
-	Content string `json:"content" db:"content" validate:"required"`
-	Rating int32 `json:"rating" db:"rating" validate:"required"`
-	IsVerifiedPurchase bool `json:"is_verified_purchase" db:"is_verified_purchase" validate:""`
-	Status string `json:"status" db:"status" validate:"required,max=20"`
-	IsFeatured bool `json:"is_featured" db:"is_featured" validate:""`
-	HelpfulCount int32 `json:"helpful_count" db:"helpful_count" validate:""`
-	NotHelpfulCount int32 `json:"not_helpful_count" db:"not_helpful_count" validate:""`
-	MerchantResponse string `json:"merchant_response" db:"merchant_response" validate:""`
-	MerchantResponseAt time.Time `json:"merchant_response_at" db:"merchant_response_at" validate:""`
-	MerchantResponseByUserId int64 `json:"merchant_response_by_user_id" db:"merchant_response_by_user_id" validate:""`
-	ReportCount int32 `json:"report_count" db:"report_count" validate:""`
-	ReportReasons string `json:"report_reasons" db:"report_reasons" validate:""`
-	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
-	ApprovedAt time.Time `json:"approved_at" db:"approved_at" validate:""`
+	Id                       int64     `json:"id" db:"id" validate:""`
+	ProductId                int64     `json:"product_id" db:"product_id" validate:"required"`
+	CustomerId               int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	OrderId                  int64     `json:"order_id" db:"order_id" validate:""`
+	Title                    string    `json:"title" db:"title" validate:"required,max=255"`
+	Content                  string    `json:"content" db:"content" validate:"required"`
+	Rating                   int32     `json:"rating" db:"rating" validate:"required"`
+	IsVerifiedPurchase       bool      `json:"is_verified_purchase" db:"is_verified_purchase" validate:""`
+	Status                   string    `json:"status" db:"status" validate:"required,max=20"`
+	IsFeatured               bool      `json:"is_featured" db:"is_featured" validate:""`
+	HelpfulCount             int32     `json:"helpful_count" db:"helpful_count" validate:""`
+	NotHelpfulCount          int32     `json:"not_helpful_count" db:"not_helpful_count" validate:""`
+	MerchantResponse         string    `json:"merchant_response" db:"merchant_response" validate:""`
+	MerchantResponseAt       time.Time `json:"merchant_response_at" db:"merchant_response_at" validate:""`
+	MerchantResponseByUserId int64     `json:"merchant_response_by_user_id" db:"merchant_response_by_user_id" validate:""`
+	ReportCount              int32     `json:"report_count" db:"report_count" validate:""`
+	ReportReasons            string    `json:"report_reasons" db:"report_reasons" validate:""`
+	CreatedAt                time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt                time.Time `json:"updated_at" db:"updated_at" validate:""`
+	ApprovedAt               time.Time `json:"approved_at" db:"approved_at" validate:""`
 }
 
 // Validate validates the Review model
@@ -189,64 +182,61 @@ var ReviewObjects, _ = orm.NewManager[Review]("reviews")
 
 // ReviewFields provides type-safe field access for Review
 type ReviewFields struct {
-	Id orm.Field[int64]
-	ProductId orm.Field[int64]
-	CustomerId orm.Field[int64]
-	OrderId orm.Field[int64]
-	Title orm.Field[string]
-	Content orm.Field[string]
-	Rating orm.Field[int32]
-	IsVerifiedPurchase orm.Field[bool]
-	Status orm.Field[string]
-	IsFeatured orm.Field[bool]
-	HelpfulCount orm.Field[int32]
-	NotHelpfulCount orm.Field[int32]
-	MerchantResponse orm.Field[string]
-	MerchantResponseAt orm.Field[time.Time]
+	Id                       orm.Field[int64]
+	ProductId                orm.Field[int64]
+	CustomerId               orm.Field[int64]
+	OrderId                  orm.Field[int64]
+	Title                    orm.Field[string]
+	Content                  orm.Field[string]
+	Rating                   orm.Field[int32]
+	IsVerifiedPurchase       orm.Field[bool]
+	Status                   orm.Field[string]
+	IsFeatured               orm.Field[bool]
+	HelpfulCount             orm.Field[int32]
+	NotHelpfulCount          orm.Field[int32]
+	MerchantResponse         orm.Field[string]
+	MerchantResponseAt       orm.Field[time.Time]
 	MerchantResponseByUserId orm.Field[int64]
-	ReportCount orm.Field[int32]
-	ReportReasons orm.Field[string]
-	CreatedAt orm.Field[time.Time]
-	UpdatedAt orm.Field[time.Time]
-	ApprovedAt orm.Field[time.Time]
+	ReportCount              orm.Field[int32]
+	ReportReasons            orm.Field[string]
+	CreatedAt                orm.Field[time.Time]
+	UpdatedAt                orm.Field[time.Time]
+	ApprovedAt               orm.Field[time.Time]
 }
 
 var ReviewFieldsInstance = ReviewFields{
-	Id: orm.NewField[int64]("id", "reviews"),
-	ProductId: orm.NewField[int64]("product_id", "reviews"),
-	CustomerId: orm.NewField[int64]("customer_id", "reviews"),
-	OrderId: orm.NewField[int64]("order_id", "reviews"),
-	Title: orm.NewField[string]("title", "reviews"),
-	Content: orm.NewField[string]("content", "reviews"),
-	Rating: orm.NewField[int32]("rating", "reviews"),
-	IsVerifiedPurchase: orm.NewField[bool]("is_verified_purchase", "reviews"),
-	Status: orm.NewField[string]("status", "reviews"),
-	IsFeatured: orm.NewField[bool]("is_featured", "reviews"),
-	HelpfulCount: orm.NewField[int32]("helpful_count", "reviews"),
-	NotHelpfulCount: orm.NewField[int32]("not_helpful_count", "reviews"),
-	MerchantResponse: orm.NewField[string]("merchant_response", "reviews"),
-	MerchantResponseAt: orm.NewField[time.Time]("merchant_response_at", "reviews"),
+	Id:                       orm.NewField[int64]("id", "reviews"),
+	ProductId:                orm.NewField[int64]("product_id", "reviews"),
+	CustomerId:               orm.NewField[int64]("customer_id", "reviews"),
+	OrderId:                  orm.NewField[int64]("order_id", "reviews"),
+	Title:                    orm.NewField[string]("title", "reviews"),
+	Content:                  orm.NewField[string]("content", "reviews"),
+	Rating:                   orm.NewField[int32]("rating", "reviews"),
+	IsVerifiedPurchase:       orm.NewField[bool]("is_verified_purchase", "reviews"),
+	Status:                   orm.NewField[string]("status", "reviews"),
+	IsFeatured:               orm.NewField[bool]("is_featured", "reviews"),
+	HelpfulCount:             orm.NewField[int32]("helpful_count", "reviews"),
+	NotHelpfulCount:          orm.NewField[int32]("not_helpful_count", "reviews"),
+	MerchantResponse:         orm.NewField[string]("merchant_response", "reviews"),
+	MerchantResponseAt:       orm.NewField[time.Time]("merchant_response_at", "reviews"),
 	MerchantResponseByUserId: orm.NewField[int64]("merchant_response_by_user_id", "reviews"),
-	ReportCount: orm.NewField[int32]("report_count", "reviews"),
-	ReportReasons: orm.NewField[string]("report_reasons", "reviews"),
-	CreatedAt: orm.NewField[time.Time]("created_at", "reviews"),
-	UpdatedAt: orm.NewField[time.Time]("updated_at", "reviews"),
-	ApprovedAt: orm.NewField[time.Time]("approved_at", "reviews"),
+	ReportCount:              orm.NewField[int32]("report_count", "reviews"),
+	ReportReasons:            orm.NewField[string]("report_reasons", "reviews"),
+	CreatedAt:                orm.NewField[time.Time]("created_at", "reviews"),
+	UpdatedAt:                orm.NewField[time.Time]("updated_at", "reviews"),
+	ApprovedAt:               orm.NewField[time.Time]("approved_at", "reviews"),
 }
-
-
-
 
 // ReviewImageGenerated struct definition
 type ReviewImageGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	ReviewId int64 `json:"review_id" db:"review_id" validate:"required"`
-	ImageUrl string `json:"image_url" db:"image_url" validate:"required,max=500"`
-	ThumbnailUrl string `json:"thumbnail_url" db:"thumbnail_url" validate:"max=500"`
-	AltText string `json:"alt_text" db:"alt_text" validate:"max=255"`
-	SortOrder int32 `json:"sort_order" db:"sort_order" validate:""`
-	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	Id           int64     `json:"id" db:"id" validate:""`
+	ReviewId     int64     `json:"review_id" db:"review_id" validate:"required"`
+	ImageUrl     string    `json:"image_url" db:"image_url" validate:"required,max=500"`
+	ThumbnailUrl string    `json:"thumbnail_url" db:"thumbnail_url" validate:"max=500"`
+	AltText      string    `json:"alt_text" db:"alt_text" validate:"max=255"`
+	SortOrder    int32     `json:"sort_order" db:"sort_order" validate:""`
+	CreatedAt    time.Time `json:"created_at" db:"created_at" validate:""`
 }
 
 // Validate validates the ReviewImage model
@@ -261,37 +251,34 @@ var ReviewImageObjects, _ = orm.NewManager[ReviewImage]("review_images")
 
 // ReviewImageFields provides type-safe field access for ReviewImage
 type ReviewImageFields struct {
-	Id orm.Field[int64]
-	ReviewId orm.Field[int64]
-	ImageUrl orm.Field[string]
+	Id           orm.Field[int64]
+	ReviewId     orm.Field[int64]
+	ImageUrl     orm.Field[string]
 	ThumbnailUrl orm.Field[string]
-	AltText orm.Field[string]
-	SortOrder orm.Field[int32]
-	CreatedAt orm.Field[time.Time]
+	AltText      orm.Field[string]
+	SortOrder    orm.Field[int32]
+	CreatedAt    orm.Field[time.Time]
 }
 
 var ReviewImageFieldsInstance = ReviewImageFields{
-	Id: orm.NewField[int64]("id", "review_images"),
-	ReviewId: orm.NewField[int64]("review_id", "review_images"),
-	ImageUrl: orm.NewField[string]("image_url", "review_images"),
+	Id:           orm.NewField[int64]("id", "review_images"),
+	ReviewId:     orm.NewField[int64]("review_id", "review_images"),
+	ImageUrl:     orm.NewField[string]("image_url", "review_images"),
 	ThumbnailUrl: orm.NewField[string]("thumbnail_url", "review_images"),
-	AltText: orm.NewField[string]("alt_text", "review_images"),
-	SortOrder: orm.NewField[int32]("sort_order", "review_images"),
-	CreatedAt: orm.NewField[time.Time]("created_at", "review_images"),
+	AltText:      orm.NewField[string]("alt_text", "review_images"),
+	SortOrder:    orm.NewField[int32]("sort_order", "review_images"),
+	CreatedAt:    orm.NewField[time.Time]("created_at", "review_images"),
 }
-
-
-
 
 // ReviewHelpfulnessGenerated struct definition
 type ReviewHelpfulnessGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	ReviewId int64 `json:"review_id" db:"review_id" validate:"required"`
-	CustomerId int64 `json:"customer_id" db:"customer_id" validate:""`
-	IsHelpful bool `json:"is_helpful" db:"is_helpful" validate:"required"`
-	IpAddress string `json:"ip_address" db:"ip_address" validate:"max=45"`
-	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	Id         int64     `json:"id" db:"id" validate:""`
+	ReviewId   int64     `json:"review_id" db:"review_id" validate:"required"`
+	CustomerId int64     `json:"customer_id" db:"customer_id" validate:""`
+	IsHelpful  bool      `json:"is_helpful" db:"is_helpful" validate:"required"`
+	IpAddress  string    `json:"ip_address" db:"ip_address" validate:"max=45"`
+	CreatedAt  time.Time `json:"created_at" db:"created_at" validate:""`
 }
 
 // Validate validates the ReviewHelpfulness model
@@ -306,42 +293,39 @@ var ReviewHelpfulnessObjects, _ = orm.NewManager[ReviewHelpfulness]("review_help
 
 // ReviewHelpfulnessFields provides type-safe field access for ReviewHelpfulness
 type ReviewHelpfulnessFields struct {
-	Id orm.Field[int64]
-	ReviewId orm.Field[int64]
+	Id         orm.Field[int64]
+	ReviewId   orm.Field[int64]
 	CustomerId orm.Field[int64]
-	IsHelpful orm.Field[bool]
-	IpAddress orm.Field[string]
-	CreatedAt orm.Field[time.Time]
+	IsHelpful  orm.Field[bool]
+	IpAddress  orm.Field[string]
+	CreatedAt  orm.Field[time.Time]
 }
 
 var ReviewHelpfulnessFieldsInstance = ReviewHelpfulnessFields{
-	Id: orm.NewField[int64]("id", "review_helpfulness"),
-	ReviewId: orm.NewField[int64]("review_id", "review_helpfulness"),
+	Id:         orm.NewField[int64]("id", "review_helpfulness"),
+	ReviewId:   orm.NewField[int64]("review_id", "review_helpfulness"),
 	CustomerId: orm.NewField[int64]("customer_id", "review_helpfulness"),
-	IsHelpful: orm.NewField[bool]("is_helpful", "review_helpfulness"),
-	IpAddress: orm.NewField[string]("ip_address", "review_helpfulness"),
-	CreatedAt: orm.NewField[time.Time]("created_at", "review_helpfulness"),
+	IsHelpful:  orm.NewField[bool]("is_helpful", "review_helpfulness"),
+	IpAddress:  orm.NewField[string]("ip_address", "review_helpfulness"),
+	CreatedAt:  orm.NewField[time.Time]("created_at", "review_helpfulness"),
 }
-
-
-
 
 // ProductQuestionGenerated struct definition
 type ProductQuestionGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	ProductId int64 `json:"product_id" db:"product_id" validate:"required"`
-	CustomerId int64 `json:"customer_id" db:"customer_id" validate:"required"`
-	Question string `json:"question" db:"question" validate:"required"`
-	Answer string `json:"answer" db:"answer" validate:""`
-	AnsweredAt time.Time `json:"answered_at" db:"answered_at" validate:""`
-	AnsweredByUserId int64 `json:"answered_by_user_id" db:"answered_by_user_id" validate:""`
-	AnsweredByUserName string `json:"answered_by_user_name" db:"answered_by_user_name" validate:"max=200"`
-	Status string `json:"status" db:"status" validate:"required,max=20"`
-	IsPublic bool `json:"is_public" db:"is_public" validate:""`
-	HelpfulCount int32 `json:"helpful_count" db:"helpful_count" validate:""`
-	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id                 int64     `json:"id" db:"id" validate:""`
+	ProductId          int64     `json:"product_id" db:"product_id" validate:"required"`
+	CustomerId         int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	Question           string    `json:"question" db:"question" validate:"required"`
+	Answer             string    `json:"answer" db:"answer" validate:""`
+	AnsweredAt         time.Time `json:"answered_at" db:"answered_at" validate:""`
+	AnsweredByUserId   int64     `json:"answered_by_user_id" db:"answered_by_user_id" validate:""`
+	AnsweredByUserName string    `json:"answered_by_user_name" db:"answered_by_user_name" validate:"max=200"`
+	Status             string    `json:"status" db:"status" validate:"required,max=20"`
+	IsPublic           bool      `json:"is_public" db:"is_public" validate:""`
+	HelpfulCount       int32     `json:"helpful_count" db:"helpful_count" validate:""`
+	CreatedAt          time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt          time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the ProductQuestion model
@@ -356,37 +340,33 @@ var ProductQuestionObjects, _ = orm.NewManager[ProductQuestion]("product_questio
 
 // ProductQuestionFields provides type-safe field access for ProductQuestion
 type ProductQuestionFields struct {
-	Id orm.Field[int64]
-	ProductId orm.Field[int64]
-	CustomerId orm.Field[int64]
-	Question orm.Field[string]
-	Answer orm.Field[string]
-	AnsweredAt orm.Field[time.Time]
-	AnsweredByUserId orm.Field[int64]
+	Id                 orm.Field[int64]
+	ProductId          orm.Field[int64]
+	CustomerId         orm.Field[int64]
+	Question           orm.Field[string]
+	Answer             orm.Field[string]
+	AnsweredAt         orm.Field[time.Time]
+	AnsweredByUserId   orm.Field[int64]
 	AnsweredByUserName orm.Field[string]
-	Status orm.Field[string]
-	IsPublic orm.Field[bool]
-	HelpfulCount orm.Field[int32]
-	CreatedAt orm.Field[time.Time]
-	UpdatedAt orm.Field[time.Time]
+	Status             orm.Field[string]
+	IsPublic           orm.Field[bool]
+	HelpfulCount       orm.Field[int32]
+	CreatedAt          orm.Field[time.Time]
+	UpdatedAt          orm.Field[time.Time]
 }
 
 var ProductQuestionFieldsInstance = ProductQuestionFields{
-	Id: orm.NewField[int64]("id", "product_questions"),
-	ProductId: orm.NewField[int64]("product_id", "product_questions"),
-	CustomerId: orm.NewField[int64]("customer_id", "product_questions"),
-	Question: orm.NewField[string]("question", "product_questions"),
-	Answer: orm.NewField[string]("answer", "product_questions"),
-	AnsweredAt: orm.NewField[time.Time]("answered_at", "product_questions"),
-	AnsweredByUserId: orm.NewField[int64]("answered_by_user_id", "product_questions"),
+	Id:                 orm.NewField[int64]("id", "product_questions"),
+	ProductId:          orm.NewField[int64]("product_id", "product_questions"),
+	CustomerId:         orm.NewField[int64]("customer_id", "product_questions"),
+	Question:           orm.NewField[string]("question", "product_questions"),
+	Answer:             orm.NewField[string]("answer", "product_questions"),
+	AnsweredAt:         orm.NewField[time.Time]("answered_at", "product_questions"),
+	AnsweredByUserId:   orm.NewField[int64]("answered_by_user_id", "product_questions"),
 	AnsweredByUserName: orm.NewField[string]("answered_by_user_name", "product_questions"),
-	Status: orm.NewField[string]("status", "product_questions"),
-	IsPublic: orm.NewField[bool]("is_public", "product_questions"),
-	HelpfulCount: orm.NewField[int32]("helpful_count", "product_questions"),
-	CreatedAt: orm.NewField[time.Time]("created_at", "product_questions"),
-	UpdatedAt: orm.NewField[time.Time]("updated_at", "product_questions"),
+	Status:             orm.NewField[string]("status", "product_questions"),
+	IsPublic:           orm.NewField[bool]("is_public", "product_questions"),
+	HelpfulCount:       orm.NewField[int32]("helpful_count", "product_questions"),
+	CreatedAt:          orm.NewField[time.Time]("created_at", "product_questions"),
+	UpdatedAt:          orm.NewField[time.Time]("updated_at", "product_questions"),
 }
-
-
-
-

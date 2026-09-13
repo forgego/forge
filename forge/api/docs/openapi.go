@@ -166,4 +166,3 @@ func (g *OpenAPIGenerator) Handler() http.HandlerFunc {
 		json.NewEncoder(w).Encode(spec)
 	}
 }
-

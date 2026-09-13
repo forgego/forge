@@ -36,4 +36,3 @@ func ToKebab(s string) string {
 func ToLowerCamel(s string) string {
 	return strcase.ToCamel(s)
 }
-

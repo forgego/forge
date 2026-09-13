@@ -142,4 +142,3 @@ func (s *permissionService) RemovePermission(ctx context.Context, userID int64, 
 
 	return nil
 }
-

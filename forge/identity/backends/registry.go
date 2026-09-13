@@ -101,4 +101,3 @@ func (r *backendRegistry) GetUser(ctx context.Context, identifier string) (*mode
 
 	return nil, fmt.Errorf("user not found")
 }
-

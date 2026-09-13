@@ -46,4 +46,3 @@ func (p *FormParser) Parse(r io.Reader, v interface{}) error {
 func (p *FormParser) MediaType() string {
 	return "application/x-www-form-urlencoded"
 }
-

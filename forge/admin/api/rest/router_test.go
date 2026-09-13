@@ -19,36 +19,36 @@ import (
 )
 
 type mockAdmin struct {
-	modelName            string
-	moduleAllowed        bool
-	metadata             *core.Metadata
-	metadataErr          error
-	listResponse         *core.PaginatedResponse
-	listErr              error
-	createObjectFn       func(data map[string]interface{}) (interface{}, error)
-	createCalls          []map[string]interface{}
-	hasChangePermission  func(obj interface{}) bool
-	hasDeletePermission  func(obj interface{}) bool
-	getObjectFn          func(id interface{}) (interface{}, error)
-	getObjectResponse    interface{}
-	getObjectErr         error
-	updateObjectFn       func(id interface{}, data map[string]interface{}) (interface{}, error)
-	updateObjectResponse interface{}
-	updateObjectErr      error
-	lastUpdateID         interface{}
-	lastUpdateData       map[string]interface{}
-	updateCalls          []mockUpdateCall
-	deleteObjectFn       func(id interface{}) error
-	deleteCalls          []interface{}
-	executeActionFn      func(actionName string, ids []interface{}, params map[string]interface{}) (interface{}, error)
-	lastActionName       string
-	lastActionIDs        []interface{}
-	lastActionParams     map[string]interface{}
-	historyEntries       []core.LogEntry
-	historyErr           error
-	denyView             bool
-	autocompleteItems    []core.AutocompleteItem
-	autocompleteErr      error
+	modelName             string
+	moduleAllowed         bool
+	metadata              *core.Metadata
+	metadataErr           error
+	listResponse          *core.PaginatedResponse
+	listErr               error
+	createObjectFn        func(data map[string]interface{}) (interface{}, error)
+	createCalls           []map[string]interface{}
+	hasChangePermission   func(obj interface{}) bool
+	hasDeletePermission   func(obj interface{}) bool
+	getObjectFn           func(id interface{}) (interface{}, error)
+	getObjectResponse     interface{}
+	getObjectErr          error
+	updateObjectFn        func(id interface{}, data map[string]interface{}) (interface{}, error)
+	updateObjectResponse  interface{}
+	updateObjectErr       error
+	lastUpdateID          interface{}
+	lastUpdateData        map[string]interface{}
+	updateCalls           []mockUpdateCall
+	deleteObjectFn        func(id interface{}) error
+	deleteCalls           []interface{}
+	executeActionFn       func(actionName string, ids []interface{}, params map[string]interface{}) (interface{}, error)
+	lastActionName        string
+	lastActionIDs         []interface{}
+	lastActionParams      map[string]interface{}
+	historyEntries        []core.LogEntry
+	historyErr            error
+	denyView              bool
+	autocompleteItems     []core.AutocompleteItem
+	autocompleteErr       error
 	lastAutocompleteQuery string
 	lastAutocompleteLimit int
 }
@@ -1028,7 +1028,6 @@ func TestHandleHistory_ReturnsAuditLog(t *testing.T) {
 	assert.Equal(t, "10", entryMap["object_id"])
 	assert.Equal(t, "add", entryMap["action"])
 }
-
 
 func withURLParams(req *http.Request, params map[string]string) *http.Request {
 	routeCtx := chi.NewRouteContext()

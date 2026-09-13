@@ -39,4 +39,3 @@ func NewNotAuthenticated(message string) *NotAuthenticated {
 		),
 	}
 }
-

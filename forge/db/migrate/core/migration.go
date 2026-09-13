@@ -51,4 +51,3 @@ func allReversible(changes []Change) bool {
 	}
 	return true
 }
-

@@ -410,7 +410,7 @@ func (OptionsModel) Relations() []schema.Relation {
 
 	// Verify we have at least the id column
 	assert.Contains(t, columns, "id", "should have id column")
-	
+
 	// Check if custom column name is used (DBColumn option)
 	// Note: The migration generator may or may not support DBColumn yet
 	// For now, just verify the table was created successfully

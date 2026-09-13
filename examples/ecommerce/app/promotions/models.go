@@ -258,19 +258,19 @@ func (Banner) Hooks() *schema.ModelHooks {
 // NewsletterSubscription represents newsletter subscriptions
 type NewsletterSubscription struct {
 	schema.BaseSchema
-	Id           int64  `json:"id" db:"id"`
-	Email        string `json:"email" db:"email"`
-	FirstName    string `json:"first_name" db:"first_name"`
-	LastName     string `json:"last_name" db:"last_name"`
-	CustomerID   int64  `json:"customer_id" db:"customer_id"`
-	Status       string `json:"status" db:"status"`
-	Source       string `json:"source" db:"source"`
-	IPAddress    string `json:"ip_address" db:"ip_address"`
-	ConfirmedAt  string `json:"confirmed_at" db:"confirmed_at"`
+	Id             int64  `json:"id" db:"id"`
+	Email          string `json:"email" db:"email"`
+	FirstName      string `json:"first_name" db:"first_name"`
+	LastName       string `json:"last_name" db:"last_name"`
+	CustomerID     int64  `json:"customer_id" db:"customer_id"`
+	Status         string `json:"status" db:"status"`
+	Source         string `json:"source" db:"source"`
+	IPAddress      string `json:"ip_address" db:"ip_address"`
+	ConfirmedAt    string `json:"confirmed_at" db:"confirmed_at"`
 	UnsubscribedAt string `json:"unsubscribed_at" db:"unsubscribed_at"`
-	Preferences  string `json:"preferences" db:"preferences"`
-	CreatedAt    string `json:"created_at" db:"created_at"`
-	UpdatedAt    string `json:"updated_at" db:"updated_at"`
+	Preferences    string `json:"preferences" db:"preferences"`
+	CreatedAt      string `json:"created_at" db:"created_at"`
+	UpdatedAt      string `json:"updated_at" db:"updated_at"`
 }
 
 func (NewsletterSubscription) Fields() []schema.Field {
@@ -332,13 +332,13 @@ func (NewsletterSubscription) Hooks() *schema.ModelHooks {
 // PromotionUsage tracks promotion usage by customers
 type PromotionUsage struct {
 	schema.BaseSchema
-	Id          int64  `json:"id" db:"id"`
-	PromotionID int64  `json:"promotion_id" db:"promotion_id"`
-	CustomerID  int64  `json:"customer_id" db:"customer_id"`
-	OrderID     int64  `json:"order_id" db:"order_id"`
-	UsedAt      string `json:"used_at" db:"used_at"`
+	Id          int64   `json:"id" db:"id"`
+	PromotionID int64   `json:"promotion_id" db:"promotion_id"`
+	CustomerID  int64   `json:"customer_id" db:"customer_id"`
+	OrderID     int64   `json:"order_id" db:"order_id"`
+	UsedAt      string  `json:"used_at" db:"used_at"`
 	DiscountAmt float64 `json:"discount_amount" db:"discount_amount"`
-	CreatedAt   string `json:"created_at" db:"created_at"`
+	CreatedAt   string  `json:"created_at" db:"created_at"`
 }
 
 func (PromotionUsage) Fields() []schema.Field {

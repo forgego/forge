@@ -7,12 +7,12 @@ import (
 )
 
 type testStruct struct {
-	Slug          string  `validate:"slug"`
-	Phone         string  `validate:"phone"`
-	Status        string  `validate:"choices=draft published archived"`
-	Code          string  `validate:"unique"`
-	Price         float64 `validate:"decimal_places=2,decimal_max_digits=10"`
-	BigNumber     float64 `validate:"decimal_places=2,decimal_max_digits=12"`
+	Slug      string  `validate:"slug"`
+	Phone     string  `validate:"phone"`
+	Status    string  `validate:"choices=draft published archived"`
+	Code      string  `validate:"unique"`
+	Price     float64 `validate:"decimal_places=2,decimal_max_digits=10"`
+	BigNumber float64 `validate:"decimal_places=2,decimal_max_digits=12"`
 }
 
 func TestValidator_CustomValidators(t *testing.T) {

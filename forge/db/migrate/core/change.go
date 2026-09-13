@@ -239,4 +239,3 @@ func toSnakeCase(s string) string {
 	}
 	return string(result)
 }
-

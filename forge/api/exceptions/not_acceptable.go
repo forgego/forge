@@ -19,4 +19,3 @@ func NewNotAcceptable(message string) *NotAcceptable {
 		),
 	}
 }
-

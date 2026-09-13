@@ -41,4 +41,3 @@ func (r *YAMLRenderer) RenderToWriter(w io.Writer, data interface{}) error {
 	_, err = fmt.Fprint(w, string(jsonData))
 	return err
 }
-

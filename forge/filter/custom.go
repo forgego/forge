@@ -15,11 +15,11 @@ var (
 
 // CustomFilterHandler represents a custom filter handler
 type CustomFilterHandler struct {
-	ID          string
-	Name        string
-	Handler     func(value interface{}) (orm.Expression, error)
+	ID           string
+	Name         string
+	Handler      func(value interface{}) (orm.Expression, error)
 	AllowedRoles []string
-	Cost        int
+	Cost         int
 }
 
 // RegisterCustom registers a custom filter handler
@@ -112,4 +112,3 @@ func (f *CustomFilter[T]) ToExpression(fieldPath string, value interface{}) (orm
 
 	return f.handler.Handler(value)
 }
-

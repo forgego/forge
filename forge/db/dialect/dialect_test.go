@@ -15,8 +15,8 @@ func TestPostgreSQLDialect_Placeholder(t *testing.T) {
 	d := NewPostgreSQLDialect()
 
 	tests := []struct {
-		position  int
-		expected  string
+		position int
+		expected string
 	}{
 		{1, "$1"},
 		{2, "$2"},
@@ -188,8 +188,8 @@ func TestSQLiteDialect_Placeholder(t *testing.T) {
 	d := NewSQLiteDialect()
 
 	tests := []struct {
-		position  int
-		expected  string
+		position int
+		expected string
 	}{
 		{1, "?"},
 		{2, "?"},

@@ -149,21 +149,21 @@ func (PaymentMethod) Hooks() *schema.ModelHooks {
 // TaxRate represents a tax rate configuration
 type TaxRate struct {
 	schema.BaseSchema
-	Id           int64   `json:"id" db:"id"`
-	Name         string  `json:"name" db:"name"`
-	Code         string  `json:"code" db:"code"`
-	Rate         float64 `json:"rate" db:"rate"`
-	Country      string  `json:"country" db:"country"`
-	State        string  `json:"state" db:"state"`
-	City         string  `json:"city" db:"city"`
-	ZipCode      string  `json:"zip_code" db:"zip_code"`
-	IsCompound   bool    `json:"is_compound" db:"is_compound"`
-	IsActive     bool    `json:"is_active" db:"is_active"`
-	Priority     int32   `json:"priority" db:"priority"`
-	ApplyToShip  bool    `json:"apply_to_shipping" db:"apply_to_shipping"`
-	IncludedInPrice bool `json:"included_in_price" db:"included_in_price"`
-	CreatedAt    string  `json:"created_at" db:"created_at"`
-	UpdatedAt    string  `json:"updated_at" db:"updated_at"`
+	Id              int64   `json:"id" db:"id"`
+	Name            string  `json:"name" db:"name"`
+	Code            string  `json:"code" db:"code"`
+	Rate            float64 `json:"rate" db:"rate"`
+	Country         string  `json:"country" db:"country"`
+	State           string  `json:"state" db:"state"`
+	City            string  `json:"city" db:"city"`
+	ZipCode         string  `json:"zip_code" db:"zip_code"`
+	IsCompound      bool    `json:"is_compound" db:"is_compound"`
+	IsActive        bool    `json:"is_active" db:"is_active"`
+	Priority        int32   `json:"priority" db:"priority"`
+	ApplyToShip     bool    `json:"apply_to_shipping" db:"apply_to_shipping"`
+	IncludedInPrice bool    `json:"included_in_price" db:"included_in_price"`
+	CreatedAt       string  `json:"created_at" db:"created_at"`
+	UpdatedAt       string  `json:"updated_at" db:"updated_at"`
 }
 
 func (TaxRate) Fields() []schema.Field {
@@ -225,15 +225,15 @@ func (TaxRate) Hooks() *schema.ModelHooks {
 // Currency represents a currency
 type Currency struct {
 	schema.BaseSchema
-	Id           int64  `json:"id" db:"id"`
-	Code         string `json:"code" db:"code"`
-	Name         string `json:"name" db:"name"`
-	Symbol       string `json:"symbol" db:"symbol"`
-	DecimalPlaces int32 `json:"decimal_places" db:"decimal_places"`
-	IsActive     bool   `json:"is_active" db:"is_active"`
-	IsDefault    bool   `json:"is_default" db:"is_default"`
-	CreatedAt    string `json:"created_at" db:"created_at"`
-	UpdatedAt    string `json:"updated_at" db:"updated_at"`
+	Id            int64  `json:"id" db:"id"`
+	Code          string `json:"code" db:"code"`
+	Name          string `json:"name" db:"name"`
+	Symbol        string `json:"symbol" db:"symbol"`
+	DecimalPlaces int32  `json:"decimal_places" db:"decimal_places"`
+	IsActive      bool   `json:"is_active" db:"is_active"`
+	IsDefault     bool   `json:"is_default" db:"is_default"`
+	CreatedAt     string `json:"created_at" db:"created_at"`
+	UpdatedAt     string `json:"updated_at" db:"updated_at"`
 }
 
 func (Currency) Fields() []schema.Field {

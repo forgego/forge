@@ -15,13 +15,17 @@ type mockAdmin struct {
 	name string
 }
 
-func (m *mockAdmin) ModelName() string                                               { return m.name }
-func (m *mockAdmin) ModelType() reflect.Type                                         { return reflect.TypeOf(struct{}{}) }
-func (m *mockAdmin) GetMetadata(ctx context.Context, user interface{}) (*Metadata, error) { return nil, nil }
-func (m *mockAdmin) SetDB(database *db.DB)                                           {}
-func (m *mockAdmin) ManagerInterface() interface{}                                   { return nil }
-func (m *mockAdmin) ConfigInterface() interface{}                                    { return nil }
-func (m *mockAdmin) GetHistory(ctx context.Context, objectID string) ([]LogEntry, error)  { return nil, nil }
+func (m *mockAdmin) ModelName() string       { return m.name }
+func (m *mockAdmin) ModelType() reflect.Type { return reflect.TypeOf(struct{}{}) }
+func (m *mockAdmin) GetMetadata(ctx context.Context, user interface{}) (*Metadata, error) {
+	return nil, nil
+}
+func (m *mockAdmin) SetDB(database *db.DB)         {}
+func (m *mockAdmin) ManagerInterface() interface{} { return nil }
+func (m *mockAdmin) ConfigInterface() interface{}  { return nil }
+func (m *mockAdmin) GetHistory(ctx context.Context, objectID string) ([]LogEntry, error) {
+	return nil, nil
+}
 func (m *mockAdmin) LogAction(ctx context.Context, user interface{}, objectID string, repr string, action ActionType, changes string) error {
 	return nil
 }
@@ -69,11 +73,11 @@ type mockPlugin struct {
 	name string
 }
 
-func (m *mockPlugin) ID() string                                        { return m.id }
-func (m *mockPlugin) Name() string                                      { return m.name }
+func (m *mockPlugin) ID() string                                       { return m.id }
+func (m *mockPlugin) Name() string                                     { return m.name }
 func (m *mockPlugin) Init(ctx context.Context, site interface{}) error { return nil }
-func (m *mockPlugin) GetPages() map[string]components.Component         { return nil }
-func (m *mockPlugin) GetMenuItems() []MenuItem                          { return nil }
+func (m *mockPlugin) GetPages() map[string]components.Component        { return nil }
+func (m *mockPlugin) GetMenuItems() []MenuItem                         { return nil }
 
 func TestNewRegistry(t *testing.T) {
 	registry := NewRegistry()
@@ -183,7 +187,7 @@ func TestRegistry_Get(t *testing.T) {
 
 func TestRegistry_GetAll(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	// Empty registry
 	all := registry.GetAll()
 	if len(all) != 0 {
@@ -251,7 +255,7 @@ func TestRegistry_Unregister(t *testing.T) {
 
 func TestRegistry_Count(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	if count := registry.Count(); count != 0 {
 		t.Errorf("Count() = %d, want 0", count)
 	}
@@ -326,7 +330,7 @@ func TestRegistry_GetPlugin(t *testing.T) {
 
 func TestRegistry_GetAllPlugins(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	// Empty registry
 	all := registry.GetAllPlugins()
 	if len(all) != 0 {
@@ -376,7 +380,7 @@ func TestGetGlobalRegistry(t *testing.T) {
 	if registry == nil {
 		t.Error("GetGlobalRegistry() returned nil")
 	}
-	
+
 	// Should return the same instance
 	registry2 := GetGlobalRegistry()
 	if registry != registry2 {

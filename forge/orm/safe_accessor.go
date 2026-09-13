@@ -144,6 +144,3 @@ func toPascalCaseSafe(s string) string {
 	}
 	return result
 }
-
-
-

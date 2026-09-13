@@ -113,11 +113,11 @@ type InlineConfig struct {
 
 // InlineRelationConfig configures inline relation behavior in forms.
 type InlineRelationConfig struct {
-	Type         string   `json:"type,omitempty"` // one_to_many, one_to_one, many_to_many
-	Label        string   `json:"label,omitempty"`
-	Fields       []string `json:"fields,omitempty"`
-	RelatedModel string   `json:"related_model,omitempty"`
-	RelatedField string   `json:"related_field,omitempty"`
+	Type         string       `json:"type,omitempty"` // one_to_many, one_to_one, many_to_many
+	Label        string       `json:"label,omitempty"`
+	Fields       []string     `json:"fields,omitempty"`
+	RelatedModel string       `json:"related_model,omitempty"`
+	RelatedField string       `json:"related_field,omitempty"`
 	InlineConfig InlineConfig `json:"inline_config,omitempty"`
 }
 
@@ -212,4 +212,3 @@ type Filter[T any] struct {
 	Handler     func(ctx context.Context, qs orm.QuerySet[T], value interface{}) orm.QuerySet[T]
 	UIComponent string
 }
-

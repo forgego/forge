@@ -167,4 +167,3 @@ func (w *BooleanWidget) Parse(value string) (interface{}, error) {
 
 	return nil, fmt.Errorf("invalid boolean value: %s", value)
 }
-

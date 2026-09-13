@@ -147,4 +147,3 @@ func TestPasswordBackend_GetUser(t *testing.T) {
 		assert.Nil(t, user)
 	})
 }
-

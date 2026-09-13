@@ -42,14 +42,14 @@ func (e *AdminError) HTTPStatus() int {
 
 // Common admin errors
 var (
-	ErrModelNotFound     = NewAdminError(http.StatusNotFound, "Model not found")
-	ErrInstanceNotFound  = NewAdminError(http.StatusNotFound, "Instance not found")
-	ErrPermissionDenied  = NewAdminError(http.StatusForbidden, "Permission denied")
-	ErrValidationFailed  = NewAdminError(http.StatusBadRequest, "Validation failed")
-	ErrInvalidID         = NewAdminError(http.StatusBadRequest, "Invalid ID")
-	ErrInvalidFormData   = NewAdminError(http.StatusBadRequest, "Invalid form data")
-	ErrActionNotFound    = NewAdminError(http.StatusNotFound, "Action not found")
-	ErrExportFailed      = NewAdminError(http.StatusInternalServerError, "Export failed")
+	ErrModelNotFound    = NewAdminError(http.StatusNotFound, "Model not found")
+	ErrInstanceNotFound = NewAdminError(http.StatusNotFound, "Instance not found")
+	ErrPermissionDenied = NewAdminError(http.StatusForbidden, "Permission denied")
+	ErrValidationFailed = NewAdminError(http.StatusBadRequest, "Validation failed")
+	ErrInvalidID        = NewAdminError(http.StatusBadRequest, "Invalid ID")
+	ErrInvalidFormData  = NewAdminError(http.StatusBadRequest, "Invalid form data")
+	ErrActionNotFound   = NewAdminError(http.StatusNotFound, "Action not found")
+	ErrExportFailed     = NewAdminError(http.StatusInternalServerError, "Export failed")
 )
 
 // HandleAdminError handles an admin error and writes HTTP response
@@ -58,8 +58,7 @@ func HandleAdminError(w http.ResponseWriter, err error) {
 	if !ok {
 		adminErr = NewAdminError(http.StatusInternalServerError, err.Error())
 	}
-	
+
 	w.WriteHeader(adminErr.HTTPStatus())
 	fmt.Fprintf(w, `{"error": "%s", "code": %d}`, adminErr.Message, adminErr.Code)
 }
-

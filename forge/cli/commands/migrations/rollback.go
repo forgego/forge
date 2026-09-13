@@ -62,4 +62,3 @@ func (c *RollbackCommand) Execute(ctx *core.Context, args []string) error {
 	fmt.Println("✓ Migration rolled back successfully")
 	return nil
 }
-

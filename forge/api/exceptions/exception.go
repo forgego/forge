@@ -45,4 +45,3 @@ func (e *APIException) ToResponse() *ErrorResponse {
 		Details: e.Details,
 	}
 }
-

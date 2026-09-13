@@ -27,17 +27,17 @@ func (w *AutosuggestWidget) Render(name string, value interface{}, attrs map[str
 
 	html := fmt.Sprintf(`<input type="text" name="%s" value="%s"`, name, valueStr)
 	html += ` class="form-control autosuggest" data-min-length="` + fmt.Sprintf("%d", w.MinLength) + `"`
-	
+
 	for k, v := range attrs {
 		html += fmt.Sprintf(` %s="%s"`, k, v)
 	}
-	
+
 	html += `>`
 	html += `<div class="autosuggest-dropdown"></div>`
-	
+
 	// Add JavaScript for autosuggest
 	html += `<script>initAutosuggest('` + name + `', ` + fmt.Sprintf("%v", w.Suggestions) + `);</script>`
-	
+
 	return html, nil
 }
 
@@ -45,4 +45,3 @@ func (w *AutosuggestWidget) Render(name string, value interface{}, attrs map[str
 func (w *AutosuggestWidget) Parse(value string) (interface{}, error) {
 	return value, nil
 }
-

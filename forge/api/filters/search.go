@@ -59,4 +59,3 @@ func (f *SearchFilter) GetSchema(r *http.Request, view interface{}) map[string]i
 		},
 	}
 }
-

@@ -29,4 +29,3 @@ func (f *SerializerMethodField) ToRepresentation(value interface{}) (interface{}
 func (f *SerializerMethodField) ToInternalValue(data interface{}) (interface{}, error) {
 	return nil, nil
 }
-
