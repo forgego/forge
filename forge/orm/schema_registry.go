@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+
+	"github.com/forgego/forge/schema"
 )
 
 var (
@@ -48,23 +50,27 @@ func GetModelSchemaByType(typ reflect.Type) (*ModelSchema, error) {
 	}
 	schemaMu.RUnlock()
 
-	// Try to build schema from type
-	// This requires the type to implement schema.Schema interface
 	instanceValue := reflect.New(typ).Elem()
-
-	// Try to get schema interface
-	schemaInstance, ok := instanceValue.Interface().(interface {
-		Fields() interface{} // Would need actual schema.Schema
-		Meta() interface{}
-	})
+	schemaInstance, ok := instanceValue.Interface().(schema.Schema)
 	if !ok {
-		return nil, fmt.Errorf("type %v does not implement schema interface. Use GetModelSchema[T]() to build it first", typ)
+		return nil, fmt.Errorf("type %v does not implement schema.Schema", typ)
 	}
 
-	// Try to use BuildModelSchema if we can cast to schema.Schema
-	// For now, return error - this would need proper schema.Schema interface
-	_ = schemaInstance
-	return nil, fmt.Errorf("schema for type %v not found in cache. Use GetModelSchema[T]() to build it first", typ)
+	modelSchema, err := BuildModelSchema(schemaInstance)
+	if err != nil {
+		return nil, err
+	}
+
+	schemaMu.Lock()
+	if cached, ok := schemaCache[typ]; ok {
+		schemaMu.Unlock()
+		return cached, nil
+	}
+	schemaCache[typ] = modelSchema
+	schemaMu.Unlock()
+
+	RegisterModelType(typ.Name(), typ)
+	return modelSchema, nil
 }
 
 // getRegisteredTypeNames returns all registered type names
