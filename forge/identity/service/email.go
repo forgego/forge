@@ -17,7 +17,7 @@ type LogEmailSender struct{}
 
 // SendVerificationEmail logs the verification email details
 func (s *LogEmailSender) SendVerificationEmail(ctx context.Context, to, token string) error {
-	log.Printf("[EMAIL] Verification email for %s: token=%s", to, token)
+	log.Printf("[EMAIL] Verification email sent to %s [token redacted]", to)
 	return nil
 }
 

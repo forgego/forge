@@ -109,12 +109,12 @@ func (r *Router) RegisterRoutes(router chi.Router) {
 			// Plugin page endpoint
 			protected.Get("/plugins/{plugin}/pages/{page}", r.handlePluginPage)
 
-		// Saved views
-		protected.Route("/saved-views/{model}", func(viewRouter chi.Router) {
-			viewRouter.Get("/", r.handleSavedViewsList)
-			viewRouter.Post("/", r.handleSavedViewSave)
-			viewRouter.Delete("/{id}", r.handleSavedViewDelete)
-		})
+			// Saved views
+			protected.Route("/saved-views/{model}", func(viewRouter chi.Router) {
+				viewRouter.Get("/", r.handleSavedViewsList)
+				viewRouter.Post("/", r.handleSavedViewSave)
+				viewRouter.Delete("/{id}", r.handleSavedViewDelete)
+			})
 
 			// Model routes (registered dynamically)
 			r.registerModelRoutes(protected)
@@ -374,8 +374,8 @@ func adminCredentials() (string, string) {
 }
 
 func secureEqual(a, b string) bool {
-	// Compare SHA-256 digests so string length is not leaked by an
-	// early length check.
+	// Hash only to normalize lengths before constant-time comparison. This is not
+	// password storage: the configured credential remains the source of truth.
 	ah := sha256.Sum256([]byte(a))
 	bh := sha256.Sum256([]byte(b))
 	return subtle.ConstantTimeCompare(ah[:], bh[:]) == 1
@@ -850,9 +850,9 @@ func (r *Router) handleBulkCreate(admin core.AdminInterface) http.HandlerFunc {
 				continue
 			}
 
-		obj, err := admin.CreateObject(ctx, data)
-		if err != nil {
-			errors = append(errors, bulkItemError{
+			obj, err := admin.CreateObject(ctx, data)
+			if err != nil {
+				errors = append(errors, bulkItemError{
 					Index:   i,
 					Code:    "create_failed",
 					Message: err.Error(),
@@ -862,10 +862,10 @@ func (r *Router) handleBulkCreate(admin core.AdminInterface) http.HandlerFunc {
 			objects = append(objects, obj)
 		}
 
-	if len(objects) == 0 {
-		bulkFailure(w, "create_failed", "Failed to create any objects", errors)
-		return
-	}
+		if len(objects) == 0 {
+			bulkFailure(w, "create_failed", "Failed to create any objects", errors)
+			return
+		}
 
 		status := http.StatusCreated
 		if len(errors) > 0 {
@@ -945,9 +945,9 @@ func (r *Router) handleBulkUpdate(admin core.AdminInterface) http.HandlerFunc {
 				continue
 			}
 
-		obj, err := admin.UpdateObject(ctx, id, payload.Data)
-		if err != nil {
-			errors = append(errors, bulkItemError{
+			obj, err := admin.UpdateObject(ctx, id, payload.Data)
+			if err != nil {
+				errors = append(errors, bulkItemError{
 					Index:   i,
 					Code:    "update_failed",
 					Message: err.Error(),
@@ -957,10 +957,10 @@ func (r *Router) handleBulkUpdate(admin core.AdminInterface) http.HandlerFunc {
 			objects = append(objects, obj)
 		}
 
-	if len(objects) == 0 {
-		bulkFailure(w, "update_failed", "Failed to update any objects", errors)
-		return
-	}
+		if len(objects) == 0 {
+			bulkFailure(w, "update_failed", "Failed to update any objects", errors)
+			return
+		}
 
 		status := http.StatusOK
 		if len(errors) > 0 {
@@ -1076,10 +1076,10 @@ func (r *Router) handleBulkDelete(admin core.AdminInterface) http.HandlerFunc {
 			deleted++
 		}
 
-	if deleted == 0 {
-		bulkFailure(w, "delete_failed", "Failed to delete any objects", errors)
-		return
-	}
+		if deleted == 0 {
+			bulkFailure(w, "delete_failed", "Failed to delete any objects", errors)
+			return
+		}
 
 		if len(errors) > 0 {
 			respondJSON(w, http.StatusMultiStatus, map[string]interface{}{

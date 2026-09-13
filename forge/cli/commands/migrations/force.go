@@ -3,6 +3,7 @@ package migrations
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 
 	"github.com/forgego/forge/cli/core"
@@ -36,8 +37,8 @@ func (c *ForceCommand) Execute(ctx *core.Context, args []string) error {
 
 	// Parse version
 	version, err := strconv.ParseUint(versionStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid version: %s (must be a number)", versionStr)
+	if err != nil || version > math.MaxUint {
+		return fmt.Errorf("invalid version: %s (must be a valid number)", versionStr)
 	}
 
 	// Get migrations path
@@ -99,4 +100,3 @@ func (c *ForceCommand) Execute(ctx *core.Context, args []string) error {
 	fmt.Printf("✓ Migration version forced to %d (marked as clean)\n", version)
 	return nil
 }
-

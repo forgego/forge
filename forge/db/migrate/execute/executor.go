@@ -3,6 +3,7 @@ package execute
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -285,7 +286,7 @@ func (e *Executor) ValidatePendingMigrations(ctx context.Context, currentVersion
 
 		versionStr := parts[0]
 		version, err := strconv.ParseUint(versionStr, 10, 64)
-		if err != nil {
+		if err != nil || version > math.MaxUint {
 			continue
 		}
 
@@ -311,4 +312,3 @@ func (e *Executor) ValidatePendingMigrations(ctx context.Context, currentVersion
 
 	return nil
 }
-

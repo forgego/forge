@@ -1,6 +1,12 @@
 package db
 
-import "testing"
+import (
+	"context"
+	"math"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
 
 func TestNewMigrationRunner_NilDB(t *testing.T) {
 	runner, err := NewMigrationRunner(nil, t.TempDir())
@@ -13,6 +19,14 @@ func TestNewMigrationRunner_NilDB(t *testing.T) {
 	if err.Error() != "database connection is nil" {
 		t.Fatalf("expected nil-database error, got %q", err.Error())
 	}
+}
+
+func TestMigrationRunnerForceRejectsVersionAboveMaxInt(t *testing.T) {
+	runner := &MigrationRunner{}
+
+	err := runner.Force(context.Background(), uint(math.MaxInt)+1)
+
+	require.EqualError(t, err, "migration version exceeds maximum supported value")
 }
 
 func TestFallbackDetailedMigrationStatus_Dirty(t *testing.T) {

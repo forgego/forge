@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -161,6 +162,12 @@ func (h *Handler) writeProblem(w http.ResponseWriter, r *http.Request, problem *
 	}
 }
 
+func sanitizeLogString(s string) string {
+	s = strings.ReplaceAll(s, "\n", "")
+	s = strings.ReplaceAll(s, "\r", "")
+	return s
+}
+
 // logError logs an error with full context
 func (h *Handler) logError(err error, problem *Problem, r *http.Request) {
 	if h.config.Logger == nil {
@@ -168,25 +175,25 @@ func (h *Handler) logError(err error, problem *Problem, r *http.Request) {
 	}
 
 	fields := []zap.Field{
-		zap.String("error_code", problem.Code),
-		zap.String("error_type", string(problem.Type)),
+		zap.String("error_code", sanitizeLogString(problem.Code)),
+		zap.String("error_type", sanitizeLogString(string(problem.Type))),
 		zap.Int("http_status", problem.Status),
-		zap.String("method", r.Method),
-		zap.String("path", r.URL.Path),
-		zap.String("instance", problem.Instance),
+		zap.String("method", sanitizeLogString(r.Method)),
+		zap.String("path", sanitizeLogString(r.URL.Path)),
+		zap.String("instance", sanitizeLogString(problem.Instance)),
 	}
 
 	// Add request ID if available
 	if requestID := GetRequestIDFromContext(r.Context()); requestID != "" {
-		fields = append(fields, zap.String("request_id", requestID))
+		fields = append(fields, zap.String("request_id", sanitizeLogString(requestID)))
 	}
 
 	// Add error message (sanitized)
-	fields = append(fields, zap.String("error_message", problem.Detail))
+	fields = append(fields, zap.String("error_message", sanitizeLogString(problem.Detail)))
 
 	// Log original error if it's not already sanitized
 	if err != nil {
-		fields = append(fields, zap.Error(err))
+		fields = append(fields, zap.String("error", sanitizeLogString(err.Error())))
 	}
 
 	// Log at appropriate level
@@ -209,18 +216,18 @@ func (h *Handler) logPanic(rec interface{}, problem *Problem, r *http.Request) {
 
 	fields := []zap.Field{
 		zap.Any("panic", rec),
-		zap.String("stack", string(stack)),
-		zap.String("error_code", problem.Code),
-		zap.String("error_type", string(problem.Type)),
+		zap.String("stack", sanitizeLogString(string(stack))),
+		zap.String("error_code", sanitizeLogString(problem.Code)),
+		zap.String("error_type", sanitizeLogString(string(problem.Type))),
 		zap.Int("http_status", problem.Status),
-		zap.String("method", r.Method),
-		zap.String("path", r.URL.Path),
-		zap.String("instance", problem.Instance),
+		zap.String("method", sanitizeLogString(r.Method)),
+		zap.String("path", sanitizeLogString(r.URL.Path)),
+		zap.String("instance", sanitizeLogString(problem.Instance)),
 	}
 
 	// Add request ID if available
 	if requestID := GetRequestIDFromContext(r.Context()); requestID != "" {
-		fields = append(fields, zap.String("request_id", requestID))
+		fields = append(fields, zap.String("request_id", sanitizeLogString(requestID)))
 	}
 
 	h.config.Logger.Error("Panic recovered", fields...)
@@ -261,4 +268,3 @@ func (w *errorResponseWriter) handlePanic(rec interface{}) {
 	}
 	w.handler.HandlePanic(w, w.request, rec)
 }
-

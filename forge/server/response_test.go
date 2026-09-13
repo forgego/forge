@@ -276,12 +276,12 @@ func TestRangeParsing(t *testing.T) {
 	}{
 		{"bytes=0-49", size, []responseByteRange{{0, 49, 50}}, false},
 		{"bytes=50-99", size, []responseByteRange{{50, 99, 50}}, false},
-		{"bytes=-50", size, []responseByteRange{{50, 99, 50}}, false}, // suffix length
-		{"bytes=50-", size, []responseByteRange{{50, 99, 50}}, false}, // prefix
+		{"bytes=-50", size, []responseByteRange{{50, 99, 50}}, false},              // suffix length
+		{"bytes=50-", size, []responseByteRange{{50, 99, 50}}, false},              // prefix
 		{"bytes=0-0,-1", size, []responseByteRange{{0, 0, 1}, {99, 99, 1}}, false}, // multiple ranges
-		{"invalid", size, nil, true}, // invalid format
-		{"bytes=a-b", size, nil, true}, // invalid numbers
-		{"bytes=200-300", size, nil, false}, // out of bounds (ignored, empty array returned if all invalid)
+		{"invalid", size, nil, true},                                               // invalid format
+		{"bytes=a-b", size, nil, true},                                             // invalid numbers
+		{"bytes=200-300", size, nil, false},                                        // out of bounds (ignored, empty array returned if all invalid)
 	}
 
 	for _, tc := range tests {
@@ -304,21 +304,21 @@ func TestRangeParsing(t *testing.T) {
 
 func TestContentTypeDetection(t *testing.T) {
 	tests := map[string]string{
-		"index.html": "text/html; charset=utf-8",
-		"style.css":  "text/css; charset=utf-8",
-		"app.js":     "application/javascript; charset=utf-8",
-		"data.json":  "application/json; charset=utf-8",
-		"data.xml":   "application/xml; charset=utf-8",
-		"image.png":  "image/png",
-		"image.jpg":  "image/jpeg",
-		"image.jpeg": "image/jpeg",
-		"image.gif":  "image/gif",
-		"image.svg":  "image/svg+xml",
-		"icon.ico":   "image/x-icon",
-		"doc.pdf":    "application/pdf",
-		"file.zip":   "application/zip",
-		"note.txt":   "text/plain; charset=utf-8",
-		"unknown.xyz":"application/octet-stream",
+		"index.html":  "text/html; charset=utf-8",
+		"style.css":   "text/css; charset=utf-8",
+		"app.js":      "application/javascript; charset=utf-8",
+		"data.json":   "application/json; charset=utf-8",
+		"data.xml":    "application/xml; charset=utf-8",
+		"image.png":   "image/png",
+		"image.jpg":   "image/jpeg",
+		"image.jpeg":  "image/jpeg",
+		"image.gif":   "image/gif",
+		"image.svg":   "image/svg+xml",
+		"icon.ico":    "image/x-icon",
+		"doc.pdf":     "application/pdf",
+		"file.zip":    "application/zip",
+		"note.txt":    "text/plain; charset=utf-8",
+		"unknown.xyz": "application/octet-stream",
 	}
 
 	for filename, expectedType := range tests {

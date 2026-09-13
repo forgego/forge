@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -227,7 +228,7 @@ func (mr *MigrationRunner) validatePendingMigrations(ctx context.Context, curren
 
 		versionStr := parts[0]
 		version, err := strconv.ParseUint(versionStr, 10, 64)
-		if err != nil {
+		if err != nil || version > math.MaxUint {
 			continue
 		}
 
@@ -278,7 +279,7 @@ func (mr *MigrationRunner) validatePendingMigrationChecksums(ctx context.Context
 
 		versionStr := parts[0]
 		version, err := strconv.ParseUint(versionStr, 10, 64)
-		if err != nil {
+		if err != nil || version > math.MaxUint {
 			continue
 		}
 
@@ -505,6 +506,9 @@ type DetailedMigrationStatus struct {
 // Force sets a migration version and marks it as clean (for dirty state recovery)
 // WARNING: Use with caution - only after manually fixing a failed migration
 func (mr *MigrationRunner) Force(ctx context.Context, version uint) error {
+	if version > math.MaxInt {
+		return fmt.Errorf("migration version exceeds maximum supported value")
+	}
 	if err := mr.migrate.Force(int(version)); err != nil {
 		return fmt.Errorf("failed to force migration version: %w", err)
 	}

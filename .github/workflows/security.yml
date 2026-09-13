@@ -129,6 +129,22 @@ jobs:
         run: |
           go install github.com/securego/gosec/v2/cmd/gosec@v2.29.0
           gosec -fmt sarif -out ../gosec-results.sarif -exclude-dir=tests ./...
+          python3 - <<'PY'
+          import json
+
+          with open("../gosec-results.sarif", "r") as f:
+              data = json.load(f)
+
+          for run in data.get("runs", []):
+              for result in run.get("results", []):
+                  for loc in result.get("locations", []):
+                      aloc = loc.get("physicalLocation", {}).get("artifactLocation", {})
+                      uri = aloc.get("uri", "")
+                      if uri and not uri.startswith("forge/"):
+                          aloc["uri"] = "forge/" + uri
+          with open("../gosec-results.sarif", "w") as f:
+              json.dump(data, f, indent=2)
+          PY
       
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4

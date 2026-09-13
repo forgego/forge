@@ -100,6 +100,10 @@ func (c *AddAPICommand) Execute(ctx *core.Context, args []string) error {
 		return fmt.Errorf("failed to write API code: %w", err)
 	}
 
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("failed to close api.go: %w", err)
+	}
+
 	fmt.Printf("✓ Added API %s to app %s\n", resourceName, appName)
 	fmt.Printf("  Model: %s, Resource: /api/v1/%s\n", modelName, resourcePath)
 	if graphql {

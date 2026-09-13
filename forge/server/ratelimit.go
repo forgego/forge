@@ -151,7 +151,7 @@ func getUserRateLimitStore(requests int, window time.Duration) *rateLimitStore {
 
 // rateLimitKey generates a key for rate limit store lookup
 func rateLimitKey(requests int, window time.Duration) string {
-	return string(rune(requests)) + "-" + window.String()
+	return fmt.Sprintf("%d-%s", requests, window.String())
 }
 
 // getClientIP extracts the client IP from the request
@@ -279,4 +279,3 @@ func getUserID(user interface{}) string {
 func RateLimitGeneral(requests int, window time.Duration) Middleware {
 	return RateLimitByIP(requests, window)
 }
-

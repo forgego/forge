@@ -119,6 +119,10 @@ func (c *AddHandlerCommand) Execute(ctx *core.Context, args []string) error {
 		return fmt.Errorf("failed to write handler: %w", err)
 	}
 
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("failed to close handlers.go: %w", err)
+	}
+
 	fmt.Printf("✓ Added handler %s to app %s\n", handlerName, appName)
 	fmt.Printf("  Method: %s, Path: %s\n", method, path)
 

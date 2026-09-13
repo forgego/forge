@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
 	"strings"
 	"time"
@@ -272,25 +273,25 @@ func (a *Admin[T]) ListObjects(ctx context.Context, params ListParams) (*Paginat
 				} else {
 					expr = f.Eq(value)
 				}
-		case "in":
-			// value should be slice or comma-separated string
-			// For now assume value is single string from query param
-			if s, ok := value.(string); ok {
-				parts := strings.Split(s, ",")
-				args := make([]interface{}, 0, len(parts))
-				for _, v := range parts {
-					if trimmed := strings.TrimSpace(v); trimmed != "" {
-						args = append(args, trimmed)
+			case "in":
+				// value should be slice or comma-separated string
+				// For now assume value is single string from query param
+				if s, ok := value.(string); ok {
+					parts := strings.Split(s, ",")
+					args := make([]interface{}, 0, len(parts))
+					for _, v := range parts {
+						if trimmed := strings.TrimSpace(v); trimmed != "" {
+							args = append(args, trimmed)
+						}
 					}
-				}
-				if len(args) > 0 {
-					expr = f.In(args...)
+					if len(args) > 0 {
+						expr = f.In(args...)
+					} else {
+						expr = f.Eq(value)
+					}
 				} else {
 					expr = f.Eq(value)
 				}
-			} else {
-				expr = f.Eq(value)
-			}
 			case "isnull":
 				if s, ok := value.(string); ok && (s == "true" || s == "1") {
 					expr = f.IsNull()
@@ -492,7 +493,7 @@ func (a *Admin[T]) validateData(data map[string]interface{}, partial bool) error
 	return nil
 }
 
-func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}) (interface{}, error) {	// Validate incoming data against the schema before touching the DB.
+func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}) (interface{}, error) { // Validate incoming data against the schema before touching the DB.
 	// Full validation: missing required fields are rejected.
 	if err := a.validateData(data, false); err != nil {
 		return nil, err
@@ -566,7 +567,8 @@ func (a *Admin[T]) UpdateObject(ctx context.Context, id interface{}, data map[st
 	return updated, nil
 }
 
-func (a *Admin[T]) DeleteObject(ctx context.Context, id interface{}) error {	intID, err := toInt64(id)
+func (a *Admin[T]) DeleteObject(ctx context.Context, id interface{}) error {
+	intID, err := toInt64(id)
 	if err != nil {
 		return err
 	}
@@ -1084,6 +1086,9 @@ func toInt64(v interface{}) (int64, error) {
 	case int64:
 		return val, nil
 	case uint:
+		if val > math.MaxInt64 {
+			return 0, fmt.Errorf("uint value %d exceeds max int64", val)
+		}
 		return int64(val), nil
 	case uint8:
 		return int64(val), nil
@@ -1092,6 +1097,9 @@ func toInt64(v interface{}) (int64, error) {
 	case uint32:
 		return int64(val), nil
 	case uint64:
+		if val > math.MaxInt64 {
+			return 0, fmt.Errorf("uint64 value %d exceeds max int64", val)
+		}
 		return int64(val), nil
 	case float32:
 		return int64(val), nil
@@ -1112,7 +1120,11 @@ func toInt64(v interface{}) (int64, error) {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return rv.Int(), nil
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return int64(rv.Uint()), nil
+		u := rv.Uint()
+		if u > math.MaxInt64 {
+			return 0, fmt.Errorf("uint value %d exceeds max int64", u)
+		}
+		return int64(u), nil
 	case reflect.Float32, reflect.Float64:
 		return int64(rv.Float()), nil
 	}

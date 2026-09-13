@@ -3,6 +3,7 @@ package migrations
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -82,6 +83,9 @@ func (c *FakeCommand) Execute(ctx *core.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("invalid version number: %w", err)
 	}
+	if version > math.MaxUint {
+		return fmt.Errorf("invalid version number %q: exceeds maximum supported value", versionStr)
+	}
 
 	// Validate migration exists
 	if err := c.validateMigrationExists(migrationsPath, versionStr); err != nil {
@@ -135,8 +139,11 @@ func (c *FakeCommand) fakeInitialMigrations(ctx context.Context, db *db.DB, migr
 	// Mark each migration as applied
 	checksumValidator := verify.NewChecksumValidator(migrationsPath)
 	for _, mig := range migrationsToFake {
-		version, _ := strconv.ParseUint(mig.Version, 10, 64)
-		
+		version, err := strconv.ParseUint(mig.Version, 10, 64)
+		if err != nil || version > math.MaxUint {
+			continue
+		}
+
 		// Calculate checksum
 		upPath := filepath.Join(migrationsPath, fmt.Sprintf("%s_%s.up.sql", mig.Version, mig.Name))
 		checksum, err := checksumValidator.CalculateChecksum(upPath)
@@ -190,7 +197,7 @@ func (c *FakeCommand) fakeAllPending(ctx context.Context, db *db.DB, migrationsP
 		versionStr := parts[0]
 		name := strings.TrimSuffix(strings.Join(parts[1:], "_"), ".up.sql")
 		version, err := strconv.ParseUint(versionStr, 10, 64)
-		if err != nil {
+		if err != nil || version > math.MaxUint {
 			continue
 		}
 
@@ -321,12 +328,14 @@ func (c *FakeCommand) findMigrationsForTables(migrationsPath string, tables []st
 			createPattern := fmt.Sprintf(`CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?["']?%s["']?`, regexp.QuoteMeta(strings.ToUpper(table)))
 			matched, _ := regexp.MatchString(createPattern, sqlContent)
 			if matched {
-				version, _ := strconv.ParseUint(versionStr, 10, 64)
-				migrations = append(migrations, migrationInfo{
-					Version:  versionStr,
-					Name:     name,
-					VersionU: uint(version),
-				})
+				version, err := strconv.ParseUint(versionStr, 10, 64)
+				if err == nil && version <= math.MaxUint {
+					migrations = append(migrations, migrationInfo{
+						Version:  versionStr,
+						Name:     name,
+						VersionU: uint(version),
+					})
+				}
 				break // Found a table, move to next migration
 			}
 		}
@@ -349,4 +358,3 @@ func (c *FakeCommand) validateMigrationExists(migrationsPath string, versionStr 
 
 	return nil
 }
-

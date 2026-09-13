@@ -2,7 +2,6 @@ package registry
 
 import (
 	"fmt"
-	"reflect"
 )
 
 // Plugin is the main interface that all plugins must implement
@@ -353,14 +352,8 @@ func (p *ExampleAuthPlugin) Install() error {
 }
 
 // ExtendModel extends models with auth fields
-func (p *ExampleAuthPlugin) ExtendModel(model interface{}) error {
+func (p *ExampleAuthPlugin) ExtendModel(_ interface{}) error {
 	// Add auth-related fields to models
-	// This is a simplified example
-	modelValue := reflect.ValueOf(model)
-	if modelValue.Kind() == reflect.Ptr {
-		modelValue = modelValue.Elem()
-	}
-
 	// Example: Add is_active, is_staff fields if not present
 	// Full implementation would use schema interface
 	return nil
@@ -383,4 +376,3 @@ func (p *ExampleAuthPlugin) GetAdminActions(modelName string) []AdminAction {
 	}
 	return nil
 }
-
