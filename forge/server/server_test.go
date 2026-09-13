@@ -77,7 +77,7 @@ func TestNewServer_Initialization(t *testing.T) {
 			// For info, we might need a CSRF token because of middleware,
 			// let's check status differently if it's 403 Forbidden due to CSRF
 			if tc.name == "Info" && w.Code == http.StatusForbidden {
-			    // This is fine since it proves the CSRF middleware is active
+				// This is fine since it proves the CSRF middleware is active
 				assert.Equal(t, http.StatusForbidden, w.Code)
 			} else {
 				assert.Equal(t, tc.expectedStatus, w.Code)
@@ -142,5 +142,88 @@ func TestNewServer_NilInputs(t *testing.T) {
 	}
 	if srv != nil {
 		t.Errorf("Expected nil server, got %v", srv)
+	}
+}
+
+func TestIsCSRFExemptPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		prefixes []string
+		path     string
+		expected bool
+	}{
+		{
+			name:     `["/hook"] "/hook" -> true`,
+			prefixes: []string{"/hook"},
+			path:     "/hook",
+			expected: true,
+		},
+		{
+			name:     `["/hook"] "/hook/" -> true`,
+			prefixes: []string{"/hook"},
+			path:     "/hook/",
+			expected: true,
+		},
+		{
+			name:     `["/hook"] "/hook/github" -> true`,
+			prefixes: []string{"/hook"},
+			path:     "/hook/github",
+			expected: true,
+		},
+		{
+			name:     `["/hook"] "/hook-attacker" -> false`,
+			prefixes: []string{"/hook"},
+			path:     "/hook-attacker",
+			expected: false,
+		},
+		{
+			name:     `["/hook"] "/hookx" -> false`,
+			prefixes: []string{"/hook"},
+			path:     "/hookx",
+			expected: false,
+		},
+		{
+			name:     `["/hook/"] "/hook" -> true`,
+			prefixes: []string{"/hook/"},
+			path:     "/hook",
+			expected: true,
+		},
+		{
+			name:     `["/hook/"] "/hook/github" -> true`,
+			prefixes: []string{"/hook/"},
+			path:     "/hook/github",
+			expected: true,
+		},
+		{
+			name:     `["hook"] "/hook/a" -> true`,
+			prefixes: []string{"hook"},
+			path:     "/hook/a",
+			expected: true,
+		},
+		{
+			name:     `["/"] "/anything" -> true`,
+			prefixes: []string{"/"},
+			path:     "/anything",
+			expected: true,
+		},
+		{
+			name:     `[] "/hook" -> false`,
+			prefixes: []string{},
+			path:     "/hook",
+			expected: false,
+		},
+		{
+			name:     `["  "] "/hook" -> false`,
+			prefixes: []string{"  "},
+			path:     "/hook",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isCSRFExemptPath(tt.path, tt.prefixes)
+			assert.Equal(t, tt.expected, result)
+		})
 	}
 }

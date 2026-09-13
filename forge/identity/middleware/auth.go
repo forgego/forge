@@ -113,12 +113,12 @@ func (m *AuthenticationMiddleware) authenticateRequest(ctx context.Context, r *h
 		}
 	}
 
-	if sessionKey != "" {
+	if sessionKey != "" && m.sessionRepo != nil && m.userRepo != nil {
 		session, err := m.sessionRepo.GetByKey(ctx, sessionKey)
 		if err == nil && !session.IsExpired() {
 			// Get user from session's user_id
 			user, err := m.userRepo.GetByID(ctx, session.UserID)
-			if err == nil && user != nil {
+			if err == nil && user != nil && user.IsActive && !user.IsLocked {
 				return user, nil
 			}
 		}
@@ -236,4 +236,3 @@ func extractTokenFromHeader(authHeader string) (string, error) {
 
 	return parts[1], nil
 }
-

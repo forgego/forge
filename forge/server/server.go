@@ -233,7 +233,8 @@ func isCSRFExemptPath(path string, prefixes []string) bool {
 		if !strings.HasPrefix(prefix, "/") {
 			prefix = "/" + prefix
 		}
-		if strings.HasPrefix(path, prefix) {
+		prefix = strings.TrimSuffix(prefix, "/")
+		if path == prefix || strings.HasPrefix(path, prefix+"/") {
 			return true
 		}
 	}
