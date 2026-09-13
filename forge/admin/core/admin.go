@@ -545,9 +545,14 @@ func (a *Admin[T]) validateData(data map[string]interface{}, partial bool) error
 	return nil
 }
 
-func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}) (interface{}, error) { // Validate incoming data against the schema before touching the DB.
+func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}) (interface{}, error) {
+	filtered, err := a.filterWritable(ctx, nil, true, data)
+	if err != nil {
+		return nil, err
+	}
+
 	// Full validation: missing required fields are rejected.
-	if err := a.validateData(data, false); err != nil {
+	if err := a.validateData(filtered, false); err != nil {
 		return nil, err
 	}
 
@@ -555,7 +560,7 @@ func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}
 	var instance T
 
 	// Map data to instance fields
-	if err := a.decodeData(data, &instance); err != nil {
+	if err := a.decodeData(filtered, &instance); err != nil {
 		return nil, fmt.Errorf("failed to decode data: %w", err)
 	}
 
@@ -566,7 +571,7 @@ func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}
 	user, _ := apicore.UserFromContext(ctx)
 	objID := a.getObjectID(&instance)
 	repr := a.getObjectLabel(&instance)
-	changesJSON, _ := json.Marshal(data)
+	changesJSON, _ := json.Marshal(filtered)
 	_ = a.LogAction(ctx, user, fmt.Sprintf("%v", objID), repr, ActionAdd, string(changesJSON))
 
 	return &instance, nil
@@ -578,22 +583,27 @@ func (a *Admin[T]) UpdateObject(ctx context.Context, id interface{}, data map[st
 		return nil, err
 	}
 
-	// Partial validation: provided fields must be valid, but omitted
-	// required fields are fine (PATCH semantics).
-	if err := a.validateData(data, true); err != nil {
-		return nil, err
-	}
-
 	// Ensure object exists (and permission hooks receive a concrete object path).
 	instance, err := a.safeGetObjectByID(ctx, intID)
 	if err != nil {
 		return nil, err
 	}
 
+	filtered, err := a.filterWritable(ctx, instance, false, data)
+	if err != nil {
+		return nil, err
+	}
+
+	// Partial validation: provided fields must be valid, but omitted
+	// required fields are fine (PATCH semantics).
+	if err := a.validateData(filtered, true); err != nil {
+		return nil, err
+	}
+
 	// PATCH semantics: only update provided fields and avoid writing zero-values
 	// for fields omitted from request payload.
 	updates := orm.UpdateMap{}
-	for key, value := range data {
+	for key, value := range filtered {
 		if strings.EqualFold(key, "id") {
 			continue
 		}
@@ -613,7 +623,7 @@ func (a *Admin[T]) UpdateObject(ctx context.Context, id interface{}, data map[st
 
 	user, _ := apicore.UserFromContext(ctx)
 	repr := a.getObjectLabel(updated)
-	changesJSON, _ := json.Marshal(data)
+	changesJSON, _ := json.Marshal(filtered)
 	_ = a.LogAction(ctx, user, fmt.Sprintf("%v", intID), repr, ActionChange, string(changesJSON))
 
 	return updated, nil
