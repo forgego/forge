@@ -22,15 +22,54 @@ func NewSQLiteBuilder() SQLBuilder {
 	}
 }
 
+func collectTableForeignKeys(changes []core.Change) (map[string]bool, map[string][]*core.AddForeignKey) {
+	createdTables := make(map[string]bool)
+	for _, change := range changes {
+		if ct, ok := change.(*core.CreateTable); ok {
+			createdTables[ct.TableName()] = true
+		}
+	}
+
+	tableFKs := make(map[string][]*core.AddForeignKey)
+	for _, change := range changes {
+		if fk, ok := change.(*core.AddForeignKey); ok && createdTables[fk.Table] {
+			tableFKs[fk.Table] = append(tableFKs[fk.Table], fk)
+		}
+	}
+
+	return createdTables, tableFKs
+}
+
+func unsupportedSQLiteError(operation string) *core.MigrationError {
+	return core.NewMigrationError(
+		core.ErrInvalidChange,
+		fmt.Sprintf("%s is not supported on SQLite without rebuilding the table", operation),
+		nil,
+	)
+}
+
 // BuildUpSQL generates the up migration SQL for a list of changes
 func (b *SQLiteBuilder) BuildUpSQL(changes []core.Change) (string, error) {
+	createdTables, tableFKs := collectTableForeignKeys(changes)
+	orderedChanges := orderChanges(changes)
 	var statements []string
 
-	// Order changes by dependency
-	orderedChanges := orderChanges(changes)
-
 	for _, change := range orderedChanges {
-		sql, err := b.buildChangeUpSQL(change)
+		var sql string
+		var err error
+
+		switch c := change.(type) {
+		case *core.CreateTable:
+			sql, err = b.buildCreateTable(c, tableFKs[c.TableName()])
+		case *core.AddForeignKey:
+			if createdTables[c.Table] {
+				continue
+			}
+			sql, err = b.buildChangeUpSQL(change)
+		default:
+			sql, err = b.buildChangeUpSQL(change)
+		}
+
 		if err != nil {
 			return "", core.NewMigrationError(
 				core.ErrInvalidChange,
@@ -48,12 +87,22 @@ func (b *SQLiteBuilder) BuildUpSQL(changes []core.Change) (string, error) {
 
 // BuildDownSQL generates the down migration SQL for a list of changes
 func (b *SQLiteBuilder) BuildDownSQL(changes []core.Change) (string, error) {
-	var statements []string
+	createdTables := make(map[string]bool)
+	for _, change := range changes {
+		if ct, ok := change.(*core.CreateTable); ok {
+			createdTables[ct.TableName()] = true
+		}
+	}
 
-	// Reverse order for down migrations
+	var statements []string
 	orderedChanges := orderChanges(changes)
+
 	for i := len(orderedChanges) - 1; i >= 0; i-- {
 		change := orderedChanges[i]
+		if fk, ok := change.(*core.AddForeignKey); ok && createdTables[fk.Table] {
+			continue
+		}
+
 		sql, err := b.buildChangeDownSQL(change)
 		if err != nil {
 			return "", core.NewMigrationError(
@@ -82,8 +131,7 @@ func (b *SQLiteBuilder) buildChangeUpSQL(change core.Change) (string, error) {
 	case *core.AddColumn:
 		return b.BuildAddColumn(c)
 	case *core.DropColumn:
-		// SQLite doesn't support DROP COLUMN directly
-		return fmt.Sprintf("-- SQLite does not support DROP COLUMN directly\n-- Column %s.%s should be dropped manually", c.Table, c.ColumnName), nil
+		return fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s;", c.Table, c.ColumnName), nil
 	case *core.ModifyColumn:
 		return b.BuildModifyColumn(c)
 	case *core.RenameColumn:
@@ -97,13 +145,13 @@ func (b *SQLiteBuilder) buildChangeUpSQL(change core.Change) (string, error) {
 	case *core.AddForeignKey:
 		return b.BuildAddForeignKey(c)
 	case *core.DropForeignKey:
-		return fmt.Sprintf("-- SQLite does not support DROP FOREIGN KEY directly\n-- Foreign key %s should be dropped manually", c.FKName), nil
+		return "", unsupportedSQLiteError("drop foreign key")
 	case *core.ModifyForeignKey:
 		return b.BuildModifyForeignKey(c)
 	case *core.AddConstraint:
 		return b.BuildAddConstraint(c)
 	case *core.DropConstraint:
-		return fmt.Sprintf("-- SQLite has limited constraint support\n-- Constraint %s should be dropped manually", c.ConstraintName), nil
+		return "", unsupportedSQLiteError("drop constraint")
 	case *core.RunSQL:
 		// For RunSQL, return the SQL directly
 		return c.SQL, nil
@@ -135,7 +183,7 @@ func (b *SQLiteBuilder) buildChangeDownSQL(change core.Change) (string, error) {
 	case *core.RenameTable:
 		return fmt.Sprintf("ALTER TABLE %s RENAME TO %s;", c.NewName, c.OldName), nil
 	case *core.AddColumn:
-		return fmt.Sprintf("-- SQLite does not support DROP COLUMN directly\n-- Column %s.%s should be dropped manually", c.Table, c.Column.Name), nil
+		return fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s;", c.Table, c.Column.Name), nil
 	case *core.DropColumn:
 		// Cannot generate down SQL for DropColumn without original column definition
 		return "", core.NewMigrationError(
@@ -170,15 +218,9 @@ func (b *SQLiteBuilder) buildChangeDownSQL(change core.Change) (string, error) {
 		}
 		return b.BuildModifyIndex(reversed)
 	case *core.AddForeignKey:
-		fkName := fmt.Sprintf("fk_%s_%s", c.Table, c.Relation.Name)
-		return fmt.Sprintf("-- SQLite does not support DROP FOREIGN KEY directly\n-- Foreign key %s should be dropped manually", fkName), nil
+		return "", unsupportedSQLiteError("add foreign key")
 	case *core.DropForeignKey:
-		// Cannot generate down SQL for DropForeignKey without original FK definition
-		return "", core.NewMigrationError(
-			core.ErrInvalidChange,
-			"cannot generate down SQL for DropForeignKey without FK definition",
-			nil,
-		)
+		return "", unsupportedSQLiteError("drop foreign key")
 	case *core.ModifyForeignKey:
 		// Reverse the modification
 		reversed := &core.ModifyForeignKey{
@@ -191,12 +233,7 @@ func (b *SQLiteBuilder) buildChangeDownSQL(change core.Change) (string, error) {
 	case *core.AddConstraint:
 		return fmt.Sprintf("-- SQLite has limited constraint support\n-- Constraint %s should be dropped manually", c.Constraint.Name), nil
 	case *core.DropConstraint:
-		// Cannot generate down SQL for DropConstraint without original constraint definition
-		return "", core.NewMigrationError(
-			core.ErrInvalidChange,
-			"cannot generate down SQL for DropConstraint without constraint definition",
-			nil,
-		)
+		return "", unsupportedSQLiteError("drop constraint")
 	case *core.RunSQL:
 		// For RunSQL, return the reverse SQL if provided
 		if c.ReverseSQL != "" {
@@ -254,9 +291,68 @@ func (b *SQLiteBuilder) buildModifyColumnDown(c *core.ModifyColumn) (string, err
 	return b.BuildModifyColumn(reversed)
 }
 
-// BuildCreateTable delegates to baseBuilder
+// BuildCreateTable generates CREATE TABLE statement for SQLite
 func (b *SQLiteBuilder) BuildCreateTable(c *core.CreateTable) (string, error) {
-	return b.baseBuilder.BuildCreateTable(c)
+	return b.buildCreateTable(c, nil)
+}
+
+// buildCreateTable generates CREATE TABLE statement with optional table-level foreign keys
+func (b *SQLiteBuilder) buildCreateTable(c *core.CreateTable, fks []*core.AddForeignKey) (string, error) {
+	tableName := c.TableName()
+	var parts []string
+
+	parts = append(parts, fmt.Sprintf("-- Create table: %s", tableName))
+	parts = append(parts, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (", tableName))
+
+	var defs []string
+	for _, field := range c.Table.Fields {
+		colDef, err := b.BuildColumnDefinition(field)
+		if err != nil {
+			return "", fmt.Errorf("failed to build column %s: %w", field.Name, err)
+		}
+		defs = append(defs, "    "+colDef)
+	}
+
+	for _, fk := range fks {
+		fkDef, err := formatForeignKeyConstraint(fk)
+		if err != nil {
+			return "", err
+		}
+		defs = append(defs, "    "+fkDef)
+	}
+
+	parts = append(parts, strings.Join(defs, ",\n"))
+	parts = append(parts, ");")
+
+	return strings.Join(parts, "\n"), nil
+}
+
+// formatForeignKeyConstraint formats a foreign key constraint for table definition
+func formatForeignKeyConstraint(c *core.AddForeignKey) (string, error) {
+	if c.TargetTable == "" {
+		return "", core.NewMigrationError(
+			core.ErrInvalidChange,
+			fmt.Sprintf("foreign key %s.%s has empty target table", c.Table, c.Relation.Name),
+			nil,
+		)
+	}
+
+	onDelete := "NO ACTION"
+	if c.Relation.Options != nil {
+		if onDeleteVal, ok := c.Relation.Options["on_delete"].(string); ok {
+			onDelete = mapCascadeType(onDeleteVal)
+		}
+	}
+
+	onUpdate := "NO ACTION"
+	if c.Relation.Options != nil {
+		if onUpdateVal, ok := c.Relation.Options["on_update"].(string); ok {
+			onUpdate = mapCascadeType(onUpdateVal)
+		}
+	}
+
+	return fmt.Sprintf("FOREIGN KEY (%s) REFERENCES %s (id) ON DELETE %s ON UPDATE %s",
+		c.Relation.Name, c.TargetTable, onDelete, onUpdate), nil
 }
 
 // BuildAddColumn delegates to baseBuilder
@@ -274,9 +370,9 @@ func (b *SQLiteBuilder) BuildModifyIndex(c *core.ModifyIndex) (string, error) {
 	return b.baseBuilder.BuildModifyIndex(c)
 }
 
-// BuildAddForeignKey delegates to baseBuilder
+// BuildAddForeignKey returns an error because SQLite does not support ADD FOREIGN KEY via ALTER TABLE
 func (b *SQLiteBuilder) BuildAddForeignKey(c *core.AddForeignKey) (string, error) {
-	return b.baseBuilder.BuildAddForeignKey(c)
+	return "", unsupportedSQLiteError("add foreign key")
 }
 
 // BuildModifyForeignKey delegates to baseBuilder
