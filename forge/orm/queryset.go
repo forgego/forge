@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	forgeerrors "github.com/forgego/forge/errors"
 	"github.com/forgego/forge/utils"
 )
 
@@ -435,6 +436,9 @@ func (qs *BaseQuerySet[T]) PrefetchRelated(relations ...any) QuerySet[T] {
 func (qs *BaseQuerySet[T]) Aggregate(aggs ...Aggregate) QuerySet[T] {
 	clone := qs.clone()
 	clone.aggregates = append(clone.aggregates, aggs...)
+	if clone.err == nil {
+		clone.err = forgeerrors.NewNotImplementedError("QuerySet.Aggregate")
+	}
 	return clone
 }
 
@@ -1372,7 +1376,7 @@ func (qs *BaseQuerySet[T]) Get(ctx context.Context) (*T, error) {
 //	user, err := qs.Filter(User.Age.Gt(18)).OrderBy(User.CreatedAt.Desc()).First(ctx)
 //	// Returns first user over 18, ordered by creation date (newest first)
 func (qs *BaseQuerySet[T]) First(ctx context.Context) (*T, error) {
-	results, err := qs.Limit(1).All(ctx)
+	results, err := qs.withDefaultPKOrder().Limit(1).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1386,7 +1390,7 @@ func (qs *BaseQuerySet[T]) First(ctx context.Context) (*T, error) {
 
 // Last retrieves the last object
 func (qs *BaseQuerySet[T]) Last(ctx context.Context) (*T, error) {
-	reversed := qs.Reverse()
+	reversed := qs.withDefaultPKOrder().Reverse()
 	results, err := reversed.Limit(1).All(ctx)
 	if err != nil {
 		return nil, err
@@ -1397,6 +1401,20 @@ func (qs *BaseQuerySet[T]) Last(ctx context.Context) (*T, error) {
 	}
 
 	return results[0], nil
+}
+
+// withDefaultPKOrder orders by primary key when no ordering is set, matching Django.
+func (qs *BaseQuerySet[T]) withDefaultPKOrder() *BaseQuerySet[T] {
+	if len(qs.orderBy) > 0 {
+		return qs
+	}
+	pkCol := "id"
+	if qs.schema != nil && qs.schema.PrimaryKey != "" {
+		pkCol = qs.schema.PrimaryKey
+	}
+	clone := qs.clone()
+	clone.orderBy = []OrderField{Asc(pkCol)}
+	return clone
 }
 
 // Count counts matching records
@@ -1619,25 +1637,28 @@ func (qs *BaseQuerySet[T]) Delete(ctx context.Context) (int64, error) {
 
 // Union performs a UNION operation
 func (qs *BaseQuerySet[T]) Union(other QuerySet[T]) QuerySet[T] {
-	// For now, return a combined query set that will use SQL UNION
-	// Full implementation would require SQL query combination
 	clone := qs.clone()
-	// Mark as union - would need additional state to track this
-	// For MVP, return clone with union marker
+	if clone.err == nil {
+		clone.err = forgeerrors.NewNotImplementedError("QuerySet.Union")
+	}
 	return clone
 }
 
 // Intersection performs an INTERSECT operation
 func (qs *BaseQuerySet[T]) Intersection(other QuerySet[T]) QuerySet[T] {
-	// Similar to Union - would need SQL query combination
 	clone := qs.clone()
+	if clone.err == nil {
+		clone.err = forgeerrors.NewNotImplementedError("QuerySet.Intersection")
+	}
 	return clone
 }
 
 // Difference performs an EXCEPT operation
 func (qs *BaseQuerySet[T]) Difference(other QuerySet[T]) QuerySet[T] {
-	// Similar to Union - would need SQL query combination
 	clone := qs.clone()
+	if clone.err == nil {
+		clone.err = forgeerrors.NewNotImplementedError("QuerySet.Difference")
+	}
 	return clone
 }
 
