@@ -2,12 +2,46 @@ package log
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/forgego/forge/api/errors"
 	"go.uber.org/zap"
 )
+
+var sensitiveQueryParams = map[string]struct{}{
+	"api_key":       {},
+	"apikey":        {},
+	"key":           {},
+	"token":         {},
+	"access_token":  {},
+	"refresh_token": {},
+	"password":      {},
+	"secret":        {},
+	"signature":     {},
+	"session":       {},
+	"session_key":   {},
+}
+
+func redactQuery(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	vals, err := url.ParseQuery(raw)
+	if err != nil {
+		return "[unparseable]"
+	}
+	for k, vs := range vals {
+		if _, ok := sensitiveQueryParams[strings.ToLower(k)]; ok {
+			for i := range vs {
+				vs[i] = "REDACTED"
+			}
+			vals[k] = vs
+		}
+	}
+	return vals.Encode()
+}
 
 func sanitizeLogString(s string) string {
 	s = strings.ReplaceAll(s, "\n", "")
@@ -34,7 +68,7 @@ func Middleware(logger *Logger) func(http.Handler) http.Handler {
 			fields := []zap.Field{
 				zap.String("method", sanitizeLogString(r.Method)),
 				zap.String("path", sanitizeLogString(r.URL.Path)),
-				zap.String("query", sanitizeLogString(r.URL.RawQuery)),
+				zap.String("query", sanitizeLogString(redactQuery(r.URL.RawQuery))),
 				zap.Int("status", ww.statusCode),
 				zap.Duration("duration", duration),
 				zap.String("ip", sanitizeLogString(r.RemoteAddr)),
