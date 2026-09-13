@@ -10,7 +10,7 @@ import (
 )
 
 func TestMergeAppliedVersions_InfersAppliedHistoryForCleanState(t *testing.T) {
-	merged := mergeAppliedVersions(3, false, map[uint]bool{3: true})
+	merged := mergeAppliedVersions(3, false, map[uint]bool{3: true}, []uint{1, 2, 3})
 
 	assert.True(t, merged[1])
 	assert.True(t, merged[2])
@@ -18,7 +18,7 @@ func TestMergeAppliedVersions_InfersAppliedHistoryForCleanState(t *testing.T) {
 }
 
 func TestMergeAppliedVersions_ExcludesCurrentWhenDirty(t *testing.T) {
-	merged := mergeAppliedVersions(4, true, map[uint]bool{4: true})
+	merged := mergeAppliedVersions(4, true, map[uint]bool{4: true}, []uint{1, 2, 3, 4})
 
 	assert.True(t, merged[1])
 	assert.True(t, merged[2])
@@ -27,18 +27,70 @@ func TestMergeAppliedVersions_ExcludesCurrentWhenDirty(t *testing.T) {
 }
 
 func TestMergeAppliedVersions_HandlesNoVersion(t *testing.T) {
-	merged := mergeAppliedVersions(0, false, map[uint]bool{})
+	merged := mergeAppliedVersions(0, false, map[uint]bool{}, []uint{1, 2, 3})
 
 	assert.Empty(t, merged)
 }
 
 func TestMergeAppliedVersions_KeepsExplicitPastVersionsWhenDirty(t *testing.T) {
-	merged := mergeAppliedVersions(4, true, map[uint]bool{2: true})
+	merged := mergeAppliedVersions(4, true, map[uint]bool{2: true}, []uint{1, 2, 3, 4})
 
 	assert.True(t, merged[1])
 	assert.True(t, merged[2])
 	assert.True(t, merged[3])
 	assert.False(t, merged[4])
+}
+
+func TestMergeAppliedVersions_TableDriven(t *testing.T) {
+	tests := []struct {
+		name           string
+		currentVersion uint
+		dirty          bool
+		explicit       map[uint]bool
+		fileVersions   []uint
+		expected       map[uint]bool
+	}{
+		{
+			name:           "timestamp versions return immediately",
+			currentVersion: 20240101120000,
+			dirty:          false,
+			explicit:       nil,
+			fileVersions:   []uint{20231201000000, 20240101120000, 20240201000000},
+			expected: map[uint]bool{
+				20231201000000: true,
+				20240101120000: true,
+			},
+		},
+		{
+			name:           "gap in files only includes existing versions",
+			currentVersion: 3,
+			dirty:          false,
+			explicit:       nil,
+			fileVersions:   []uint{1, 3, 5},
+			expected: map[uint]bool{
+				1: true,
+				3: true,
+			},
+		},
+		{
+			name:           "dirty excludes current version",
+			currentVersion: 3,
+			dirty:          true,
+			explicit:       nil,
+			fileVersions:   []uint{1, 2, 3},
+			expected: map[uint]bool{
+				1: true,
+				2: true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			merged := mergeAppliedVersions(tt.currentVersion, tt.dirty, tt.explicit, tt.fileVersions)
+			assert.Equal(t, tt.expected, merged)
+		})
+	}
 }
 
 func TestGetAllMigrations_IgnoresMalformedVersions(t *testing.T) {

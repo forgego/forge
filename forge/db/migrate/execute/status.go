@@ -96,7 +96,13 @@ func (r *StatusReporter) GetDetailedStatus(ctx context.Context) (*DetailedStatus
 		// If we can't get applied versions, assume none are applied
 		appliedVersions = make(map[uint]bool)
 	}
-	appliedVersions = mergeAppliedVersions(version, dirty, appliedVersions)
+	fileVersions := make([]uint, 0, len(allMigrations))
+	for _, mig := range allMigrations {
+		if v, err := parseVersion(mig.Version); err == nil {
+			fileVersions = append(fileVersions, v)
+		}
+	}
+	appliedVersions = mergeAppliedVersions(version, dirty, appliedVersions, fileVersions)
 
 	// Categorize migrations
 	for _, mig := range allMigrations {
@@ -255,8 +261,8 @@ func parseVersion(versionStr string) (uint, error) {
 // mergeAppliedVersions merges explicit applied versions with inferred history from current version.
 // golang-migrate stores only the current version in schema_migrations, so older applied versions must
 // be inferred for accurate status output.
-func mergeAppliedVersions(currentVersion uint, dirty bool, explicit map[uint]bool) map[uint]bool {
-	merged := make(map[uint]bool, len(explicit))
+func mergeAppliedVersions(currentVersion uint, dirty bool, explicit map[uint]bool, fileVersions []uint) map[uint]bool {
+	merged := make(map[uint]bool, len(explicit)+len(fileVersions))
 	for version := range explicit {
 		if dirty && version == currentVersion {
 			// A dirty current version is not successfully applied yet.
@@ -269,13 +275,16 @@ func mergeAppliedVersions(currentVersion uint, dirty bool, explicit map[uint]boo
 		return merged
 	}
 
-	maxApplied := currentVersion
-	if dirty && maxApplied > 0 {
-		maxApplied--
-	}
-
-	for v := uint(1); v <= maxApplied; v++ {
-		merged[v] = true
+	for _, v := range fileVersions {
+		if dirty {
+			if v < currentVersion {
+				merged[v] = true
+			}
+		} else {
+			if v <= currentVersion {
+				merged[v] = true
+			}
+		}
 	}
 
 	return merged
