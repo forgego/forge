@@ -54,6 +54,8 @@ func (c *CreateTable) Reversible() bool { return true }
 // DropTable represents dropping a table
 type DropTable struct {
 	Table string
+	// previous definition; nil when unknown, e.g. parsed from SQL
+	Definition *generator.ModelDefinition
 }
 
 func (c *DropTable) Type() ChangeType  { return ChangeTypeDropTable }
@@ -84,6 +86,8 @@ func (c *AddColumn) Reversible() bool  { return true }
 type DropColumn struct {
 	Table      string
 	ColumnName string
+	// previous definition; nil when unknown, e.g. parsed from SQL
+	Column *generator.FieldDefinition
 }
 
 func (c *DropColumn) Type() ChangeType  { return ChangeTypeDropColumn }
