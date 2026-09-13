@@ -517,44 +517,58 @@ func (qs *BaseQuerySet[T]) buildSQL() (string, []interface{}, error) {
 	// Build select_related JOINs first (populates qs.joins and qs.joinMap)
 	qs.buildJoinClause(builder)
 
-	// Set join resolver for WHERE / ORDER BY relation path resolution
-	var pathJoins []string
-	builder.SetJoinResolver(qs.createJoinResolver(&pathJoins))
+	// Build WHERE clause with resolver W
+	var whereJoins []string
+	whereSeen := make(map[string]bool)
+	var whereMulti bool
+	builder.SetJoinResolver(qs.createJoinResolver(&whereJoins, whereSeen, &whereMulti))
 
-	// Build WHERE clause
 	whereClause, _, whereErr := qs.buildWhereClause(builder)
 	if whereErr != nil {
 		return "", nil, whereErr
 	}
 
-	// Build ORDER BY clause
+	// Build ORDER BY clause with resolver O
+	var orderJoins []string
+	orderSeen := make(map[string]bool)
+	var orderMulti bool
+	builder.SetJoinResolver(qs.createJoinResolver(&orderJoins, orderSeen, &orderMulti))
+
 	orderByClause, orderErr := qs.buildOrderByClause(builder)
 	if orderErr != nil {
 		return "", nil, orderErr
 	}
 
-	// Build SELECT clause (qualifies main table columns when path joins are present)
-	hasPathJoins := len(pathJoins) > 0
-	selectClause := qs.buildSelectClause(builder, hasPathJoins)
-
-	// Build FROM clause
 	fromClause := fmt.Sprintf("FROM %s", EscapeIdentifier(qs.table))
-
-	// Build LIMIT/OFFSET
 	limitClause := qs.buildLimitClause()
 	offsetClause := qs.buildOffsetClause()
 
-	// Combine all parts
-	parts := []string{selectClause, fromClause}
-	if len(qs.joins) > 0 {
-		parts = append(parts, strings.Join(qs.joins, " "))
+	var parts []string
+	if whereMulti {
+		selectClause := qs.buildSelectClause(builder, true)
+		parts = []string{selectClause, fromClause}
+		if len(qs.joins) > 0 {
+			parts = append(parts, strings.Join(qs.joins, " "))
+		}
+		if len(orderJoins) > 0 {
+			parts = append(parts, strings.Join(orderJoins, " "))
+		}
+		parts = append(parts, qs.pkSubquery(whereJoins, whereClause))
+	} else {
+		pathJoins := mergeJoins(whereJoins, orderJoins)
+		selectClause := qs.buildSelectClause(builder, len(pathJoins) > 0)
+		parts = []string{selectClause, fromClause}
+		if len(qs.joins) > 0 {
+			parts = append(parts, strings.Join(qs.joins, " "))
+		}
+		if len(pathJoins) > 0 {
+			parts = append(parts, strings.Join(pathJoins, " "))
+		}
+		if whereClause != "" {
+			parts = append(parts, whereClause)
+		}
 	}
-	if len(pathJoins) > 0 {
-		parts = append(parts, strings.Join(pathJoins, " "))
-	}
-	if whereClause != "" {
-		parts = append(parts, whereClause)
-	}
+
 	if orderByClause != "" {
 		parts = append(parts, orderByClause)
 	}
@@ -569,6 +583,43 @@ func (qs *BaseQuerySet[T]) buildSQL() (string, []interface{}, error) {
 	args := builder.Args()
 
 	return qs.rebindSQL(sql), args, nil
+}
+
+// mergeJoins merges whereJoins and orderJoins without duplicating identical joins.
+func mergeJoins(whereJoins, orderJoins []string) []string {
+	var merged []string
+	seen := make(map[string]bool, len(whereJoins)+len(orderJoins))
+	for _, j := range whereJoins {
+		if !seen[j] {
+			seen[j] = true
+			merged = append(merged, j)
+		}
+	}
+	for _, j := range orderJoins {
+		if !seen[j] {
+			seen[j] = true
+			merged = append(merged, j)
+		}
+	}
+	return merged
+}
+
+// pkSubquery formats a WHERE <table>.<pk> IN (SELECT <table>.<pk> FROM <table> <whereJoins> <where>) clause.
+func (qs *BaseQuerySet[T]) pkSubquery(joins []string, where string) string {
+	pkCol := "id"
+	if qs.schema != nil && qs.schema.PrimaryKey != "" {
+		pkCol = qs.schema.PrimaryKey
+	}
+	table := EscapeIdentifier(qs.table)
+	pk := EscapeIdentifier(pkCol)
+	innerParts := []string{fmt.Sprintf("SELECT %s.%s FROM %s", table, pk, table)}
+	if len(joins) > 0 {
+		innerParts = append(innerParts, strings.Join(joins, " "))
+	}
+	if where != "" {
+		innerParts = append(innerParts, where)
+	}
+	return fmt.Sprintf("WHERE %s.%s IN (%s)", table, pk, strings.Join(innerParts, " "))
 }
 
 // fkColumnFor resolves the FK column on schema pointing to rel
@@ -667,7 +718,35 @@ func (qs *BaseQuerySet[T]) buildJoinClause(builder *SQLBuilder) {
 	}
 }
 
-func (qs *BaseQuerySet[T]) createJoinResolver(pathJoins *[]string) JoinResolver {
+// reverseFKFor resolves the foreign key column on targetSchema pointing back to currentSchema.
+func reverseFKFor(currentSchema, targetSchema *ModelSchema) string {
+	if currentSchema == nil || targetSchema == nil {
+		return ""
+	}
+	for _, r := range targetSchema.Relations {
+		if (currentSchema.ModelType != nil && r.TargetModel == currentSchema.ModelType.Name()) || r.TargetModel == currentSchema.TableName {
+			if col := fkColumnFor(targetSchema, &r); col != "" {
+				return col
+			}
+		}
+	}
+	guess := strings.ToLower(currentSchema.TableName) + "_id"
+	if f := targetSchema.GetField(guess); f != nil {
+		return f.DBColumn
+	}
+	if currentSchema.ModelType != nil {
+		guess = strings.ToLower(currentSchema.ModelType.Name()) + "_id"
+		if f := targetSchema.GetField(guess); f != nil {
+			return f.DBColumn
+		}
+	}
+	return ""
+}
+
+func (qs *BaseQuerySet[T]) createJoinResolver(pathJoins *[]string, seen map[string]bool, multiValued *bool) JoinResolver {
+	if seen == nil {
+		seen = make(map[string]bool)
+	}
 	return func(parts []string) (string, string, error) {
 		if len(parts) <= 1 {
 			return "", "", fmt.Errorf("invalid relation path: %v", parts)
@@ -686,6 +765,10 @@ func (qs *BaseQuerySet[T]) createJoinResolver(pathJoins *[]string) JoinResolver 
 				return "", "", fmt.Errorf("relation %s not found in model %s", part, currentSchema.TableName)
 			}
 
+			if multiValued != nil && rel.Type == RelationManyToMany {
+				*multiValued = true
+			}
+
 			targetSchema, err := GetModelSchemaByName(rel.TargetModel)
 			if err != nil {
 				return "", "", fmt.Errorf("failed to resolve target model %s for relation %s: %w", rel.TargetModel, part, err)
@@ -700,7 +783,7 @@ func (qs *BaseQuerySet[T]) createJoinResolver(pathJoins *[]string) JoinResolver 
 				hopAlias = rel.Name
 			}
 
-			if !qs.joinMap[hopAlias] {
+			if !seen[hopAlias] && !(i == 0 && qs.joinMap[rel.Name]) {
 				targetPk := targetSchema.PrimaryKey
 				if targetPk == "" {
 					targetPk = "id"
@@ -718,48 +801,29 @@ func (qs *BaseQuerySet[T]) createJoinResolver(pathJoins *[]string) JoinResolver 
 						EscapeIdentifier(fkColumn),
 					)
 				} else {
-					// Check for reverse relation where targetSchema has FK pointing to currentSchema
-					var reverseFK string
-					for _, r := range targetSchema.Relations {
-						if (currentSchema.ModelType != nil && r.TargetModel == currentSchema.ModelType.Name()) || r.TargetModel == currentSchema.TableName {
-							reverseFK = fkColumnFor(targetSchema, &r)
-							if reverseFK != "" {
-								break
-							}
-						}
+					if multiValued != nil {
+						*multiValued = true
 					}
+					reverseFK := reverseFKFor(currentSchema, targetSchema)
 					if reverseFK == "" {
-						guess := strings.ToLower(currentSchema.TableName) + "_id"
-						if f := targetSchema.GetField(guess); f != nil {
-							reverseFK = f.DBColumn
-						}
-						if reverseFK == "" && currentSchema.ModelType != nil {
-							guess = strings.ToLower(currentSchema.ModelType.Name()) + "_id"
-							if f := targetSchema.GetField(guess); f != nil {
-								reverseFK = f.DBColumn
-							}
-						}
+						return "", "", fmt.Errorf("cannot determine join condition for relation %s", part)
 					}
 					currentPk := currentSchema.PrimaryKey
 					if currentPk == "" {
 						currentPk = "id"
 					}
-					if reverseFK != "" {
-						joinSQL = fmt.Sprintf("LEFT JOIN %s AS %s ON %s.%s = %s.%s",
-							EscapeIdentifier(targetSchema.TableName),
-							EscapeIdentifier(hopAlias),
-							EscapeIdentifier(hopAlias),
-							EscapeIdentifier(reverseFK),
-							parentRef,
-							EscapeIdentifier(currentPk),
-						)
-					} else {
-						return "", "", fmt.Errorf("cannot determine join condition for relation %s", part)
-					}
+					joinSQL = fmt.Sprintf("LEFT JOIN %s AS %s ON %s.%s = %s.%s",
+						EscapeIdentifier(targetSchema.TableName),
+						EscapeIdentifier(hopAlias),
+						EscapeIdentifier(hopAlias),
+						EscapeIdentifier(reverseFK),
+						parentRef,
+						EscapeIdentifier(currentPk),
+					)
 				}
 
 				*pathJoins = append(*pathJoins, joinSQL)
-				qs.joinMap[hopAlias] = true
+				seen[hopAlias] = true
 			}
 
 			parentRef = EscapeIdentifier(currentAlias)
@@ -1348,36 +1412,42 @@ func (qs *BaseQuerySet[T]) Count(ctx context.Context) (int64, error) {
 	builder := qs.newSQLBuilder()
 	qs.buildJoinClause(builder)
 
-	var pathJoins []string
-	builder.SetJoinResolver(qs.createJoinResolver(&pathJoins))
+	var whereJoins []string
+	whereSeen := make(map[string]bool)
+	var whereMulti bool
+	builder.SetJoinResolver(qs.createJoinResolver(&whereJoins, whereSeen, &whereMulti))
 
 	whereClause, _, whereErr := qs.buildWhereClause(builder)
 	if whereErr != nil {
 		return 0, whereErr
 	}
 
-	var selectClause string
-	if len(pathJoins) > 0 {
-		pkCol := "id"
-		if qs.schema != nil && qs.schema.PrimaryKey != "" {
-			pkCol = qs.schema.PrimaryKey
-		}
-		selectClause = fmt.Sprintf("SELECT COUNT(DISTINCT %s.%s) FROM %s",
-			EscapeIdentifier(qs.table), EscapeIdentifier(pkCol), EscapeIdentifier(qs.table))
-	} else {
-		selectClause = fmt.Sprintf("SELECT COUNT(*) FROM %s", EscapeIdentifier(qs.table))
-	}
-
 	var parts []string
-	parts = append(parts, selectClause)
-	if len(qs.joins) > 0 {
-		parts = append(parts, strings.Join(qs.joins, " "))
-	}
-	if len(pathJoins) > 0 {
-		parts = append(parts, strings.Join(pathJoins, " "))
-	}
-	if whereClause != "" {
-		parts = append(parts, whereClause)
+	if whereMulti {
+		selectClause := fmt.Sprintf("SELECT COUNT(*) FROM %s", EscapeIdentifier(qs.table))
+		parts = []string{selectClause, qs.pkSubquery(whereJoins, whereClause)}
+	} else {
+		var selectClause string
+		if len(whereJoins) > 0 {
+			pkCol := "id"
+			if qs.schema != nil && qs.schema.PrimaryKey != "" {
+				pkCol = qs.schema.PrimaryKey
+			}
+			selectClause = fmt.Sprintf("SELECT COUNT(DISTINCT %s.%s) FROM %s",
+				EscapeIdentifier(qs.table), EscapeIdentifier(pkCol), EscapeIdentifier(qs.table))
+		} else {
+			selectClause = fmt.Sprintf("SELECT COUNT(*) FROM %s", EscapeIdentifier(qs.table))
+		}
+		parts = append(parts, selectClause)
+		if len(qs.joins) > 0 {
+			parts = append(parts, strings.Join(qs.joins, " "))
+		}
+		if len(whereJoins) > 0 {
+			parts = append(parts, strings.Join(whereJoins, " "))
+		}
+		if whereClause != "" {
+			parts = append(parts, whereClause)
+		}
 	}
 
 	sql := strings.Join(parts, " ")

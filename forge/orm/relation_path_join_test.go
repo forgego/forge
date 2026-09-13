@@ -267,3 +267,120 @@ func TestRelationPathJoin_UpdateDeleteError(t *testing.T) {
 	require.Error(t, err)
 	assert.Equal(t, "filtering by related fields is not supported in delete", err.Error())
 }
+
+func setupToManyDedupeDB(t *testing.T) *db.DB {
+	t.Helper()
+	database := setupRelationTestDB(t)
+
+	// Companies: 1: Acme Corp, 2: Beta LLC
+	_, err := database.Exec(`INSERT INTO companies (id, name) VALUES (1, 'Acme Corp'), (2, 'Beta LLC')`)
+	require.NoError(t, err)
+
+	// Customers:
+	// Customer 1: Acme, Company 1 (Acme Corp)
+	// Customer 2: Bob, Company 2 (Beta LLC)
+	// Customer 3: Charlie, Company 1 (Acme Corp)
+	_, err = database.Exec(`INSERT INTO customers (id, name, company_id) VALUES (1, 'Acme', 1), (2, 'Bob', 2), (3, 'Charlie', 1)`)
+	require.NoError(t, err)
+
+	// Orders:
+	// Customer 1 (Acme): 3 orders over 100
+	// Customer 2 (Bob): 1 order over 100
+	// Customer 3 (Charlie): 1 order under 100
+	_, err = database.Exec(`INSERT INTO orders (id, total, customer_id) VALUES
+		(1, 150.0, 1),
+		(2, 200.0, 1),
+		(3, 250.0, 1),
+		(4, 300.0, 2),
+		(5, 50.0, 3)`)
+	require.NoError(t, err)
+
+	return database
+}
+
+func TestRelationPathJoin_ToManyFilter_DeduplicatesParentRows(t *testing.T) {
+	database := setupToManyDedupeDB(t)
+	defer database.Close()
+
+	ctx := context.Background()
+	customerQS, err := NewQuerySet[TestCustomer]("customers")
+	require.NoError(t, err)
+	customerQS = customerQS.SetDB(database)
+
+	// Customer with 3 orders over 100 (Acme) and one with a single order over 100 (Bob):
+	// Filter(F("orders__total").Gt(100)).All returns 2 customers, each once; Count returns 2.
+	filtered := customerQS.Filter(F("orders__total").Gt(100.0))
+
+	customers, err := filtered.All(ctx)
+	require.NoError(t, err)
+	require.Len(t, customers, 2)
+	assert.Equal(t, int64(1), customers[0].ID)
+	assert.Equal(t, "Acme", customers[0].Name)
+	assert.Equal(t, int64(2), customers[1].ID)
+	assert.Equal(t, "Bob", customers[1].Name)
+
+	count, err := filtered.Count(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), count)
+}
+
+func TestRelationPathJoin_ToManyFilter_Pagination(t *testing.T) {
+	database := setupToManyDedupeDB(t)
+	defer database.Close()
+
+	ctx := context.Background()
+	customerQS, err := NewQuerySet[TestCustomer]("customers")
+	require.NoError(t, err)
+	customerQS = customerQS.SetDB(database)
+
+	// Same filter plus OrderBy("name"), Limit(1), Offset(1):
+	// returns exactly the second customer by name (pagination is over distinct parents).
+	customers, err := customerQS.
+		Filter(F("orders__total").Gt(100.0)).
+		OrderBy("name").
+		Limit(1).
+		Offset(1).
+		All(ctx)
+	require.NoError(t, err)
+	require.Len(t, customers, 1)
+	assert.Equal(t, int64(2), customers[0].ID)
+	assert.Equal(t, "Bob", customers[0].Name)
+}
+
+func TestRelationPathJoin_ToManyFilter_CombinedWithToOneOrderBy(t *testing.T) {
+	database := setupToManyDedupeDB(t)
+	defer database.Close()
+
+	ctx := context.Background()
+	customerQS, err := NewQuerySet[TestCustomer]("customers")
+	require.NoError(t, err)
+	customerQS = customerQS.SetDB(database)
+
+	// To-many filter combined with a to-one ordering path (OrderBy("company__name"))
+	// runs without SQL error and returns distinct rows in company-name order.
+	customers, err := customerQS.
+		Filter(F("orders__total").Gt(100.0)).
+		OrderBy("company__name").
+		All(ctx)
+	require.NoError(t, err)
+	require.Len(t, customers, 2)
+	assert.Equal(t, "Acme", customers[0].Name)
+	assert.Equal(t, "Bob", customers[1].Name)
+
+	// Descending order: Beta LLC > Acme Corp
+	customersDesc, err := customerQS.
+		Filter(F("orders__total").Gt(100.0)).
+		OrderBy("-company__name").
+		All(ctx)
+	require.NoError(t, err)
+	require.Len(t, customersDesc, 2)
+	assert.Equal(t, "Bob", customersDesc[0].Name)
+	assert.Equal(t, "Acme", customersDesc[1].Name)
+
+	// Assert SQL structure
+	sql, _, err := customerQS.
+		Filter(F("orders__total").Gt(100.0)).
+		OrderBy("company__name").(*BaseQuerySet[TestCustomer]).buildSQL()
+	require.NoError(t, err)
+	assert.Equal(t, `SELECT "customers".* FROM "customers" LEFT JOIN "companies" AS "company" ON "company"."id" = "customers"."company_id" WHERE "customers"."id" IN (SELECT "customers"."id" FROM "customers" LEFT JOIN "orders" AS "orders" ON "orders"."customer_id" = "customers"."id" WHERE "orders"."total" > ?1) ORDER BY "company"."name" ASC`, sql)
+}
