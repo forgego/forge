@@ -823,6 +823,13 @@ func setFieldValue(field reflect.Value, value interface{}) {
 	}
 
 	valueValue := reflect.ValueOf(value)
+	if !valueValue.IsValid() {
+		switch field.Kind() {
+		case reflect.Ptr, reflect.Interface, reflect.Slice, reflect.Map:
+			field.Set(reflect.Zero(field.Type()))
+		}
+		return
+	}
 
 	switch field.Kind() {
 	case reflect.String:
