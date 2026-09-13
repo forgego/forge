@@ -109,7 +109,7 @@ func SaveFilter[T any](fs *FilterSet[T], name, description string, storage Filte
 		Description:   description,
 		AST:           ast.Clone(),
 		DialectHint:   "postgres", // Would be determined from DB
-		SchemaVersion: "1.0",       // Would be from schema
+		SchemaVersion: "1.0",      // Would be from schema
 		Public:        false,
 		Version:       1,
 		CreatedAt:     time.Now(),
@@ -161,4 +161,3 @@ func PreviewFilter[T any](fs *FilterSet[T], ctx context.Context, limit int) (int
 
 	return count, nil
 }
-

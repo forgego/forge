@@ -35,4 +35,3 @@ func (rl RendererList) GetMediaTypes() []string {
 	}
 	return types
 }
-

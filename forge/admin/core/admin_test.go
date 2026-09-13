@@ -7,9 +7,9 @@ import (
 
 func TestNewAction(t *testing.T) {
 	tests := []struct {
-		name    string
-		action  string
-		label   string
+		name   string
+		action string
+		label  string
 	}{
 		{
 			name:   "basic action",

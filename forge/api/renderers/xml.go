@@ -34,4 +34,3 @@ func (r *XMLRenderer) RenderToWriter(w io.Writer, data interface{}) error {
 	encoder.Indent("", r.Indent)
 	return encoder.Encode(data)
 }
-

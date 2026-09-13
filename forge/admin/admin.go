@@ -94,8 +94,8 @@ const (
 )
 
 const (
-	InlineTypeOneToMany = "one_to_many"
-	InlineTypeOneToOne  = "one_to_one"
+	InlineTypeOneToMany  = "one_to_many"
+	InlineTypeOneToOne   = "one_to_one"
 	InlineTypeManyToMany = "many_to_many"
 )
 
@@ -111,4 +111,3 @@ var Computed = core.Computed
 func NewAction[T any](name, label string, handler func(ctx context.Context, instances []*T) error) core.Action[T] {
 	return core.NewAction(name, label, handler)
 }
-

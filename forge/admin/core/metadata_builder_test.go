@@ -55,4 +55,3 @@ func TestBuildFiltersMetadata_RelatedModelForRelationFilters(t *testing.T) {
 	assert.Empty(t, filters[2].RelatedModel)
 	assert.False(t, filters[2].Multiple)
 }
-

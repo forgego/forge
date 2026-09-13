@@ -332,4 +332,3 @@ func TestAuthService_LogoutAll(t *testing.T) {
 		assert.Len(t, sessions, 0)
 	})
 }
-

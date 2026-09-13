@@ -44,7 +44,7 @@ func TestRouterMethods(t *testing.T) {
 			// HEAD requests don't typically reach the body handler in the same way,
 			// or chi might handle them specifically, but for standard routing the method should match.
 			if method != "HEAD" {
-			    assert.Equal(t, method, methodCalled)
+				assert.Equal(t, method, methodCalled)
 			}
 		})
 	}

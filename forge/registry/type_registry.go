@@ -10,10 +10,10 @@ import (
 
 // TypeInfo provides type information for a registered type
 type TypeInfo[T any] struct {
-	name         string
-	modelType    reflect.Type
+	name          string
+	modelType     reflect.Type
 	fieldAccessor *orm.FieldAccessor[T]
-	schema       *orm.ModelSchema
+	schema        *orm.ModelSchema
 }
 
 // New creates a new instance of the registered type
@@ -85,10 +85,10 @@ func RegisterType[T any](tr *TypeRegistry, name string) error {
 
 	// Create type info
 	typeInfo := &TypeInfo[T]{
-		name:         name,
-		modelType:    modelType,
+		name:          name,
+		modelType:     modelType,
 		fieldAccessor: accessor,
-		schema:       schema,
+		schema:        schema,
 	}
 
 	tr.types[name] = typeInfo
@@ -158,4 +158,3 @@ func (tr *TypeRegistry) List() []string {
 	}
 	return names
 }
-

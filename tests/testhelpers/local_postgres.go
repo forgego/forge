@@ -18,4 +18,3 @@ func LocalPostgresOpts(testName string) PostgresOpts {
 		DBName:    fmt.Sprintf("test_%s_%d", sanitizeTestName(testName), time.Now().UnixNano()),
 	}
 }
-

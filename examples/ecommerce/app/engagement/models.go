@@ -7,14 +7,14 @@ import (
 // RecentlyViewed tracks recently viewed products by customers
 type RecentlyViewed struct {
 	schema.BaseSchema
-	Id          int64  `json:"id" db:"id"`
-	CustomerID  int64  `json:"customer_id" db:"customer_id"`
-	ProductID   int64  `json:"product_id" db:"product_id"`
-	ViewedAt    string `json:"viewed_at" db:"viewed_at"`
-	ViewCount   int32  `json:"view_count" db:"view_count"`
-	SessionID   string `json:"session_id" db:"session_id"`
-	CreatedAt   string `json:"created_at" db:"created_at"`
-	UpdatedAt   string `json:"updated_at" db:"updated_at"`
+	Id         int64  `json:"id" db:"id"`
+	CustomerID int64  `json:"customer_id" db:"customer_id"`
+	ProductID  int64  `json:"product_id" db:"product_id"`
+	ViewedAt   string `json:"viewed_at" db:"viewed_at"`
+	ViewCount  int32  `json:"view_count" db:"view_count"`
+	SessionID  string `json:"session_id" db:"session_id"`
+	CreatedAt  string `json:"created_at" db:"created_at"`
+	UpdatedAt  string `json:"updated_at" db:"updated_at"`
 }
 
 func (RecentlyViewed) Fields() []schema.Field {
@@ -121,21 +121,21 @@ func (ProductComparison) Hooks() *schema.ModelHooks {
 // Notification represents customer notifications
 type Notification struct {
 	schema.BaseSchema
-	Id           int64  `json:"id" db:"id"`
-	CustomerID   int64  `json:"customer_id" db:"customer_id"`
-	Title        string `json:"title" db:"title"`
-	Message      string `json:"message" db:"message"`
-	Type         string `json:"type" db:"type"`
-	Priority     string `json:"priority" db:"priority"`
-	IsRead       bool   `json:"is_read" db:"is_read"`
-	ReadAt       string `json:"read_at" db:"read_at"`
-	ActionURL    string `json:"action_url" db:"action_url"`
-	ActionLabel  string `json:"action_label" db:"action_label"`
-	RelatedType  string `json:"related_type" db:"related_type"`
-	RelatedID    int64  `json:"related_id" db:"related_id"`
-	ExpiresAt    string `json:"expires_at" db:"expires_at"`
-	CreatedAt    string `json:"created_at" db:"created_at"`
-	UpdatedAt    string `json:"updated_at" db:"updated_at"`
+	Id          int64  `json:"id" db:"id"`
+	CustomerID  int64  `json:"customer_id" db:"customer_id"`
+	Title       string `json:"title" db:"title"`
+	Message     string `json:"message" db:"message"`
+	Type        string `json:"type" db:"type"`
+	Priority    string `json:"priority" db:"priority"`
+	IsRead      bool   `json:"is_read" db:"is_read"`
+	ReadAt      string `json:"read_at" db:"read_at"`
+	ActionURL   string `json:"action_url" db:"action_url"`
+	ActionLabel string `json:"action_label" db:"action_label"`
+	RelatedType string `json:"related_type" db:"related_type"`
+	RelatedID   int64  `json:"related_id" db:"related_id"`
+	ExpiresAt   string `json:"expires_at" db:"expires_at"`
+	CreatedAt   string `json:"created_at" db:"created_at"`
+	UpdatedAt   string `json:"updated_at" db:"updated_at"`
 }
 
 func (Notification) Fields() []schema.Field {
@@ -410,15 +410,15 @@ func (UserSegment) Hooks() *schema.ModelHooks {
 // SegmentRule represents individual rules for user segments (placeholder for future implementation)
 type SegmentRule struct {
 	schema.BaseSchema
-	Id         int64  `json:"id" db:"id"`
-	SegmentID  int64  `json:"segment_id" db:"segment_id"`
-	Field      string `json:"field" db:"field"`
-	Operator   string `json:"operator" db:"operator"`
-	Value      string `json:"value" db:"value"`
-	LogicType  string `json:"logic_type" db:"logic_type"`
-	SortOrder  int32  `json:"sort_order" db:"sort_order"`
-	CreatedAt  string `json:"created_at" db:"created_at"`
-	UpdatedAt  string `json:"updated_at" db:"updated_at"`
+	Id        int64  `json:"id" db:"id"`
+	SegmentID int64  `json:"segment_id" db:"segment_id"`
+	Field     string `json:"field" db:"field"`
+	Operator  string `json:"operator" db:"operator"`
+	Value     string `json:"value" db:"value"`
+	LogicType string `json:"logic_type" db:"logic_type"`
+	SortOrder int32  `json:"sort_order" db:"sort_order"`
+	CreatedAt string `json:"created_at" db:"created_at"`
+	UpdatedAt string `json:"updated_at" db:"updated_at"`
 }
 
 func (SegmentRule) Fields() []schema.Field {

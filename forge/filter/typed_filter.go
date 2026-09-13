@@ -74,45 +74,44 @@ func (tfb *TypedFilterBuilder[T]) Build(ctx context.Context) (orm.QuerySet[T], e
 type TypedFilterOp string
 
 const (
-	TypedOpEquals      TypedFilterOp = "equals"
-	TypedOpNotEquals   TypedFilterOp = "not_equals"
-	TypedOpGreater     TypedFilterOp = "greater"
+	TypedOpEquals         TypedFilterOp = "equals"
+	TypedOpNotEquals      TypedFilterOp = "not_equals"
+	TypedOpGreater        TypedFilterOp = "greater"
 	TypedOpGreaterOrEqual TypedFilterOp = "greater_or_equal"
-	TypedOpLess        TypedFilterOp = "less"
-	TypedOpLessOrEqual TypedFilterOp = "less_or_equal"
-	TypedOpContains    TypedFilterOp = "contains"
-	TypedOpIContains   TypedFilterOp = "icontains"
-	TypedOpStartsWith  TypedFilterOp = "starts_with"
-	TypedOpEndsWith    TypedFilterOp = "ends_with"
-	TypedOpIn          TypedFilterOp = "in"
-	TypedOpIsNull      TypedFilterOp = "is_null"
-	TypedOpIsNotNull   TypedFilterOp = "is_not_null"
+	TypedOpLess           TypedFilterOp = "less"
+	TypedOpLessOrEqual    TypedFilterOp = "less_or_equal"
+	TypedOpContains       TypedFilterOp = "contains"
+	TypedOpIContains      TypedFilterOp = "icontains"
+	TypedOpStartsWith     TypedFilterOp = "starts_with"
+	TypedOpEndsWith       TypedFilterOp = "ends_with"
+	TypedOpIn             TypedFilterOp = "in"
+	TypedOpIsNull         TypedFilterOp = "is_null"
+	TypedOpIsNotNull      TypedFilterOp = "is_not_null"
 )
 
 // Helper functions for filter operations
 var (
-	Equals      = TypedOpEquals
-	NotEquals   = TypedOpNotEquals
-	Greater     = TypedOpGreater
+	Equals         = TypedOpEquals
+	NotEquals      = TypedOpNotEquals
+	Greater        = TypedOpGreater
 	GreaterOrEqual = TypedOpGreaterOrEqual
-	Less        = TypedOpLess
-	LessOrEqual = TypedOpLessOrEqual
-	Contains    = TypedOpContains
-	IContains   = TypedOpIContains
-	StartsWith  = TypedOpStartsWith
-	EndsWith    = TypedOpEndsWith
-	In          = TypedOpIn
-	IsNull      = TypedOpIsNull
-	IsNotNull   = TypedOpIsNotNull
+	Less           = TypedOpLess
+	LessOrEqual    = TypedOpLessOrEqual
+	Contains       = TypedOpContains
+	IContains      = TypedOpIContains
+	StartsWith     = TypedOpStartsWith
+	EndsWith       = TypedOpEndsWith
+	In             = TypedOpIn
+	IsNull         = TypedOpIsNull
+	IsNotNull      = TypedOpIsNotNull
 )
 
 // buildTypedExpression builds an ORM expression from a field expression and operation
 func buildTypedExpression(fieldExpr orm.Expression, op TypedFilterOp, value interface{}) orm.Expression {
 	// This is a simplified version - in practice, you'd need to handle each operation type
 	// and convert to the appropriate ORM expression type
-	
+
 	// For now, return the field expression directly
 	// Full implementation would create ComparisonExpression based on op
 	return fieldExpr
 }
-

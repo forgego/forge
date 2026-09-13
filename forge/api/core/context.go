@@ -67,4 +67,3 @@ func ActionFromContext(ctx context.Context) (string, bool) {
 	}
 	return "", false
 }
-

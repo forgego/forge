@@ -9,6 +9,7 @@ import (
 )
 
 // dist contains the built React Admin UI files
+//
 //go:embed dist/*
 var dist embed.FS
 

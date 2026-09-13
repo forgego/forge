@@ -176,4 +176,3 @@ func TestCoreMiddleware_Apply(t *testing.T) {
 
 	assert.Equal(t, "true", w.Header().Get("X-Applied"))
 }
-

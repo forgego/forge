@@ -29,4 +29,3 @@ func (f *HiddenField) ToInternalValue(data interface{}) (interface{}, error) {
 	}
 	return data, nil
 }
-

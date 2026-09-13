@@ -133,6 +133,3 @@ func BuildAggregate(name, field string) (Aggregate, bool) {
 	}
 	return aggregate, true
 }
-
-
-

@@ -44,4 +44,3 @@ type BackendRegistry interface {
 	// GetUser attempts to get a user using all backends
 	GetUser(ctx context.Context, identifier string) (*models.User, error)
 }
-

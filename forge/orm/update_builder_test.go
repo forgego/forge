@@ -141,6 +141,3 @@ func TestUpdateBuilder_Chaining(t *testing.T) {
 
 // GetUpdates is not exported - would need integration test to verify updates
 // This is tested indirectly through Execute() in integration tests
-
-
-

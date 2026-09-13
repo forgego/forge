@@ -245,4 +245,3 @@ func SerializeMany(models interface{}) []map[string]interface{} {
 
 	return result
 }
-

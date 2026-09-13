@@ -66,4 +66,3 @@ func getRow(obj interface{}, headers []string) []string {
 	// Simplified - would use reflection to get field values
 	return make([]string, len(headers))
 }
-

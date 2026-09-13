@@ -90,4 +90,3 @@ func DiscoverAPIFiles(projectRoot string) ([]string, error) {
 
 	return apiFiles, nil
 }
-

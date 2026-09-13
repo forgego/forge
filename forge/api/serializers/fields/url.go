@@ -38,4 +38,3 @@ func (f *URLField) Validate(value interface{}) error {
 
 	return nil
 }
-

@@ -35,10 +35,10 @@ func (SafeAccessorTestModel) Fields() []schema.Field {
 
 type SafeAccessorRelModel struct {
 	schema.BaseSchema
-	ID        int `db:"id"`
-	ParentID  int `db:"parent_id"`
-	Parent    *SafeAccessorTestModel `db:"-"`
-	Title     string `db:"title"`
+	ID       int                    `db:"id"`
+	ParentID int                    `db:"parent_id"`
+	Parent   *SafeAccessorTestModel `db:"-"`
+	Title    string                 `db:"title"`
 }
 
 func (SafeAccessorRelModel) Meta() schema.Meta {

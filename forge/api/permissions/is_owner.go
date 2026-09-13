@@ -120,4 +120,3 @@ func getOwnerID(obj interface{}, fieldName string) interface{} {
 
 	return nil
 }
-

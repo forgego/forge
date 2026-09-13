@@ -5,8 +5,8 @@ package migrate
 import (
 	"github.com/forgego/forge/codegen"
 	"github.com/forgego/forge/db/migrate/generate"
-	"github.com/forgego/forge/db/migrate/state"
 	"github.com/forgego/forge/db/migrate/sql"
+	"github.com/forgego/forge/db/migrate/state"
 )
 
 // Generate creates a new migration generator and generates migration files
@@ -144,4 +144,3 @@ type Generator struct {
 func (g *Generator) GenerateMigrations(name string) error {
 	return g.generator.GenerateMigrations(name)
 }
-

@@ -128,4 +128,3 @@ func TestRendererList_GetMediaTypes(t *testing.T) {
 	assert.Contains(t, types, "application/xml")
 	assert.Contains(t, types, "text/html")
 }
-

@@ -56,10 +56,11 @@ func ParsePaginationParams(r *http.Request, defaultPageSize int) (page, pageSize
 // Deprecated: Use ParsePaginationParams() for clarity (parsing vs getting).
 // GetPaginationParams will be removed in v3.0.
 // Migration:
-//   // Old
-//   page, size, offset := api.GetPaginationParams(r, 20)
-//   // New
-//   page, size, offset := api.ParsePaginationParams(r, 20)
+//
+//	// Old
+//	page, size, offset := api.GetPaginationParams(r, 20)
+//	// New
+//	page, size, offset := api.ParsePaginationParams(r, 20)
 func GetPaginationParams(r *http.Request, defaultPageSize int) (page, pageSize, offset int) {
 	return ParsePaginationParams(r, defaultPageSize)
 }
@@ -122,4 +123,3 @@ func SendPaginatedResponse(w http.ResponseWriter, r *http.Request, results inter
 	response := BuildPaginatedResponse(r, results, totalCount, page, pageSize)
 	return forgehttp.SendJSON(w, http.StatusOK, response)
 }
-

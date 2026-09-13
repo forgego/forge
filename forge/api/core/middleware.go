@@ -25,4 +25,3 @@ func Apply(handler http.Handler, middlewares ...Middleware) http.Handler {
 func ApplyFunc(handler http.HandlerFunc, middlewares ...Middleware) http.Handler {
 	return Chain(middlewares...)(handler)
 }
-

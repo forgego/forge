@@ -119,4 +119,3 @@ func ListErrorCodesByType(errType ErrorType) []*ErrorCode {
 
 	return codes
 }
-

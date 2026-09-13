@@ -45,4 +45,3 @@ func (g *DefaultCacheKeyGenerator) GenerateKey(parts ...string) string {
 	}
 	return key
 }
-

@@ -36,7 +36,7 @@ func MessageUser(ctx context.Context, r *http.Request, message string, level Mes
 
 	// Get existing messages
 	messages := getMessages(sessionManager, r)
-	
+
 	// Add new message
 	messages = append(messages, Message{
 		Level:   level,
@@ -104,4 +104,3 @@ func Warning(ctx context.Context, r *http.Request, message string) error {
 func Error(ctx context.Context, r *http.Request, message string) error {
 	return MessageUser(ctx, r, message, MessageError)
 }
-

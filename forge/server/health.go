@@ -186,4 +186,3 @@ func SimpleHealthHandler() http.HandlerFunc {
 		w.Write([]byte("OK"))
 	}
 }
-

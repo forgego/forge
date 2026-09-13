@@ -1732,17 +1732,17 @@ func TestBuildEcommerceRouter_APICustomerAndAddressFlow(t *testing.T) {
 
 	// 4. Create address for customer
 	createdAddress := performJSONRequest(t, router, http.MethodPost, "/api/v1/addresses/", map[string]interface{}{
-		"customer_id":          customerID,
-		"address_type":         "shipping",
-		"first_name":           "Alice",
-		"last_name":            "Smith",
-		"address_line1":        "123 Market St",
-		"city":                 "Seattle",
-		"state_province":       "WA",
-		"postal_code":          "98101",
-		"country_code":         "US",
-		"country_name":         "United States",
-		"is_default_shipping":  true,
+		"customer_id":         customerID,
+		"address_type":        "shipping",
+		"first_name":          "Alice",
+		"last_name":           "Smith",
+		"address_line1":       "123 Market St",
+		"city":                "Seattle",
+		"state_province":      "WA",
+		"postal_code":         "98101",
+		"country_code":        "US",
+		"country_name":        "United States",
+		"is_default_shipping": true,
 	}, http.StatusCreated)
 	addressID := int64(createdAddress["id"].(float64))
 	if addressID == 0 {
@@ -2341,5 +2341,3 @@ func TestBuildEcommerceRouter_CheckoutEndpointFlow(t *testing.T) {
 		t.Fatalf("expected at least 1 total order in summary, got %v", totalOrders)
 	}
 }
-
-

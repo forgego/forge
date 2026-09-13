@@ -286,4 +286,3 @@ func (w *DateTimeWidget) Parse(value string) (interface{}, error) {
 
 	return nil, fmt.Errorf("invalid datetime format: %s", value)
 }
-

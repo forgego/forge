@@ -40,4 +40,3 @@ func (p *IsAuthenticatedOrReadOnly) GetMessage() string {
 func (p *IsAuthenticatedOrReadOnly) GetCode() string {
 	return "not_authenticated"
 }
-

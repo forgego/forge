@@ -225,4 +225,3 @@ func RegisterErrorCodeWithVersion(code, description string, httpStatus int, errT
 		Version:     version,
 	})
 }
-

@@ -61,4 +61,3 @@ func ValidateNestingDepth(key string, currentDepth, maxDepth int) error {
 	}
 	return nil
 }
-

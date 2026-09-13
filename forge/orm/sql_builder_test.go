@@ -253,6 +253,3 @@ func TestSQLBuilder_BuildDelete(t *testing.T) {
 	assert.Contains(t, sql, "DELETE FROM")
 	assert.Contains(t, sql, `"users"`)
 }
-
-
-

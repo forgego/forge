@@ -273,21 +273,21 @@ func (ReturnRequest) Hooks() *schema.ModelHooks {
 // LiveChatSession represents live chat sessions
 type LiveChatSession struct {
 	schema.BaseSchema
-	Id          int64  `json:"id" db:"id"`
-	SessionID   string `json:"session_id" db:"session_id"`
-	CustomerID  int64  `json:"customer_id" db:"customer_id"`
-	AgentID     int64  `json:"agent_id" db:"agent_id"`
-	Status      string `json:"status" db:"status"`
-	StartedAt   string `json:"started_at" db:"started_at"`
-	EndedAt     string `json:"ended_at" db:"ended_at"`
-	Duration    int32  `json:"duration" db:"duration"`
-	MsgCount    int32  `json:"message_count" db:"message_count"`
-	Rating      int32  `json:"rating" db:"rating"`
-	Feedback    string `json:"feedback" db:"feedback"`
-	IPAddress   string `json:"ip_address" db:"ip_address"`
-	UserAgent   string `json:"user_agent" db:"user_agent"`
-	CreatedAt   string `json:"created_at" db:"created_at"`
-	UpdatedAt   string `json:"updated_at" db:"updated_at"`
+	Id         int64  `json:"id" db:"id"`
+	SessionID  string `json:"session_id" db:"session_id"`
+	CustomerID int64  `json:"customer_id" db:"customer_id"`
+	AgentID    int64  `json:"agent_id" db:"agent_id"`
+	Status     string `json:"status" db:"status"`
+	StartedAt  string `json:"started_at" db:"started_at"`
+	EndedAt    string `json:"ended_at" db:"ended_at"`
+	Duration   int32  `json:"duration" db:"duration"`
+	MsgCount   int32  `json:"message_count" db:"message_count"`
+	Rating     int32  `json:"rating" db:"rating"`
+	Feedback   string `json:"feedback" db:"feedback"`
+	IPAddress  string `json:"ip_address" db:"ip_address"`
+	UserAgent  string `json:"user_agent" db:"user_agent"`
+	CreatedAt  string `json:"created_at" db:"created_at"`
+	UpdatedAt  string `json:"updated_at" db:"updated_at"`
 }
 
 func (LiveChatSession) Fields() []schema.Field {
@@ -553,15 +553,15 @@ func (ReturnItem) Hooks() *schema.ModelHooks {
 // StatusChange tracks status changes for tickets and returns
 type StatusChange struct {
 	schema.BaseSchema
-	Id         int64  `json:"id" db:"id"`
-	EntityType string `json:"entity_type" db:"entity_type"`
-	EntityID   int64  `json:"entity_id" db:"entity_id"`
-	FromStatus string `json:"from_status" db:"from_status"`
-	ToStatus   string `json:"to_status" db:"to_status"`
-	ChangedBy  int64  `json:"changed_by" db:"changed_by"`
+	Id          int64  `json:"id" db:"id"`
+	EntityType  string `json:"entity_type" db:"entity_type"`
+	EntityID    int64  `json:"entity_id" db:"entity_id"`
+	FromStatus  string `json:"from_status" db:"from_status"`
+	ToStatus    string `json:"to_status" db:"to_status"`
+	ChangedBy   int64  `json:"changed_by" db:"changed_by"`
 	ChangerType string `json:"changer_type" db:"changer_type"`
-	Note       string `json:"note" db:"note"`
-	CreatedAt  string `json:"created_at" db:"created_at"`
+	Note        string `json:"note" db:"note"`
+	CreatedAt   string `json:"created_at" db:"created_at"`
 }
 
 func (StatusChange) Fields() []schema.Field {

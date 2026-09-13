@@ -18,4 +18,3 @@ func NewMethodNotAllowed(allowedMethods []string) *MethodNotAllowed {
 		AllowedMethods: allowedMethods,
 	}
 }
-

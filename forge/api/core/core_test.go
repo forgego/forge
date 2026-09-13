@@ -158,4 +158,3 @@ func TestAuthFromContext_NotSet(t *testing.T) {
 	_, ok := AuthFromContext(ctx)
 	assert.False(t, ok)
 }
-

@@ -420,4 +420,3 @@ func TestUserRepository_Delete(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
-

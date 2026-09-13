@@ -147,4 +147,3 @@ func SetTypeBaseURL(url string) {
 func GetTypeBaseURL() string {
 	return typeBaseURL
 }
-

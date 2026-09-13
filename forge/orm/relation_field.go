@@ -179,6 +179,3 @@ var ErrCycleDetected = fmt.Errorf("cycle detected in relation traversal")
 
 // ErrMaxDepthExceeded is returned when max depth is exceeded
 var ErrMaxDepthExceeded = fmt.Errorf("max relation depth exceeded")
-
-
-

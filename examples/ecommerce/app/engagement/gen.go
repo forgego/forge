@@ -2,24 +2,23 @@
 package engagement
 
 import (
-	"time"
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
 	validate "github.com/forgego/forge/validate"
+	"time"
 )
-
 
 // RecentlyViewedGenerated struct definition
 type RecentlyViewedGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	CustomerId int64 `json:"customer_id" db:"customer_id" validate:"required"`
-	ProductId int64 `json:"product_id" db:"product_id" validate:"required"`
-	ViewedAt time.Time `json:"viewed_at" db:"viewed_at" validate:"required"`
-	ViewCount int32 `json:"view_count" db:"view_count" validate:""`
-	SessionId string `json:"session_id" db:"session_id" validate:"max=100"`
-	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id         int64     `json:"id" db:"id" validate:""`
+	CustomerId int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	ProductId  int64     `json:"product_id" db:"product_id" validate:"required"`
+	ViewedAt   time.Time `json:"viewed_at" db:"viewed_at" validate:"required"`
+	ViewCount  int32     `json:"view_count" db:"view_count" validate:""`
+	SessionId  string    `json:"session_id" db:"session_id" validate:"max=100"`
+	CreatedAt  time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt  time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the RecentlyViewed model
@@ -34,39 +33,36 @@ var RecentlyViewedObjects, _ = orm.NewManager[RecentlyViewed]("recently_viewed")
 
 // RecentlyViewedFields provides type-safe field access for RecentlyViewed
 type RecentlyViewedFields struct {
-	Id orm.Field[int64]
+	Id         orm.Field[int64]
 	CustomerId orm.Field[int64]
-	ProductId orm.Field[int64]
-	ViewedAt orm.Field[time.Time]
-	ViewCount orm.Field[int32]
-	SessionId orm.Field[string]
-	CreatedAt orm.Field[time.Time]
-	UpdatedAt orm.Field[time.Time]
+	ProductId  orm.Field[int64]
+	ViewedAt   orm.Field[time.Time]
+	ViewCount  orm.Field[int32]
+	SessionId  orm.Field[string]
+	CreatedAt  orm.Field[time.Time]
+	UpdatedAt  orm.Field[time.Time]
 }
 
 var RecentlyViewedFieldsInstance = RecentlyViewedFields{
-	Id: orm.NewField[int64]("id", "recently_viewed"),
+	Id:         orm.NewField[int64]("id", "recently_viewed"),
 	CustomerId: orm.NewField[int64]("customer_id", "recently_viewed"),
-	ProductId: orm.NewField[int64]("product_id", "recently_viewed"),
-	ViewedAt: orm.NewField[time.Time]("viewed_at", "recently_viewed"),
-	ViewCount: orm.NewField[int32]("view_count", "recently_viewed"),
-	SessionId: orm.NewField[string]("session_id", "recently_viewed"),
-	CreatedAt: orm.NewField[time.Time]("created_at", "recently_viewed"),
-	UpdatedAt: orm.NewField[time.Time]("updated_at", "recently_viewed"),
+	ProductId:  orm.NewField[int64]("product_id", "recently_viewed"),
+	ViewedAt:   orm.NewField[time.Time]("viewed_at", "recently_viewed"),
+	ViewCount:  orm.NewField[int32]("view_count", "recently_viewed"),
+	SessionId:  orm.NewField[string]("session_id", "recently_viewed"),
+	CreatedAt:  orm.NewField[time.Time]("created_at", "recently_viewed"),
+	UpdatedAt:  orm.NewField[time.Time]("updated_at", "recently_viewed"),
 }
-
-
-
 
 // ProductComparisonGenerated struct definition
 type ProductComparisonGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	CustomerId int64 `json:"customer_id" db:"customer_id" validate:"required"`
-	Name string `json:"name" db:"name" validate:"max=200"`
-	IsPublic bool `json:"is_public" db:"is_public" validate:""`
-	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id         int64     `json:"id" db:"id" validate:""`
+	CustomerId int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	Name       string    `json:"name" db:"name" validate:"max=200"`
+	IsPublic   bool      `json:"is_public" db:"is_public" validate:""`
+	CreatedAt  time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt  time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the ProductComparison model
@@ -81,44 +77,41 @@ var ProductComparisonObjects, _ = orm.NewManager[ProductComparison]("product_com
 
 // ProductComparisonFields provides type-safe field access for ProductComparison
 type ProductComparisonFields struct {
-	Id orm.Field[int64]
+	Id         orm.Field[int64]
 	CustomerId orm.Field[int64]
-	Name orm.Field[string]
-	IsPublic orm.Field[bool]
-	CreatedAt orm.Field[time.Time]
-	UpdatedAt orm.Field[time.Time]
+	Name       orm.Field[string]
+	IsPublic   orm.Field[bool]
+	CreatedAt  orm.Field[time.Time]
+	UpdatedAt  orm.Field[time.Time]
 }
 
 var ProductComparisonFieldsInstance = ProductComparisonFields{
-	Id: orm.NewField[int64]("id", "product_comparisons"),
+	Id:         orm.NewField[int64]("id", "product_comparisons"),
 	CustomerId: orm.NewField[int64]("customer_id", "product_comparisons"),
-	Name: orm.NewField[string]("name", "product_comparisons"),
-	IsPublic: orm.NewField[bool]("is_public", "product_comparisons"),
-	CreatedAt: orm.NewField[time.Time]("created_at", "product_comparisons"),
-	UpdatedAt: orm.NewField[time.Time]("updated_at", "product_comparisons"),
+	Name:       orm.NewField[string]("name", "product_comparisons"),
+	IsPublic:   orm.NewField[bool]("is_public", "product_comparisons"),
+	CreatedAt:  orm.NewField[time.Time]("created_at", "product_comparisons"),
+	UpdatedAt:  orm.NewField[time.Time]("updated_at", "product_comparisons"),
 }
-
-
-
 
 // NotificationGenerated struct definition
 type NotificationGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	CustomerId int64 `json:"customer_id" db:"customer_id" validate:"required"`
-	Title string `json:"title" db:"title" validate:"required,max=200"`
-	Message string `json:"message" db:"message" validate:"required"`
-	Type string `json:"type" db:"type" validate:"max=50"`
-	Priority string `json:"priority" db:"priority" validate:"max=20"`
-	IsRead bool `json:"is_read" db:"is_read" validate:""`
-	ReadAt time.Time `json:"read_at" db:"read_at" validate:""`
-	ActionUrl string `json:"action_url" db:"action_url" validate:"max=500"`
-	ActionLabel string `json:"action_label" db:"action_label" validate:"max=100"`
-	RelatedType string `json:"related_type" db:"related_type" validate:"max=50"`
-	RelatedId int64 `json:"related_id" db:"related_id" validate:""`
-	ExpiresAt time.Time `json:"expires_at" db:"expires_at" validate:""`
-	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id          int64     `json:"id" db:"id" validate:""`
+	CustomerId  int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	Title       string    `json:"title" db:"title" validate:"required,max=200"`
+	Message     string    `json:"message" db:"message" validate:"required"`
+	Type        string    `json:"type" db:"type" validate:"max=50"`
+	Priority    string    `json:"priority" db:"priority" validate:"max=20"`
+	IsRead      bool      `json:"is_read" db:"is_read" validate:""`
+	ReadAt      time.Time `json:"read_at" db:"read_at" validate:""`
+	ActionUrl   string    `json:"action_url" db:"action_url" validate:"max=500"`
+	ActionLabel string    `json:"action_label" db:"action_label" validate:"max=100"`
+	RelatedType string    `json:"related_type" db:"related_type" validate:"max=50"`
+	RelatedId   int64     `json:"related_id" db:"related_id" validate:""`
+	ExpiresAt   time.Time `json:"expires_at" db:"expires_at" validate:""`
+	CreatedAt   time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the Notification model
@@ -133,58 +126,55 @@ var NotificationObjects, _ = orm.NewManager[Notification]("notifications")
 
 // NotificationFields provides type-safe field access for Notification
 type NotificationFields struct {
-	Id orm.Field[int64]
-	CustomerId orm.Field[int64]
-	Title orm.Field[string]
-	Message orm.Field[string]
-	Type orm.Field[string]
-	Priority orm.Field[string]
-	IsRead orm.Field[bool]
-	ReadAt orm.Field[time.Time]
-	ActionUrl orm.Field[string]
+	Id          orm.Field[int64]
+	CustomerId  orm.Field[int64]
+	Title       orm.Field[string]
+	Message     orm.Field[string]
+	Type        orm.Field[string]
+	Priority    orm.Field[string]
+	IsRead      orm.Field[bool]
+	ReadAt      orm.Field[time.Time]
+	ActionUrl   orm.Field[string]
 	ActionLabel orm.Field[string]
 	RelatedType orm.Field[string]
-	RelatedId orm.Field[int64]
-	ExpiresAt orm.Field[time.Time]
-	CreatedAt orm.Field[time.Time]
-	UpdatedAt orm.Field[time.Time]
+	RelatedId   orm.Field[int64]
+	ExpiresAt   orm.Field[time.Time]
+	CreatedAt   orm.Field[time.Time]
+	UpdatedAt   orm.Field[time.Time]
 }
 
 var NotificationFieldsInstance = NotificationFields{
-	Id: orm.NewField[int64]("id", "notifications"),
-	CustomerId: orm.NewField[int64]("customer_id", "notifications"),
-	Title: orm.NewField[string]("title", "notifications"),
-	Message: orm.NewField[string]("message", "notifications"),
-	Type: orm.NewField[string]("type", "notifications"),
-	Priority: orm.NewField[string]("priority", "notifications"),
-	IsRead: orm.NewField[bool]("is_read", "notifications"),
-	ReadAt: orm.NewField[time.Time]("read_at", "notifications"),
-	ActionUrl: orm.NewField[string]("action_url", "notifications"),
+	Id:          orm.NewField[int64]("id", "notifications"),
+	CustomerId:  orm.NewField[int64]("customer_id", "notifications"),
+	Title:       orm.NewField[string]("title", "notifications"),
+	Message:     orm.NewField[string]("message", "notifications"),
+	Type:        orm.NewField[string]("type", "notifications"),
+	Priority:    orm.NewField[string]("priority", "notifications"),
+	IsRead:      orm.NewField[bool]("is_read", "notifications"),
+	ReadAt:      orm.NewField[time.Time]("read_at", "notifications"),
+	ActionUrl:   orm.NewField[string]("action_url", "notifications"),
 	ActionLabel: orm.NewField[string]("action_label", "notifications"),
 	RelatedType: orm.NewField[string]("related_type", "notifications"),
-	RelatedId: orm.NewField[int64]("related_id", "notifications"),
-	ExpiresAt: orm.NewField[time.Time]("expires_at", "notifications"),
-	CreatedAt: orm.NewField[time.Time]("created_at", "notifications"),
-	UpdatedAt: orm.NewField[time.Time]("updated_at", "notifications"),
+	RelatedId:   orm.NewField[int64]("related_id", "notifications"),
+	ExpiresAt:   orm.NewField[time.Time]("expires_at", "notifications"),
+	CreatedAt:   orm.NewField[time.Time]("created_at", "notifications"),
+	UpdatedAt:   orm.NewField[time.Time]("updated_at", "notifications"),
 }
-
-
-
 
 // CustomerActivityGenerated struct definition
 type CustomerActivityGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	CustomerId int64 `json:"customer_id" db:"customer_id" validate:""`
-	ActivityType string `json:"activity_type" db:"activity_type" validate:"required,max=50"`
-	Description string `json:"description" db:"description" validate:""`
-	EntityType string `json:"entity_type" db:"entity_type" validate:"max=50"`
-	EntityId int64 `json:"entity_id" db:"entity_id" validate:""`
-	IpAddress string `json:"ip_address" db:"ip_address" validate:"max=45"`
-	UserAgent string `json:"user_agent" db:"user_agent" validate:"max=500"`
-	SessionId string `json:"session_id" db:"session_id" validate:"max=100"`
-	Metadata string `json:"metadata" db:"metadata" validate:""`
-	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
+	Id           int64     `json:"id" db:"id" validate:""`
+	CustomerId   int64     `json:"customer_id" db:"customer_id" validate:""`
+	ActivityType string    `json:"activity_type" db:"activity_type" validate:"required,max=50"`
+	Description  string    `json:"description" db:"description" validate:""`
+	EntityType   string    `json:"entity_type" db:"entity_type" validate:"max=50"`
+	EntityId     int64     `json:"entity_id" db:"entity_id" validate:""`
+	IpAddress    string    `json:"ip_address" db:"ip_address" validate:"max=45"`
+	UserAgent    string    `json:"user_agent" db:"user_agent" validate:"max=500"`
+	SessionId    string    `json:"session_id" db:"session_id" validate:"max=100"`
+	Metadata     string    `json:"metadata" db:"metadata" validate:""`
+	CreatedAt    time.Time `json:"created_at" db:"created_at" validate:""`
 }
 
 // Validate validates the CustomerActivity model
@@ -199,50 +189,47 @@ var CustomerActivityObjects, _ = orm.NewManager[CustomerActivity]("customer_acti
 
 // CustomerActivityFields provides type-safe field access for CustomerActivity
 type CustomerActivityFields struct {
-	Id orm.Field[int64]
-	CustomerId orm.Field[int64]
+	Id           orm.Field[int64]
+	CustomerId   orm.Field[int64]
 	ActivityType orm.Field[string]
-	Description orm.Field[string]
-	EntityType orm.Field[string]
-	EntityId orm.Field[int64]
-	IpAddress orm.Field[string]
-	UserAgent orm.Field[string]
-	SessionId orm.Field[string]
-	Metadata orm.Field[string]
-	CreatedAt orm.Field[time.Time]
+	Description  orm.Field[string]
+	EntityType   orm.Field[string]
+	EntityId     orm.Field[int64]
+	IpAddress    orm.Field[string]
+	UserAgent    orm.Field[string]
+	SessionId    orm.Field[string]
+	Metadata     orm.Field[string]
+	CreatedAt    orm.Field[time.Time]
 }
 
 var CustomerActivityFieldsInstance = CustomerActivityFields{
-	Id: orm.NewField[int64]("id", "customer_activities"),
-	CustomerId: orm.NewField[int64]("customer_id", "customer_activities"),
+	Id:           orm.NewField[int64]("id", "customer_activities"),
+	CustomerId:   orm.NewField[int64]("customer_id", "customer_activities"),
 	ActivityType: orm.NewField[string]("activity_type", "customer_activities"),
-	Description: orm.NewField[string]("description", "customer_activities"),
-	EntityType: orm.NewField[string]("entity_type", "customer_activities"),
-	EntityId: orm.NewField[int64]("entity_id", "customer_activities"),
-	IpAddress: orm.NewField[string]("ip_address", "customer_activities"),
-	UserAgent: orm.NewField[string]("user_agent", "customer_activities"),
-	SessionId: orm.NewField[string]("session_id", "customer_activities"),
-	Metadata: orm.NewField[string]("metadata", "customer_activities"),
-	CreatedAt: orm.NewField[time.Time]("created_at", "customer_activities"),
+	Description:  orm.NewField[string]("description", "customer_activities"),
+	EntityType:   orm.NewField[string]("entity_type", "customer_activities"),
+	EntityId:     orm.NewField[int64]("entity_id", "customer_activities"),
+	IpAddress:    orm.NewField[string]("ip_address", "customer_activities"),
+	UserAgent:    orm.NewField[string]("user_agent", "customer_activities"),
+	SessionId:    orm.NewField[string]("session_id", "customer_activities"),
+	Metadata:     orm.NewField[string]("metadata", "customer_activities"),
+	CreatedAt:    orm.NewField[time.Time]("created_at", "customer_activities"),
 }
-
-
-
 
 // AbandonedCartReminderGenerated struct definition
 type AbandonedCartReminderGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	CartId int64 `json:"cart_id" db:"cart_id" validate:"required"`
-	CustomerId int64 `json:"customer_id" db:"customer_id" validate:"required"`
-	ReminderType string `json:"reminder_type" db:"reminder_type" validate:"max=50"`
-	SentAt time.Time `json:"sent_at" db:"sent_at" validate:"required"`
-	Status string `json:"status" db:"status" validate:"max=20"`
-	EmailAddress string `json:"email_address" db:"email_address" validate:"max=255"`
-	Converted bool `json:"converted" db:"converted" validate:""`
-	ConvertedAt time.Time `json:"converted_at" db:"converted_at" validate:""`
-	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id           int64     `json:"id" db:"id" validate:""`
+	CartId       int64     `json:"cart_id" db:"cart_id" validate:"required"`
+	CustomerId   int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	ReminderType string    `json:"reminder_type" db:"reminder_type" validate:"max=50"`
+	SentAt       time.Time `json:"sent_at" db:"sent_at" validate:"required"`
+	Status       string    `json:"status" db:"status" validate:"max=20"`
+	EmailAddress string    `json:"email_address" db:"email_address" validate:"max=255"`
+	Converted    bool      `json:"converted" db:"converted" validate:""`
+	ConvertedAt  time.Time `json:"converted_at" db:"converted_at" validate:""`
+	CreatedAt    time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt    time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the AbandonedCartReminder model
@@ -257,49 +244,46 @@ var AbandonedCartReminderObjects, _ = orm.NewManager[AbandonedCartReminder]("aba
 
 // AbandonedCartReminderFields provides type-safe field access for AbandonedCartReminder
 type AbandonedCartReminderFields struct {
-	Id orm.Field[int64]
-	CartId orm.Field[int64]
-	CustomerId orm.Field[int64]
+	Id           orm.Field[int64]
+	CartId       orm.Field[int64]
+	CustomerId   orm.Field[int64]
 	ReminderType orm.Field[string]
-	SentAt orm.Field[time.Time]
-	Status orm.Field[string]
+	SentAt       orm.Field[time.Time]
+	Status       orm.Field[string]
 	EmailAddress orm.Field[string]
-	Converted orm.Field[bool]
-	ConvertedAt orm.Field[time.Time]
-	CreatedAt orm.Field[time.Time]
-	UpdatedAt orm.Field[time.Time]
+	Converted    orm.Field[bool]
+	ConvertedAt  orm.Field[time.Time]
+	CreatedAt    orm.Field[time.Time]
+	UpdatedAt    orm.Field[time.Time]
 }
 
 var AbandonedCartReminderFieldsInstance = AbandonedCartReminderFields{
-	Id: orm.NewField[int64]("id", "abandoned_cart_reminders"),
-	CartId: orm.NewField[int64]("cart_id", "abandoned_cart_reminders"),
-	CustomerId: orm.NewField[int64]("customer_id", "abandoned_cart_reminders"),
+	Id:           orm.NewField[int64]("id", "abandoned_cart_reminders"),
+	CartId:       orm.NewField[int64]("cart_id", "abandoned_cart_reminders"),
+	CustomerId:   orm.NewField[int64]("customer_id", "abandoned_cart_reminders"),
 	ReminderType: orm.NewField[string]("reminder_type", "abandoned_cart_reminders"),
-	SentAt: orm.NewField[time.Time]("sent_at", "abandoned_cart_reminders"),
-	Status: orm.NewField[string]("status", "abandoned_cart_reminders"),
+	SentAt:       orm.NewField[time.Time]("sent_at", "abandoned_cart_reminders"),
+	Status:       orm.NewField[string]("status", "abandoned_cart_reminders"),
 	EmailAddress: orm.NewField[string]("email_address", "abandoned_cart_reminders"),
-	Converted: orm.NewField[bool]("converted", "abandoned_cart_reminders"),
-	ConvertedAt: orm.NewField[time.Time]("converted_at", "abandoned_cart_reminders"),
-	CreatedAt: orm.NewField[time.Time]("created_at", "abandoned_cart_reminders"),
-	UpdatedAt: orm.NewField[time.Time]("updated_at", "abandoned_cart_reminders"),
+	Converted:    orm.NewField[bool]("converted", "abandoned_cart_reminders"),
+	ConvertedAt:  orm.NewField[time.Time]("converted_at", "abandoned_cart_reminders"),
+	CreatedAt:    orm.NewField[time.Time]("created_at", "abandoned_cart_reminders"),
+	UpdatedAt:    orm.NewField[time.Time]("updated_at", "abandoned_cart_reminders"),
 }
-
-
-
 
 // UserSegmentGenerated struct definition
 type UserSegmentGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	Name string `json:"name" db:"name" validate:"required,max=200"`
-	Description string `json:"description" db:"description" validate:""`
-	Conditions string `json:"conditions" db:"conditions" validate:""`
-	IsActive bool `json:"is_active" db:"is_active" validate:""`
-	IsDynamic bool `json:"is_dynamic" db:"is_dynamic" validate:""`
-	Priority int32 `json:"priority" db:"priority" validate:""`
-	MemberCount int32 `json:"member_count" db:"member_count" validate:""`
-	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id          int64     `json:"id" db:"id" validate:""`
+	Name        string    `json:"name" db:"name" validate:"required,max=200"`
+	Description string    `json:"description" db:"description" validate:""`
+	Conditions  string    `json:"conditions" db:"conditions" validate:""`
+	IsActive    bool      `json:"is_active" db:"is_active" validate:""`
+	IsDynamic   bool      `json:"is_dynamic" db:"is_dynamic" validate:""`
+	Priority    int32     `json:"priority" db:"priority" validate:""`
+	MemberCount int32     `json:"member_count" db:"member_count" validate:""`
+	CreatedAt   time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the UserSegment model
@@ -314,44 +298,41 @@ var UserSegmentObjects, _ = orm.NewManager[UserSegment]("user_segments")
 
 // UserSegmentFields provides type-safe field access for UserSegment
 type UserSegmentFields struct {
-	Id orm.Field[int64]
-	Name orm.Field[string]
+	Id          orm.Field[int64]
+	Name        orm.Field[string]
 	Description orm.Field[string]
-	Conditions orm.Field[string]
-	IsActive orm.Field[bool]
-	IsDynamic orm.Field[bool]
-	Priority orm.Field[int32]
+	Conditions  orm.Field[string]
+	IsActive    orm.Field[bool]
+	IsDynamic   orm.Field[bool]
+	Priority    orm.Field[int32]
 	MemberCount orm.Field[int32]
-	CreatedAt orm.Field[time.Time]
-	UpdatedAt orm.Field[time.Time]
+	CreatedAt   orm.Field[time.Time]
+	UpdatedAt   orm.Field[time.Time]
 }
 
 var UserSegmentFieldsInstance = UserSegmentFields{
-	Id: orm.NewField[int64]("id", "user_segments"),
-	Name: orm.NewField[string]("name", "user_segments"),
+	Id:          orm.NewField[int64]("id", "user_segments"),
+	Name:        orm.NewField[string]("name", "user_segments"),
 	Description: orm.NewField[string]("description", "user_segments"),
-	Conditions: orm.NewField[string]("conditions", "user_segments"),
-	IsActive: orm.NewField[bool]("is_active", "user_segments"),
-	IsDynamic: orm.NewField[bool]("is_dynamic", "user_segments"),
-	Priority: orm.NewField[int32]("priority", "user_segments"),
+	Conditions:  orm.NewField[string]("conditions", "user_segments"),
+	IsActive:    orm.NewField[bool]("is_active", "user_segments"),
+	IsDynamic:   orm.NewField[bool]("is_dynamic", "user_segments"),
+	Priority:    orm.NewField[int32]("priority", "user_segments"),
 	MemberCount: orm.NewField[int32]("member_count", "user_segments"),
-	CreatedAt: orm.NewField[time.Time]("created_at", "user_segments"),
-	UpdatedAt: orm.NewField[time.Time]("updated_at", "user_segments"),
+	CreatedAt:   orm.NewField[time.Time]("created_at", "user_segments"),
+	UpdatedAt:   orm.NewField[time.Time]("updated_at", "user_segments"),
 }
-
-
-
 
 // SegmentRuleGenerated struct definition
 type SegmentRuleGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	SegmentId int64 `json:"segment_id" db:"segment_id" validate:"required"`
-	Field string `json:"field" db:"field" validate:"required,max=100"`
-	Operator string `json:"operator" db:"operator" validate:"required,max=20"`
-	Value string `json:"value" db:"value" validate:"required,max=500"`
-	LogicType string `json:"logic_type" db:"logic_type" validate:"max=10"`
-	SortOrder int32 `json:"sort_order" db:"sort_order" validate:""`
+	Id        int64     `json:"id" db:"id" validate:""`
+	SegmentId int64     `json:"segment_id" db:"segment_id" validate:"required"`
+	Field     string    `json:"field" db:"field" validate:"required,max=100"`
+	Operator  string    `json:"operator" db:"operator" validate:"required,max=20"`
+	Value     string    `json:"value" db:"value" validate:"required,max=500"`
+	LogicType string    `json:"logic_type" db:"logic_type" validate:"max=10"`
+	SortOrder int32     `json:"sort_order" db:"sort_order" validate:""`
 	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
@@ -368,11 +349,11 @@ var SegmentRuleObjects, _ = orm.NewManager[SegmentRule]("segment_rules")
 
 // SegmentRuleFields provides type-safe field access for SegmentRule
 type SegmentRuleFields struct {
-	Id orm.Field[int64]
+	Id        orm.Field[int64]
 	SegmentId orm.Field[int64]
-	Field orm.Field[string]
-	Operator orm.Field[string]
-	Value orm.Field[string]
+	Field     orm.Field[string]
+	Operator  orm.Field[string]
+	Value     orm.Field[string]
 	LogicType orm.Field[string]
 	SortOrder orm.Field[int32]
 	CreatedAt orm.Field[time.Time]
@@ -380,17 +361,13 @@ type SegmentRuleFields struct {
 }
 
 var SegmentRuleFieldsInstance = SegmentRuleFields{
-	Id: orm.NewField[int64]("id", "segment_rules"),
+	Id:        orm.NewField[int64]("id", "segment_rules"),
 	SegmentId: orm.NewField[int64]("segment_id", "segment_rules"),
-	Field: orm.NewField[string]("field", "segment_rules"),
-	Operator: orm.NewField[string]("operator", "segment_rules"),
-	Value: orm.NewField[string]("value", "segment_rules"),
+	Field:     orm.NewField[string]("field", "segment_rules"),
+	Operator:  orm.NewField[string]("operator", "segment_rules"),
+	Value:     orm.NewField[string]("value", "segment_rules"),
 	LogicType: orm.NewField[string]("logic_type", "segment_rules"),
 	SortOrder: orm.NewField[int32]("sort_order", "segment_rules"),
 	CreatedAt: orm.NewField[time.Time]("created_at", "segment_rules"),
 	UpdatedAt: orm.NewField[time.Time]("updated_at", "segment_rules"),
 }
-
-
-
-

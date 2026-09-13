@@ -58,4 +58,3 @@ func (c *RunServerCommand) Execute(ctx *core.Context, args []string) error {
 
 	return nil
 }
-

@@ -63,4 +63,3 @@ func TestMaskParameters(t *testing.T) {
 		t.Error("ID should be masked")
 	}
 }
-

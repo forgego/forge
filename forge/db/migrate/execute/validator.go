@@ -132,4 +132,3 @@ func (v *MigrationValidator) ValidateMigrationsDir(migrationsDir string) error {
 
 	return nil
 }
-

@@ -80,4 +80,3 @@ func ProductionErrorHandler(logger *zap.Logger, typeBaseURL, linkURL string) *Ha
 	// Use default sanitizer (always enabled in production)
 	return builder.Build()
 }
-

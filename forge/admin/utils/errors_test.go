@@ -44,7 +44,7 @@ func TestAdminError_Error(t *testing.T) {
 func TestAdminError_WithDetail(t *testing.T) {
 	err := NewAdminError(http.StatusBadRequest, "Validation failed")
 	result := err.WithDetail("field", "email")
-	
+
 	if result != err {
 		t.Error("WithDetail() should return the same error for chaining")
 	}
@@ -56,7 +56,7 @@ func TestAdminError_WithDetail(t *testing.T) {
 func TestAdminError_WithDetail_Multiple(t *testing.T) {
 	err := NewAdminError(http.StatusBadRequest, "Validation failed")
 	err.WithDetail("field", "email").WithDetail("error", "invalid format")
-	
+
 	if len(err.Details) != 2 {
 		t.Errorf("Details length = %d, want 2", len(err.Details))
 	}
@@ -124,7 +124,7 @@ func TestHandleAdminError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rr := httptest.NewRecorder()
-			
+
 			if tt.err != nil {
 				HandleAdminError(rr, tt.err)
 				if rr.Code != tt.expectedCode {
@@ -139,7 +139,7 @@ func TestHandleAdminError_GenericError(t *testing.T) {
 	rr := httptest.NewRecorder()
 	genericErr := error(&testError{msg: "something went wrong"})
 	HandleAdminError(rr, genericErr)
-	
+
 	if rr.Code != http.StatusInternalServerError {
 		t.Errorf("HandleAdminError() status = %d, want %d", rr.Code, http.StatusInternalServerError)
 	}

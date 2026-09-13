@@ -78,6 +78,3 @@ func getRegisteredTypeNames() []string {
 	}
 	return names
 }
-
-
-

@@ -22,4 +22,3 @@ func (p *JSONParser) Parse(r io.Reader, v interface{}) error {
 func (p *JSONParser) MediaType() string {
 	return "application/json"
 }
-

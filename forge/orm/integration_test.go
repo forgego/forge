@@ -102,7 +102,7 @@ func TestQuerySet_Integration_Filter(t *testing.T) {
 	results, err := filtered.All(context.Background())
 	require.NoError(t, err)
 	assert.Len(t, results, 2) // Product 2 (20.0) and Product 3 (30.0)
-	
+
 	for _, p := range results {
 		assert.Greater(t, p.Price, 15.0)
 	}
@@ -111,7 +111,7 @@ func TestQuerySet_Integration_Filter(t *testing.T) {
 func TestQuerySet_Integration_OrderBy(t *testing.T) {
 	database, tableName := setupIsolatedTestTable(t)
 	escapedTable := EscapeIdentifier(tableName)
-	
+
 	_, err := database.Exec(fmt.Sprintf(`
 		INSERT INTO %s (name, price, email) VALUES
 		('A', 10.0, ''), ('B', 30.0, ''), ('C', 20.0, '')
@@ -137,7 +137,7 @@ func TestQuerySet_Integration_LimitOffset(t *testing.T) {
 
 	// Insert 15 records
 	for i := 1; i <= 15; i++ {
-		_, err := database.Exec(fmt.Sprintf(`INSERT INTO %s (name, price, email) VALUES ($1, $2, $3)`, escapedTable), 
+		_, err := database.Exec(fmt.Sprintf(`INSERT INTO %s (name, price, email) VALUES ($1, $2, $3)`, escapedTable),
 			"Product", float64(i), "")
 		require.NoError(t, err)
 	}
@@ -149,7 +149,7 @@ func TestQuerySet_Integration_LimitOffset(t *testing.T) {
 	limited := qs.OrderBy(Asc("price")).Limit(5).Offset(5)
 	results, err := limited.All(context.Background())
 	require.NoError(t, err)
-	
+
 	assert.Len(t, results, 5)
 	// Should be 6, 7, 8, 9, 10
 	assert.Equal(t, 6.0, results[0].Price)
@@ -184,7 +184,7 @@ func TestQuerySet_Integration_ComplexQuery(t *testing.T) {
 
 	results, err := complex.All(context.Background())
 	require.NoError(t, err)
-	
+
 	assert.Len(t, results, 2) // P4 (150), P1 (100)
 	assert.Equal(t, "P4", results[0].Name)
 	assert.Equal(t, "P1", results[1].Name)
@@ -210,9 +210,9 @@ func TestUpdateBuilder_Integration(t *testing.T) {
 		Increment("id", int64(1)) // id becomes 2
 
 	// Need to handle WHERE clause to update specific row, defaulting to all if not filtered
-	// But UpdateBuilder usually applies to the queryset's filter. 
+	// But UpdateBuilder usually applies to the queryset's filter.
 	// Here qs is unfiltered, so it updates all.
-	
+
 	rows, err := ub.Execute(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), rows)
@@ -223,7 +223,7 @@ func TestUpdateBuilder_Integration(t *testing.T) {
 	var id int64
 	err = database.QueryRow(fmt.Sprintf("SELECT id, name, price FROM %s", escapedTable)).Scan(&id, &name, &price)
 	require.NoError(t, err)
-	
+
 	assert.Equal(t, "Updated Name", name)
 	assert.Equal(t, 99.99, price)
 	assert.Equal(t, int64(2), id)
@@ -260,7 +260,7 @@ func TestExpression_Integration_StringOperations(t *testing.T) {
 }
 
 func TestQ_Integration_ComplexNesting(t *testing.T) {
-    // ... (Same as before)
+	// ... (Same as before)
 	priceField := NewField[float64]("price", "test_models")
 	availableField := NewField[bool]("available", "test_models")
 	nameField := NewField[string]("name", "test_models")
@@ -280,7 +280,7 @@ func TestQ_Integration_ComplexNesting(t *testing.T) {
 }
 
 func TestSQLBuilder_Integration_ComplexQuery(t *testing.T) {
-    // ... (Same as before)
+	// ... (Same as before)
 	builder := NewSQLBuilder()
 
 	// Build a complex SELECT query
@@ -307,6 +307,3 @@ func TestSQLBuilder_Integration_ComplexQuery(t *testing.T) {
 func intPtr(i int) *int {
 	return &i
 }
-
-
-

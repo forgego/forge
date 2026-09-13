@@ -22,14 +22,16 @@ its pr on remote branch"*. So:
 
 - This session now owns BOTH the admin UI (`forge/admin/ui/web/`, `docs/design/`) and the
   codex backend fix-slices listed in `docs/design/backend-tasks.md`.
-- Backend work happens ONLY in dedicated git worktrees under
-  `/home/hamid/Other/projects/foreit-wt/<slice>` (one branch + one PR per slice), never
-  in the main checkout — the main checkout holds the uncommitted UI redesign.
+- All work happens in dedicated git worktrees under
+  `/home/hamid/Other/projects/foreit-wt/<slice>` (one branch + one PR per slice, created from
+  `origin/master`). The main checkout stays on `master` and is only fast-forwarded.
 - **Never put worktrees in `/tmp`.** A reboot wiped codex's four `/tmp` worktrees and all
   their uncommitted work on 2026-09-13.
-- Committing and pushing the backend slices (and updating their PRs) is explicitly
-  authorized by the user. The UI redesign is also committed and pushed now (user: "keep all
-  tasks going and committing and pr and all that") on `feat/admin-ui-redesign`, draft PR #204.
+- Committing, pushing and opening PRs for these slices is explicitly authorized by the user.
+  The UI redesign (#204) and backend slices #201–#213 are merged. Remove a slice's worktree
+  once its PR is merged.
+- The owner squash-merges while work continues: check the PR is still open before pushing to
+  its branch; if it is merged, cherry-pick onto a new branch from `origin/master`.
 - Other agents may still be active: stay inside the worktree/branch you own.
 
 ## Delegation rule: Claude does NOT write code in this repo (MANDATORY)
@@ -83,6 +85,7 @@ $(cat docs/design/tasks/<task>.md)"
 | Route | Status 2026-09-13 | Notes |
 |---|---|---|
 | `agy` + `--add-dir` | ✅ default | real read/write/shell verified |
+| `codex exec --skip-git-repo-check --sandbox workspace-write -C <worktree> "<prompt>"` | ✅ working again | usage limits reset; PONG and real Go slices verified 2026-09-13 (G1c, CI hygiene). Tell it not to run git |
 | `opencode/*-free` (muse-spark 1.2/1.3, mimo, ling) | ❌ hang after the banner | all timed out on PONG, even with zombies reaped |
 | `nvidia/*` via opencode | ❌ 403 | "request was blocked by a gateway or proxy" |
 | `freellm/auto` (localhost:3001 router) | ⚠️ flaky | PONG works; real tasks die with retired upstream models (410) or "all models exhausted" rate limits. Pinned `freellm/<model>` → opencode UnknownError (not registered) |

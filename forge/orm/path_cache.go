@@ -76,6 +76,3 @@ var globalPathCache = NewPathCache(1000)
 func GetCachedPathToken(path string, schema *ModelSchema) (*PathToken, error) {
 	return globalPathCache.Get(path, schema)
 }
-
-
-

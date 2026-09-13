@@ -131,4 +131,3 @@ func (c *LintCommand) Execute(ctx *core.Context, args []string) error {
 
 	return nil
 }
-

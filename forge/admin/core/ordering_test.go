@@ -17,7 +17,7 @@ func TestSanitizeOrdering_DropsUnknownAndUnsafe(t *testing.T) {
 	valid := map[string]bool{"name": true}
 
 	out := sanitizeOrdering([]string{
-		"nonexistent_field", // unknown -> dropped
+		"nonexistent_field",  // unknown -> dropped
 		"name; DROP TABLE x", // unsafe chars -> dropped
 		"name)",              // unsafe chars -> dropped
 		"  ",                 // blank -> dropped

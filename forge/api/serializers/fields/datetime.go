@@ -59,4 +59,3 @@ func (f *DateTimeField) ToRepresentation(value interface{}) (interface{}, error)
 
 	return t.Format(f.Format), nil
 }
-

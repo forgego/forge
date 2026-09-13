@@ -29,4 +29,3 @@ func (e *ConsoleExporter) GetWriter() zapcore.WriteSyncer {
 func (e *ConsoleExporter) GetLevel() zapcore.Level {
 	return e.level
 }
-

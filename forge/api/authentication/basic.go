@@ -80,4 +80,3 @@ func (a *BasicAuthentication) Authenticate(r *http.Request) (*AuthResult, error)
 func (a *BasicAuthentication) AuthenticateHeader(r *http.Request) string {
 	return "Basic realm=\"api\""
 }
-

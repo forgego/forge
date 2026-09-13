@@ -44,4 +44,3 @@ func (t *PasswordResetToken) IsExpired() bool {
 func (t *PasswordResetToken) IsUsed() bool {
 	return t.UsedAt != nil
 }
-

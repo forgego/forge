@@ -72,4 +72,3 @@ func RequestIDMiddleware(headerName string, generateIfMissing bool) func(http.Ha
 func DefaultRequestIDMiddleware() func(http.Handler) http.Handler {
 	return RequestIDMiddleware(RequestIDHeader, true)
 }
-

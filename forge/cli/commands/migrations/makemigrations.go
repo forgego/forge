@@ -147,4 +147,3 @@ func (c *MakeMigrationsCommand) Execute(ctx *core.Context, args []string) error 
 
 	return nil
 }
-

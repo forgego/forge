@@ -19,4 +19,3 @@ func NewUnsupportedMediaType(message string) *UnsupportedMediaType {
 		),
 	}
 }
-

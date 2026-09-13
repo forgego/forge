@@ -38,15 +38,15 @@ func RegisterAdmin(ctx context.Context) {
 		// Fieldsets for grouping form fields
 		Fieldsets: []admin.Fieldset[Category]{
 			{
-				Name: "Basic Information",
+				Name:   "Basic Information",
 				Fields: []string{"name", "slug", "description", "image_url"},
 			},
 			{
-				Name: "Hierarchy",
+				Name:   "Hierarchy",
 				Fields: []string{"parent_id", "level", "sort_order"},
 			},
 			{
-				Name: "Status",
+				Name:   "Status",
 				Fields: []string{"is_active"},
 			},
 		},
@@ -159,15 +159,15 @@ func RegisterAdmin(ctx context.Context) {
 		// Fieldsets
 		Fieldsets: []admin.Fieldset[Brand]{
 			{
-				Name: "Basic Information",
+				Name:   "Basic Information",
 				Fields: []string{"name", "slug", "description", "logo_url"},
 			},
 			{
-				Name: "Contact",
+				Name:   "Contact",
 				Fields: []string{"website_url"},
 			},
 			{
-				Name: "Status",
+				Name:   "Status",
 				Fields: []string{"is_active"},
 			},
 		},
@@ -253,7 +253,7 @@ func RegisterAdmin(ctx context.Context) {
 		// Fieldsets for comprehensive product management
 		Fieldsets: []admin.Fieldset[Product]{
 			{
-				Name: "Basic Information",
+				Name:   "Basic Information",
 				Fields: []string{"name", "slug", "sku", "description", "short_description"},
 			},
 			{
@@ -511,11 +511,11 @@ func RegisterAdmin(ctx context.Context) {
 		// Fieldsets
 		Fieldsets: []admin.Fieldset[ProductVariant]{
 			{
-				Name: "Identification",
+				Name:   "Identification",
 				Fields: []string{"product_id", "sku", "name", "is_default"},
 			},
 			{
-				Name: "Options",
+				Name:   "Options",
 				Fields: []string{"option1_name", "option1_value", "option2_name", "option2_value", "option3_name", "option3_value"},
 			},
 			{
@@ -537,7 +537,7 @@ func RegisterAdmin(ctx context.Context) {
 				Description: "Physical dimensions",
 			},
 			{
-				Name:  "Display",
+				Name:   "Display",
 				Fields: []string{"image_url", "sort_order", "is_active"},
 			},
 		},
@@ -676,11 +676,11 @@ func RegisterAdmin(ctx context.Context) {
 		// Fieldsets
 		Fieldsets: []admin.Fieldset[ProductImage]{
 			{
-				Name: "Image Information",
+				Name:   "Image Information",
 				Fields: []string{"product_id", "variant_id", "image_url", "thumbnail_url"},
 			},
 			{
-				Name: "Display",
+				Name:   "Display",
 				Fields: []string{"alt_text", "is_primary", "sort_order"},
 			},
 		},
@@ -765,11 +765,11 @@ func RegisterAdmin(ctx context.Context) {
 		// Fieldsets
 		Fieldsets: []admin.Fieldset[ProductAttribute]{
 			{
-				Name: "Attribute Definition",
+				Name:   "Attribute Definition",
 				Fields: []string{"name", "code", "type"},
 			},
 			{
-				Name: "Display Settings",
+				Name:   "Display Settings",
 				Fields: []string{"is_filterable", "is_visible", "sort_order"},
 			},
 		},
@@ -843,7 +843,7 @@ func RegisterAdmin(ctx context.Context) {
 		// Fieldsets
 		Fieldsets: []admin.Fieldset[ProductAttributeValue]{
 			{
-				Name: "Attribute Value",
+				Name:   "Attribute Value",
 				Fields: []string{"product_id", "attribute_id", "value"},
 			},
 		},

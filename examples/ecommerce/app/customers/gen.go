@@ -2,24 +2,23 @@
 package customers
 
 import (
-	"time"
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
 	validate "github.com/forgego/forge/validate"
+	"time"
 )
-
 
 // CustomerGroupGenerated struct definition
 type CustomerGroupGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	Name string `json:"name" db:"name" validate:"required,max=200"`
-	Code string `json:"code" db:"code" validate:"required,max=50"`
-	Description string `json:"description" db:"description" validate:""`
-	DiscountPercentage float64 `json:"discount_percentage" db:"discount_percentage" validate:""`
-	IsActive bool `json:"is_active" db:"is_active" validate:""`
-	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id                 int64     `json:"id" db:"id" validate:""`
+	Name               string    `json:"name" db:"name" validate:"required,max=200"`
+	Code               string    `json:"code" db:"code" validate:"required,max=50"`
+	Description        string    `json:"description" db:"description" validate:""`
+	DiscountPercentage float64   `json:"discount_percentage" db:"discount_percentage" validate:""`
+	IsActive           bool      `json:"is_active" db:"is_active" validate:""`
+	CreatedAt          time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt          time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the CustomerGroup model
@@ -34,60 +33,57 @@ var CustomerGroupObjects, _ = orm.NewManager[CustomerGroup]("customer_groups")
 
 // CustomerGroupFields provides type-safe field access for CustomerGroup
 type CustomerGroupFields struct {
-	Id orm.Field[int64]
-	Name orm.Field[string]
-	Code orm.Field[string]
-	Description orm.Field[string]
+	Id                 orm.Field[int64]
+	Name               orm.Field[string]
+	Code               orm.Field[string]
+	Description        orm.Field[string]
 	DiscountPercentage orm.Field[float64]
-	IsActive orm.Field[bool]
-	CreatedAt orm.Field[time.Time]
-	UpdatedAt orm.Field[time.Time]
+	IsActive           orm.Field[bool]
+	CreatedAt          orm.Field[time.Time]
+	UpdatedAt          orm.Field[time.Time]
 }
 
 var CustomerGroupFieldsInstance = CustomerGroupFields{
-	Id: orm.NewField[int64]("id", "customer_groups"),
-	Name: orm.NewField[string]("name", "customer_groups"),
-	Code: orm.NewField[string]("code", "customer_groups"),
-	Description: orm.NewField[string]("description", "customer_groups"),
+	Id:                 orm.NewField[int64]("id", "customer_groups"),
+	Name:               orm.NewField[string]("name", "customer_groups"),
+	Code:               orm.NewField[string]("code", "customer_groups"),
+	Description:        orm.NewField[string]("description", "customer_groups"),
 	DiscountPercentage: orm.NewField[float64]("discount_percentage", "customer_groups"),
-	IsActive: orm.NewField[bool]("is_active", "customer_groups"),
-	CreatedAt: orm.NewField[time.Time]("created_at", "customer_groups"),
-	UpdatedAt: orm.NewField[time.Time]("updated_at", "customer_groups"),
+	IsActive:           orm.NewField[bool]("is_active", "customer_groups"),
+	CreatedAt:          orm.NewField[time.Time]("created_at", "customer_groups"),
+	UpdatedAt:          orm.NewField[time.Time]("updated_at", "customer_groups"),
 }
-
-
-
 
 // CustomerGenerated struct definition
 type CustomerGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	Email string `json:"email" db:"email" validate:"required,max=255"`
-	PasswordHash string `json:"password_hash" db:"password_hash" validate:"required,max=255"`
-	FirstName string `json:"first_name" db:"first_name" validate:"required,max=100"`
-	LastName string `json:"last_name" db:"last_name" validate:"required,max=100"`
-	Phone string `json:"phone" db:"phone" validate:"max=20"`
-	DateOfBirth time.Time `json:"date_of_birth" db:"date_of_birth" validate:""`
-	Gender string `json:"gender" db:"gender" validate:"max=20"`
-	CompanyName string `json:"company_name" db:"company_name" validate:"max=200"`
-	TaxId string `json:"tax_id" db:"tax_id" validate:"max=50"`
-	CustomerGroupId int64 `json:"customer_group_id" db:"customer_group_id" validate:""`
-	IsActive bool `json:"is_active" db:"is_active" validate:""`
-	IsVerified bool `json:"is_verified" db:"is_verified" validate:""`
-	AcceptsMarketing bool `json:"accepts_marketing" db:"accepts_marketing" validate:""`
-	VerificationToken string `json:"verification_token" db:"verification_token" validate:"max=255"`
-	ResetPasswordToken string `json:"reset_password_token" db:"reset_password_token" validate:"max=255"`
+	Id                     int64     `json:"id" db:"id" validate:""`
+	Email                  string    `json:"email" db:"email" validate:"required,max=255"`
+	PasswordHash           string    `json:"password_hash" db:"password_hash" validate:"required,max=255"`
+	FirstName              string    `json:"first_name" db:"first_name" validate:"required,max=100"`
+	LastName               string    `json:"last_name" db:"last_name" validate:"required,max=100"`
+	Phone                  string    `json:"phone" db:"phone" validate:"max=20"`
+	DateOfBirth            time.Time `json:"date_of_birth" db:"date_of_birth" validate:""`
+	Gender                 string    `json:"gender" db:"gender" validate:"max=20"`
+	CompanyName            string    `json:"company_name" db:"company_name" validate:"max=200"`
+	TaxId                  string    `json:"tax_id" db:"tax_id" validate:"max=50"`
+	CustomerGroupId        int64     `json:"customer_group_id" db:"customer_group_id" validate:""`
+	IsActive               bool      `json:"is_active" db:"is_active" validate:""`
+	IsVerified             bool      `json:"is_verified" db:"is_verified" validate:""`
+	AcceptsMarketing       bool      `json:"accepts_marketing" db:"accepts_marketing" validate:""`
+	VerificationToken      string    `json:"verification_token" db:"verification_token" validate:"max=255"`
+	ResetPasswordToken     string    `json:"reset_password_token" db:"reset_password_token" validate:"max=255"`
 	ResetPasswordExpiresAt time.Time `json:"reset_password_expires_at" db:"reset_password_expires_at" validate:""`
-	LastLoginAt time.Time `json:"last_login_at" db:"last_login_at" validate:""`
-	LastLoginIp string `json:"last_login_ip" db:"last_login_ip" validate:"max=45"`
-	TotalOrders int32 `json:"total_orders" db:"total_orders" validate:""`
-	TotalSpent float64 `json:"total_spent" db:"total_spent" validate:""`
-	AverageOrderValue float64 `json:"average_order_value" db:"average_order_value" validate:""`
-	PreferredLanguage string `json:"preferred_language" db:"preferred_language" validate:"max=10"`
-	PreferredCurrency string `json:"preferred_currency" db:"preferred_currency" validate:"max=3"`
-	Notes string `json:"notes" db:"notes" validate:""`
-	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	LastLoginAt            time.Time `json:"last_login_at" db:"last_login_at" validate:""`
+	LastLoginIp            string    `json:"last_login_ip" db:"last_login_ip" validate:"max=45"`
+	TotalOrders            int32     `json:"total_orders" db:"total_orders" validate:""`
+	TotalSpent             float64   `json:"total_spent" db:"total_spent" validate:""`
+	AverageOrderValue      float64   `json:"average_order_value" db:"average_order_value" validate:""`
+	PreferredLanguage      string    `json:"preferred_language" db:"preferred_language" validate:"max=10"`
+	PreferredCurrency      string    `json:"preferred_currency" db:"preferred_currency" validate:"max=3"`
+	Notes                  string    `json:"notes" db:"notes" validate:""`
+	CreatedAt              time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt              time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the Customer model
@@ -102,92 +98,89 @@ var CustomerObjects, _ = orm.NewManager[Customer]("customers")
 
 // CustomerFields provides type-safe field access for Customer
 type CustomerFields struct {
-	Id orm.Field[int64]
-	Email orm.Field[string]
-	PasswordHash orm.Field[string]
-	FirstName orm.Field[string]
-	LastName orm.Field[string]
-	Phone orm.Field[string]
-	DateOfBirth orm.Field[time.Time]
-	Gender orm.Field[string]
-	CompanyName orm.Field[string]
-	TaxId orm.Field[string]
-	CustomerGroupId orm.Field[int64]
-	IsActive orm.Field[bool]
-	IsVerified orm.Field[bool]
-	AcceptsMarketing orm.Field[bool]
-	VerificationToken orm.Field[string]
-	ResetPasswordToken orm.Field[string]
+	Id                     orm.Field[int64]
+	Email                  orm.Field[string]
+	PasswordHash           orm.Field[string]
+	FirstName              orm.Field[string]
+	LastName               orm.Field[string]
+	Phone                  orm.Field[string]
+	DateOfBirth            orm.Field[time.Time]
+	Gender                 orm.Field[string]
+	CompanyName            orm.Field[string]
+	TaxId                  orm.Field[string]
+	CustomerGroupId        orm.Field[int64]
+	IsActive               orm.Field[bool]
+	IsVerified             orm.Field[bool]
+	AcceptsMarketing       orm.Field[bool]
+	VerificationToken      orm.Field[string]
+	ResetPasswordToken     orm.Field[string]
 	ResetPasswordExpiresAt orm.Field[time.Time]
-	LastLoginAt orm.Field[time.Time]
-	LastLoginIp orm.Field[string]
-	TotalOrders orm.Field[int32]
-	TotalSpent orm.Field[float64]
-	AverageOrderValue orm.Field[float64]
-	PreferredLanguage orm.Field[string]
-	PreferredCurrency orm.Field[string]
-	Notes orm.Field[string]
-	CreatedAt orm.Field[time.Time]
-	UpdatedAt orm.Field[time.Time]
+	LastLoginAt            orm.Field[time.Time]
+	LastLoginIp            orm.Field[string]
+	TotalOrders            orm.Field[int32]
+	TotalSpent             orm.Field[float64]
+	AverageOrderValue      orm.Field[float64]
+	PreferredLanguage      orm.Field[string]
+	PreferredCurrency      orm.Field[string]
+	Notes                  orm.Field[string]
+	CreatedAt              orm.Field[time.Time]
+	UpdatedAt              orm.Field[time.Time]
 }
 
 var CustomerFieldsInstance = CustomerFields{
-	Id: orm.NewField[int64]("id", "customers"),
-	Email: orm.NewField[string]("email", "customers"),
-	PasswordHash: orm.NewField[string]("password_hash", "customers"),
-	FirstName: orm.NewField[string]("first_name", "customers"),
-	LastName: orm.NewField[string]("last_name", "customers"),
-	Phone: orm.NewField[string]("phone", "customers"),
-	DateOfBirth: orm.NewField[time.Time]("date_of_birth", "customers"),
-	Gender: orm.NewField[string]("gender", "customers"),
-	CompanyName: orm.NewField[string]("company_name", "customers"),
-	TaxId: orm.NewField[string]("tax_id", "customers"),
-	CustomerGroupId: orm.NewField[int64]("customer_group_id", "customers"),
-	IsActive: orm.NewField[bool]("is_active", "customers"),
-	IsVerified: orm.NewField[bool]("is_verified", "customers"),
-	AcceptsMarketing: orm.NewField[bool]("accepts_marketing", "customers"),
-	VerificationToken: orm.NewField[string]("verification_token", "customers"),
-	ResetPasswordToken: orm.NewField[string]("reset_password_token", "customers"),
+	Id:                     orm.NewField[int64]("id", "customers"),
+	Email:                  orm.NewField[string]("email", "customers"),
+	PasswordHash:           orm.NewField[string]("password_hash", "customers"),
+	FirstName:              orm.NewField[string]("first_name", "customers"),
+	LastName:               orm.NewField[string]("last_name", "customers"),
+	Phone:                  orm.NewField[string]("phone", "customers"),
+	DateOfBirth:            orm.NewField[time.Time]("date_of_birth", "customers"),
+	Gender:                 orm.NewField[string]("gender", "customers"),
+	CompanyName:            orm.NewField[string]("company_name", "customers"),
+	TaxId:                  orm.NewField[string]("tax_id", "customers"),
+	CustomerGroupId:        orm.NewField[int64]("customer_group_id", "customers"),
+	IsActive:               orm.NewField[bool]("is_active", "customers"),
+	IsVerified:             orm.NewField[bool]("is_verified", "customers"),
+	AcceptsMarketing:       orm.NewField[bool]("accepts_marketing", "customers"),
+	VerificationToken:      orm.NewField[string]("verification_token", "customers"),
+	ResetPasswordToken:     orm.NewField[string]("reset_password_token", "customers"),
 	ResetPasswordExpiresAt: orm.NewField[time.Time]("reset_password_expires_at", "customers"),
-	LastLoginAt: orm.NewField[time.Time]("last_login_at", "customers"),
-	LastLoginIp: orm.NewField[string]("last_login_ip", "customers"),
-	TotalOrders: orm.NewField[int32]("total_orders", "customers"),
-	TotalSpent: orm.NewField[float64]("total_spent", "customers"),
-	AverageOrderValue: orm.NewField[float64]("average_order_value", "customers"),
-	PreferredLanguage: orm.NewField[string]("preferred_language", "customers"),
-	PreferredCurrency: orm.NewField[string]("preferred_currency", "customers"),
-	Notes: orm.NewField[string]("notes", "customers"),
-	CreatedAt: orm.NewField[time.Time]("created_at", "customers"),
-	UpdatedAt: orm.NewField[time.Time]("updated_at", "customers"),
+	LastLoginAt:            orm.NewField[time.Time]("last_login_at", "customers"),
+	LastLoginIp:            orm.NewField[string]("last_login_ip", "customers"),
+	TotalOrders:            orm.NewField[int32]("total_orders", "customers"),
+	TotalSpent:             orm.NewField[float64]("total_spent", "customers"),
+	AverageOrderValue:      orm.NewField[float64]("average_order_value", "customers"),
+	PreferredLanguage:      orm.NewField[string]("preferred_language", "customers"),
+	PreferredCurrency:      orm.NewField[string]("preferred_currency", "customers"),
+	Notes:                  orm.NewField[string]("notes", "customers"),
+	CreatedAt:              orm.NewField[time.Time]("created_at", "customers"),
+	UpdatedAt:              orm.NewField[time.Time]("updated_at", "customers"),
 }
-
-
-
 
 // AddressGenerated struct definition
 type AddressGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	CustomerId int64 `json:"customer_id" db:"customer_id" validate:"required"`
-	AddressType string `json:"address_type" db:"address_type" validate:"required,max=20"`
-	FirstName string `json:"first_name" db:"first_name" validate:"required,max=100"`
-	LastName string `json:"last_name" db:"last_name" validate:"required,max=100"`
-	CompanyName string `json:"company_name" db:"company_name" validate:"max=200"`
-	Phone string `json:"phone" db:"phone" validate:"max=20"`
-	AddressLine1 string `json:"address_line1" db:"address_line1" validate:"required,max=255"`
-	AddressLine2 string `json:"address_line2" db:"address_line2" validate:"max=255"`
-	City string `json:"city" db:"city" validate:"required,max=100"`
-	StateProvince string `json:"state_province" db:"state_province" validate:"max=100"`
-	PostalCode string `json:"postal_code" db:"postal_code" validate:"required,max=20"`
-	CountryCode string `json:"country_code" db:"country_code" validate:"required,max=2"`
-	CountryName string `json:"country_name" db:"country_name" validate:"required,max=100"`
-	Latitude float64 `json:"latitude" db:"latitude" validate:""`
-	Longitude float64 `json:"longitude" db:"longitude" validate:""`
-	IsDefaultShipping bool `json:"is_default_shipping" db:"is_default_shipping" validate:""`
-	IsDefaultBilling bool `json:"is_default_billing" db:"is_default_billing" validate:""`
-	DeliveryInstructions string `json:"delivery_instructions" db:"delivery_instructions" validate:""`
-	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id                   int64     `json:"id" db:"id" validate:""`
+	CustomerId           int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	AddressType          string    `json:"address_type" db:"address_type" validate:"required,max=20"`
+	FirstName            string    `json:"first_name" db:"first_name" validate:"required,max=100"`
+	LastName             string    `json:"last_name" db:"last_name" validate:"required,max=100"`
+	CompanyName          string    `json:"company_name" db:"company_name" validate:"max=200"`
+	Phone                string    `json:"phone" db:"phone" validate:"max=20"`
+	AddressLine1         string    `json:"address_line1" db:"address_line1" validate:"required,max=255"`
+	AddressLine2         string    `json:"address_line2" db:"address_line2" validate:"max=255"`
+	City                 string    `json:"city" db:"city" validate:"required,max=100"`
+	StateProvince        string    `json:"state_province" db:"state_province" validate:"max=100"`
+	PostalCode           string    `json:"postal_code" db:"postal_code" validate:"required,max=20"`
+	CountryCode          string    `json:"country_code" db:"country_code" validate:"required,max=2"`
+	CountryName          string    `json:"country_name" db:"country_name" validate:"required,max=100"`
+	Latitude             float64   `json:"latitude" db:"latitude" validate:""`
+	Longitude            float64   `json:"longitude" db:"longitude" validate:""`
+	IsDefaultShipping    bool      `json:"is_default_shipping" db:"is_default_shipping" validate:""`
+	IsDefaultBilling     bool      `json:"is_default_billing" db:"is_default_billing" validate:""`
+	DeliveryInstructions string    `json:"delivery_instructions" db:"delivery_instructions" validate:""`
+	CreatedAt            time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt            time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the Address model
@@ -202,68 +195,65 @@ var AddressObjects, _ = orm.NewManager[Address]("addresses")
 
 // AddressFields provides type-safe field access for Address
 type AddressFields struct {
-	Id orm.Field[int64]
-	CustomerId orm.Field[int64]
-	AddressType orm.Field[string]
-	FirstName orm.Field[string]
-	LastName orm.Field[string]
-	CompanyName orm.Field[string]
-	Phone orm.Field[string]
-	AddressLine1 orm.Field[string]
-	AddressLine2 orm.Field[string]
-	City orm.Field[string]
-	StateProvince orm.Field[string]
-	PostalCode orm.Field[string]
-	CountryCode orm.Field[string]
-	CountryName orm.Field[string]
-	Latitude orm.Field[float64]
-	Longitude orm.Field[float64]
-	IsDefaultShipping orm.Field[bool]
-	IsDefaultBilling orm.Field[bool]
+	Id                   orm.Field[int64]
+	CustomerId           orm.Field[int64]
+	AddressType          orm.Field[string]
+	FirstName            orm.Field[string]
+	LastName             orm.Field[string]
+	CompanyName          orm.Field[string]
+	Phone                orm.Field[string]
+	AddressLine1         orm.Field[string]
+	AddressLine2         orm.Field[string]
+	City                 orm.Field[string]
+	StateProvince        orm.Field[string]
+	PostalCode           orm.Field[string]
+	CountryCode          orm.Field[string]
+	CountryName          orm.Field[string]
+	Latitude             orm.Field[float64]
+	Longitude            orm.Field[float64]
+	IsDefaultShipping    orm.Field[bool]
+	IsDefaultBilling     orm.Field[bool]
 	DeliveryInstructions orm.Field[string]
-	CreatedAt orm.Field[time.Time]
-	UpdatedAt orm.Field[time.Time]
+	CreatedAt            orm.Field[time.Time]
+	UpdatedAt            orm.Field[time.Time]
 }
 
 var AddressFieldsInstance = AddressFields{
-	Id: orm.NewField[int64]("id", "addresses"),
-	CustomerId: orm.NewField[int64]("customer_id", "addresses"),
-	AddressType: orm.NewField[string]("address_type", "addresses"),
-	FirstName: orm.NewField[string]("first_name", "addresses"),
-	LastName: orm.NewField[string]("last_name", "addresses"),
-	CompanyName: orm.NewField[string]("company_name", "addresses"),
-	Phone: orm.NewField[string]("phone", "addresses"),
-	AddressLine1: orm.NewField[string]("address_line1", "addresses"),
-	AddressLine2: orm.NewField[string]("address_line2", "addresses"),
-	City: orm.NewField[string]("city", "addresses"),
-	StateProvince: orm.NewField[string]("state_province", "addresses"),
-	PostalCode: orm.NewField[string]("postal_code", "addresses"),
-	CountryCode: orm.NewField[string]("country_code", "addresses"),
-	CountryName: orm.NewField[string]("country_name", "addresses"),
-	Latitude: orm.NewField[float64]("latitude", "addresses"),
-	Longitude: orm.NewField[float64]("longitude", "addresses"),
-	IsDefaultShipping: orm.NewField[bool]("is_default_shipping", "addresses"),
-	IsDefaultBilling: orm.NewField[bool]("is_default_billing", "addresses"),
+	Id:                   orm.NewField[int64]("id", "addresses"),
+	CustomerId:           orm.NewField[int64]("customer_id", "addresses"),
+	AddressType:          orm.NewField[string]("address_type", "addresses"),
+	FirstName:            orm.NewField[string]("first_name", "addresses"),
+	LastName:             orm.NewField[string]("last_name", "addresses"),
+	CompanyName:          orm.NewField[string]("company_name", "addresses"),
+	Phone:                orm.NewField[string]("phone", "addresses"),
+	AddressLine1:         orm.NewField[string]("address_line1", "addresses"),
+	AddressLine2:         orm.NewField[string]("address_line2", "addresses"),
+	City:                 orm.NewField[string]("city", "addresses"),
+	StateProvince:        orm.NewField[string]("state_province", "addresses"),
+	PostalCode:           orm.NewField[string]("postal_code", "addresses"),
+	CountryCode:          orm.NewField[string]("country_code", "addresses"),
+	CountryName:          orm.NewField[string]("country_name", "addresses"),
+	Latitude:             orm.NewField[float64]("latitude", "addresses"),
+	Longitude:            orm.NewField[float64]("longitude", "addresses"),
+	IsDefaultShipping:    orm.NewField[bool]("is_default_shipping", "addresses"),
+	IsDefaultBilling:     orm.NewField[bool]("is_default_billing", "addresses"),
 	DeliveryInstructions: orm.NewField[string]("delivery_instructions", "addresses"),
-	CreatedAt: orm.NewField[time.Time]("created_at", "addresses"),
-	UpdatedAt: orm.NewField[time.Time]("updated_at", "addresses"),
+	CreatedAt:            orm.NewField[time.Time]("created_at", "addresses"),
+	UpdatedAt:            orm.NewField[time.Time]("updated_at", "addresses"),
 }
-
-
-
 
 // WishListGenerated struct definition
 type WishListGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	CustomerId int64 `json:"customer_id" db:"customer_id" validate:"required"`
-	Name string `json:"name" db:"name" validate:"required,max=200"`
-	Description string `json:"description" db:"description" validate:""`
-	IsPublic bool `json:"is_public" db:"is_public" validate:""`
-	ShareToken string `json:"share_token" db:"share_token" validate:"max=100"`
-	IsDefault bool `json:"is_default" db:"is_default" validate:""`
-	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id          int64     `json:"id" db:"id" validate:""`
+	CustomerId  int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	Name        string    `json:"name" db:"name" validate:"required,max=200"`
+	Description string    `json:"description" db:"description" validate:""`
+	IsPublic    bool      `json:"is_public" db:"is_public" validate:""`
+	ShareToken  string    `json:"share_token" db:"share_token" validate:"max=100"`
+	IsDefault   bool      `json:"is_default" db:"is_default" validate:""`
+	CreatedAt   time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the WishList model
@@ -278,45 +268,42 @@ var WishListObjects, _ = orm.NewManager[WishList]("wish_lists")
 
 // WishListFields provides type-safe field access for WishList
 type WishListFields struct {
-	Id orm.Field[int64]
-	CustomerId orm.Field[int64]
-	Name orm.Field[string]
+	Id          orm.Field[int64]
+	CustomerId  orm.Field[int64]
+	Name        orm.Field[string]
 	Description orm.Field[string]
-	IsPublic orm.Field[bool]
-	ShareToken orm.Field[string]
-	IsDefault orm.Field[bool]
-	CreatedAt orm.Field[time.Time]
-	UpdatedAt orm.Field[time.Time]
+	IsPublic    orm.Field[bool]
+	ShareToken  orm.Field[string]
+	IsDefault   orm.Field[bool]
+	CreatedAt   orm.Field[time.Time]
+	UpdatedAt   orm.Field[time.Time]
 }
 
 var WishListFieldsInstance = WishListFields{
-	Id: orm.NewField[int64]("id", "wish_lists"),
-	CustomerId: orm.NewField[int64]("customer_id", "wish_lists"),
-	Name: orm.NewField[string]("name", "wish_lists"),
+	Id:          orm.NewField[int64]("id", "wish_lists"),
+	CustomerId:  orm.NewField[int64]("customer_id", "wish_lists"),
+	Name:        orm.NewField[string]("name", "wish_lists"),
 	Description: orm.NewField[string]("description", "wish_lists"),
-	IsPublic: orm.NewField[bool]("is_public", "wish_lists"),
-	ShareToken: orm.NewField[string]("share_token", "wish_lists"),
-	IsDefault: orm.NewField[bool]("is_default", "wish_lists"),
-	CreatedAt: orm.NewField[time.Time]("created_at", "wish_lists"),
-	UpdatedAt: orm.NewField[time.Time]("updated_at", "wish_lists"),
+	IsPublic:    orm.NewField[bool]("is_public", "wish_lists"),
+	ShareToken:  orm.NewField[string]("share_token", "wish_lists"),
+	IsDefault:   orm.NewField[bool]("is_default", "wish_lists"),
+	CreatedAt:   orm.NewField[time.Time]("created_at", "wish_lists"),
+	UpdatedAt:   orm.NewField[time.Time]("updated_at", "wish_lists"),
 }
-
-
-
 
 // WishListItemGenerated struct definition
 type WishListItemGenerated struct {
 	schema.BaseSchema
-	Id int64 `json:"id" db:"id" validate:""`
-	WishListId int64 `json:"wish_list_id" db:"wish_list_id" validate:"required"`
-	ProductId int64 `json:"product_id" db:"product_id" validate:"required"`
-	VariantId int64 `json:"variant_id" db:"variant_id" validate:""`
-	DesiredQuantity int32 `json:"desired_quantity" db:"desired_quantity" validate:""`
-	PriceWhenAdded float64 `json:"price_when_added" db:"price_when_added" validate:""`
-	Notes string `json:"notes" db:"notes" validate:""`
-	Priority int32 `json:"priority" db:"priority" validate:""`
-	CreatedAt time.Time `json:"created_at" db:"created_at" validate:""`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at" validate:""`
+	Id              int64     `json:"id" db:"id" validate:""`
+	WishListId      int64     `json:"wish_list_id" db:"wish_list_id" validate:"required"`
+	ProductId       int64     `json:"product_id" db:"product_id" validate:"required"`
+	VariantId       int64     `json:"variant_id" db:"variant_id" validate:""`
+	DesiredQuantity int32     `json:"desired_quantity" db:"desired_quantity" validate:""`
+	PriceWhenAdded  float64   `json:"price_when_added" db:"price_when_added" validate:""`
+	Notes           string    `json:"notes" db:"notes" validate:""`
+	Priority        int32     `json:"priority" db:"priority" validate:""`
+	CreatedAt       time.Time `json:"created_at" db:"created_at" validate:""`
+	UpdatedAt       time.Time `json:"updated_at" db:"updated_at" validate:""`
 }
 
 // Validate validates the WishListItem model
@@ -331,31 +318,27 @@ var WishListItemObjects, _ = orm.NewManager[WishListItem]("wish_list_items")
 
 // WishListItemFields provides type-safe field access for WishListItem
 type WishListItemFields struct {
-	Id orm.Field[int64]
-	WishListId orm.Field[int64]
-	ProductId orm.Field[int64]
-	VariantId orm.Field[int64]
+	Id              orm.Field[int64]
+	WishListId      orm.Field[int64]
+	ProductId       orm.Field[int64]
+	VariantId       orm.Field[int64]
 	DesiredQuantity orm.Field[int32]
-	PriceWhenAdded orm.Field[float64]
-	Notes orm.Field[string]
-	Priority orm.Field[int32]
-	CreatedAt orm.Field[time.Time]
-	UpdatedAt orm.Field[time.Time]
+	PriceWhenAdded  orm.Field[float64]
+	Notes           orm.Field[string]
+	Priority        orm.Field[int32]
+	CreatedAt       orm.Field[time.Time]
+	UpdatedAt       orm.Field[time.Time]
 }
 
 var WishListItemFieldsInstance = WishListItemFields{
-	Id: orm.NewField[int64]("id", "wish_list_items"),
-	WishListId: orm.NewField[int64]("wish_list_id", "wish_list_items"),
-	ProductId: orm.NewField[int64]("product_id", "wish_list_items"),
-	VariantId: orm.NewField[int64]("variant_id", "wish_list_items"),
+	Id:              orm.NewField[int64]("id", "wish_list_items"),
+	WishListId:      orm.NewField[int64]("wish_list_id", "wish_list_items"),
+	ProductId:       orm.NewField[int64]("product_id", "wish_list_items"),
+	VariantId:       orm.NewField[int64]("variant_id", "wish_list_items"),
 	DesiredQuantity: orm.NewField[int32]("desired_quantity", "wish_list_items"),
-	PriceWhenAdded: orm.NewField[float64]("price_when_added", "wish_list_items"),
-	Notes: orm.NewField[string]("notes", "wish_list_items"),
-	Priority: orm.NewField[int32]("priority", "wish_list_items"),
-	CreatedAt: orm.NewField[time.Time]("created_at", "wish_list_items"),
-	UpdatedAt: orm.NewField[time.Time]("updated_at", "wish_list_items"),
+	PriceWhenAdded:  orm.NewField[float64]("price_when_added", "wish_list_items"),
+	Notes:           orm.NewField[string]("notes", "wish_list_items"),
+	Priority:        orm.NewField[int32]("priority", "wish_list_items"),
+	CreatedAt:       orm.NewField[time.Time]("created_at", "wish_list_items"),
+	UpdatedAt:       orm.NewField[time.Time]("updated_at", "wish_list_items"),
 }
-
-
-
-

@@ -111,4 +111,3 @@ func (c *GenerateCommand) Execute(ctx *core.Context, args []string) error {
 	fmt.Printf("✓ Generated code from %s to %s\n", modelsDir, outputDir)
 	return nil
 }
-

@@ -64,4 +64,3 @@ func (a *APIKeyAuthentication) Authenticate(r *http.Request) (*AuthResult, error
 func (a *APIKeyAuthentication) AuthenticateHeader(r *http.Request) string {
 	return ""
 }
-

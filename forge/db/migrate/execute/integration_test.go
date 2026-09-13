@@ -16,16 +16,16 @@ import (
 func TestExecutor_Integration_Workflow(t *testing.T) {
 	db := testutils.SetupTestDB(t)
 
-    // Explicit cleanup
-    _, _ = db.Exec("TRUNCATE TABLE schema_migrations")
-    _, _ = db.Exec("DROP TABLE IF EXISTS users_test")
-	
+	// Explicit cleanup
+	_, _ = db.Exec("TRUNCATE TABLE schema_migrations")
+	_, _ = db.Exec("DROP TABLE IF EXISTS users_test")
+
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	require.NoError(t, err)
 
 	// Create temp migrations dir
 	tmpDir := t.TempDir()
-	
+
 	// Migration 1: Create Users
 	m1Up := `CREATE TABLE users_test (id SERIAL PRIMARY KEY, name TEXT);`
 	m1Down := `DROP TABLE users_test;`

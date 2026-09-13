@@ -15,7 +15,7 @@ func ApplyFilterSetToViewSet[T any](ctx context.Context, r *http.Request, qs int
 	}
 
 	integration := NewFilterSetIntegration(fs)
-	
+
 	// Convert queryset to proper type if needed
 	qsValue := reflect.ValueOf(qs)
 	if !qsValue.IsValid() {
@@ -40,4 +40,3 @@ func EnhanceResponseWithFilters[T any](data map[string]interface{}, r *http.Requ
 	integration := NewFilterSetIntegration(fs)
 	return integration.EnhanceViewSetResponse(data, r)
 }
-

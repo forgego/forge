@@ -76,4 +76,3 @@ func (f *StringField) Validate(value interface{}) error {
 
 	return nil
 }
-

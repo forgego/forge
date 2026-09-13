@@ -61,4 +61,3 @@ func isAdmin(user interface{}) bool {
 
 	return false
 }
-

@@ -52,11 +52,11 @@ func (fsi *FilterSetIntegration[T]) GetFilterMetadata(r *http.Request) map[strin
 		available := make(map[string]interface{})
 		for name, info := range filterMetadata.AvailableFilters {
 			available[name] = map[string]interface{}{
-				"type":      info.Type,
-				"lookups":   info.Lookups,
-				"field":     info.FieldPath,
-				"label":     info.Label,
-				"widget":    info.WidgetType,
+				"type":    info.Type,
+				"lookups": info.Lookups,
+				"field":   info.FieldPath,
+				"label":   info.Label,
+				"widget":  info.WidgetType,
 			}
 		}
 		metadata["available"] = available
@@ -83,5 +83,3 @@ func (fsi *FilterSetIntegration[T]) EnhanceViewSetResponse(data map[string]inter
 	data["filters"] = filterMetadata
 	return data
 }
-
-

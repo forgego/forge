@@ -49,6 +49,3 @@ func BuildAnnotation(name string, args ...interface{}) (AnnotationExpr, bool) {
 	}
 	return annotation, true
 }
-
-
-

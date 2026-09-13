@@ -49,4 +49,3 @@ func (us *IdentitySystem) RegisterRoutes(router *forgehttp.Router) {
 		})
 	})
 }
-

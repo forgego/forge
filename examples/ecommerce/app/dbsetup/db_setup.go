@@ -62,7 +62,7 @@ func SetupSchema(database *db.DB) {
 	if err != nil {
 		log.Fatalf("Failed to create brands table: %v", err)
 	}
-	
+
 	// Products
 	_, err = database.ExecContext(ctx, adaptDDL(database.Driver, `
 		CREATE TABLE IF NOT EXISTS products (
