@@ -43,12 +43,5 @@ func (c *SquashCommand) Execute(ctx *core.Context, args []string) error {
 	}
 
 	squasher := generate.NewSquasher(migrationsPath)
-	if err := squasher.SquashMigrations(startVersion, endVersion, name); err != nil {
-		return fmt.Errorf("failed to squash migrations: %w", err)
-	}
-
-	fmt.Printf("✓ Successfully squashed migrations from %s to %s into %s\n", startVersion, endVersion, name)
-	fmt.Println("  Note: Old migrations should be archived, not deleted")
-	fmt.Println("  The new migration includes a 'replaces' field listing the squashed migrations")
-	return nil
+	return squasher.SquashMigrations(startVersion, endVersion, name)
 }
