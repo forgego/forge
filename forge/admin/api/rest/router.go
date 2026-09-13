@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"reflect"
@@ -430,7 +431,112 @@ func (r *Router) handleList(admin core.AdminInterface) http.HandlerFunc {
 			return
 		}
 
+		r.attachDisplayLabels(ctx, admin, user, response)
+
 		respondJSON(w, http.StatusOK, response)
+	}
+}
+
+func isFKOrOneToOne(relType string) bool {
+	switch relType {
+	case "ForeignKey", "OneToOne", "foreign_key", "one_to_one":
+		return true
+	default:
+		return false
+	}
+}
+
+func (r *Router) attachDisplayLabels(ctx context.Context, admin core.AdminInterface, user interface{}, response *core.PaginatedResponse) {
+	if r.registry == nil || response == nil || response.Results == nil {
+		return
+	}
+
+	meta, err := admin.GetMetadata(ctx, user)
+	if err != nil || meta == nil || len(meta.Relations) == 0 {
+		return
+	}
+
+	resultsBytes, err := json.Marshal(response.Results)
+	if err != nil {
+		return
+	}
+
+	var rows []map[string]interface{}
+	if err := json.Unmarshal(resultsBytes, &rows); err != nil || len(rows) == 0 {
+		return
+	}
+
+	for _, rel := range meta.Relations {
+		if !isFKOrOneToOne(rel.Type) {
+			continue
+		}
+
+		var ids []interface{}
+		seen := make(map[string]bool)
+
+		for _, row := range rows {
+			val, exists := row[rel.Name]
+			if !exists || val == nil {
+				val, exists = row[rel.Name+"_id"]
+			}
+			if !exists || val == nil {
+				for k, v := range row {
+					if v != nil && (strings.EqualFold(k, rel.Name) || strings.EqualFold(k, rel.Name+"_id") || strings.EqualFold(k, rel.Name+"id")) {
+						val = v
+						exists = true
+						break
+					}
+				}
+			}
+			if !exists || val == nil {
+				continue
+			}
+
+			if m, ok := val.(map[string]interface{}); ok {
+				if idVal, hasID := m["id"]; hasID && idVal != nil {
+					val = idVal
+				} else if idVal, hasID := m["ID"]; hasID && idVal != nil {
+					val = idVal
+				} else {
+					continue
+				}
+			}
+
+			if f, ok := val.(float64); ok && f == math.Floor(f) && !math.IsNaN(f) && !math.IsInf(f, 0) {
+				val = int64(f)
+			}
+
+			strKey := fmt.Sprint(val)
+			if strKey == "" || seen[strKey] {
+				continue
+			}
+			seen[strKey] = true
+			ids = append(ids, val)
+		}
+
+		if len(ids) == 0 {
+			continue
+		}
+
+		related, err := r.registry.Get(rel.RelatedModel)
+		if err != nil || related == nil {
+			continue
+		}
+
+		resolver, ok := related.(core.LabelResolver)
+		if !ok {
+			continue
+		}
+
+		labels, err := resolver.ObjectLabels(ctx, ids)
+		if err != nil || len(labels) == 0 {
+			continue
+		}
+
+		if response.Display == nil {
+			response.Display = make(map[string]map[string]string)
+		}
+		response.Display[rel.Name] = labels
 	}
 }
 

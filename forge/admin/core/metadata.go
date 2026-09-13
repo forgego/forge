@@ -131,6 +131,8 @@ type PaginatedResponse struct {
 	Page       int         `json:"page"`
 	TotalPages int         `json:"total_pages"`
 	Results    interface{} `json:"results"`
+	// Display maps relation field name -> related object id (as string) -> human label.
+	Display map[string]map[string]string `json:"display,omitempty"`
 }
 
 // ErrorResponse represents an API error response

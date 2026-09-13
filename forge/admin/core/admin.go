@@ -453,6 +453,58 @@ func (a *Admin[T]) Autocomplete(ctx context.Context, query string, limit int) ([
 	return items, nil
 }
 
+// LabelResolver is implemented by admins that can label objects by id in bulk.
+type LabelResolver interface {
+	ObjectLabels(ctx context.Context, ids []interface{}) (map[string]string, error)
+}
+
+// ObjectLabels resolves human-readable labels for objects by their primary keys in bulk.
+func (a *Admin[T]) ObjectLabels(ctx context.Context, ids []interface{}) (map[string]string, error) {
+	if len(ids) == 0 {
+		return make(map[string]string), nil
+	}
+
+	if len(ids) > 1000 {
+		ids = ids[:1000]
+	}
+
+	qs, err := a.GetQueryset(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	pkField := "id"
+	if a.modelSchema != nil && a.modelSchema.PrimaryKey != "" {
+		pkField = a.modelSchema.PrimaryKey
+	}
+
+	normalizedIDs := make([]interface{}, len(ids))
+	for i, id := range ids {
+		if f, ok := id.(float64); ok && f == math.Floor(f) && !math.IsNaN(f) && !math.IsInf(f, 0) {
+			normalizedIDs[i] = int64(f)
+		} else {
+			normalizedIDs[i] = id
+		}
+	}
+
+	qs = qs.Filter(orm.F(pkField).In(normalizedIDs...))
+
+	results, err := qs.All(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	labels := make(map[string]string, len(results))
+	for _, obj := range results {
+		objID := a.getObjectID(obj)
+		if objID != nil {
+			labels[fmt.Sprint(objID)] = a.getObjectLabel(obj)
+		}
+	}
+
+	return labels, nil
+}
+
 func (a *Admin[T]) GetObject(ctx context.Context, id interface{}) (interface{}, error) {
 	intID, err := toInt64(id)
 	if err != nil {

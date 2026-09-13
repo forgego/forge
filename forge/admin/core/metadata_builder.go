@@ -75,8 +75,8 @@ func buildFieldsMetadata(s schema.Schema) ([]FieldMetadata, error) {
 			Type:         field.Type.String(),
 			Label:        getOrDefault(field.VerboseName, "", humanizeFieldLabel(field.Name)),
 			HelpText:     field.HelpText,
-			Required:     field.Required,
-			ReadOnly:     !field.Editable, // ReadOnly is inverse of Editable usually, or need to check field definition
+			Required:     field.Required && !isAutoManaged(field),
+			ReadOnly:     !field.Editable || isAutoManaged(field), // Auto-managed fields or non-editable fields are read-only
 			Widget:       inferWidget(field),
 			DefaultValue: field.Default,
 		}
@@ -116,6 +116,11 @@ func buildFieldsMetadata(s schema.Schema) ([]FieldMetadata, error) {
 	}
 
 	return result, nil
+}
+
+// isAutoManaged reports whether the database/ORM owns this field's value.
+func isAutoManaged(f schema.Field) bool {
+	return f.AutoNow || f.AutoNowAdd || f.Generated || (f.PrimaryKey && f.AutoIncrement)
 }
 
 // buildRelationsMetadata builds relation metadata from schema relations
