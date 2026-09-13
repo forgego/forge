@@ -2,7 +2,10 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"math"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -61,4 +64,46 @@ func TestFallbackDetailedMigrationStatus_Clean(t *testing.T) {
 	if result.Dirty {
 		t.Fatal("expected dirty=false")
 	}
+}
+
+func TestNewMigrationRunner_UsesDatabaseDriver(t *testing.T) {
+	t.Setenv("FORGE_DATABASE_DRIVER", "postgres")
+
+	dbPath := filepath.Join(t.TempDir(), "m.db")
+	database, err := NewDBWithDriver("sqlite3", dbPath)
+	require.NoError(t, err)
+	defer database.Close()
+
+	migrationsDir := t.TempDir()
+	err = os.WriteFile(filepath.Join(migrationsDir, "000001_init.up.sql"), []byte("CREATE TABLE t(id INTEGER);"), 0644)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(migrationsDir, "000001_init.down.sql"), []byte("DROP TABLE t;"), 0644)
+	require.NoError(t, err)
+
+	runner, err := NewMigrationRunner(database, migrationsDir)
+	require.NoError(t, err)
+	require.NotNil(t, runner)
+
+	err = runner.Up(context.Background())
+	require.NoError(t, err)
+
+	var count int
+	err = database.QueryRow("SELECT COUNT(*) FROM t").Scan(&count)
+	require.NoError(t, err)
+}
+
+func TestNewMigrationRunner_EmptyDriver(t *testing.T) {
+	sqlDB, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	defer sqlDB.Close()
+
+	database := &DB{DB: sqlDB, Driver: ""}
+	migrationsDir := t.TempDir()
+	err = os.WriteFile(filepath.Join(migrationsDir, "000001_init.up.sql"), []byte("CREATE TABLE t(id INTEGER);"), 0644)
+	require.NoError(t, err)
+
+	runner, err := NewMigrationRunner(database, migrationsDir)
+	require.Error(t, err)
+	require.Nil(t, runner)
+	require.Contains(t, err.Error(), "database driver is unknown")
 }

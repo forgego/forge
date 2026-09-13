@@ -2,8 +2,12 @@ package db
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"strings"
 	"testing"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestBeginTx_NilDB(t *testing.T) {
@@ -309,5 +313,127 @@ func TestValidateSavepointNameUnicodeLetters(t *testing.T) {
 				t.Errorf("validateSavepointName(%q) = %v, want %v", tt.input, err, tt.expected)
 			}
 		})
+	}
+}
+
+func setupTransactionTestDB(t *testing.T) *DB {
+	t.Helper()
+	sqlDB, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Skipf("sqlite3 not available (CGO required): %v", err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+	t.Cleanup(func() {
+		_ = sqlDB.Close()
+	})
+
+	db := &DB{
+		DB:     sqlDB,
+		Driver: "sqlite3",
+	}
+
+	_, err = db.Exec("CREATE TABLE test_items (id INTEGER PRIMARY KEY, name TEXT)")
+	if err != nil {
+		t.Fatalf("failed to create test table: %v", err)
+	}
+	return db
+}
+
+func TestWithTx_CommitFailure(t *testing.T) {
+	db := setupTransactionTestDB(t)
+
+	err := db.WithTx(context.Background(), func(tx *Tx) error {
+		_, execErr := tx.Exec("INSERT INTO test_items (id, name) VALUES (1, 'item1')")
+		if execErr != nil {
+			return execErr
+		}
+		// Manually commit inside fn so deferred Commit fails with sql.ErrTxDone
+		return tx.Commit()
+	})
+
+	if err == nil {
+		t.Fatal("expected non-nil error when tx commit fails in defer, got nil")
+	}
+	if !errors.Is(err, sql.ErrTxDone) {
+		t.Fatalf("expected sql.ErrTxDone, got %v", err)
+	}
+}
+
+func TestWithTx_ErrorRollback(t *testing.T) {
+	db := setupTransactionTestDB(t)
+
+	expectedErr := errors.New("business logic error")
+	err := db.WithTx(context.Background(), func(tx *Tx) error {
+		_, execErr := tx.Exec("INSERT INTO test_items (id, name) VALUES (2, 'item2')")
+		if execErr != nil {
+			return execErr
+		}
+		return expectedErr
+	})
+
+	if !errors.Is(err, expectedErr) {
+		t.Fatalf("expected error %v, got %v", expectedErr, err)
+	}
+
+	var count int
+	queryErr := db.QueryRow("SELECT COUNT(*) FROM test_items WHERE id = 2").Scan(&count)
+	if queryErr != nil {
+		t.Fatalf("failed to query test_items: %v", queryErr)
+	}
+	if count != 0 {
+		t.Fatalf("expected 0 rows after rollback, got %d", count)
+	}
+}
+
+func TestWithTx_PanicRollback(t *testing.T) {
+	db := setupTransactionTestDB(t)
+
+	var recovered interface{}
+	func() {
+		defer func() {
+			recovered = recover()
+		}()
+		_ = db.WithTx(context.Background(), func(tx *Tx) error {
+			_, execErr := tx.Exec("INSERT INTO test_items (id, name) VALUES (3, 'item3')")
+			if execErr != nil {
+				return execErr
+			}
+			panic("something went critically wrong")
+		})
+	}()
+
+	if recovered != "something went critically wrong" {
+		t.Fatalf("expected panic 'something went critically wrong', got %v", recovered)
+	}
+
+	var count int
+	queryErr := db.QueryRow("SELECT COUNT(*) FROM test_items WHERE id = 3").Scan(&count)
+	if queryErr != nil {
+		t.Fatalf("failed to query test_items: %v", queryErr)
+	}
+	if count != 0 {
+		t.Fatalf("expected 0 rows after panic rollback, got %d", count)
+	}
+}
+
+func TestWithTx_Success(t *testing.T) {
+	db := setupTransactionTestDB(t)
+
+	err := db.WithTx(context.Background(), func(tx *Tx) error {
+		_, execErr := tx.Exec("INSERT INTO test_items (id, name) VALUES (4, 'item4')")
+		return execErr
+	})
+
+	if err != nil {
+		t.Fatalf("expected nil error on success, got %v", err)
+	}
+
+	var name string
+	queryErr := db.QueryRow("SELECT name FROM test_items WHERE id = 4").Scan(&name)
+	if queryErr != nil {
+		t.Fatalf("failed to query test_items: %v", queryErr)
+	}
+	if name != "item4" {
+		t.Fatalf("expected 'item4', got %q", name)
 	}
 }

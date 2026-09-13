@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/forgego/forge/config"
 	"github.com/forgego/forge/db/migrate/execute"
 	"github.com/forgego/forge/db/migrate/verify"
 	"github.com/golang-migrate/migrate/v4"
@@ -42,9 +41,10 @@ func NewMigrationRunner(db *DB, migrationsPath string) (*MigrationRunner, error)
 		return nil, fmt.Errorf("database connection is closed or invalid: %w", err)
 	}
 
-	// Detect driver from DSN or use config
-	cfg := config.NewConfig()
-	driverName := cfg.GetDriver()
+	if db.Driver == "" {
+		return nil, fmt.Errorf("database driver is unknown")
+	}
+	driverName := db.Driver
 
 	var driver database.Driver
 	var err error
@@ -55,12 +55,14 @@ func NewMigrationRunner(db *DB, migrationsPath string) (*MigrationRunner, error)
 			return nil, fmt.Errorf("failed to create sqlite driver: %w", err)
 		}
 		driverName = "sqlite3" // golang-migrate uses "sqlite3" as the driver name
-	} else {
+	} else if driverName == "postgres" || driverName == "postgresql" {
 		driver, err = postgres.WithInstance(db.DB, &postgres.Config{})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create postgres driver: %w", err)
 		}
 		driverName = "postgres"
+	} else {
+		return nil, fmt.Errorf("unsupported database driver: %s", driverName)
 	}
 
 	// Always convert to absolute path to avoid issues with working directory changes
@@ -202,6 +204,11 @@ func (mr *MigrationRunner) Migrate(ctx context.Context) error {
 		return fmt.Errorf("failed to apply migrations: %w", err)
 	}
 	return nil
+}
+
+// Up applies all pending migrations (alias for Migrate)
+func (mr *MigrationRunner) Up(ctx context.Context) error {
+	return mr.Migrate(ctx)
 }
 
 // validatePendingMigrations validates pending migrations before execution
