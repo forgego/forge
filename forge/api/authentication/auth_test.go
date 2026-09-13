@@ -1,6 +1,7 @@
 package authentication
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -156,3 +157,28 @@ func TestContextIntegration(t *testing.T) {
 	assert.Equal(t, authData, auth)
 }
 
+func TestAuthenticateRequest_ReturnsAuthenticationError(t *testing.T) {
+	credentialErr := errors.New("invalid credentials")
+	fallthroughAuth := &MockAuthentication{ShouldAuthenticate: true, User: &MockUser{ID: "unexpected"}}
+
+	result, err := AuthenticateRequest(httptest.NewRequest("GET", "/test", nil), []Authentication{
+		&MockAuthentication{Error: credentialErr},
+		fallthroughAuth,
+	})
+
+	assert.ErrorIs(t, err, credentialErr)
+	assert.Nil(t, result)
+}
+
+func TestAuthenticateRequest_FallsThroughOnlyWhenNotApplicable(t *testing.T) {
+	user := &MockUser{ID: "456", Authenticated: true}
+
+	result, err := AuthenticateRequest(httptest.NewRequest("GET", "/test", nil), []Authentication{
+		&MockAuthentication{ShouldAuthenticate: false},
+		&MockAuthentication{ShouldAuthenticate: true, User: user, Auth: "token456"},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, user, result.User)
+}

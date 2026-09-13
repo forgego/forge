@@ -6,7 +6,8 @@ import (
 	"errors"
 	"net/http"
 	"strings"
-	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // JWTClaims represents JWT claims
@@ -35,40 +36,54 @@ func NewJWTAuthentication(secretKey []byte, userLookup func(claims JWTClaims) (i
 	}
 }
 
-// validateJWTToken validates a JWT token (simplified implementation)
-// For production, use a proper JWT library like github.com/golang-jwt/jwt
+// validateJWTToken validates a JWT token signed with HS256.
 func validateJWTToken(tokenString string, secretKey []byte) (JWTClaims, error) {
-	// Split token into parts (header.payload.signature)
-	parts := strings.Split(tokenString, ".")
-	if len(parts) != 3 {
-		return nil, errors.New("invalid token format")
+	if len(secretKey) == 0 {
+		return nil, errors.New("JWT secret key is not configured")
 	}
 
-	// Decode payload (simplified - in production, verify signature)
-	payload := parts[1]
-	// Add padding if needed
-	if len(payload)%4 != 0 {
-		payload += strings.Repeat("=", 4-len(payload)%4)
-	}
-
-	decoded, err := base64.URLEncoding.DecodeString(payload)
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(
+		tokenString,
+		claims,
+		func(token *jwt.Token) (interface{}, error) {
+			if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+				return nil, errors.New("unexpected JWT signing method")
+			}
+			return secretKey, nil
+		},
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+	)
 	if err != nil {
 		return nil, err
 	}
-
-	var claims JWTClaims
-	if err := json.Unmarshal(decoded, &claims); err != nil {
+	if token == nil || !token.Valid {
+		return nil, errors.New("invalid JWT token")
+	}
+	if err := validateJWTClaimsPayload(tokenString); err != nil {
 		return nil, err
 	}
 
-	// Check expiration
-	if exp, ok := claims["exp"].(float64); ok {
-		if time.Now().Unix() > int64(exp) {
-			return nil, errors.New("token expired")
-		}
+	return JWTClaims(claims), nil
+}
+
+func validateJWTClaimsPayload(tokenString string) error {
+	parts := strings.Split(tokenString, ".")
+	if len(parts) != 3 {
+		return errors.New("invalid JWT token")
 	}
 
-	return claims, nil
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return errors.New("invalid JWT claims payload")
+	}
+
+	var rawClaims map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &rawClaims); err != nil || rawClaims == nil {
+		return errors.New("JWT claims must be a JSON object")
+	}
+
+	return nil
 }
 
 // Authenticate attempts to authenticate using JWT from Authorization header
@@ -78,16 +93,17 @@ func (a *JWTAuthentication) Authenticate(r *http.Request) (*AuthResult, error) {
 		return nil, nil
 	}
 
-	// Parse "Bearer <token>" format
-	parts := strings.SplitN(authHeader, " ", 2)
-	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+	// A non-Bearer scheme is not applicable to this authenticator. A malformed
+	// Bearer credential is applicable, but invalid, and must not fall through.
+	parts := strings.Fields(authHeader)
+	if len(parts) == 0 || !strings.EqualFold(parts[0], "Bearer") {
 		return nil, nil
+	}
+	if len(parts) != 2 || parts[1] == "" {
+		return nil, errors.New("invalid Bearer authorization header")
 	}
 
 	tokenString := parts[1]
-	if tokenString == "" {
-		return nil, nil
-	}
 
 	// Validate token
 	validateFunc := a.ValidateToken
@@ -121,4 +137,3 @@ func (a *JWTAuthentication) Authenticate(r *http.Request) (*AuthResult, error) {
 func (a *JWTAuthentication) AuthenticateHeader(r *http.Request) string {
 	return "Bearer"
 }
-
