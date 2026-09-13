@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"net/url"
 	"strconv"
 
 	forgehttp "github.com/forgego/forge/server"
@@ -94,19 +95,36 @@ func NewPagination(page, pageSize, totalCount int) *Pagination {
 	}
 }
 
+// pageURL returns an absolute URL for the current request with page and page_size replaced.
+func pageURL(r *http.Request, page, pageSize int) string {
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+
+	q := r.URL.Query()
+	q.Set("page", strconv.Itoa(page))
+	q.Set("page_size", strconv.Itoa(pageSize))
+
+	return (&url.URL{
+		Scheme:   scheme,
+		Host:     r.Host,
+		Path:     r.URL.Path,
+		RawQuery: q.Encode(),
+	}).String()
+}
+
 // BuildPaginatedResponse creates a paginated response
 func BuildPaginatedResponse(r *http.Request, results interface{}, totalCount, page, pageSize int) *PaginatedResponse {
-	baseURL := r.URL.Scheme + "://" + r.URL.Host + r.URL.Path
-
 	var next, previous *string
 	pagination := NewPagination(page, pageSize, totalCount)
 
 	if pagination.HasNext {
-		nextURL := baseURL + "?page=" + strconv.Itoa(*pagination.NextPage) + "&page_size=" + strconv.Itoa(pageSize)
+		nextURL := pageURL(r, *pagination.NextPage, pageSize)
 		next = &nextURL
 	}
 	if pagination.HasPrev {
-		prevURL := baseURL + "?page=" + strconv.Itoa(*pagination.PrevPage) + "&page_size=" + strconv.Itoa(pageSize)
+		prevURL := pageURL(r, *pagination.PrevPage, pageSize)
 		previous = &prevURL
 	}
 
