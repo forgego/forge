@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/forgego/forge/netutil"
 	"golang.org/x/time/rate"
 )
 
@@ -17,22 +18,32 @@ type RateLimiter interface {
 	Wait(ctx context.Context) error
 }
 
+type limiterEntry struct {
+	limiter  *rate.Limiter
+	lastSeen atomic.Int64 // unix nanos
+}
+
 // rateLimitStore stores rate limiters for different keys
 type rateLimitStore struct {
 	mu       sync.RWMutex
-	limiters map[string]*rate.Limiter
+	limiters map[string]*limiterEntry
 	rate     rate.Limit
 	burst    int
 	cleanup  *time.Ticker
+	done     chan struct{}
+	stopOnce sync.Once
+	idleTTL  time.Duration
 }
 
 // newRateLimitStore creates a new rate limit store
 func newRateLimitStore(r rate.Limit, burst int) *rateLimitStore {
 	store := &rateLimitStore{
-		limiters: make(map[string]*rate.Limiter),
+		limiters: make(map[string]*limiterEntry),
 		rate:     r,
 		burst:    burst,
 		cleanup:  time.NewTicker(5 * time.Minute),
+		done:     make(chan struct{}),
+		idleTTL:  10 * time.Minute,
 	}
 
 	// Start cleanup goroutine
@@ -43,53 +54,65 @@ func newRateLimitStore(r rate.Limit, burst int) *rateLimitStore {
 
 // getLimiter gets or creates a limiter for a key
 func (s *rateLimitStore) getLimiter(key string) *rate.Limiter {
-	s.mu.RLock()
-	limiter, exists := s.limiters[key]
-	s.mu.RUnlock()
+	now := time.Now().UnixNano()
 
+	s.mu.RLock()
+	entry, exists := s.limiters[key]
 	if exists {
-		return limiter
+		entry.lastSeen.Store(now)
+		s.mu.RUnlock()
+		return entry.limiter
 	}
+	s.mu.RUnlock()
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	// Double-check after acquiring write lock
-	if limiter, exists := s.limiters[key]; exists {
-		return limiter
+	if entry, exists = s.limiters[key]; exists {
+		entry.lastSeen.Store(now)
+		return entry.limiter
 	}
 
-	limiter = rate.NewLimiter(s.rate, s.burst)
-	s.limiters[key] = limiter
-	return limiter
+	entry = &limiterEntry{
+		limiter: rate.NewLimiter(s.rate, s.burst),
+	}
+	entry.lastSeen.Store(now)
+	s.limiters[key] = entry
+	return entry.limiter
+}
+
+// evictIdle removes limiters that have been idle longer than idleTTL
+func (s *rateLimitStore) evictIdle(now time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	cutoff := now.Add(-s.idleTTL).UnixNano()
+	for k, e := range s.limiters {
+		if e.lastSeen.Load() < cutoff {
+			delete(s.limiters, k)
+		}
+	}
 }
 
 // cleanupExpired periodically cleans up old limiters
 func (s *rateLimitStore) cleanupExpired() {
-	for range s.cleanup.C {
-		s.mu.Lock()
-		// Simple cleanup: remove limiters that haven't been used recently
-		// In production, you might want a more sophisticated approach
-		if len(s.limiters) > 1000 {
-			// Clear half of the limiters (simple strategy)
-			// In production, use LRU or time-based expiration
-			newLimiters := make(map[string]*rate.Limiter, len(s.limiters)/2)
-			count := 0
-			for k, v := range s.limiters {
-				if count < len(s.limiters)/2 {
-					newLimiters[k] = v
-					count++
-				}
-			}
-			s.limiters = newLimiters
+	defer s.cleanup.Stop()
+	for {
+		select {
+		case <-s.cleanup.C:
+			s.evictIdle(time.Now())
+		case <-s.done:
+			return
 		}
-		s.mu.Unlock()
 	}
 }
 
 // stop stops the cleanup ticker
 func (s *rateLimitStore) stop() {
-	s.cleanup.Stop()
+	s.stopOnce.Do(func() {
+		close(s.done)
+	})
 }
 
 // global stores for different rate limit types
@@ -156,50 +179,7 @@ func rateLimitKey(requests int, window time.Duration) string {
 
 // getClientIP extracts the client IP from the request
 func getClientIP(r *http.Request) string {
-	// Check X-Forwarded-For header
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		// Take the first IP (original client)
-		ips := splitIPs(xff)
-		if len(ips) > 0 {
-			return ips[0]
-		}
-	}
-
-	// Check X-Real-IP header
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return xri
-	}
-
-	// Fall back to RemoteAddr
-	ip := r.RemoteAddr
-	if host, _, err := splitHostPort(ip); err == nil {
-		return host
-	}
-
-	return ip
-}
-
-// splitIPs splits comma-separated IPs
-func splitIPs(s string) []string {
-	parts := strings.Split(s, ",")
-	result := make([]string, 0, len(parts))
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part != "" {
-			result = append(result, part)
-		}
-	}
-	return result
-}
-
-// splitHostPort splits host:port (simplified)
-func splitHostPort(hostport string) (host, port string, err error) {
-	// Simple implementation - in production use net.SplitHostPort
-	idx := strings.LastIndex(hostport, ":")
-	if idx < 0 {
-		return hostport, "", nil
-	}
-	return hostport[:idx], hostport[idx+1:], nil
+	return netutil.ClientIP(r, netutil.TrustedProxies())
 }
 
 // RateLimitByIP creates a middleware that rate limits by IP address
