@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
 	"net/http"
 	"os"
 	"reflect"
@@ -34,9 +35,10 @@ type Router struct {
 	prefix   string
 	// adminPrefix is the public mount path of the admin UI, used for
 	// absolute URLs in search results. Defaults to "/admin".
-	adminPrefix string
-	views       *savedViewStore
-	sessions    *adminSessionStore
+	adminPrefix  string
+	views        *savedViewStore
+	sessions     *adminSessionStore
+	loginLimiter *loginLimiter
 }
 
 // NewRouter creates a new admin API router
@@ -46,9 +48,10 @@ func NewRouter(registry *core.Registry) *Router {
 		prefix:   "/api",
 		// adminPrefix is the public path the admin UI is served from. It is
 		// used to build absolute URLs (e.g. in global search results).
-		adminPrefix: "/admin",
-		views:       newSavedViewStore(),
-		sessions:    newAdminSessionStore(),
+		adminPrefix:  "/admin",
+		views:        newSavedViewStore(),
+		sessions:     newAdminSessionStore(),
+		loginLimiter: newLoginLimiter(),
 	}
 }
 
@@ -321,7 +324,35 @@ func (r *Router) handleLogin(w http.ResponseWriter, req *http.Request) {
 	}
 
 	payload.Username = strings.TrimSpace(payload.Username)
-	payload.Password = strings.TrimSpace(payload.Password)
+
+	ip, _, err := net.SplitHostPort(req.RemoteAddr)
+	if err != nil {
+		ip = req.RemoteAddr
+	}
+	ipKey := "ip:" + ip
+	userKey := "user:" + strings.ToLower(payload.Username)
+
+	if r.loginLimiter != nil {
+		blockedIP, remIP := r.loginLimiter.blocked(ipKey)
+		blockedUser, remUser := r.loginLimiter.blocked(userKey)
+		if blockedIP || blockedUser {
+			var longer time.Duration
+			if blockedIP && remIP > longer {
+				longer = remIP
+			}
+			if blockedUser && remUser > longer {
+				longer = remUser
+			}
+			secs := int(math.Ceil(longer.Seconds()))
+			if secs < 1 {
+				secs = 1
+			}
+			w.Header().Set("Retry-After", strconv.Itoa(secs))
+			respondError(w, http.StatusTooManyRequests, "too_many_attempts", "Too many failed login attempts. Try again later.", nil)
+			return
+		}
+	}
+
 	if payload.Username == "" || payload.Password == "" {
 		respondError(w, http.StatusBadRequest, "invalid_credentials", "Username and password are required", nil)
 		return
@@ -332,8 +363,17 @@ func (r *Router) handleLogin(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if !secureEqual(payload.Username, expectedUsername) || !secureEqual(payload.Password, expectedPassword) {
+		if r.loginLimiter != nil {
+			r.loginLimiter.fail(ipKey)
+			r.loginLimiter.fail(userKey)
+		}
 		respondError(w, http.StatusUnauthorized, "invalid_credentials", "Invalid username or password", nil)
 		return
+	}
+
+	if r.loginLimiter != nil {
+		r.loginLimiter.success(ipKey)
+		r.loginLimiter.success(userKey)
 	}
 
 	token, err := r.sessions.Issue(payload.Username, 24*time.Hour)
@@ -369,7 +409,7 @@ func (r *Router) handleLogout(w http.ResponseWriter, req *http.Request) {
 func adminCredentials() (string, string) {
 	// No defaults: admin login stays disabled until both variables are set.
 	username := strings.TrimSpace(os.Getenv("FORGE_ADMIN_USERNAME"))
-	password := strings.TrimSpace(os.Getenv("FORGE_ADMIN_PASSWORD"))
+	password := strings.TrimRight(os.Getenv("FORGE_ADMIN_PASSWORD"), "\r\n")
 
 	return username, password
 }
@@ -1417,8 +1457,18 @@ type adminSession struct {
 }
 
 type adminSessionStore struct {
-	mu       sync.RWMutex
-	sessions map[string]adminSession
+	mu            sync.RWMutex
+	sessions      map[string]adminSession
+	lastPurge     time.Time
+	purgeInterval time.Duration
+}
+
+func (s *adminSessionStore) purgeExpiredLocked(now time.Time) {
+	for k, session := range s.sessions {
+		if !session.Active || now.After(session.ExpiresAt) {
+			delete(s.sessions, k)
+		}
+	}
 }
 
 func hashSessionToken(token string) string {
@@ -1450,9 +1500,20 @@ func (s *adminSessionStore) Issue(username string, ttl time.Duration) (string, e
 	tokenHash := hashSessionToken(token)
 
 	s.mu.Lock()
+	now := time.Now()
+	interval := s.purgeInterval
+	if interval == 0 {
+		interval = time.Minute
+	}
+	if s.lastPurge.IsZero() || now.Sub(s.lastPurge) >= interval {
+		if len(s.sessions) > 0 {
+			s.purgeExpiredLocked(now)
+			s.lastPurge = now
+		}
+	}
 	s.sessions[tokenHash] = adminSession{
 		Username:  username,
-		ExpiresAt: time.Now().Add(ttl),
+		ExpiresAt: now.Add(ttl),
 		Active:    true,
 	}
 	s.mu.Unlock()
