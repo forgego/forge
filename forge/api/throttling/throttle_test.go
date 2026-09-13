@@ -2,9 +2,13 @@ package throttling
 
 import (
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/forgego/forge/api/authentication"
+	"github.com/forgego/forge/netutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -205,3 +209,148 @@ func (m *MockViewSet) GetAction() string     { return "list" }
 func (m *MockViewSet) GetDetail() bool       { return false }
 func (m *MockViewSet) GetModel() interface{} { return nil }
 
+type mockAuthUser struct {
+	ID string
+}
+
+func TestAnonRateThrottle_Concurrent(t *testing.T) {
+	cache := NewMemoryCache()
+	throttle := NewAnonRateThrottle("50/hour", cache)
+	view := &MockViewSet{}
+
+	const total = 200
+	var wg sync.WaitGroup
+	var allowedCount int64
+
+	start := make(chan struct{})
+	for i := 0; i < total; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			req := httptest.NewRequest("GET", "/test", nil)
+			req.RemoteAddr = "192.168.1.100:12345"
+			allowed, _, err := throttle.AllowRequest(req, view)
+			if err == nil && allowed {
+				atomic.AddInt64(&allowedCount, 1)
+			}
+		}()
+	}
+	close(start)
+	wg.Wait()
+
+	assert.Equal(t, int64(50), allowedCount, "expected exactly 50 allowed requests under concurrent load")
+}
+
+func TestUserRateThrottle_Concurrent(t *testing.T) {
+	cache := NewMemoryCache()
+	throttle := NewUserRateThrottle("50/hour", cache)
+	view := &MockViewSet{}
+
+	const total = 200
+	var wg sync.WaitGroup
+	var allowedCount int64
+
+	start := make(chan struct{})
+	for i := 0; i < total; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			req := httptest.NewRequest("GET", "/test", nil)
+			authentication.SetUserOnRequest(req, &mockAuthUser{ID: "user-42"})
+			allowed, _, err := throttle.AllowRequest(req, view)
+			if err == nil && allowed {
+				atomic.AddInt64(&allowedCount, 1)
+			}
+		}()
+	}
+	close(start)
+	wg.Wait()
+
+	assert.Equal(t, int64(50), allowedCount, "expected exactly 50 allowed requests under concurrent load")
+}
+
+func TestThrottle_SequentialLimit3(t *testing.T) {
+	cache := NewMemoryCache()
+	throttle := NewAnonRateThrottle("3/hour", cache)
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.RemoteAddr = "192.168.1.1:1234"
+	view := &MockViewSet{}
+
+	// 1st request -> allowed
+	allowed, retryAfter, err := throttle.AllowRequest(req, view)
+	require.NoError(t, err)
+	assert.True(t, allowed)
+	assert.Equal(t, time.Duration(0), retryAfter)
+
+	// 2nd request -> allowed
+	allowed, retryAfter, err = throttle.AllowRequest(req, view)
+	require.NoError(t, err)
+	assert.True(t, allowed)
+	assert.Equal(t, time.Duration(0), retryAfter)
+
+	// 3rd request -> allowed
+	allowed, retryAfter, err = throttle.AllowRequest(req, view)
+	require.NoError(t, err)
+	assert.True(t, allowed)
+	assert.Equal(t, time.Duration(0), retryAfter)
+
+	// 4th request -> denied with retryAfter > 0
+	allowed, retryAfter, err = throttle.AllowRequest(req, view)
+	require.NoError(t, err)
+	assert.False(t, allowed)
+	assert.True(t, retryAfter > 0, "retryAfter must be greater than 0")
+}
+
+func TestThrottle_WindowExpiry(t *testing.T) {
+	cache := NewMemoryCache()
+	throttle := NewAnonRateThrottle("3/second", cache)
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.RemoteAddr = "192.168.1.1:1234"
+	view := &MockViewSet{}
+
+	// Exhaust limit of 3
+	for i := 0; i < 3; i++ {
+		allowed, _, err := throttle.AllowRequest(req, view)
+		require.NoError(t, err)
+		assert.True(t, allowed)
+	}
+
+	// 4th request must be denied
+	allowed, retryAfter, err := throttle.AllowRequest(req, view)
+	require.NoError(t, err)
+	assert.False(t, allowed)
+	assert.True(t, retryAfter > 0)
+
+	// Wait for window to elapse
+	time.Sleep(retryAfter + 50*time.Millisecond)
+
+	// Requests should be allowed again
+	allowed, _, err = throttle.AllowRequest(req, view)
+	require.NoError(t, err)
+	assert.True(t, allowed)
+}
+
+func TestAnonRateThrottle_UntrustedHeaderSpoofing(t *testing.T) {
+	err := netutil.SetTrustedProxies(nil)
+	require.NoError(t, err)
+
+	cache := NewMemoryCache()
+	throttle := NewAnonRateThrottle("1/hour", cache)
+	view := &MockViewSet{}
+
+	req1 := httptest.NewRequest("GET", "/test", nil)
+	req1.RemoteAddr = "203.0.113.195:1234"
+	req1.Header.Set("X-Forwarded-For", "1.1.1.1")
+	allowed, _, err := throttle.AllowRequest(req1, view)
+	require.NoError(t, err)
+	assert.True(t, allowed)
+
+	req2 := httptest.NewRequest("GET", "/test", nil)
+	req2.RemoteAddr = "203.0.113.195:1234"
+	req2.Header.Set("X-Forwarded-For", "2.2.2.2")
+	allowed, _, err = throttle.AllowRequest(req2, view)
+	require.NoError(t, err)
+	assert.False(t, allowed, "spoofed X-Forwarded-For from untrusted peer must not bypass throttle")
+}

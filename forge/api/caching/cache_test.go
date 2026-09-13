@@ -1,6 +1,8 @@
 package caching
 
 import (
+	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -107,3 +109,77 @@ func TestDefaultCacheKeyGenerator_MultipleParts(t *testing.T) {
 	assert.Equal(t, "cache:users:123:orders:456", key)
 }
 
+func TestMemoryCache_Concurrency(t *testing.T) {
+	cache := NewMemoryCache()
+	var wg sync.WaitGroup
+	numGoroutines := 50
+	iterations := 200
+
+	keys := []string{"key-0", "key-1", "key-2", "key-3", "key-4"}
+
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(gID int) {
+			defer wg.Done()
+			for j := 0; j < iterations; j++ {
+				if j%10 == 0 {
+					time.Sleep(2 * time.Millisecond)
+				}
+				key := keys[(gID+j)%len(keys)]
+				switch (gID + j) % 3 {
+				case 0:
+					_ = cache.Set(key, j, 1*time.Millisecond)
+				case 1:
+					_, _ = cache.Get(key)
+				case 2:
+					_ = cache.Exists(key)
+				}
+			}
+		}(i)
+	}
+
+	wg.Wait()
+}
+
+func TestMemoryCache_Expiry(t *testing.T) {
+	cache := NewMemoryCache()
+	err := cache.Set("expiry-key", "value", 10*time.Millisecond)
+	require.NoError(t, err)
+
+	time.Sleep(30 * time.Millisecond)
+
+	val, err := cache.Get("expiry-key")
+	require.NoError(t, err)
+	assert.Nil(t, val)
+	assert.False(t, cache.Exists("expiry-key"))
+}
+
+func TestMemoryCache_Close(t *testing.T) {
+	before := runtime.NumGoroutine()
+	cache := NewMemoryCache()
+
+	err := cache.Close()
+	require.NoError(t, err)
+
+	deadline := time.Now().Add(1 * time.Second)
+	stopped := false
+	for time.Now().Before(deadline) {
+		if runtime.NumGoroutine() <= before {
+			stopped = true
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	require.True(t, stopped, "cleanup goroutine did not stop within 1s")
+}
+
+func TestMemoryCache_CloseTwice(t *testing.T) {
+	cache := NewMemoryCache()
+	err := cache.Close()
+	require.NoError(t, err)
+
+	assert.NotPanics(t, func() {
+		err = cache.Close()
+		assert.NoError(t, err)
+	})
+}

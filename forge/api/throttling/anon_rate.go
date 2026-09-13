@@ -3,6 +3,8 @@ package throttling
 import (
 	"net/http"
 	"time"
+
+	"github.com/forgego/forge/netutil"
 )
 
 // AnonRateThrottle throttles anonymous (unauthenticated) requests
@@ -55,6 +57,10 @@ func (t *AnonRateThrottle) checkRate(key, rate string) (bool, time.Duration, err
 		return true, 0, err
 	}
 
+	if c, ok := t.Cache.(atomicCounter); ok {
+		return c.IncrementWithinLimit(key, limit, duration)
+	}
+
 	// Get current count
 	count, err := t.Cache.GetInt(key)
 	if err != nil {
@@ -79,15 +85,5 @@ func (t *AnonRateThrottle) checkRate(key, rate string) (bool, time.Duration, err
 
 // getClientIP gets the client IP address from request
 func getClientIP(r *http.Request) string {
-	// Check X-Forwarded-For header
-	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
-		return ip
-	}
-	// Check X-Real-IP header
-	if ip := r.Header.Get("X-Real-IP"); ip != "" {
-		return ip
-	}
-	// Fall back to RemoteAddr
-	return r.RemoteAddr
+	return netutil.ClientIP(r, netutil.TrustedProxies())
 }
-

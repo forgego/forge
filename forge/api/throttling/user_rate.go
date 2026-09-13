@@ -70,6 +70,10 @@ func (t *UserRateThrottle) checkRate(key, rate string) (bool, time.Duration, err
 		return true, 0, err
 	}
 
+	if c, ok := t.Cache.(atomicCounter); ok {
+		return c.IncrementWithinLimit(key, limit, duration)
+	}
+
 	count, err := t.Cache.GetInt(key)
 	if err != nil {
 		count = 0
@@ -120,4 +124,3 @@ func formatID(id interface{}) string {
 	// Convert to string
 	return fmt.Sprintf("%v", id)
 }
-
