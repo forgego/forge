@@ -224,8 +224,7 @@ func main() {
 
 func startServer(t *testing.T, ctx context.Context, projectDir string) (*exec.Cmd, *bytes.Buffer) {
 	t.Helper()
-	serverCtx, _ := context.WithCancel(ctx)
-	cmd := exec.CommandContext(serverCtx, "go", "run", "cmd/server/main.go")
+	cmd := exec.CommandContext(ctx, "go", "run", "cmd/server/main.go")
 	cmd.Dir = projectDir
 	cmd.Env = append(os.Environ(),
 		"FORGE_ADMIN_USERNAME=admin",

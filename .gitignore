@@ -123,3 +123,7 @@ coverage.html
 
 # Helper projects
 helper-projects/
+# admin UI test artifacts
+forge/admin/ui/web/test-results/
+forge/admin/ui/web/playwright-report/
+forge/admin/ui/web/.vitest/

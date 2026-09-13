@@ -138,7 +138,7 @@ export function ThemeCustomizer() {
                   </Button>
                 ))}
               </div>
-              <p className="mt-2 text-[11px] text-muted-foreground">
+              <p className="mt-2 text-micro text-muted-foreground">
                 Radius in rem units. Current: {radius}rem.
               </p>
             </div>

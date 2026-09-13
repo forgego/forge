@@ -262,9 +262,51 @@ go run main.go
 
 ### 7. Access Interfaces
 
-- **Admin Interface**: http://localhost:8000/admin/
-- **REST API**: http://localhost:8000/api/v1/
-- **API Docs**: http://localhost:8000/api/v1/docs/
+- **Admin Interface**: http://localhost:8020/admin/
+- **REST API**: http://localhost:8020/api/v1/
+- **API Docs**: http://localhost:8020/api/v1/docs/
+
+## Admin UI
+
+The admin interface is a modern React application served directly by the Go server at http://localhost:8020/admin/. The port is configured via `server.port` in `config/config.yaml` (default `8020`, or overridden by the `FORGE_SERVER_PORT` environment variable). Log in with default credentials `admin` / `admin123` (configured via `admin.username` and `admin.password` in `config/config.yaml`).
+
+Without building the UI bundle, the server falls back to serving a placeholder stub page (`forge/admin/ui/stub/index.html`).
+
+### Quick Start
+
+Build the admin UI bundle and start the server:
+
+```bash
+make admin-ui
+make run-go
+```
+
+Or build and run in a single command:
+
+```bash
+make demo
+```
+
+### Production Binary
+
+Build the admin UI and compile a self-contained production binary with the UI bundle embedded via `-tags embed`:
+
+```bash
+make build-embed
+./ecommerce
+```
+
+### End-to-End Tests
+
+Run the Playwright end-to-end test suite for the admin UI (Google Chrome is required; the suite starts the server automatically):
+
+```bash
+make ui-test
+```
+
+### Mounting Under a Different Path
+
+To mount the admin UI under a custom path, set `admin.path` in `config/config.yaml` (for example, `admin.path: /custom-admin/`). The Go server injects the prefix into the React UI at runtime, so no rebuild of the UI bundle is needed.
 
 ## CLI Commands Demonstrated
 
@@ -346,16 +388,16 @@ forge createsuperuser --no-superuser
 
 ```bash
 # List products
-curl http://localhost:8000/api/v1/products/
+curl http://localhost:8020/api/v1/products/
 
 # Filter products
-curl "http://localhost:8000/api/v1/products/?category__name=Electronics&price__gte=100"
+curl "http://localhost:8020/api/v1/products/?category__name=Electronics&price__gte=100"
 
 # Get product
-curl http://localhost:8000/api/v1/products/1/
+curl http://localhost:8020/api/v1/products/1/
 
 # Create product
-curl -X POST http://localhost:8000/api/v1/products/ \
+curl -X POST http://localhost:8020/api/v1/products/ \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Laptop",
@@ -365,28 +407,28 @@ curl -X POST http://localhost:8000/api/v1/products/ \
   }'
 
 # Update product
-curl -X PATCH http://localhost:8000/api/v1/products/1/ \
+curl -X PATCH http://localhost:8020/api/v1/products/1/ \
   -H "Content-Type: application/json" \
   -d '{"price": 899.99}'
 
 # Delete product
-curl -X DELETE http://localhost:8000/api/v1/products/1/
+curl -X DELETE http://localhost:8020/api/v1/products/1/
 ```
 
 ### Orders API
 
 ```bash
 # List orders
-curl http://localhost:8000/api/v1/orders/
+curl http://localhost:8020/api/v1/orders/
 
 # Filter by status
-curl "http://localhost:8000/api/v1/orders/?status=pending"
+curl "http://localhost:8020/api/v1/orders/?status=pending"
 
 # Filter by customer
-curl "http://localhost:8000/api/v1/orders/?customer__email=john@example.com"
+curl "http://localhost:8020/api/v1/orders/?customer__email=john@example.com"
 
 # Create order
-curl -X POST http://localhost:8000/api/v1/orders/ \
+curl -X POST http://localhost:8020/api/v1/orders/ \
   -H "Content-Type: application/json" \
   -d '{
     "customer_id": 1,
@@ -400,16 +442,16 @@ curl -X POST http://localhost:8000/api/v1/orders/ \
 
 ```bash
 # Complex filters with deep relations
-curl "http://localhost:8000/api/v1/products/?category__parent__name=Electronics&reviews__rating__gte=4"
+curl "http://localhost:8020/api/v1/products/?category__parent__name=Electronics&reviews__rating__gte=4"
 
 # Multiple conditions
-curl "http://localhost:8000/api/v1/orders/?status__in=pending,processing&created_at__gte=2024-01-01&total__gte=100"
+curl "http://localhost:8020/api/v1/orders/?status__in=pending,processing&created_at__gte=2024-01-01&total__gte=100"
 
 # Search
-curl "http://localhost:8000/api/v1/products/?search=laptop"
+curl "http://localhost:8020/api/v1/products/?search=laptop"
 
 # Ordering
-curl "http://localhost:8000/api/v1/products/?ordering=-created_at,price"
+curl "http://localhost:8020/api/v1/products/?ordering=-created_at,price"
 ```
 
 ## ORM Usage Examples

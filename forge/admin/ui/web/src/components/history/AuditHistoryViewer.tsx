@@ -216,7 +216,7 @@ export function AuditHistoryViewer({
             <Button
               variant={selectedActionFilter === "all" ? "secondary" : "ghost"}
               size="sm"
-              className="h-7 px-2.5 text-[11px] font-medium"
+              className="h-7 px-2.5 text-meta font-medium"
               onClick={() => setSelectedActionFilter("all")}
             >
               All
@@ -224,7 +224,7 @@ export function AuditHistoryViewer({
             <Button
               variant={selectedActionFilter === "add" ? "secondary" : "ghost"}
               size="sm"
-              className="h-7 px-2.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400"
+              className="h-7 px-2.5 text-meta font-medium text-success"
               onClick={() => setSelectedActionFilter("add")}
             >
               Created
@@ -232,7 +232,7 @@ export function AuditHistoryViewer({
             <Button
               variant={selectedActionFilter === "change" ? "secondary" : "ghost"}
               size="sm"
-              className="h-7 px-2.5 text-[11px] font-medium text-blue-600 dark:text-blue-400"
+              className="h-7 px-2.5 text-meta font-medium text-info"
               onClick={() => setSelectedActionFilter("change")}
             >
               Updated
@@ -240,7 +240,7 @@ export function AuditHistoryViewer({
             <Button
               variant={selectedActionFilter === "delete" ? "secondary" : "ghost"}
               size="sm"
-              className="h-7 px-2.5 text-[11px] font-medium text-rose-600 dark:text-rose-400"
+              className="h-7 px-2.5 text-meta font-medium text-danger"
               onClick={() => setSelectedActionFilter("delete")}
             >
               Deleted
@@ -295,10 +295,10 @@ export function AuditHistoryViewer({
                   className={cn(
                     "absolute -left-[27px] top-1.5 flex h-6 w-6 items-center justify-center rounded-full border shadow-sm transition-transform group-hover:scale-110",
                     isAdd
-                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                      ? "border-success/20 bg-success-surface text-success"
                       : isDelete
-                      ? "border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400"
-                      : "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                      ? "border-danger/20 bg-danger-surface text-danger"
+                      : "border-info/20 bg-info-surface text-info"
                   )}
                 >
                   {isAdd ? (
@@ -315,7 +315,7 @@ export function AuditHistoryViewer({
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <div className="flex items-center gap-1.5 font-medium text-xs text-foreground">
-                        <div className="h-5 w-5 rounded-full bg-muted/80 flex items-center justify-center text-[10px] font-bold text-muted-foreground border border-border/40">
+                        <div className="h-5 w-5 rounded-full bg-muted/80 flex items-center justify-center text-micro font-bold text-muted-foreground border border-border/40">
                           {userLabel.charAt(0).toUpperCase()}
                         </div>
                         <span>{userLabel}</span>
@@ -324,10 +324,10 @@ export function AuditHistoryViewer({
                       <Badge
                         variant="outline"
                         className={cn(
-                          "text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5",
-                          isAdd && "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-                          isDelete && "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400",
-                          !isAdd && !isDelete && "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                          "text-micro font-semibold uppercase tracking-wider px-2 py-0.5",
+                          isAdd && "border-success/20 bg-success-surface text-success",
+                          isDelete && "border-danger/20 bg-danger-surface text-danger",
+                          !isAdd && !isDelete && "border-info/20 bg-info-surface text-info"
                         )}
                       >
                         {isAdd ? "Created" : isDelete ? "Deleted" : "Updated"}
@@ -351,7 +351,7 @@ export function AuditHistoryViewer({
                   {/* Changes Diff Display */}
                   {changes.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-border/40 space-y-2">
-                      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      <div className="flex items-center gap-1.5 text-meta font-semibold text-muted-foreground uppercase tracking-wider">
                         <SlidersHorizontal className="h-3 w-3" />
                         <span>Modified Properties ({changes.length})</span>
                       </div>
@@ -370,11 +370,11 @@ export function AuditHistoryViewer({
                               </span>
                             ) : (
                               <div className="flex items-center gap-2 text-xs">
-                                <span className="line-through text-destructive/80 font-mono bg-destructive/10 px-1.5 py-0.5 rounded text-[11px] truncate max-w-[140px]">
+                                <span className="line-through text-destructive/80 font-mono bg-destructive/10 px-1.5 py-0.5 rounded text-meta truncate max-w-[140px]">
                                   {change.oldValue ?? "null"}
                                 </span>
                                 <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                                <span className="text-emerald-600 dark:text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded text-[11px] font-medium truncate max-w-[140px]">
+                                <span className="text-success font-mono bg-success-surface px-1.5 py-0.5 rounded text-meta font-medium truncate max-w-[140px]">
                                   {change.newValue ?? "null"}
                                 </span>
                               </div>

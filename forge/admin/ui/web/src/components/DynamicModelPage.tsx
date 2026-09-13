@@ -22,7 +22,7 @@ export default function DynamicModelPage({ mode }: DynamicModelPageProps) {
 
   if (error || !metadata) {
     return (
-      <div className="p-8 text-center text-red-500">
+      <div className="p-8 text-center text-danger">
         Error loading metadata for "{model}"
       </div>
     );

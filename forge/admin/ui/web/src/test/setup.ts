@@ -35,3 +35,17 @@ global.IntersectionObserver = class IntersectionObserver {
   }
   unobserve() {}
 } as any;
+
+// Mock ResizeObserver (cmdk relies on it; unavailable in jsdom)
+if (typeof globalThis !== "undefined" && !(globalThis as any).ResizeObserver) {
+  (globalThis as any).ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
+// Mock scrollIntoView (cmdk relies on it; unavailable in jsdom)
+if (typeof Element !== "undefined" && !(Element.prototype as any).scrollIntoView) {
+  (Element.prototype as any).scrollIntoView = () => {};
+}

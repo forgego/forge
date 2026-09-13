@@ -21,12 +21,13 @@ import type {
   SavedView,
   SavedViewRequest,
 } from "./types";
+import { withAdminPrefix, stripAdminPrefix } from "../lib/admin-prefix";
 
 export class AdminAPIClient {
   private client: AxiosInstance;
   private baseURL: string;
 
-  constructor(baseURL: string = "/admin/api") {
+  constructor(baseURL: string = withAdminPrefix("/api")) {
     this.baseURL = baseURL;
     this.client = axios.create({
       baseURL,
@@ -59,9 +60,8 @@ export class AdminAPIClient {
           if (!isLoginRequest) {
             localStorage.removeItem("admin_token");
             const currentPath = window.location.pathname;
-            if (!currentPath.endsWith("/login")) {
-              const adminPrefix = currentPath.startsWith("/admin") ? "/admin" : "";
-              window.location.href = `${adminPrefix}/login`;
+            if (stripAdminPrefix(currentPath) !== "/login") {
+              window.location.href = withAdminPrefix("/login");
             }
           }
         }

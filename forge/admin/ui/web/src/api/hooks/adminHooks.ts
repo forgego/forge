@@ -122,7 +122,7 @@ function withInvalidation<TData, TError, TVariables>(
     ...rest,
     onSuccess: (data, variables, onMutateResult, context) => {
       invalidate();
-      (onSuccess as any)?.(data, variables, onMutateResult, context);
+      onSuccess?.(data, variables, onMutateResult, context);
     },
   };
 }
@@ -238,12 +238,12 @@ export function useUpdateObject<T = any>(
       data: Partial<ModelFormData>;
     }) => adminAPI.updateObject<T>(model, id, data),
     ...restOptions,
-    onSuccess: (data, variables, context) => {
+    onSuccess: (data, variables, onMutateResult, context) => {
       queryClient.invalidateQueries({
         queryKey: adminKeys.modelDetail(model, variables.id),
       });
       queryClient.invalidateQueries({ queryKey: adminKeys.model(model) });
-      (onSuccess as any)?.(data, variables, context);
+      onSuccess?.(data, variables, onMutateResult, context);
     },
   });
 }

@@ -119,10 +119,10 @@ export default function ModelsListPage() {
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-2">
-                        <span className="font-semibold text-[14px] truncate">
+                        <span className="font-semibold text-ui truncate">
                           {model.verbose_name_plural}
                         </span>
-                        <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                        <span className="shrink-0 text-micro tabular-nums text-muted-foreground">
                           {model.count} {model.count === 1 ? "record" : "records"}
                         </span>
                       </div>

@@ -13,6 +13,7 @@ import {
   Legend,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { chartColor, axisProps, gridProps, ChartTooltip, CHART_MIN_HEIGHT } from '../../lib/chart-theme';
 
 interface ChartWidgetProps {
   title: string;
@@ -61,22 +62,6 @@ export function ChartWidget({
     }
   };
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-popover border border-border rounded-lg shadow-lg p-3">
-          <p className="text-sm font-medium mb-2">{label}</p>
-          {payload.map((entry: any, idx: number) => (
-            <p key={idx} className="text-sm" style={{ color: entry.color }}>
-              {entry.name}: {formatValue(entry.value)}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
   const renderChart = () => {
     const chartProps = {
       data,
@@ -84,112 +69,106 @@ export function ChartWidget({
     };
 
     switch (type) {
-      case 'area':
-        return (
-          <AreaChart {...chartProps}>
-            {showGrid && <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />}
-            <XAxis
-              dataKey={xAxisKey}
-              className="text-xs"
-              tick={{ fill: 'hsl(var(--muted-foreground))' }}
-              axisLine={{ stroke: 'hsl(var(--border))' }}
-            />
-            <YAxis
-              className="text-xs"
-              tick={{ fill: 'hsl(var(--muted-foreground))' }}
-              axisLine={{ stroke: 'hsl(var(--border))' }}
-              tickFormatter={format !== 'none' ? formatValue : undefined}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            {showLegend && <Legend />}
-            {areas?.map((area, idx) => (
-              <Area
-                key={idx}
-                type="monotone"
-                dataKey={area.key}
-                stroke={area.color}
-                fill={area.color}
-                fillOpacity={0.3}
-                name={area.name}
-              />
-            ))}
-          </AreaChart>
-        );
+case 'area':
+         return (
+           <AreaChart {...chartProps}>
+             {showGrid && <CartesianGrid {...gridProps} />}
+             <XAxis
+               dataKey={xAxisKey}
+               className="text-xs"
+               {...axisProps}
+             />
+             <YAxis
+               className="text-xs"
+               tickFormatter={format !== 'none' ? formatValue : undefined}
+               {...axisProps}
+             />
+             <Tooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--surface-sunken))" }} />
+             {showLegend && <Legend />}
+             {areas?.map((area, idx) => (
+               <Area
+                 key={idx}
+                 type="monotone"
+                 dataKey={area.key}
+                 stroke={area.color ?? chartColor(idx)}
+                 fill={area.color ?? chartColor(idx)}
+                 fillOpacity={0.3}
+                 name={area.name}
+               />
+             ))}
+           </AreaChart>
+         );
 
-      case 'bar':
-        return (
-          <BarChart {...chartProps}>
-            {showGrid && <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />}
-            <XAxis
-              dataKey={xAxisKey}
-              className="text-xs"
-              tick={{ fill: 'hsl(var(--muted-foreground))' }}
-              axisLine={{ stroke: 'hsl(var(--border))' }}
-            />
-            <YAxis
-              className="text-xs"
-              tick={{ fill: 'hsl(var(--muted-foreground))' }}
-              axisLine={{ stroke: 'hsl(var(--border))' }}
-              tickFormatter={format !== 'none' ? formatValue : undefined}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            {showLegend && <Legend />}
-            {bars?.map((bar, idx) => (
-              <Bar key={idx} dataKey={bar.key} fill={bar.color} name={bar.name} radius={[4, 4, 0, 0]} />
-            ))}
-          </BarChart>
-        );
+case 'bar':
+         return (
+           <BarChart {...chartProps}>
+             {showGrid && <CartesianGrid {...gridProps} />}
+             <XAxis
+               dataKey={xAxisKey}
+               className="text-xs"
+               {...axisProps}
+             />
+             <YAxis
+               className="text-xs"
+               tickFormatter={format !== 'none' ? formatValue : undefined}
+               {...axisProps}
+             />
+             <Tooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--surface-sunken))" }} />
+             {showLegend && <Legend />}
+             {bars?.map((bar, idx) => (
+               <Bar key={idx} dataKey={bar.key} fill={bar.color ?? chartColor(idx)} name={bar.name} radius={[4, 4, 0, 0]} />
+             ))}
+           </BarChart>
+         );
 
-      case 'line':
-      default:
-        return (
-          <LineChart {...chartProps}>
-            {showGrid && <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />}
-            <XAxis
-              dataKey={xAxisKey}
-              className="text-xs"
-              tick={{ fill: 'hsl(var(--muted-foreground))' }}
-              axisLine={{ stroke: 'hsl(var(--border))' }}
-            />
-            <YAxis
-              className="text-xs"
-              tick={{ fill: 'hsl(var(--muted-foreground))' }}
-              axisLine={{ stroke: 'hsl(var(--border))' }}
-              tickFormatter={format !== 'none' ? formatValue : undefined}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            {showLegend && <Legend />}
-            {lines?.map((line, idx) => (
-              <Line
-                key={idx}
-                type="monotone"
-                dataKey={line.key}
-                stroke={line.color}
-                strokeWidth={2}
-                dot={{ fill: line.color, strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, strokeWidth: 2 }}
-                name={line.name}
-              />
-            ))}
-          </LineChart>
-        );
+case 'line':
+       default:
+         return (
+           <LineChart {...chartProps}>
+             {showGrid && <CartesianGrid {...gridProps} />}
+             <XAxis
+               dataKey={xAxisKey}
+               className="text-xs"
+               {...axisProps}
+             />
+             <YAxis
+               className="text-xs"
+               tickFormatter={format !== 'none' ? formatValue : undefined}
+               {...axisProps}
+             />
+             <Tooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--surface-sunken))" }} />
+             {showLegend && <Legend />}
+             {lines?.map((line, idx) => (
+               <Line
+                 key={idx}
+                 type="monotone"
+                 dataKey={line.key}
+                 stroke={line.color ?? chartColor(idx)}
+                 strokeWidth={2}
+                 dot={{ fill: line.color ?? chartColor(idx), strokeWidth: 2, r: 4 }}
+                 activeDot={{ r: 6, strokeWidth: 2 }}
+                 name={line.name}
+               />
+             ))}
+           </LineChart>
+         );
     }
   };
 
-  return (
-    <Card className="">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-bold">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div style={{ height }}>
-          <ResponsiveContainer width="100%" height="100%">
-            {renderChart()}
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
-  );
+return (
+     <Card className="">
+       <CardHeader className="pb-2">
+         <CardTitle className="text-sm font-bold">{title}</CardTitle>
+       </CardHeader>
+       <CardContent>
+         <div style={{ height: Math.max(height, CHART_MIN_HEIGHT) }}>
+           <ResponsiveContainer width="100%" height="100%">
+             {renderChart()}
+           </ResponsiveContainer>
+         </div>
+       </CardContent>
+     </Card>
+   );
 }
 
 interface SalesChartProps {

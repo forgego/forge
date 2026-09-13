@@ -1,8 +1,22 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { cn } from "../../lib/utils";
-import { ChartWidget } from "./widgets/ChartWidget";
+import { Skeleton } from "../ui/skeleton";
+
+// recharts is heavy (~113 kB gzipped) and only needed for chart widgets, so the
+// SDUI ChartWidget is loaded lazily to keep it out of the initial bundle.
+const LazyChartWidget = React.lazy(() =>
+  import("./widgets/ChartWidget").then((m) => ({ default: m.ChartWidget }))
+);
+
+function LazyChartWidgetWithFallback(props: React.ComponentProps<typeof LazyChartWidget>) {
+  return (
+    <Suspense fallback={<Skeleton className="h-[280px] w-full" />}>
+      <LazyChartWidget {...props} />
+    </Suspense>
+  );
+}
 
 // Component Types matching Go definitions
 export type ComponentType =
@@ -138,7 +152,7 @@ export const defaultRegistry: Record<string, React.ComponentType<any>> = {
   text: SDText,
   button: SDButton,
   stats: SDStats,
-  chart: ChartWidget,
+  chart: LazyChartWidgetWithFallback,
   container: ({ children }) => <div>{children}</div>,
 };
 

@@ -1,35 +1,21 @@
-"use client"
-
-import {
-  Toast,
-  ToastClose,
-  ToastDescription,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
-} from "./toast"
-import { useToast } from "../../hooks/use-toast"
+import { Toaster as SonnerToaster } from "sonner"
 
 export function Toaster() {
-  const { toasts } = useToast()
-
   return (
-    <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        return (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
-              )}
-            </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        )
-      })}
-      <ToastViewport />
-    </ToastProvider>
+    <SonnerToaster
+      position="bottom-right"
+      closeButton
+      toastOptions={{
+        classNames: {
+          toast:
+            "rounded border border-border bg-surface-3 text-foreground shadow-overlay text-ui",
+          description: "text-meta text-muted-foreground",
+          actionButton: "rounded-sm bg-primary text-primary-foreground text-meta",
+          cancelButton: "rounded-sm bg-surface-sunken text-foreground text-meta",
+          error: "border-danger/30",
+          success: "border-success/30",
+        },
+      }}
+    />
   )
 }
