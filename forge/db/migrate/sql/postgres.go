@@ -125,6 +125,10 @@ func (b *PostgreSQLBuilder) buildChangeDownSQL(change core.Change) (string, erro
 	case *core.CreateTable:
 		return fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", c.TableName()), nil
 	case *core.DropTable:
+		if c.Definition != nil {
+			// Foreign keys of a re-created table are not restored.
+			return b.BuildCreateTable(&core.CreateTable{Table: c.Definition})
+		}
 		// Cannot generate down SQL for DropTable without original table definition
 		return "", core.NewMigrationError(
 			core.ErrInvalidChange,
@@ -136,6 +140,9 @@ func (b *PostgreSQLBuilder) buildChangeDownSQL(change core.Change) (string, erro
 	case *core.AddColumn:
 		return fmt.Sprintf("ALTER TABLE %s DROP COLUMN IF EXISTS %s;", c.Table, c.Column.Name), nil
 	case *core.DropColumn:
+		if c.Column != nil {
+			return b.BuildAddColumn(&core.AddColumn{Table: c.Table, Column: *c.Column})
+		}
 		// Cannot generate down SQL for DropColumn without original column definition
 		return "", core.NewMigrationError(
 			core.ErrInvalidChange,

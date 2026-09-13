@@ -92,9 +92,12 @@ func (d *Detector) DetectChanges(current, previous []*generator.ModelDefinition)
 	}
 
 	// Detect dropped tables
-	for tableName := range previousMap {
+	for tableName, prevDef := range previousMap {
 		if _, exists := currentMap[tableName]; !exists {
-			changes = append(changes, &core.DropTable{Table: tableName})
+			changes = append(changes, &core.DropTable{
+				Table:      tableName,
+				Definition: prevDef,
+			})
 		}
 	}
 
@@ -162,11 +165,13 @@ func (d *Detector) detectColumnChanges(tableName string, current, previous []gen
 	}
 
 	// Detect dropped columns
-	for name := range previousMap {
+	for name, prevField := range previousMap {
 		if _, exists := currentMap[name]; !exists {
+			col := prevField
 			changes = append(changes, &core.DropColumn{
 				Table:      tableName,
 				ColumnName: name,
+				Column:     &col,
 			})
 		}
 	}
