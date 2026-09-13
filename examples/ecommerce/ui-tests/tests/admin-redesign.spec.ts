@@ -1,5 +1,10 @@
 import { test, expect, type APIRequestContext } from '@playwright/test';
 
+async function chooseRadixOption(page, triggerTestId: string, optionName: string | RegExp) {
+  await page.getByTestId(triggerTestId).click();
+  await page.getByRole('option', { name: optionName, exact: typeof optionName === 'string' }).click();
+}
+
 // Comprehensive verification for the admin redesign. Runs against the live
 // ecommerce reference server (seeded sqlite) serving the production bundle.
 const username = process.env.FORGE_ADMIN_USERNAME || 'admin';
@@ -115,7 +120,7 @@ test.describe('Admin redesign', () => {
     const sizeResp = page.waitForResponse((r) =>
       r.url().includes('/api/categories') && r.url().includes('page_size=10')
     );
-    await page.selectOption('[data-testid="page-size-select"]', '10');
+    await chooseRadixOption(page, 'page-size-select', '10');
     await sizeResp;
 
     // Select all drives the bulk toolbar.
@@ -132,7 +137,7 @@ test.describe('Admin redesign', () => {
 
     // Filter panel with badge count + reset.
     await page.getByTestId('filter-button').click();
-    await page.selectOption('[data-testid="filter-is_active"]', 'true');
+    await chooseRadixOption(page, 'filter-is_active', 'Yes');
     await expect(page.getByTestId('filter-button')).toContainText('1');
     await page.getByTestId('reset-filters').click();
 

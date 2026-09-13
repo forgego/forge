@@ -1,12 +1,14 @@
 import * as React from "react";
 import { Search, FileText, Loader2 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
+import { Command } from "cmdk";
 import { ModelIcon } from "../ModelIcon";
 
 import type { ModelListMetadata, SearchResultGroup } from "../../api/types";
 import { adminAPI } from "../../api/client";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { cn } from "../../lib/utils";
+import { stripAdminPrefix } from "../../lib/admin-prefix";
 
 type GlobalSearchProps = {
   models?: ModelListMetadata[];
@@ -14,10 +16,6 @@ type GlobalSearchProps = {
   triggerLabel?: string;
   className?: string;
 };
-
-type FlatItem =
-  | { kind: "model"; key: string; label: string; sub?: string; icon?: string; model: ModelListMetadata }
-  | { kind: "record"; key: string; label: string; sub?: string; url: string };
 
 export function GlobalSearch({
   models = [],
@@ -32,16 +30,13 @@ export function GlobalSearch({
   // Last query the server answered; loading is derived from it so no
   // synchronous setState-in-effect is needed.
   const [loadedQuery, setLoadedQuery] = React.useState<string | null>(null);
-  const [activeIndex, setActiveIndex] = React.useState(0);
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const listRef = React.useRef<HTMLDivElement>(null);
 
   const debouncedQuery = useDebouncedValue(query.trim(), 250);
   const isLoading = open && debouncedQuery !== "" && loadedQuery !== debouncedQuery;
 
   const openPalette = React.useCallback(() => {
     setOpen(true);
-    setActiveIndex(0);
     setLoadedQuery(null);
     requestAnimationFrame(() => inputRef.current?.focus());
   }, []);
@@ -51,12 +46,10 @@ export function GlobalSearch({
     setQuery("");
     setResults([]);
     setLoadedQuery(null);
-    setActiveIndex(0);
   }, []);
 
   const onQueryChange = (value: string) => {
     setQuery(value);
-    setActiveIndex(0);
     if (value.trim() === "") {
       setResults([]);
       setLoadedQuery(null);
@@ -111,7 +104,6 @@ export function GlobalSearch({
         if (cancelled) return;
         setResults(res.results || []);
         setLoadedQuery(debouncedQuery);
-        setActiveIndex(0);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -134,73 +126,55 @@ export function GlobalSearch({
     );
   }, [models, query]);
 
-  const flatItems: FlatItem[] = React.useMemo(() => {
-    const items: FlatItem[] = [];
-    if (debouncedQuery !== "") {
-      for (const group of results) {
-        for (const item of group.items) {
-          items.push({
-            kind: "record",
-            key: `record-${group.model}-${item.id}`,
-            label: item.title,
-            sub: group.model,
-            url: item.url,
-          });
-        }
+  const modelLabelByName = React.useMemo(() => {
+    const map = new Map<string, string>();
+    (models ?? []).forEach((m: any) => {
+      if (m?.name) map.set(m.name, m.verbose_name_plural ?? m.verbose_name ?? m.name);
+    });
+    return map;
+  }, [models]);
+
+  const recordItems = React.useMemo(() => {
+    if (debouncedQuery === "") return [];
+    const items: Array<{ key: string; label: string; sub: string; url: string }> = [];
+    for (const group of results) {
+      for (const item of group.items) {
+        items.push({
+          key: `record-${group.model}-${item.id}`,
+          label: item.title,
+          sub: modelLabelByName.get(group.model) ?? group.model,
+          url: item.url,
+        });
       }
     }
-    for (const m of matchingModels.slice(0, 8)) {
-      items.push({
-        kind: "model",
-        key: `model-${m.name}`,
-        label: m.verbose_name_plural,
-        sub: `${m.count} records`,
-        icon: m.icon,
-        model: m,
-      });
-    }
     return items;
-  }, [results, matchingModels, debouncedQuery]);
+  }, [results, debouncedQuery, modelLabelByName]);
 
-  // Clamp instead of resetting in an effect: keeps selection valid when
-  // the result list shrinks without cascading renders.
-  const safeIndex = Math.min(activeIndex, Math.max(flatItems.length - 1, 0));
-  const activeItem = flatItems[safeIndex];
+  const modelItems = React.useMemo(() => matchingModels.slice(0, 8), [matchingModels]);
 
-  const activateItem = (item: FlatItem) => {
-    if (item.kind === "model") {
-      navigate({ to: "/$model", params: { model: item.model.name } });
-    } else if (item.url) {
-      const to = item.url.startsWith("/admin")
-        ? item.url.replace("/admin", "") || "/"
-        : item.url;
+  const handleSelectModel = React.useCallback(
+    (model: ModelListMetadata) => {
+      navigate({ to: "/$model", params: { model: model.name } });
+      closePalette();
+    },
+    [navigate, closePalette]
+  );
+
+  const handleSelectRecord = React.useCallback(
+    (url: string) => {
+      const to = stripAdminPrefix(url) || "/";
       navigate({ to } as any);
-    }
-    closePalette();
-  };
+      closePalette();
+    },
+    [navigate, closePalette]
+  );
 
-  const onInputKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActiveIndex((i) => Math.min(i + 1, flatItems.length - 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActiveIndex((i) => Math.max(i - 1, 0));
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      const item = activeItem;
-      if (item) activateItem(item);
-    } else if (e.key === "Escape") {
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
       e.preventDefault();
       closePalette();
     }
   };
-
-  React.useEffect(() => {
-    listRef.current
-      ?.querySelector(`[data-index="${safeIndex}"]`)
-      ?.scrollIntoView({ block: "nearest" });
-  }, [safeIndex]);
 
   return (
     <div className={cn("relative", className)}>
@@ -208,7 +182,7 @@ export function GlobalSearch({
         type="button"
         data-testid="global-search-trigger"
         className={cn(
-          "flex items-center gap-2 rounded-md border border-border bg-background py-2 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "flex items-center gap-2 rounded border border-border bg-background py-2 text-ui text-muted-foreground hover:text-foreground hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           compact
             ? "h-9 w-9 justify-center p-0"
             : "h-9 w-9 justify-center p-0 sm:w-full sm:justify-start sm:px-3"
@@ -221,7 +195,7 @@ export function GlobalSearch({
         {!compact && (
           <>
             <span className="hidden sm:block flex-1 text-left">{triggerLabel}</span>
-            <kbd className="hidden md:inline-flex items-center rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-mono">
+            <kbd className="hidden md:inline-flex items-center rounded border border-border bg-muted px-1.5 py-0.5 text-micro font-mono">
               ⌘K
             </kbd>
           </>
@@ -240,109 +214,101 @@ export function GlobalSearch({
               role="dialog"
               aria-modal="true"
               aria-label="Global search"
-              className="w-full max-w-xl rounded-xl border border-border bg-card shadow-2xl overflow-hidden"
+              className="w-full max-w-xl rounded border border-border bg-surface-3 shadow-dialog overflow-hidden"
             >
-              <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-                <Search className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
-                <input
-                  ref={inputRef}
-                  data-testid="global-search-input"
-                  value={query}
-                  onChange={(e) => onQueryChange(e.target.value)}
-                  onKeyDown={onInputKeyDown}
-                  placeholder="Search models and records..."
-                  role="combobox"
-                  aria-expanded="true"
-                  aria-controls="global-search-results"
-                  aria-activedescendant={
-                    activeItem ? `gs-item-${safeIndex}` : undefined
-                  }
-                  autoComplete="off"
-                  className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                />
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" aria-label="Searching" />
-                ) : (
-                  <kbd className="shrink-0 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
-                    ESC
-                  </kbd>
-                )}
-              </div>
-
-              <div
-                ref={listRef}
-                id="global-search-results"
-                role="listbox"
-                aria-label="Search results"
-                className="max-h-[55vh] overflow-y-auto p-2"
+              <Command
+                shouldFilter={false}
+                className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1 [&_[cmdk-group-heading]]:text-micro [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-muted-foreground"
               >
-                {query.trim() === "" && (
-                  <div className="px-3 py-2">
-                    <p className="pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Models
-                    </p>
-                    {matchingModels.length === 0 && (
-                      <p className="px-1 py-3 text-xs text-muted-foreground">
-                        No models registered.
-                      </p>
-                    )}
-                  </div>
-                )}
+                <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+                  <Search className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+                  <Command.Input
+                    ref={inputRef}
+                    data-testid="global-search-input"
+                    value={query}
+                    onValueChange={onQueryChange}
+                    onKeyDown={handleInputKeyDown}
+                    placeholder="Search models and records..."
+                    autoComplete="off"
+                    className="w-full bg-transparent text-ui outline-none placeholder:text-muted-foreground"
+                  />
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" aria-label="Searching" />
+                  ) : (
+                    <kbd className="shrink-0 rounded border border-border bg-muted px-1.5 py-0.5 text-micro font-mono text-muted-foreground">
+                      ESC
+                    </kbd>
+                  )}
+                </div>
 
-                {query.trim() !== "" &&
-                  !isLoading &&
-                  flatItems.length === 0 && (
-                    <p className="p-4 text-xs text-muted-foreground">
-                      No matching models or records for “{query.trim()}”.
-                    </p>
+                <Command.List
+                  id="global-search-results"
+                  className="max-h-[55vh] overflow-y-auto p-2"
+                >
+                  {!isLoading && modelItems.length === 0 && recordItems.length === 0 && (
+                    <Command.Empty className="p-4 text-meta text-muted-foreground">
+                      {query.trim() === ""
+                        ? "No models registered."
+                        : `No matching models or records for “${query.trim()}”.`}
+                    </Command.Empty>
+                  )}
+                  {isLoading && modelItems.length === 0 && recordItems.length === 0 && (
+                    <Command.Empty className="p-4 text-meta text-muted-foreground">
+                      {""}
+                    </Command.Empty>
                   )}
 
-                {flatItems.map((item, index) => (
-                  <button
-                    key={item.key}
-                    id={`gs-item-${index}`}
-                    data-index={index}
-                    data-testid={`global-search-result-${index}`}
-                    type="button"
-                    role="option"
-                    aria-selected={index === safeIndex}
-                    onClick={() => activateItem(item)}
-                    onMouseEnter={() => setActiveIndex(index)}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-left",
-                      index === safeIndex
-                        ? "bg-accent text-accent-foreground"
-                        : "text-foreground"
-                    )}
-                  >
-                    {item.kind === "model" ? (
-                      <ModelIcon name={item.icon} className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    ) : (
-                      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-                    )}
-                    <span className="flex-1 truncate font-medium">
-                      {item.label}
-                    </span>
-                    {item.sub && (
-                      <span className="shrink-0 text-[11px] text-muted-foreground">
-                        {item.sub}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
+                  {modelItems.length > 0 && (
+                    <Command.Group heading="Models">
+                      {modelItems.map((m) => (
+                        <Command.Item
+                          key={`model-${m.name}`}
+                          value={`model-${m.name}`}
+                          onSelect={() => handleSelectModel(m)}
+                          className="flex w-full items-center gap-3 rounded px-3 py-2 text-ui text-left transition-colors duration-fast ease-out text-foreground data-[selected=true]:bg-surface-sunken data-[selected=true]:text-foreground aria-selected:bg-surface-sunken aria-selected:text-foreground"
+                        >
+                          <ModelIcon name={m.icon} className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <span className="flex-1 truncate font-medium">{m.verbose_name_plural}</span>
+                          <span className="shrink-0 font-mono text-meta tabular-nums text-muted-foreground">
+                            {m.count} records
+                          </span>
+                        </Command.Item>
+                      ))}
+                    </Command.Group>
+                  )}
 
-              <div className="flex items-center gap-4 border-t border-border px-4 py-2 text-[11px] text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <kbd className="rounded border border-border bg-muted px-1 font-mono">↑↓</kbd> navigate
-                </span>
-                <span className="flex items-center gap-1">
-                  <kbd className="rounded border border-border bg-muted px-1 font-mono">↵</kbd> open
-                </span>
-                <span className="flex items-center gap-1">
-                  <kbd className="rounded border border-border bg-muted px-1 font-mono">esc</kbd> close
-                </span>
-              </div>
+                  {recordItems.length > 0 && (
+                    <Command.Group heading="Records">
+                      {recordItems.map((item) => (
+                        <Command.Item
+                          key={item.key}
+                          value={item.key}
+                          onSelect={() => handleSelectRecord(item.url)}
+                          className="flex w-full items-center gap-3 rounded px-3 py-2 text-ui text-left transition-colors duration-fast ease-out text-foreground data-[selected=true]:bg-surface-sunken data-[selected=true]:text-foreground aria-selected:bg-surface-sunken aria-selected:text-foreground"
+                        >
+                          <FileText className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                          <span className="flex-1 truncate font-medium">{item.label}</span>
+                          <span className="shrink-0 font-mono text-meta tabular-nums text-muted-foreground">
+                            {item.sub}
+                          </span>
+                        </Command.Item>
+                      ))}
+                    </Command.Group>
+                  )}
+                </Command.List>
+
+                <div className="flex items-center gap-4 border-t border-border px-4 py-2 text-meta text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <kbd className="rounded border border-border bg-muted px-1 font-mono">↑↓</kbd> navigate
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <kbd className="rounded border border-border bg-muted px-1 font-mono">↵</kbd> open
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <kbd className="rounded border border-border bg-muted px-1 font-mono">esc</kbd> close
+                  </span>
+                </div>
+              </Command>
             </div>
           </div>
         </div>

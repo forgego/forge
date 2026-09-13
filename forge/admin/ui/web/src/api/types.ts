@@ -120,6 +120,7 @@ export interface PaginatedResponse<T = any> {
   page: number;
   total_pages: number;
   results: T[];
+  display?: Record<string, Record<string, string>>;
 }
 
 export interface ErrorResponse {

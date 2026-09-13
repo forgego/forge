@@ -9,123 +9,28 @@ import {
   adminKeys,
 } from "../api/hooks/adminHooks";
 import { adminAPI } from "../api/client";
+import { parseApiError } from "../api/errors";
 import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Checkbox } from "../components/ui/checkbox";
-import { SearchableSelect } from "../components/ui/searchable-select";
 import { Card, CardContent } from "../components/ui/card";
-import { Loader2, Save, X, Plus } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
 import { useUIComponent } from "../hooks/useUIComponent";
 import { cn } from "../lib/utils";
 import { useToast } from "../hooks/use-toast";
-import { Switch } from "../components/ui/switch";
 
 import { ConfirmationDialog } from "../components/ui/confirmation-dialog";
+import { FieldRenderer } from "../components/form/FieldRenderer";
+import { InlineRelations } from "../components/form/InlineRelations";
+import { HistorySection } from "../components/form/HistorySection";
 
 interface ModelFormPageProps {
   mode: "create" | "edit";
 }
 
-// Backend metadata uses Go-flavored type names (Bool, Int64, String, Text,
-// Float64, Time, ...) while widgets carry the UI intent (checkbox, number,
-// textarea, ...). resolveFieldKind normalizes both into a single form kind
-// so typed inputs (checkbox, number, date, select) actually render instead
-// of falling through to plain text inputs.
-export type FieldKind =
-  | "boolean"
-  | "number"
-  | "date"
-  | "datetime"
-  | "time"
-  | "text"
-  | "textarea"
-  | "choice"
-  | "password"
-  | "email"
-  | "url"
-  | "tel"
-  | "color"
-  | "json"
-  | "fk"
-  | "m2m";
-
-const INT_TYPES = new Set([
-  "integer", "int", "int8", "int16", "int32", "int64",
-  "uint", "uint8", "uint16", "uint32", "uint64",
-]);
-const FLOAT_TYPES = new Set([
-  "float", "float32", "float64", "double", "decimal", "numeric", "number",
-]);
-const FK_TYPES = new Set([
-  "foreign_key", "foreignkey", "fk", "one_to_one", "onetoone", "many_to_one",
-]);
-const M2M_TYPES = new Set(["many_to_many", "manytomany", "m2m"]);
-
-export function resolveFieldKind(field: any, relation?: any): FieldKind {
-  const t = String(field?.type ?? "").toLowerCase();
-  const w = String(field?.widget ?? "").toLowerCase();
-  const relType = String(relation?.type ?? "").toLowerCase();
-
-  if (Array.isArray(field?.choices) && field.choices.length > 0) return "choice";
-  if (FK_TYPES.has(t) || FK_TYPES.has(relType)) return "fk";
-  if (M2M_TYPES.has(t) || M2M_TYPES.has(relType)) return "m2m";
-  if (t === "boolean" || t === "bool" || ["checkbox", "switch", "toggle"].includes(w)) {
-    return "boolean";
-  }
-  if (w === "number" || INT_TYPES.has(t) || FLOAT_TYPES.has(t)) return "number";
-  if (w === "date" || t === "date") return "date";
-  if (w === "datetime" || w === "datetime-local" || ["datetime", "timestamp", "timestamptz"].includes(t)) {
-    return "datetime";
-  }
-  if (w === "time" || t === "time") return "time";
-  if (w === "password" || t === "password") return "password";
-  if (w === "email" || t === "email") return "email";
-  if (w === "url" || t === "url") return "url";
-  if (w === "tel" || t === "tel" || t === "phone") return "tel";
-  if (w === "color" || t === "color") return "color";
-  if (w === "select" || t === "choice" || t === "enum") return "choice";
-  if (["json", "jsonb", "object", "dict", "map"].includes(t) || w === "json") return "json";
-  if (w === "textarea" || w === "rich_text" || t === "text") return "textarea";
-  return "text";
-}
-
-export function isIntegerField(field: any): boolean {
-  const t = String(field?.type ?? "").toLowerCase();
-  const w = String(field?.widget ?? "").toLowerCase();
-  if (w === "number") return INT_TYPES.has(t) || !FLOAT_TYPES.has(t);
-  return INT_TYPES.has(t);
-}
-
-// Override slot for a single field. Extracted as a component so the
-// useUIComponent hook call has a stable call order (calling it inside
-// renderField would violate the Rules of Hooks as field counts change).
-function FieldOverride({
-  overrideKey,
-  field,
-  value,
-  onChange,
-  metadata,
-}: {
-  overrideKey: string;
-  field: any;
-  value: any;
-  onChange: (val: any) => void;
-  metadata: any;
-}) {
-  const CustomField = useUIComponent(overrideKey, null as any);
-  if (!CustomField) return null;
-  return (
-    // eslint-disable-next-line react-hooks/static-components -- useUIComponent returns a stable registry ref
-    <CustomField
-      field={field}
-      value={value}
-      onChange={onChange}
-      metadata={metadata}
-    />
-  );
-}
+// Re-exported from their new home so existing import paths keep working.
+export { resolveFieldKind, isIntegerField } from "../components/form/resolve-field-kind";
+export type { FieldKind } from "../components/form/types";
 
 export default function ModelFormPage({ mode }: ModelFormPageProps) {
   const params = useParams({ strict: false }) as any;
@@ -134,6 +39,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
   const { toast } = useToast();
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [formErrors, setFormErrors] = useState<string[]>([]);
   const [inlineData, setInlineData] = useState<Record<string, any[]>>({});
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -186,6 +92,23 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
       ),
     [metadata?.relations]
   );
+
+  const displayedFormErrors = useMemo(() => {
+    const errors = [...formErrors];
+    const renderedFieldNames = new Set(
+      metadata?.fields
+        ?.filter((f) => !(f.name === "id" || (f.read_only && mode === "create")))
+        ?.map((f) => f.name) ?? []
+    );
+    for (const [key, msgs] of Object.entries(fieldErrors)) {
+      if (!renderedFieldNames.has(key)) {
+        for (const msg of msgs) {
+          errors.push(`${key}: ${msg}`);
+        }
+      }
+    }
+    return errors;
+  }, [formErrors, fieldErrors, metadata?.fields, mode]);
 
   const inlineMetadataQueries = useQueries({
     queries: inlineRelationDetails.map((detail) => ({
@@ -322,6 +245,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFieldErrors({});
+    setFormErrors([]);
     if (!validateJsonFields()) return;
 
     try {
@@ -346,19 +270,17 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
       }
       setHasUnsavedChanges(false);
       navigate({ to: "/$model", params: { model: modelName } });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to save:", error);
-      const errorData = error.response?.data;
-      const errorMsg =
-        errorData?.message || "Failed to save changes. Please try again.";
-
-      if (errorData?.details) {
-        setFieldErrors(errorData.details);
-      }
-
+      const info = parseApiError(
+        error,
+        "Failed to save changes. Please try again."
+      );
+      setFieldErrors(info.fieldErrors);
+      setFormErrors(info.formErrors);
       toast({
-        title: "Error",
-        description: errorMsg,
+        title: "Could not save",
+        description: info.message,
         variant: "destructive",
       });
     }
@@ -430,621 +352,18 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
 
   if (!metadata) return null;
 
-  const formatTimestamp = (timestamp?: string) => {
-    if (!timestamp) return "Unknown time";
-    const date = new Date(timestamp);
-    if (Number.isNaN(date.getTime())) return timestamp;
-    return date.toLocaleString();
-  };
-
-  const formatChangeStats = (changeStats?: string) => {
-    if (!changeStats) return [];
-    try {
-      const parsed = JSON.parse(changeStats);
-      if (Array.isArray(parsed)) {
-        return parsed.map((item) => String(item));
-      }
-      if (parsed && typeof parsed === "object") {
-        return Object.entries(parsed).map(([field, details]) => {
-          if (details && typeof details === "object") {
-            const detailObj = details as Record<string, any>;
-            const fromValue =
-              detailObj.from ?? detailObj.old ?? detailObj.before;
-            const toValue = detailObj.to ?? detailObj.new ?? detailObj.after;
-            if (fromValue !== undefined || toValue !== undefined) {
-              return `${field}: ${fromValue ?? "∅"} → ${toValue ?? "∅"}`;
-            }
-          }
-          return `${field}: ${String(details)}`;
-        });
-      }
-      return [String(parsed)];
-    } catch (error) {
-      return [changeStats];
-    }
-  };
-
-  const getActionLabel = (action?: string) => {
-    switch (action) {
-      case "add":
-        return "Created";
-      case "change":
-        return "Updated";
-      case "delete":
-        return "Deleted";
-      default:
-        return action ? action : "Updated";
-    }
-  };
-
-  const renderField = (field: any) => {
-    if (field.read_only && mode === "create") return null;
-
-    // Preserve 0/false: only null/undefined become "".
-    const value = formData[field.name] ?? "";
-    const fieldOverride = metadata.ui_overrides?.[`field.${field.name}`];
-    const isReadOnly = field.read_only;
-    const isSwitchWidget =
-      field.widget === "switch" || field.widget === "toggle";
-
-    if (fieldOverride) {
-      return (
-        <FieldOverride
-          overrideKey={fieldOverride}
-          field={field}
-          value={value}
-          onChange={(val: any) => handleChange(field.name, val)}
-          metadata={metadata}
-        />
-      );
-    }
-
-    const relation = relationsByName.get(field.name);
-    const kind = resolveFieldKind(field, relation);
-
-    switch (kind) {
-      case "boolean":
-        if (isSwitchWidget) {
-          return (
-            <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-muted/20 hover:bg-muted/30 transition-colors">
-              <Switch
-                checked={!!value}
-                onCheckedChange={(checked) => handleChange(field.name, checked)}
-                disabled={isReadOnly}
-              />
-              <label className="text-sm font-semibold leading-none cursor-pointer select-none">
-                {field.label}
-              </label>
-            </div>
-          );
-        }
-        return (
-          <div className="flex items-center space-x-3 p-3 rounded-lg border border-border/50 bg-muted/20 hover:bg-muted/30 transition-colors">
-            <Checkbox
-              id={field.name}
-              checked={!!value}
-              onChange={(e) => handleChange(field.name, e.target.checked)}
-              disabled={isReadOnly}
-            />
-            <label
-              htmlFor={field.name}
-              className="text-sm font-semibold leading-none cursor-pointer select-none"
-            >
-              {field.label}
-            </label>
-          </div>
-        );
-
-      case "textarea":
-        return (
-          <textarea
-            id={field.name}
-            value={value}
-            onChange={(e) => handleChange(field.name, e.target.value)}
-            className="flex min-h-[120px] w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all"
-            required={field.required}
-            disabled={isReadOnly}
-          />
-        );
-
-      case "text":
-      case "email":
-      case "url":
-      case "tel":
-      case "color":
-        return (
-          <Input
-            type={kind}
-            id={field.name}
-            value={value}
-            onChange={(e) => handleChange(field.name, e.target.value)}
-            className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
-            required={field.required}
-            maxLength={field.max_length}
-            minLength={field.min_length}
-            disabled={isReadOnly}
-          />
-        );
-
-      case "number":
-        return (
-          <Input
-            type="number"
-            id={field.name}
-            value={value}
-            onChange={(e) =>
-              handleChange(
-                field.name,
-                e.target.value === "" ? "" : Number(e.target.value)
-              )
-            }
-            className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
-            required={field.required}
-            min={field.min_value}
-            max={field.max_value}
-            step={isIntegerField(field) ? 1 : "any"}
-            disabled={isReadOnly}
-          />
-        );
-
-      case "date":
-        return (
-          <Input
-            type="date"
-            id={field.name}
-            value={value}
-            onChange={(e) => handleChange(field.name, e.target.value)}
-            className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
-            required={field.required}
-            disabled={isReadOnly}
-          />
-        );
-
-      case "datetime":
-        return (
-          <Input
-            type="datetime-local"
-            id={field.name}
-            value={value}
-            onChange={(e) => handleChange(field.name, e.target.value)}
-            className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
-            required={field.required}
-            disabled={isReadOnly}
-          />
-        );
-
-      case "time":
-        return (
-          <Input
-            type="time"
-            id={field.name}
-            value={value}
-            onChange={(e) => handleChange(field.name, e.target.value)}
-            className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
-            required={field.required}
-            disabled={isReadOnly}
-          />
-        );
-
-      case "choice":
-        if (!field.choices?.length) {
-          return (
-            <Input
-              id={field.name}
-              value={value}
-              onChange={(e) => handleChange(field.name, e.target.value)}
-              className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
-              required={field.required}
-              disabled={isReadOnly}
-            />
-          );
-        }
-        return (
-          <select
-            id={field.name}
-            value={value}
-            onChange={(e) => handleChange(field.name, e.target.value)}
-            className="flex h-10 w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all appearance-none"
-            required={field.required}
-            disabled={isReadOnly}
-          >
-            <option value="">Select {field.label}</option>
-            {field.choices?.map((choice: any) => (
-              <option key={choice.value} value={choice.value}>
-                {choice.label}
-              </option>
-            ))}
-          </select>
-        );
-
-      case "password":
-        return (
-          <Input
-            type="password"
-            id={field.name}
-            value={value}
-            onChange={(e) => handleChange(field.name, e.target.value)}
-            className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
-            required={field.required}
-            autoComplete="new-password"
-            disabled={isReadOnly}
-          />
-        );
-
-      case "json":
-        return (
-          <textarea
-            id={field.name}
-            value={
-              typeof value === "object" ? JSON.stringify(value, null, 2) : value
-            }
-            onChange={(e) => {
-              const val = e.target.value;
-              handleChange(field.name, val);
-              // Basic validation hint could go here
-            }}
-            className="flex min-h-[150px] w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-xs font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all shadow-inner"
-            placeholder="{}"
-            required={field.required}
-            disabled={isReadOnly}
-          />
-        );
-
-      case "fk":
-        return (
-          <SearchableSelect
-            model={relation?.related_model || field.related_model}
-            value={value}
-            onChange={(val) => handleChange(field.name, val)}
-            placeholder={`Select ${field.label}...`}
-            required={field.required}
-            disabled={isReadOnly}
-          />
-        );
-
-      case "m2m":
-        const m2mValue = Array.isArray(value) ? value : [];
-        return (
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-2 mb-2">
-              {m2mValue.map((item: any, idx: number) => (
-                <div
-                  key={item.id || idx}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-medium animate-in fade-in zoom-in-95"
-                >
-                  <span>
-                    {item.name ||
-                      item.title ||
-                      item.label ||
-                      `ID: ${item.id || item}`}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label={`Remove ${field.label} item ${idx + 1}`}
-                    onClick={() => {
-                      const newValue = m2mValue.filter(
-                        (_: any, i: number) => i !== idx
-                      );
-                      handleChange(field.name, newValue);
-                    }}
-                    className="hover:text-destructive transition-colors"
-                    disabled={isReadOnly}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <SearchableSelect
-              model={field.related_model}
-              value={null}
-              onChange={(val) => {
-                if (!val) return;
-                // Avoid duplicates
-                if (
-                  m2mValue.some(
-                    (v: any) => (typeof v === "object" ? v.id : v) === val
-                  )
-                )
-                  return;
-                handleChange(field.name, [...m2mValue, val]);
-              }}
-              placeholder={`Add ${field.label}...`}
-              disabled={isReadOnly}
-            />
-          </div>
-        );
-
-      default:
-        return (
-          <Input
-            id={field.name}
-            value={value}
-            onChange={(e) => handleChange(field.name, e.target.value)}
-            className="rounded-lg border-border/50 bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
-            required={field.required}
-            disabled={isReadOnly}
-          />
-        );
-    }
-  };
-
-  const renderInlineField = (
-    field: any,
-    value: any,
-    onChange: (val: any) => void,
-    relation?: any
-  ) => {
-    const isReadOnly = field.read_only;
-    const isSwitchWidget =
-      field.widget === "switch" || field.widget === "toggle";
-    const kind = resolveFieldKind(field, relation);
-    switch (kind) {
-      case "boolean":
-        if (isSwitchWidget) {
-          return (
-            <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-muted/20">
-              <Switch
-                checked={!!value}
-                onCheckedChange={(checked) => onChange(checked)}
-                disabled={isReadOnly}
-              />
-              <label className="text-sm font-semibold leading-none cursor-pointer select-none">
-                {field.label}
-              </label>
-            </div>
-          );
-        }
-        return (
-          <div className="flex items-center space-x-3 p-3 rounded-lg border border-border/50 bg-muted/20">
-            <Checkbox
-              id={field.name}
-              checked={!!value}
-              onChange={(e) => onChange(e.target.checked)}
-              disabled={isReadOnly}
-            />
-            <label
-              htmlFor={field.name}
-              className="text-sm font-semibold leading-none cursor-pointer select-none"
-            >
-              {field.label}
-            </label>
-          </div>
-        );
-      case "textarea":
-        return (
-          <textarea
-            id={field.name}
-            value={value || ""}
-            onChange={(e) => onChange(e.target.value)}
-            className="flex min-h-[120px] w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all"
-            required={field.required}
-            disabled={isReadOnly}
-          />
-        );
-      case "text":
-      case "email":
-      case "url":
-      case "tel":
-      case "color":
-        return (
-          <Input
-            type={kind}
-            id={field.name}
-            value={value || ""}
-            onChange={(e) => onChange(e.target.value)}
-            className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
-            required={field.required}
-            maxLength={field.max_length}
-            minLength={field.min_length}
-            disabled={isReadOnly}
-          />
-        );
-      case "number":
-        return (
-          <Input
-            type="number"
-            id={field.name}
-            value={value ?? ""}
-            onChange={(e) =>
-              onChange(
-                e.target.value === "" ? "" : Number(e.target.value)
-              )
-            }
-            className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
-            required={field.required}
-            min={field.min_value}
-            max={field.max_value}
-            step={isIntegerField(field) ? 1 : "any"}
-            disabled={isReadOnly}
-          />
-        );
-      case "date":
-        return (
-          <Input
-            type="date"
-            id={field.name}
-            value={value || ""}
-            onChange={(e) => onChange(e.target.value)}
-            className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
-            required={field.required}
-            disabled={isReadOnly}
-          />
-        );
-      case "datetime":
-        return (
-          <Input
-            type="datetime-local"
-            id={field.name}
-            value={value || ""}
-            onChange={(e) => onChange(e.target.value)}
-            className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
-            required={field.required}
-            disabled={isReadOnly}
-          />
-        );
-      case "time":
-        return (
-          <Input
-            type="time"
-            id={field.name}
-            value={value || ""}
-            onChange={(e) => onChange(e.target.value)}
-            className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
-            required={field.required}
-            disabled={isReadOnly}
-          />
-        );
-      case "choice":
-        if (!field.choices?.length) {
-          return (
-            <Input
-              id={field.name}
-              value={value || ""}
-              onChange={(e) => onChange(e.target.value)}
-              className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
-              required={field.required}
-              disabled={isReadOnly}
-            />
-          );
-        }
-        return (
-          <select
-            id={field.name}
-            value={value || ""}
-            onChange={(e) => onChange(e.target.value)}
-            className="flex h-10 w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all appearance-none"
-            required={field.required}
-            disabled={isReadOnly}
-          >
-            <option value="">Select {field.label}</option>
-            {field.choices?.map((choice: any) => (
-              <option key={choice.value} value={choice.value}>
-                {choice.label}
-              </option>
-            ))}
-          </select>
-        );
-      case "password":
-        return (
-          <Input
-            type="password"
-            id={field.name}
-            value={value || ""}
-            onChange={(e) => onChange(e.target.value)}
-            className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
-            required={field.required}
-            disabled={isReadOnly}
-            autoComplete="new-password"
-          />
-        );
-      case "json":
-        return (
-          <textarea
-            id={field.name}
-            value={
-              typeof value === "object" ? JSON.stringify(value, null, 2) : value
-            }
-            onChange={(e) => onChange(e.target.value)}
-            className="flex min-h-[150px] w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-xs font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all shadow-inner"
-            placeholder="{}"
-            required={field.required}
-            disabled={isReadOnly}
-          />
-        );
-      case "fk":
-        return (
-          <SearchableSelect
-            model={relation?.related_model || field.related_model}
-            value={value}
-            onChange={(val) => onChange(val)}
-            placeholder={`Select ${field.label}...`}
-            required={field.required}
-            disabled={isReadOnly}
-          />
-        );
-      case "m2m": {
-        const m2mValue = Array.isArray(value) ? value : [];
-        return (
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-2 mb-2">
-              {m2mValue.map((item: any, idx: number) => (
-                <div
-                  key={item.id || idx}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-medium animate-in fade-in zoom-in-95"
-                >
-                  <span>
-                    {item.name ||
-                      item.title ||
-                      item.label ||
-                      `ID: ${item.id || item}`}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label={`Remove ${field.label} item ${idx + 1}`}
-                    onClick={() => {
-                      const newValue = m2mValue.filter(
-                        (_: any, i: number) => i !== idx
-                      );
-                      onChange(newValue);
-                    }}
-                    className="hover:text-destructive transition-colors"
-                    disabled={isReadOnly}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <SearchableSelect
-              model={relation?.related_model || field.related_model}
-              value={null}
-              onChange={(val) => {
-                if (!val) return;
-                if (
-                  m2mValue.some(
-                    (v: any) => (typeof v === "object" ? v.id : v) === val
-                  )
-                )
-                  return;
-                onChange([...m2mValue, val]);
-              }}
-              placeholder={`Add ${field.label}...`}
-              disabled={isReadOnly}
-            />
-          </div>
-        );
-      }
-      default:
-        return (
-          <Input
-            id={field.name}
-            value={value || ""}
-            onChange={(e) => onChange(e.target.value)}
-            className="rounded-lg border-border/50 bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
-            required={field.required}
-            disabled={isReadOnly}
-          />
-        );
-    }
-  };
-
-  const getInlineFields = (
-    inlineMeta: any,
-    inlineConfig: any,
-    relatedField?: string
-  ) => {
-    const allowedFields = inlineConfig?.fields?.length
-      ? new Set(inlineConfig.fields)
-      : null;
-    return (inlineMeta?.fields ?? []).filter((field: any) => {
-      if (field.name === "id") return false;
-      if (relatedField && field.name === relatedField) return false;
-      if (allowedFields && !allowedFields.has(field.name)) return false;
-      if (field.read_only && mode === "create") return false;
-      return true;
-    });
-  };
+  const renderField = (field: any) => (
+    <FieldRenderer
+      field={field}
+      // Preserve 0/false: only null/undefined become "".
+      value={formData[field.name] ?? ""}
+      onChange={(val: any) => handleChange(field.name, val)}
+      relation={relationsByName.get(field.name)}
+      mode={mode}
+      overrideKey={metadata.ui_overrides?.[`field.${field.name}`]}
+      metadata={metadata}
+    />
+  );
 
   return (
     <AdminLayout>
@@ -1091,6 +410,20 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
         <Card className="overflow-hidden max-w-4xl mx-auto">
           <CardContent className="p-4 sm:p-8">
             <form ref={formRef} onSubmit={handleSubmit} className="space-y-8">
+              {displayedFormErrors.length > 0 && (
+                <div
+                  role="alert"
+                  data-testid="form-errors"
+                  className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-ui text-destructive"
+                >
+                  <ul className="list-disc pl-5 space-y-1">
+                    {displayedFormErrors.map((m) => (
+                      <li key={m}>{m}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {FormBody ? (
                 // eslint-disable-next-line react-hooks/static-components -- useUIComponent returns a stable registry ref
                 <FormBody
@@ -1139,7 +472,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
                           </p>
                         )}
                         {field.help_text && (
-                          <p className="text-[11px] text-muted-foreground px-1 leading-relaxed">
+                          <p className="text-micro text-muted-foreground px-1 leading-relaxed">
                             {field.help_text}
                           </p>
                         )}
@@ -1169,207 +502,20 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
         </Card>
 
         {mode === "edit" && (
-          <Card className="overflow-hidden max-w-4xl mx-auto">
-            <CardContent className="p-4 sm:p-8 space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold text-foreground/90">
-                  History
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Track who changed this record and what was updated.
-                </p>
-              </div>
-              {historyLoading ? (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Loading history…</span>
-                </div>
-              ) : historyData?.entries?.length ? (
-                <ul className="relative border-l border-border/50 pl-6 space-y-6">
-                  {historyData.entries.map((entry) => {
-                    const changes = formatChangeStats(entry.change_stats);
-                    const userLabel =
-                      entry.user_name ||
-                      entry.user_id ||
-                      "System";
-                    return (
-                      <li key={entry.id} className="relative">
-                        <span className="absolute -left-[9px] top-1.5 h-4 w-4 rounded-full bg-primary/70 border border-background shadow" />
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-2 text-sm">
-                            <span className="font-semibold text-foreground">
-                              {userLabel}
-                            </span>
-                            <span className="text-muted-foreground">
-                              {getActionLabel(entry.action)}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {formatTimestamp(entry.timestamp)}
-                            </span>
-                          </div>
-                          {entry.object_repr && (
-                            <p className="text-sm text-muted-foreground">
-                              {entry.object_repr}
-                            </p>
-                          )}
-                          {changes.length > 0 ? (
-                            <ul className="space-y-1 text-sm text-foreground/80">
-                              {changes.map((change, index) => (
-                                <li key={`${entry.id}-change-${index}`}>
-                                  {change}
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">
-                              No change details recorded.
-                            </p>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No history events recorded yet.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <HistorySection
+            historyData={historyData}
+            historyLoading={historyLoading}
+          />
         )}
-        {inlineRelationDetails.map((detail, index) => {
-          const inlineMeta = inlineMetadataQueries[index]?.data;
-          const inlineRows = inlineData[detail.relation.name] ?? [];
-          const inlineLabel =
-            detail.inlineConfig.label ||
-            detail.relation.label ||
-            detail.relation.name;
-          const allowMultiple = detail.inlineConfig.type === "one_to_many";
-          const inlineFields = getInlineFields(
-            inlineMeta,
-            detail.inlineConfig,
-            detail.relatedField
-          );
-          const inlineRelByName = new Map(
-            (inlineMeta?.relations ?? []).map((rel: any) => [rel.name, rel])
-          );
-
-          return (
-            <Card
-              key={detail.relation.name}
-              className="overflow-hidden max-w-4xl mx-auto"
-            >
-              <CardContent className="p-4 sm:p-8 space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-semibold text-foreground">
-                      {inlineLabel}
-                    </h2>
-                    {detail.inlineConfig.type && (
-                      <p className="text-xs text-muted-foreground uppercase tracking-widest mt-1">
-                        {detail.inlineConfig.type.replace(/_/g, " ")}
-                      </p>
-                    )}
-                  </div>
-                  {allowMultiple && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => addInlineRow(detail.relation.name)}
-                      className="gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add {inlineLabel}
-                    </Button>
-                  )}
-                </div>
-
-                {inlineFields.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    No editable fields configured for this inline relation.
-                  </p>
-                )}
-
-                <div className="space-y-6">
-                  {inlineRows.length === 0 && allowMultiple && (
-                    <div className="rounded-lg border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
-                      No {inlineLabel} added yet.
-                    </div>
-                  )}
-
-                  {inlineRows.map((row, rowIndex) => (
-                    <div
-                      key={row?.id || rowIndex}
-                      className="rounded-lg border border-border/50 bg-background/40 p-6 space-y-6"
-                    >
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-foreground">
-                          {inlineLabel} {rowIndex + 1}
-                        </h3>
-                        {allowMultiple && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              removeInlineRow(detail.relation.name, rowIndex)
-                            }
-                            className="text-muted-foreground hover:text-destructive"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                        {inlineFields.map((field: any) => (
-                          <div key={field.name} className="space-y-2">
-                            <div className="flex items-center justify-between px-1">
-                              <label
-                                htmlFor={`${detail.relation.name}-${rowIndex}-${field.name}`}
-                                className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80"
-                              >
-                                {field.label}{" "}
-                                {field.required && (
-                                  <span className="text-destructive font-normal">
-                                    *
-                                  </span>
-                                )}
-                              </label>
-                            </div>
-                            {renderInlineField(
-                              // Prefix the DOM id namespace so inline inputs
-                              // never collide with main-form ids.
-                              {
-                                ...field,
-                                name: `${detail.relation.name}-${rowIndex}-${field.name}`,
-                              },
-                              row?.[field.name],
-                              (value) =>
-                                updateInlineRow(
-                                  detail.relation.name,
-                                  rowIndex,
-                                  field.name,
-                                  value
-                                ),
-                              inlineRelByName.get(field.name)
-                            )}
-                            {field.help_text && (
-                              <p className="text-[11px] text-muted-foreground px-1 leading-relaxed">
-                                {field.help_text}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+        <InlineRelations
+          details={inlineRelationDetails}
+          metaQueries={inlineMetadataQueries}
+          inlineData={inlineData}
+          mode={mode}
+          onUpdateRow={updateInlineRow}
+          onAddRow={addInlineRow}
+          onRemoveRow={removeInlineRow}
+        />
 
         <ConfirmationDialog
           open={showExitDialog}

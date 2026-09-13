@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, useParams, Link } from "@tanstack/react-router";
 import {
   Loader2,
@@ -11,7 +11,6 @@ import {
   History,
   FileCode,
   Sliders,
-  CheckCircle2,
   XCircle,
   Link2,
 } from "lucide-react";
@@ -19,7 +18,6 @@ import AdminLayout from "../components/layout/AdminLayout";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
@@ -40,7 +38,9 @@ import {
   useDeleteObject,
 } from "../api/hooks/adminHooks";
 import { useToast } from "../hooks/use-toast";
-import { cn } from "../lib/utils";
+import { PageHeader } from "../components/ui/page-header";
+import { EmptyValue } from "../components/ui/empty-state";
+import { StatusBadge } from "../components/ui/status-badge";
 
 function isDateField(name: string, type?: string): boolean {
   return (
@@ -100,6 +100,16 @@ export default function ModelViewPage() {
 
   const deleteMutation = useDeleteObject(modelName);
 
+  const relationByField = useMemo(() => {
+    const map = new Map<string, any>();
+    (metadata?.relations ?? []).forEach((rel: any) => {
+      if (!rel?.name) return;
+      map.set(rel.name, rel);
+      map.set(`${rel.name}_id`, rel);
+    });
+    return map;
+  }, [metadata]);
+
   const handleDelete = async () => {
     try {
       await deleteMutation.mutateAsync(objectID);
@@ -158,7 +168,7 @@ export default function ModelViewPage() {
       <AdminLayout>
         <div className="flex flex-col items-center justify-center h-96 gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground animate-pulse">
+          <p className="text-ui text-muted-foreground animate-pulse">
             Loading record details...
           </p>
         </div>
@@ -174,10 +184,10 @@ export default function ModelViewPage() {
             <XCircle className="h-8 w-8" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-foreground">
+            <h2 className="text-title font-bold tracking-tight text-foreground">
               Unable to load record
             </h2>
-            <p className="text-sm text-muted-foreground mt-1 max-w-md">
+            <p className="text-ui text-muted-foreground mt-1 max-w-md">
               Could not retrieve {metadata?.verbose_name || modelName} #{objectID}. The item may have been deleted or moved.
             </p>
           </div>
@@ -214,26 +224,17 @@ export default function ModelViewPage() {
   return (
     <AdminLayout>
       <div className="space-y-6 pb-12">
-        {/* Top Header & Actions */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/40 pb-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground -ml-2"
-                onClick={() => navigate({ to: "/$model", params: { model: modelName } })}
-              >
-                <ArrowLeft className="h-3.5 w-3.5 mr-1" />
-                {metadata.verbose_name_plural}
-              </Button>
-              <span className="text-muted-foreground/40">/</span>
-              <Badge variant="outline" className="text-xs font-mono">
+        <PageHeader
+          eyebrow={metadata.verbose_name}
+          title={primaryLabel}
+          meta={
+            <>
+              <span className="font-mono tabular-nums">
                 {metadata.name} #{objectID}
-              </Badge>
+              </span>
               {statusValue !== undefined && (
-                <Badge
-                  variant={
+                <StatusBadge
+                  tone={
                     statusValue === true ||
                     statusValue === "active" ||
                     statusValue === "published" ||
@@ -242,50 +243,45 @@ export default function ModelViewPage() {
                     statusValue === "open" ||
                     statusValue === "paid" ||
                     statusValue === "approved"
-                      ? "default"
-                      : "secondary"
+                      ? "success"
+                      : "neutral"
                   }
-                  className="capitalize text-xs font-medium"
                 >
                   {String(statusValue)}
-                </Badge>
+                </StatusBadge>
               )}
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              {primaryLabel}
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {metadata.permissions.change && (
-              <Button
-                data-testid="edit-record"
-                onClick={() =>
-                  navigate({
-                    to: "/$model/$id",
-                    params: { model: modelName, id: objectID },
-                  })
-                }
-                className="shadow-sm"
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Record
-              </Button>
-            )}
-
-            {metadata.permissions.delete && (
-              <Button
-                data-testid="delete-record"
-                variant="outline"
-                className="border-destructive/30 text-destructive hover:bg-destructive/10"
-                onClick={() => setDeleteDialogOpen(true)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
-            )}
-          </div>
-        </div>
+            </>
+          }
+          actions={
+            <>
+              {metadata.permissions.change && (
+                <Button
+                  data-testid="edit-record"
+                  onClick={() =>
+                    navigate({
+                      to: "/$model/$id",
+                      params: { model: modelName, id: objectID },
+                    })
+                  }
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Record
+                </Button>
+              )}
+              {metadata.permissions.delete && (
+                <Button
+                  data-testid="delete-record"
+                  variant="outline"
+                  className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              )}
+            </>
+          }
+        />
 
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -298,7 +294,7 @@ export default function ModelViewPage() {
               <History className="h-3.5 w-3.5" />
               Audit Log
               {historyData?.entries?.length ? (
-                <span className="ml-1 rounded-full bg-primary/10 text-primary px-1.5 py-0.2 text-[10px] font-mono">
+                <span className="ml-1 rounded-full bg-primary/10 text-primary px-1.5 py-0.2 text-micro font-mono">
                   {historyData.entries.length}
                 </span>
               ) : null}
@@ -313,20 +309,17 @@ export default function ModelViewPage() {
           <TabsContent value="overview" className="space-y-6 mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Main Fields Card (2 cols) */}
-              <Card className="lg:col-span-2 border-border/50 shadow-sm">
+              <Card className="lg:col-span-2 border-border-subtle bg-surface-2">
                 <CardHeader>
-                  <CardTitle className="text-lg">Properties & Attributes</CardTitle>
-                  <CardDescription>
-                    All registered schema properties for this {metadata.verbose_name.toLowerCase()}.
-                  </CardDescription>
+                  <CardTitle className="text-lead">Properties & Attributes</CardTitle>
                 </CardHeader>
-                <CardContent className="divide-y divide-border/40">
+                <CardContent className="divide-y divide-border-subtle">
                   {metadata.fields
                     .filter((f) => f.name !== "id")
                     .map((field) => {
                       const value = objectData[field.name];
-                      const hasValue =
-                        value !== null && value !== undefined && value !== "";
+                      const isEmpty =
+                        value === null || value === undefined || value === "";
                       const isBool =
                         field.type === "boolean" || typeof value === "boolean";
                       const isDate = isDateField(field.name, field.type);
@@ -338,6 +331,7 @@ export default function ModelViewPage() {
                       );
                       const isComplex =
                         typeof value === "object" && value !== null;
+                      const relation = relationByField.get(field.name);
 
                       return (
                         <div
@@ -345,49 +339,53 @@ export default function ModelViewPage() {
                           className="py-3.5 flex flex-col sm:flex-row sm:items-baseline justify-between gap-2"
                         >
                           <div className="sm:w-1/3 shrink-0">
-                            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            <span className="text-micro font-semibold uppercase tracking-wider text-muted-foreground">
                               {field.label || field.name}
                             </span>
                             {field.help_text && (
-                              <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                              <p className="text-meta text-muted-foreground/70 mt-0.5">
                                 {field.help_text}
                               </p>
                             )}
                           </div>
 
-                          <div className="sm:w-2/3 break-words text-sm">
-                            {!hasValue ? (
-                              <span className="text-muted-foreground/40 italic font-mono text-xs">
-                                — (null)
-                              </span>
+                          <div className="sm:w-2/3 break-words text-body">
+                            {isEmpty ? (
+                              <EmptyValue />
                             ) : isBool ? (
-                              <Badge
-                                variant={value ? "default" : "outline"}
-                                className={cn(
-                                  "text-xs inline-flex items-center gap-1",
-                                  value
-                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                                    : "text-muted-foreground"
-                                )}
-                              >
-                                {value ? (
-                                  <>
-                                    <CheckCircle2 className="h-3 w-3" /> Yes
-                                  </>
-                                ) : (
-                                  <>
-                                    <XCircle className="h-3 w-3" /> No
-                                  </>
-                                )}
-                              </Badge>
+                              value ? (
+                                <StatusBadge tone="success">
+                                  Yes
+                                </StatusBadge>
+                              ) : (
+                                <StatusBadge tone="danger">
+                                  No
+                                </StatusBadge>
+                              )
                             ) : isChoice ? (
-                              <Badge variant="secondary" className="font-medium text-xs">
+                              <StatusBadge tone="neutral">
                                 {matchedChoice?.label || String(value)}
-                              </Badge>
+                              </StatusBadge>
                             ) : isDate ? (
-                              <span className="font-mono text-xs text-foreground/90">
+                              <span className="font-mono text-meta tabular-nums text-muted-foreground">
                                 {formatDisplayDate(value)}
                               </span>
+                            ) : relation ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  navigate({
+                                    to: "/$model/$id/view",
+                                    params: {
+                                      model: relation.related_model,
+                                      id: String(value),
+                                    },
+                                  })
+                                }
+                                className="font-mono text-meta tabular-nums text-muted-foreground transition-colors duration-fast ease-out hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                              >
+                                #{String(value)}
+                              </button>
                             ) : field.widget === "url" ||
                               (typeof value === "string" &&
                                 value.startsWith("http")) ? (
@@ -395,7 +393,7 @@ export default function ModelViewPage() {
                                 href={value}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex items-center gap-1 text-primary hover:underline font-mono text-xs"
+                                className="inline-flex items-center gap-1 text-primary hover:underline font-mono text-meta"
                               >
                                 {value}
                                 <ExternalLink className="h-3 w-3" />
@@ -403,16 +401,16 @@ export default function ModelViewPage() {
                             ) : field.widget === "email" ? (
                               <a
                                 href={`mailto:${value}`}
-                                className="text-primary hover:underline font-mono text-xs"
+                                className="text-primary hover:underline font-mono text-meta"
                               >
                                 {value}
                               </a>
                             ) : isComplex ? (
-                              <pre className="rounded-lg border border-border/50 bg-muted/40 p-3 text-xs font-mono whitespace-pre-wrap max-h-48 overflow-auto">
+                              <pre className="rounded border border-border-subtle bg-surface-sunken p-3 text-meta font-mono whitespace-pre-wrap max-h-48 overflow-auto">
                                 {JSON.stringify(value, null, 2)}
                               </pre>
                             ) : (
-                              <span className="text-foreground/90 font-medium">
+                              <span className="text-foreground font-medium">
                                 {String(value)}
                               </span>
                             )}
@@ -425,35 +423,35 @@ export default function ModelViewPage() {
 
               {/* Sidebar Info Card (1 col) */}
               <div className="space-y-6">
-                <Card className="border-border/50 shadow-sm">
+                <Card className="border-border-subtle bg-surface-2">
                   <CardHeader>
-                    <CardTitle className="text-base">System Metadata</CardTitle>
+                    <CardTitle className="text-lead">System Metadata</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4 text-xs">
-                    <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                  <CardContent className="space-y-4 text-meta">
+                    <div className="flex items-center justify-between border-b border-border-subtle pb-2">
                       <span className="text-muted-foreground">Internal ID</span>
-                      <span className="font-mono font-bold text-foreground">
+                      <span className="font-mono font-bold text-foreground tabular-nums">
                         {objectID}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                    <div className="flex items-center justify-between border-b border-border-subtle pb-2">
                       <span className="text-muted-foreground">Model Type</span>
                       <span className="font-mono text-foreground">
                         {metadata.name}
                       </span>
                     </div>
                     {objectData.created_at && (
-                      <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                      <div className="flex items-center justify-between border-b border-border-subtle pb-2">
                         <span className="text-muted-foreground">Created</span>
-                        <span className="font-mono text-foreground">
+                        <span className="font-mono text-foreground tabular-nums">
                           {formatDisplayDate(objectData.created_at)}
                         </span>
                       </div>
                     )}
                     {objectData.updated_at && (
-                      <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                      <div className="flex items-center justify-between border-b border-border-subtle pb-2">
                         <span className="text-muted-foreground">Last Updated</span>
-                        <span className="font-mono text-foreground">
+                        <span className="font-mono text-foreground tabular-nums">
                           {formatDisplayDate(objectData.updated_at)}
                         </span>
                       </div>
@@ -462,12 +460,12 @@ export default function ModelViewPage() {
                       <span className="text-muted-foreground">Permissions</span>
                       <div className="flex gap-1">
                         {metadata.permissions.change && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                           <Badge variant="outline" className="text-micro px-1.5 py-0">
                             Writable
                           </Badge>
                         )}
                         {metadata.permissions.delete && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-destructive">
+                          <Badge variant="outline" className="text-micro px-1.5 py-0 text-destructive">
                             Deletable
                           </Badge>
                         )}
@@ -478,27 +476,24 @@ export default function ModelViewPage() {
 
                 {/* Relations Card if configured */}
                 {metadata.relations && metadata.relations.length > 0 && (
-                  <Card className="border-border/50 shadow-sm">
+                  <Card className="border-border-subtle bg-surface-2">
                     <CardHeader>
-                      <CardTitle className="text-base flex items-center gap-2">
+                      <CardTitle className="text-lead flex items-center gap-2">
                         <Link2 className="h-4 w-4 text-primary" />
                         Related Models
                       </CardTitle>
-                      <CardDescription>
-                        Direct links to linked relations in the schema.
-                      </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-2">
                       {metadata.relations.map((relation) => (
                         <div
                           key={relation.name}
-                          className="flex items-center justify-between p-2 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors"
+                          className="flex items-center justify-between p-2 rounded bg-surface-sunken hover:bg-muted/70 transition-colors"
                         >
                           <div>
-                            <p className="text-xs font-semibold text-foreground">
+                            <p className="text-meta font-semibold text-foreground">
                               {relation.label || relation.name}
                             </p>
-                            <p className="text-[10px] text-muted-foreground uppercase">
+                            <p className="text-micro text-muted-foreground uppercase">
                               {relation.type} &middot; {relation.related_model}
                             </p>
                           </div>
@@ -506,7 +501,7 @@ export default function ModelViewPage() {
                             variant="ghost"
                             size="sm"
                             asChild
-                            className="h-7 px-2 text-xs text-primary"
+                            className="h-7 px-2 text-meta text-primary"
                           >
                             <Link
                               to="/$model"
@@ -526,7 +521,7 @@ export default function ModelViewPage() {
 
           {/* Audit History Tab Content */}
           <TabsContent value="history" className="mt-6">
-            <Card className="border-border/50 shadow-sm">
+            <Card className="border-border-subtle bg-surface-2">
               <CardContent className="p-6">
                 <AuditHistoryViewer
                   entries={historyData?.entries}
@@ -540,24 +535,21 @@ export default function ModelViewPage() {
 
           {/* Raw JSON Tab Content */}
           <TabsContent value="json" className="mt-6">
-            <Card className="border-border/50 shadow-sm">
+            <Card className="border-border-subtle bg-surface-2">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg">Raw Entity Payload</CardTitle>
-                  <CardDescription>
-                    Direct JSON object representation received from the Admin API.
-                  </CardDescription>
+                  <CardTitle className="text-lead">Raw Entity Payload</CardTitle>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
                   data-testid="copy-json"
                   onClick={copyJSON}
-                  className="gap-1.5 text-xs"
+                  className="gap-1.5 text-meta"
                 >
                   {copiedJSON ? (
                     <>
-                      <Check className="h-3.5 w-3.5 text-emerald-500" />
+                      <Check className="h-3.5 w-3.5 text-success" />
                       Copied
                     </>
                   ) : (
@@ -569,7 +561,7 @@ export default function ModelViewPage() {
                 </Button>
               </CardHeader>
               <CardContent>
-                <pre className="rounded-xl border border-border/60 bg-muted/30 p-4 text-xs font-mono text-foreground/90 overflow-x-auto max-h-[600px]">
+                <pre className="rounded border border-border-subtle bg-surface-sunken p-4 text-meta font-mono text-foreground/90 overflow-x-auto max-h-[600px]">
                   {JSON.stringify(objectData, null, 2)}
                 </pre>
               </CardContent>

@@ -11,6 +11,7 @@ import { Switch } from "../components/ui/switch";
 export default function FormPlaygroundPage() {
   const [switchOn, setSwitchOn] = useState(true);
   const [status, setStatus] = useState("draft");
+  // eslint-disable-next-line no-restricted-syntax -- native color input requires a hex value
   const [color, setColor] = useState("#6366f1");
   const [timeValue, setTimeValue] = useState("09:30");
 

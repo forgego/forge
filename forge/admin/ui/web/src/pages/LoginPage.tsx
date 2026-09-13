@@ -42,14 +42,14 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-background px-4 py-10">
       <Card className="w-full max-w-3xl overflow-hidden shadow-lg md:grid md:grid-cols-2 p-0">
         {/* Brand panel */}
-        <div className="relative hidden md:flex flex-col justify-between overflow-hidden bg-zinc-950 p-8 text-white dark:bg-primary/[0.12] dark:text-foreground dark:border-r dark:border-border">
+        <div className="relative hidden md:flex flex-col justify-between overflow-hidden bg-surface-sunken p-8 text-white dark:bg-primary/[0.12] dark:text-foreground dark:border-r dark:border-border">
           <div
             aria-hidden
             className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary/30 blur-3xl"
           />
           <div
             aria-hidden
-            className="pointer-events-none absolute -bottom-28 -left-20 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl"
+            className="pointer-events-none absolute -bottom-28 -left-20 h-72 w-72 rounded-full bg-primary/20 blur-3xl"
           />
           <div className="relative flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground text-lg font-bold shadow-lg">
@@ -61,7 +61,7 @@ export default function LoginPage() {
             <p className="text-xl font-semibold leading-snug tracking-tight">
               Every model, record and audit trail — one quiet console.
             </p>
-            <ul className="space-y-3 text-[13px] text-zinc-300 dark:text-muted-foreground">
+            <ul className="space-y-3 text-body text-muted-foreground">
               <li className="flex items-start gap-2.5">
                 <Database className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
                 Schema-driven CRUD with search, filters and bulk actions
@@ -76,7 +76,7 @@ export default function LoginPage() {
               </li>
             </ul>
           </div>
-          <p className="relative text-xs text-zinc-500 dark:text-muted-foreground">
+          <p className="relative text-xs text-muted-foreground">
             Type-safe Go backend · React admin UI
           </p>
         </div>

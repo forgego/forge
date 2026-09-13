@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveFieldKind, isIntegerField } from "./ModelUpsertPage";
+import { resolveFieldKind, isIntegerField } from "../components/form/resolve-field-kind";
 import { modelIconComponent } from "../components/ModelIcon";
 import { FolderTree, Shapes } from "lucide-react";
 

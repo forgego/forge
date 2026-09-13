@@ -75,19 +75,25 @@ make superuser
 forge createsuperuser
 ```
 
-### 8. Start Server
+### 8. Build the Admin UI
 
 ```bash
-make run
+make admin-ui
+```
+
+### 9. Start Server
+
+```bash
+make run-go
 # or
 forge runserver
 ```
 
-### 9. Access the Application
+### 10. Access the Application
 
-- **Homepage**: http://localhost:8000/
-- **Admin Interface**: http://localhost:8000/admin/
-- **REST API**: http://localhost:8000/api/v1/
+- **Homepage**: http://localhost:8020/
+- **Admin Interface**: http://localhost:8020/admin/
+- **REST API**: http://localhost:8020/api/v1/
 
 ## Configuration Knobs
 
@@ -147,7 +153,7 @@ ecommerce/
 
 ## Key Features to Explore
 
-### 1. Admin Interface (http://localhost:8000/admin/)
+### 1. Admin Interface (http://localhost:8020/admin/)
 
 **Login** with the superuser account you created.
 
@@ -165,7 +171,7 @@ ecommerce/
 - Place a test order
 - Add a review
 
-### 2. REST API (http://localhost:8000/api/v1/)
+### 2. REST API (http://localhost:8020/api/v1/)
 
 **Available endpoints:**
 - `/api/v1/products/` - Product catalog
@@ -179,16 +185,16 @@ ecommerce/
 
 ```bash
 # List products
-curl http://localhost:8000/api/v1/products/
+curl http://localhost:8020/api/v1/products/
 
 # Filter products
-curl "http://localhost:8000/api/v1/products/?category__name=Electronics&price__gte=100"
+curl "http://localhost:8020/api/v1/products/?category__name=Electronics&price__gte=100"
 
 # Get specific product
-curl http://localhost:8000/api/v1/products/1/
+curl http://localhost:8020/api/v1/products/1/
 
 # Create product (requires authentication)
-curl -X POST http://localhost:8000/api/v1/products/ \
+curl -X POST http://localhost:8020/api/v1/products/ \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Laptop",
@@ -202,13 +208,13 @@ curl -X POST http://localhost:8000/api/v1/products/ \
 
 ```bash
 # Products in Electronics category with 4+ rating
-curl "http://localhost:8000/api/v1/products/?category__name=Electronics&rating_average__gte=4"
+curl "http://localhost:8020/api/v1/products/?category__name=Electronics&rating_average__gte=4"
 
 # Orders from specific customer in last 30 days
-curl "http://localhost:8000/api/v1/orders/?customer__email=john@example.com&created_at__gte=2024-01-01"
+curl "http://localhost:8020/api/v1/orders/?customer__email=john@example.com&created_at__gte=2024-01-01"
 
 # Low stock alerts
-curl "http://localhost:8000/api/v1/stock-alerts/?status=active&alert_type=low_stock"
+curl "http://localhost:8020/api/v1/stock-alerts/?status=active&alert_type=low_stock"
 ```
 
 ## Development Workflow

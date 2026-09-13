@@ -1,6 +1,8 @@
 # Forge Ecommerce Makefile
 
-.PHONY: help install generate migrate migrate-down migrate-status run test clean docker-up docker-down seed
+.PHONY: help install generate migrate migrate-down migrate-status run test clean docker-up docker-down seed admin-ui run-go build-embed ui-test demo
+
+ADMIN_UI_DIR := ../../forge/admin/ui/web
 
 # Default target
 help:
@@ -18,6 +20,11 @@ help:
 	@echo "  make docker-down   - Stop Docker containers"
 	@echo "  make seed          - Seed database with sample data"
 	@echo "  make all           - Full setup (install, generate, migrate, run)"
+	@echo "  make admin-ui      - Build the admin UI bundle (forge/admin/ui/dist)"
+	@echo "  make run-go        - Run the server with plain go run (serves built admin UI)"
+	@echo "  make build-embed   - Production binary with the admin UI embedded"
+	@echo "  make ui-test       - Run the Playwright admin suite"
+	@echo "  make demo          - Build the admin UI and start the server"
 	@echo ""
 
 # Install dependencies
@@ -119,6 +126,21 @@ build:
 	@echo "🏗️  Building production binary..."
 	go build -o ecommerce -ldflags="-s -w" .
 	@echo "✅ Build complete: ./ecommerce"
+
+# Admin UI commands
+admin-ui:        ## Build the admin UI bundle (forge/admin/ui/dist)
+	cd $(ADMIN_UI_DIR) && npm ci && npm run build
+
+run-go:          ## Run the server with plain `go run` (serves the built admin UI from ../../forge/admin/ui/dist)
+	go run .
+
+build-embed: admin-ui   ## Production binary with the admin UI embedded
+	go build -tags embed -o ecommerce -ldflags="-s -w" .
+
+ui-test:         ## Run the Playwright admin suite (needs Chrome; starts the server itself)
+	cd ui-tests && npm ci && npx playwright test
+
+demo: admin-ui run-go   ## One command: build the admin UI and start the server
 
 # Full setup (for new developers)
 setup: install db-create generate migrate

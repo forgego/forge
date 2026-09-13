@@ -15,3 +15,9 @@ This repository stores local skills under `skills/`.
 - Each skill directory must include a `SKILL.md` with YAML frontmatter that matches the directory name.
 - Place supporting docs under `references/` within the skill directory.
 - Keep skill instructions concise and task-trigger focused.
+
+## Code Authoring Rule
+
+Claude must not write code in this repo. All implementation is delegated to free
+models via `agy` or `opencode`. See [CLAUDE.md](./CLAUDE.md) for routes, prompt
+shape, and the verification loop.
