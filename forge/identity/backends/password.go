@@ -2,6 +2,8 @@ package backends
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -16,6 +18,18 @@ var (
 	ErrUserInactive       = fmt.Errorf("user account is inactive")
 	ErrUserLocked         = fmt.Errorf("user account is locked")
 )
+
+var dummyPasswordHash = mustHash("forge-dummy-password")
+
+var comparePassword = utils.CheckPassword
+
+func mustHash(password string) string {
+	hash, err := utils.HashPassword(password)
+	if err != nil {
+		panic(fmt.Sprintf("failed to hash dummy password: %v", err))
+	}
+	return hash
+}
 
 // passwordBackend implements password-based authentication
 type passwordBackend struct {
@@ -37,6 +51,30 @@ func (b *passwordBackend) Supports(credentialType string) bool {
 	return credentialType == "password"
 }
 
+func isNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return errors.Is(err, repository.ErrUserNotFound) || errors.Is(err, sql.ErrNoRows)
+}
+
+func (b *passwordBackend) lookupUser(ctx context.Context, identifier string) (*models.User, error) {
+	if strings.Contains(identifier, "@") {
+		return b.userRepo.GetByEmail(ctx, identifier)
+	}
+	return b.userRepo.GetByUsername(ctx, identifier)
+}
+
+func checkUserStatus(user *models.User) error {
+	if !user.IsActive {
+		return ErrUserInactive
+	}
+	if user.IsLocked {
+		return ErrUserLocked
+	}
+	return nil
+}
+
 // Authenticate attempts to authenticate using username/email and password
 func (b *passwordBackend) Authenticate(ctx context.Context, credentials map[string]string) (*models.User, error) {
 	// Get username or email
@@ -55,34 +93,23 @@ func (b *passwordBackend) Authenticate(ctx context.Context, credentials map[stri
 	}
 
 	// Get user by username or email
-	var user *models.User
-	var err error
-
-	if strings.Contains(usernameOrEmail, "@") {
-		// Looks like an email
-		user, err = b.userRepo.GetByEmail(ctx, usernameOrEmail)
-	} else {
-		// Looks like a username
-		user, err = b.userRepo.GetByUsername(ctx, usernameOrEmail)
-	}
-
+	user, err := b.lookupUser(ctx, usernameOrEmail)
 	if err != nil {
-		return nil, ErrInvalidCredentials
-	}
-
-	// Check if user is active
-	if !user.IsActive {
-		return nil, ErrUserInactive
-	}
-
-	// Check if user is locked
-	if user.IsLocked {
-		return nil, ErrUserLocked
+		if isNotFoundError(err) {
+			comparePassword(password, dummyPasswordHash)
+			return nil, ErrInvalidCredentials
+		}
+		return nil, fmt.Errorf("authenticate: lookup user: %w", err)
 	}
 
 	// Check password
-	if !utils.CheckPassword(password, user.Password) {
+	if !comparePassword(password, user.Password) {
 		return nil, ErrInvalidCredentials
+	}
+
+	// Check user status
+	if err := checkUserStatus(user); err != nil {
+		return nil, err
 	}
 
 	return user, nil
