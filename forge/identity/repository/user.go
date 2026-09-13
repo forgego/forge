@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -10,6 +11,9 @@ import (
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/identity/models"
 )
+
+// ErrUserNotFound is returned when a user is not found
+var ErrUserNotFound = errors.New("user not found")
 
 // scanNullableString scans a nullable string field
 func scanNullableString(ns sql.NullString) string {
@@ -146,7 +150,7 @@ func (r *userRepository) GetByID(ctx context.Context, id int64) (*models.User, e
 	user.LockedReason = scanNullableString(lockedReason)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("user not found")
+		return nil, ErrUserNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
@@ -202,7 +206,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*models.
 	user.LockedReason = scanNullableString(lockedReason)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("user not found")
+		return nil, ErrUserNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user by email: %w", err)
@@ -258,7 +262,7 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string) (*m
 	user.LockedReason = scanNullableString(lockedReason)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("user not found")
+		return nil, ErrUserNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user by username: %w", err)
@@ -326,7 +330,7 @@ func (r *userRepository) Update(ctx context.Context, user *models.User) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("user not found")
+		return ErrUserNotFound
 	}
 
 	return nil
@@ -348,7 +352,7 @@ func (r *userRepository) Delete(ctx context.Context, id int64) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("user not found")
+		return ErrUserNotFound
 	}
 
 	return nil
