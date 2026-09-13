@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	forgeerrors "github.com/forgego/forge/errors"
 )
 
 // InMemoryStore is an in-memory idempotency store (for dev/testing)
@@ -133,108 +135,30 @@ func (s *RedisStore) Delete(key string) error {
 }
 
 // DatabaseStore is a database-based idempotency store
-type DatabaseStore struct {
-	db        interface{} // sql.DB or similar
-	tableName string
-}
-
-// DatabaseConnection interface for database operations
-type DatabaseConnection interface {
-	QueryRow(query string, args ...interface{}) interface{ Scan(...interface{}) error }
-	Exec(query string, args ...interface{}) (interface{}, error)
-}
+// NOT IMPLEMENTED: see NewDatabaseStore.
+type DatabaseStore struct{}
 
 // NewDatabaseStore creates a new database store
-func NewDatabaseStore(db interface{}, tableName string) (*DatabaseStore, error) {
-	if tableName == "" {
-		tableName = "idempotency_cache"
-	}
-
-	store := &DatabaseStore{
-		db:        db,
-		tableName: tableName,
-	}
-
-	// Initialize table if needed
-	if err := store.ensureTable(); err != nil {
-		return nil, fmt.Errorf("failed to ensure table: %w", err)
-	}
-
-	return store, nil
-}
-
-// ensureTable creates the idempotency table if it doesn't exist
-func (s *DatabaseStore) ensureTable() error {
-	// This is a basic implementation - in practice, this should use migrations
-	query := fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS %s (
-			key VARCHAR(255) PRIMARY KEY,
-			status_code INT NOT NULL,
-			headers TEXT,
-			body BYTEA NOT NULL,
-			expires_at TIMESTAMP NOT NULL,
-			created_at TIMESTAMP DEFAULT NOW()
-		)
-	`, s.tableName)
-
-	// Execute table creation
-	// Note: This requires proper database connection implementation
-	_ = query
-	return nil
+func NewDatabaseStore(_ interface{}, _ string) (*DatabaseStore, error) {
+	return nil, forgeerrors.NewNotImplementedError("idempotency DatabaseStore")
 }
 
 // Get retrieves a cached response from database
 func (s *DatabaseStore) Get(key string) (*CachedResponse, error) {
-	query := fmt.Sprintf(`
-		SELECT status_code, headers, body, expires_at
-		FROM %s
-		WHERE key = $1 AND expires_at > NOW()
-	`, s.tableName)
-
-	// This would execute the query and scan results
-	// For now, return not found
-	_ = query
-	return nil, fmt.Errorf("not found")
+	return nil, forgeerrors.NewNotImplementedError("idempotency DatabaseStore")
 }
 
 // Set stores a cached response in database
 func (s *DatabaseStore) Set(key string, response *CachedResponse, ttl time.Duration) error {
-	expiresAt := time.Now().Add(ttl)
-
-	// Serialize headers
-	headersJSON, err := json.Marshal(response.Headers)
-	if err != nil {
-		return fmt.Errorf("failed to marshal headers: %w", err)
-	}
-
-	query := fmt.Sprintf(`
-		INSERT INTO %s (key, status_code, headers, body, expires_at)
-		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (key) DO UPDATE
-		SET status_code = $2, headers = $3, body = $4, expires_at = $5
-	`, s.tableName)
-
-	// This would execute the query
-	_ = query
-	_ = headersJSON
-	_ = expiresAt
-	return nil
+	return forgeerrors.NewNotImplementedError("idempotency DatabaseStore")
 }
 
 // Delete removes a cached response from database
 func (s *DatabaseStore) Delete(key string) error {
-	query := fmt.Sprintf(`DELETE FROM %s WHERE key = $1`, s.tableName)
-
-	// This would execute the delete
-	_ = query
-	return nil
+	return forgeerrors.NewNotImplementedError("idempotency DatabaseStore")
 }
 
 // Cleanup removes expired entries from database
 func (s *DatabaseStore) Cleanup() error {
-	query := fmt.Sprintf(`DELETE FROM %s WHERE expires_at < NOW()`, s.tableName)
-
-	// This would execute the cleanup
-	_ = query
-	return nil
+	return forgeerrors.NewNotImplementedError("idempotency DatabaseStore")
 }

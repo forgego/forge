@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	forgeerrors "github.com/forgego/forge/errors"
 	logexporters "github.com/forgego/forge/log/exporters"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -62,7 +63,7 @@ func NewLoggerFromConfig(config *LoggingConfig) (*Logger, error) {
 		case OutputFile:
 			core = createFileCore(encoder, level, output.File)
 		case OutputRemote:
-			core = createRemoteCore(encoder, level, output.Remote)
+			return nil, forgeerrors.NewNotImplementedError("log remote output")
 		default:
 			continue
 		}
@@ -120,43 +121,6 @@ func createFileCore(encoder zapcore.Encoder, level zapcore.Level, fileConfig Fil
 	}, level)
 	writer := fileExp.GetWriter()
 	return zapcore.NewCore(encoder, writer, level)
-}
-
-// createRemoteCore creates a remote core
-func createRemoteCore(encoder zapcore.Encoder, level zapcore.Level, remoteConfig RemoteOutputConfig) zapcore.Core {
-	remoteExp := newRemoteExporter(remoteConfig, level)
-	writer := remoteExp.GetWriter()
-	return zapcore.NewCore(encoder, writer, level)
-}
-
-// remoteExporter wraps remote exporter functionality
-type remoteExporter struct {
-	writer zapcore.WriteSyncer
-	level  zapcore.Level
-}
-
-func newRemoteExporter(config RemoteOutputConfig, level zapcore.Level) *remoteExporter {
-	// Remote exporter implementation
-	// For now, return a no-op writer
-	return &remoteExporter{
-		writer: zapcore.AddSync(&noOpWriter{}),
-		level:  level,
-	}
-}
-
-func (e *remoteExporter) GetWriter() zapcore.WriteSyncer {
-	return e.writer
-}
-
-// noOpWriter is a no-op writer for remote exporter placeholder
-type noOpWriter struct{}
-
-func (w *noOpWriter) Write(p []byte) (int, error) {
-	return len(p), nil
-}
-
-func (w *noOpWriter) Sync() error {
-	return nil
 }
 
 // getStacktraceLevel returns the stacktrace level based on configuration
