@@ -124,7 +124,7 @@ func (ec *ExpressionConverter[T]) lookupToOperator(lookup string, fieldType refl
 		return "", fmt.Errorf("startswith lookup only valid for string fields")
 	case "istartswith":
 		if fieldType.Kind() == reflect.String {
-			return orm.OpStartsWith, nil // Use StartsWith, dialect adapter will handle case
+			return orm.OpIStartsWith, nil
 		}
 		return "", fmt.Errorf("istartswith lookup only valid for string fields")
 	case "endswith":
@@ -134,7 +134,7 @@ func (ec *ExpressionConverter[T]) lookupToOperator(lookup string, fieldType refl
 		return "", fmt.Errorf("endswith lookup only valid for string fields")
 	case "iendswith":
 		if fieldType.Kind() == reflect.String {
-			return orm.OpEndsWith, nil // Use EndsWith, dialect adapter will handle case
+			return orm.OpIEndsWith, nil
 		}
 		return "", fmt.Errorf("iendswith lookup only valid for string fields")
 	case "in":

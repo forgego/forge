@@ -111,6 +111,9 @@ func (p *Parser) parseParamName(param string) (fieldPath, lookup string, err err
 // parseValue parses a string value based on the lookup type
 func (p *Parser) parseValue(valueStr, lookup string) (interface{}, error) {
 	if valueStr == "" {
+		if lookup == "in" {
+			return []string{}, nil
+		}
 		return nil, nil
 	}
 
