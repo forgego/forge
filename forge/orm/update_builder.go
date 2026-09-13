@@ -50,6 +50,17 @@ func (ub *UpdateBuilder[T]) Set(fieldName string, value interface{}) *UpdateBuil
 	}
 
 	expectedType := fieldInfo.Type
+	if value == nil {
+		if canHoldNil(expectedType) {
+			ub.updates[fieldName] = nil
+			return ub
+		}
+		if ub.err == nil {
+			ub.err = fmt.Errorf("field %s cannot be set to nil", fieldName)
+		}
+		return ub
+	}
+
 	actualType := reflect.TypeOf(value)
 
 	// Check if types are assignable
@@ -62,6 +73,18 @@ func (ub *UpdateBuilder[T]) Set(fieldName string, value interface{}) *UpdateBuil
 
 	ub.updates[fieldName] = value
 	return ub
+}
+
+// canHoldNil reports whether a type can hold nil or represents a nullable SQL type.
+func canHoldNil(t reflect.Type) bool {
+	if t == nil {
+		return false
+	}
+	return t.Kind() == reflect.Ptr ||
+		t.Kind() == reflect.Interface ||
+		t.Kind() == reflect.Slice ||
+		t.Kind() == reflect.Map ||
+		(t.PkgPath() == "database/sql" && strings.HasPrefix(t.Name(), "Null"))
 }
 
 // SetFieldValue sets a field value using a type-safe FieldExpression (type-safe API).
