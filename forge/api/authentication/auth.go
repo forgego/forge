@@ -37,8 +37,8 @@ func AuthenticateRequest(r *http.Request, authClasses []Authentication) (*AuthRe
 	for _, auth := range authClasses {
 		result, err := auth.Authenticate(r)
 		if err != nil {
-			// Authentication failed, continue to next
-			continue
+			// Credentials were applicable but invalid; do not fall through.
+			return nil, err
 		}
 		if result != nil {
 			// Authentication successful
@@ -72,4 +72,3 @@ func GetUserFromRequest(r *http.Request) (interface{}, bool) {
 func GetAuthFromRequest(r *http.Request) (interface{}, bool) {
 	return core.AuthFromContext(r.Context())
 }
-
