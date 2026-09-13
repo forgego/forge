@@ -3,6 +3,7 @@ package orm
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -1418,6 +1419,78 @@ func (qs *BaseQuerySet[T]) withDefaultPKOrder() *BaseQuerySet[T] {
 	return clone
 }
 
+// buildCountOrExistsSQL builds SQL for Count or Exists queries reusing the WHERE and JOIN builder.
+func (qs *BaseQuerySet[T]) buildCountOrExistsSQL(isExists bool) (string, []interface{}, error) {
+	builder := qs.newSQLBuilder()
+	qs.buildJoinClause(builder)
+
+	var whereJoins []string
+	whereSeen := make(map[string]bool)
+	var whereMulti bool
+	builder.SetJoinResolver(qs.createJoinResolver(&whereJoins, whereSeen, &whereMulti))
+
+	whereClause, _, err := qs.buildWhereClause(builder)
+	if err != nil {
+		return "", nil, err
+	}
+
+	table := EscapeIdentifier(qs.table)
+	if isExists {
+		parts := []string{fmt.Sprintf("SELECT 1 FROM %s", table)}
+		if whereMulti {
+			parts = append(parts, qs.pkSubquery(whereJoins, whereClause))
+		} else {
+			parts = qs.appendWhereAndJoinParts(parts, whereJoins, whereClause)
+		}
+		parts = append(parts, "LIMIT 1")
+		return qs.rebindSQL(strings.Join(parts, " ")), builder.Args(), nil
+	}
+
+	var parts []string
+	if whereMulti {
+		parts = []string{fmt.Sprintf("SELECT COUNT(*) FROM %s", table), qs.pkSubquery(whereJoins, whereClause)}
+	} else {
+		selectClause := fmt.Sprintf("SELECT COUNT(*) FROM %s", table)
+		if len(whereJoins) > 0 {
+			pkCol := "id"
+			if qs.schema != nil && qs.schema.PrimaryKey != "" {
+				pkCol = qs.schema.PrimaryKey
+			}
+			selectClause = fmt.Sprintf("SELECT COUNT(DISTINCT %s.%s) FROM %s", table, EscapeIdentifier(pkCol), table)
+		}
+		parts = qs.appendWhereAndJoinParts([]string{selectClause}, whereJoins, whereClause)
+	}
+	return qs.rebindSQL(strings.Join(parts, " ")), builder.Args(), nil
+}
+
+func (qs *BaseQuerySet[T]) appendWhereAndJoinParts(parts []string, whereJoins []string, whereClause string) []string {
+	if len(qs.joins) > 0 {
+		parts = append(parts, strings.Join(qs.joins, " "))
+	}
+	if len(whereJoins) > 0 {
+		parts = append(parts, strings.Join(whereJoins, " "))
+	}
+	if whereClause != "" {
+		parts = append(parts, whereClause)
+	}
+	return parts
+}
+
+// buildCountSQL returns the SQL query and arguments for Count
+func (qs *BaseQuerySet[T]) buildCountSQL() (string, []interface{}, error) {
+	return qs.buildCountOrExistsSQL(false)
+}
+
+// BuildExistsSQL builds the SQL query and arguments for Exists
+func (qs *BaseQuerySet[T]) BuildExistsSQL() (string, []interface{}, error) {
+	return qs.buildCountOrExistsSQL(true)
+}
+
+// buildExistsSQL builds the SQL query and arguments for Exists
+func (qs *BaseQuerySet[T]) buildExistsSQL() (string, []interface{}, error) {
+	return qs.BuildExistsSQL()
+}
+
 // Count counts matching records
 func (qs *BaseQuerySet[T]) Count(ctx context.Context) (int64, error) {
 	if qs.err != nil {
@@ -1428,51 +1501,13 @@ func (qs *BaseQuerySet[T]) Count(ctx context.Context) (int64, error) {
 		return 0, err
 	}
 
-	builder := qs.newSQLBuilder()
-	qs.buildJoinClause(builder)
-
-	var whereJoins []string
-	whereSeen := make(map[string]bool)
-	var whereMulti bool
-	builder.SetJoinResolver(qs.createJoinResolver(&whereJoins, whereSeen, &whereMulti))
-
-	whereClause, _, whereErr := qs.buildWhereClause(builder)
-	if whereErr != nil {
-		return 0, whereErr
+	query, args, err := qs.buildCountSQL()
+	if err != nil {
+		return 0, err
 	}
-
-	var parts []string
-	if whereMulti {
-		selectClause := fmt.Sprintf("SELECT COUNT(*) FROM %s", EscapeIdentifier(qs.table))
-		parts = []string{selectClause, qs.pkSubquery(whereJoins, whereClause)}
-	} else {
-		var selectClause string
-		if len(whereJoins) > 0 {
-			pkCol := "id"
-			if qs.schema != nil && qs.schema.PrimaryKey != "" {
-				pkCol = qs.schema.PrimaryKey
-			}
-			selectClause = fmt.Sprintf("SELECT COUNT(DISTINCT %s.%s) FROM %s",
-				EscapeIdentifier(qs.table), EscapeIdentifier(pkCol), EscapeIdentifier(qs.table))
-		} else {
-			selectClause = fmt.Sprintf("SELECT COUNT(*) FROM %s", EscapeIdentifier(qs.table))
-		}
-		parts = append(parts, selectClause)
-		if len(qs.joins) > 0 {
-			parts = append(parts, strings.Join(qs.joins, " "))
-		}
-		if len(whereJoins) > 0 {
-			parts = append(parts, strings.Join(whereJoins, " "))
-		}
-		if whereClause != "" {
-			parts = append(parts, whereClause)
-		}
-	}
-
-	sql := strings.Join(parts, " ")
 
 	var count int64
-	err = db.QueryRowContext(ctx, qs.rebindSQL(sql), builder.Args()...).Scan(&count)
+	err = db.QueryRowContext(ctx, query, args...).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("count query failed: %w", err)
 	}
@@ -1482,8 +1517,29 @@ func (qs *BaseQuerySet[T]) Count(ctx context.Context) (int64, error) {
 
 // Exists checks if any records exist
 func (qs *BaseQuerySet[T]) Exists(ctx context.Context) (bool, error) {
-	count, err := qs.Count(ctx)
-	return count > 0, err
+	if qs.err != nil {
+		return false, qs.err
+	}
+	db, err := qs.getDB(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	query, args, err := qs.buildExistsSQL()
+	if err != nil {
+		return false, err
+	}
+
+	var dummy int
+	err = db.QueryRowContext(ctx, query, args...).Scan(&dummy)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("exists query failed: %w", err)
+	}
+
+	return true, nil
 }
 
 // columnFor resolves a field or column key to the database column name.

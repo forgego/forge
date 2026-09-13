@@ -22,14 +22,20 @@ import (
 
 // Site represents an admin site instance
 type Site struct {
-	Name       string
-	Title      string
-	Header     string
-	IndexTitle string
-	SiteURL    string
-	db         *db.DB
-	registry   *core.Registry
-	uiConfig   UIConfig
+	Name               string
+	Title              string
+	Header             string
+	IndexTitle         string
+	SiteURL            string
+	db                 *db.DB
+	registry           *core.Registry
+	uiConfig           UIConfig
+	loginAuthenticator rest.LoginAuthenticator
+}
+
+// SetLoginAuthenticator sets the custom login authenticator for the admin site.
+func (s *Site) SetLoginAuthenticator(a rest.LoginAuthenticator) {
+	s.loginAuthenticator = a
 }
 
 // UISource defines where the Admin UI assets come from
@@ -149,6 +155,9 @@ func (s *Site) Handler() http.Handler {
 
 	// 1. Register API Routes
 	apiRouter := rest.NewRouter(s.registry)
+	if s.loginAuthenticator != nil {
+		apiRouter.SetLoginAuthenticator(s.loginAuthenticator)
+	}
 	apiRouter.WithAdminPrefix(s.uiConfig.Prefix)
 	apiRouter.RegisterRoutes(r)
 

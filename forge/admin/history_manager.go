@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"sync"
 
 	"github.com/forgego/forge/admin/core"
 )
@@ -10,13 +11,26 @@ import (
 // It satisfies core.HistoryManager and persists history using an in-memory manager.
 type HistoryManager struct {
 	TrackFields []string
+	once        sync.Once
 	mem         *core.MemoryHistoryManager
 }
 
-func (m *HistoryManager) getMem() *core.MemoryHistoryManager {
-	if m.mem == nil {
-		m.mem = core.NewMemoryHistoryManager()
+// NewHistoryManager creates a new HistoryManager with an initialized memory store.
+func NewHistoryManager(trackFields ...string) *HistoryManager {
+	m := &HistoryManager{
+		TrackFields: trackFields,
+		mem:         core.NewMemoryHistoryManager(),
 	}
+	m.once.Do(func() {})
+	return m
+}
+
+func (m *HistoryManager) getMem() *core.MemoryHistoryManager {
+	m.once.Do(func() {
+		if m.mem == nil {
+			m.mem = core.NewMemoryHistoryManager()
+		}
+	})
 	return m.mem
 }
 

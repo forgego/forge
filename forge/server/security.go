@@ -5,7 +5,6 @@ import (
 	"html"
 	"net/http"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/alexedwards/scs/v2"
@@ -125,59 +124,11 @@ func NewSQLInjection() *SQLInjection {
 	return &SQLInjection{}
 }
 
-// ValidateInput validates input to prevent SQL injection
-func (s *SQLInjection) ValidateInput(input string) error {
-	// Check for SQL injection patterns
-	dangerousPatterns := []string{
-		";",
-		"--",
-		"/*",
-		"*/",
-		"xp_",
-		"sp_",
-		"exec",
-		"execute",
-		"union",
-		"select",
-		"insert",
-		"update",
-		"delete",
-		"drop",
-		"create",
-		"alter",
-		"truncate",
-	}
-
-	inputLower := strings.ToLower(input)
-	for _, pattern := range dangerousPatterns {
-		if strings.Contains(inputLower, pattern) {
-			return fmt.Errorf("potentially dangerous input detected: %s", pattern)
-		}
-	}
-
-	return nil
-}
-
 // SanitizeIdentifier sanitizes SQL identifiers (table/column names)
 func (s *SQLInjection) SanitizeIdentifier(identifier string) string {
 	// Only allow alphanumeric and underscore
 	reg := regexp.MustCompile(`[^a-zA-Z0-9_]`)
 	return reg.ReplaceAllString(identifier, "")
-}
-
-// EnsureParameterized ensures a query uses parameterized queries
-func (s *SQLInjection) EnsureParameterized(query string) error {
-	// Check for string concatenation in SQL
-	if strings.Contains(query, "+") || strings.Contains(query, "||") {
-		return fmt.Errorf("query appears to use string concatenation - use parameterized queries instead")
-	}
-
-	// Check for fmt.Sprintf patterns
-	if strings.Contains(query, "%s") || strings.Contains(query, "%d") {
-		return fmt.Errorf("query appears to use string formatting - use parameterized queries instead")
-	}
-
-	return nil
 }
 
 // QueryLogger interface for security audit logging
@@ -230,87 +181,6 @@ func (x *XSS) EscapeHTML(s string) string {
 	return html.EscapeString(s)
 }
 
-// HTMLPolicy represents allowed HTML elements and attributes
-type HTMLPolicy struct {
-	AllowedTags       map[string]bool
-	AllowedAttributes map[string][]string
-	StripComments     bool
-	StripScripts      bool
-}
-
-// DefaultHTMLPolicy returns a safe default HTML policy
-func DefaultHTMLPolicy() *HTMLPolicy {
-	return &HTMLPolicy{
-		AllowedTags: map[string]bool{
-			"p": true, "br": true, "strong": true, "em": true, "u": true,
-			"h1": true, "h2": true, "h3": true, "h4": true, "h5": true, "h6": true,
-			"ul": true, "ol": true, "li": true, "a": true, "img": true,
-			"blockquote": true, "code": true, "pre": true, "span": true, "div": true,
-		},
-		AllowedAttributes: map[string][]string{
-			"a":   {"href", "title", "target"},
-			"img": {"src", "alt", "title", "width", "height"},
-		},
-		StripComments: true,
-		StripScripts:  true,
-	}
-}
-
-// SanitizeHTML sanitizes HTML content according to policy
-func (x *XSS) SanitizeHTML(htmlContent string) string {
-	policy := DefaultHTMLPolicy()
-
-	// Strip comments
-	if policy.StripComments {
-		commentRe := regexp.MustCompile(`<!--.*?-->`)
-		htmlContent = commentRe.ReplaceAllString(htmlContent, "")
-	}
-
-	// Strip script tags and their content
-	if policy.StripScripts {
-		scriptRe := regexp.MustCompile(`(?i)<script[^>]*>.*?</script>`)
-		htmlContent = scriptRe.ReplaceAllString(htmlContent, "")
-	}
-
-	// Strip event handlers (onclick, onerror, etc.)
-	eventHandlerRe := regexp.MustCompile(`(?i)\s*on\w+\s*=\s*["'][^"']*["']`)
-	htmlContent = eventHandlerRe.ReplaceAllString(htmlContent, "")
-
-	// Strip javascript: URLs
-	jsUrlRe := regexp.MustCompile(`(?i)javascript:`)
-	htmlContent = jsUrlRe.ReplaceAllString(htmlContent, "")
-
-	// Strip data: URLs (can be used for XSS)
-	dataUrlRe := regexp.MustCompile(`(?i)data:text/html`)
-	htmlContent = dataUrlRe.ReplaceAllString(htmlContent, "")
-
-	// Strip style tags with expression()
-	styleExprRe := regexp.MustCompile(`(?i)<style[^>]*>.*?expression\(.*?\).*?</style>`)
-	htmlContent = styleExprRe.ReplaceAllString(htmlContent, "")
-
-	// Remove iframe, embed, object tags
-	// Note: Go regexp doesn't support backreferences, so we handle each tag separately
-	dangerousTags := []string{"iframe", "embed", "object", "applet", "meta", "link", "base"}
-	for _, tag := range dangerousTags {
-		// Remove paired tags
-		pattern := fmt.Sprintf(`(?i)<%s[^>]*>.*?</%s>`, tag, tag)
-		tagRe := regexp.MustCompile(pattern)
-		htmlContent = tagRe.ReplaceAllString(htmlContent, "")
-
-		// Remove self-closing tags
-		selfPattern := fmt.Sprintf(`(?i)<%s[^>]*/>`, tag)
-		selfRe := regexp.MustCompile(selfPattern)
-		htmlContent = selfRe.ReplaceAllString(htmlContent, "")
-	}
-
-	return htmlContent
-}
-
-// SanitizeHTMLStrict sanitizes HTML by escaping everything (safe but loses formatting)
-func (x *XSS) SanitizeHTMLStrict(htmlContent string) string {
-	return x.EscapeHTML(htmlContent)
-}
-
 // SafeString represents a string that is safe to output without escaping
 type SafeString string
 
@@ -332,15 +202,4 @@ func (x *XSS) ContentSecurityPolicy() map[string]string {
 		"X-Frame-Options":         "DENY",
 		"X-XSS-Protection":        "1; mode=block",
 	}
-}
-
-// SanitizeInput sanitizes user input
-func (x *XSS) SanitizeInput(input string) string {
-	// Remove null bytes
-	input = strings.ReplaceAll(input, "\x00", "")
-
-	// Escape HTML
-	input = x.EscapeHTML(input)
-
-	return input
 }

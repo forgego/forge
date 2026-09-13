@@ -12,6 +12,7 @@ import (
 	"github.com/forgego/forge/identity"
 	"github.com/forgego/forge/identity/service"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 // CreateSuperUserCommand creates the createsuperuser command
@@ -65,7 +66,7 @@ func (c *CreateSuperUserCommand) Execute(ctx *core.Context, args []string) error
 
 	// Read password (without echo)
 	fmt.Print("Password: ")
-	password, err := readPassword()
+	password, err := readPassword(reader)
 	if err != nil {
 		return fmt.Errorf("failed to read password: %w", err)
 	}
@@ -74,7 +75,7 @@ func (c *CreateSuperUserCommand) Execute(ctx *core.Context, args []string) error
 	}
 
 	fmt.Print("\nPassword (again): ")
-	passwordConfirm, err := readPassword()
+	passwordConfirm, err := readPassword(reader)
 	if err != nil {
 		return fmt.Errorf("failed to read password confirmation: %w", err)
 	}
@@ -118,14 +119,24 @@ func (c *CreateSuperUserCommand) Execute(ctx *core.Context, args []string) error
 	return nil
 }
 
-// readPassword reads a password from stdin without echoing
-func readPassword() (string, error) {
-	// For MVP, use simple input (no password hiding)
-	// Full implementation would use term package for password hiding
-	reader := bufio.NewReader(os.Stdin)
+// readPassword reads a password without echoing if stdin is a terminal,
+// or reads a line from reader if stdin is not a terminal.
+func readPassword(reader *bufio.Reader) (string, error) {
+	if term.IsTerminal(int(os.Stdin.Fd())) {
+		bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
+		if err != nil {
+			return "", fmt.Errorf("failed to read password: %w", err)
+		}
+		fmt.Println()
+		return strings.TrimSpace(string(bytePassword)), nil
+	}
+
+	if reader == nil {
+		reader = bufio.NewReader(os.Stdin)
+	}
 	password, err := reader.ReadString('\n')
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read password: %w", err)
 	}
 	return strings.TrimSpace(password), nil
 }

@@ -14,7 +14,11 @@ func (m *MockQueryset) Search(query string, fields []string) interface{} {
 	return m
 }
 
-func (m *MockQueryset) OrderBy(fields []string) interface{} {
+func (m *MockQueryset) Filter(expr any) interface{} {
+	return m
+}
+
+func (m *MockQueryset) OrderBy(fields ...string) interface{} {
 	return m
 }
 

@@ -195,10 +195,10 @@ func BuildInsertSQL(instance interface{}, tableName string, pkColumn string) (sq
 
 	insertSQL := fmt.Sprintf(
 		"INSERT INTO %s (%s) VALUES (%s) RETURNING %s",
-		tableName,
-		strings.Join(insertColumns, ", "),
+		EscapeIdentifier(tableName),
+		strings.Join(EscapeIdentifierList(insertColumns), ", "),
 		strings.Join(insertPlaceholders, ", "),
-		pkColumn,
+		EscapeIdentifier(pkColumn),
 	)
 
 	return insertSQL, insertValues, insertColumns, nil
@@ -372,7 +372,7 @@ func BuildUpdateSQL(instance interface{}, tableName, idField string) (string, []
 		}
 
 		// Include field in UPDATE
-		setParts = append(setParts, fmt.Sprintf("%s = $%d", columnName, paramIndex))
+		setParts = append(setParts, fmt.Sprintf("%s = $%d", EscapeIdentifier(columnName), paramIndex))
 		values = append(values, fieldValue)
 		paramIndex++
 	}
@@ -389,9 +389,9 @@ func BuildUpdateSQL(instance interface{}, tableName, idField string) (string, []
 	values = append(values, idValue)
 	sql := fmt.Sprintf(
 		"UPDATE %s SET %s WHERE %s = $%d",
-		tableName,
+		EscapeIdentifier(tableName),
 		strings.Join(setParts, ", "),
-		idField,
+		EscapeIdentifier(idField),
 		paramIndex,
 	)
 
@@ -400,7 +400,7 @@ func BuildUpdateSQL(instance interface{}, tableName, idField string) (string, []
 
 // BuildDeleteSQL builds a DELETE SQL statement
 func BuildDeleteSQL(tableName, idField string, idValue interface{}) (string, []interface{}) {
-	sql := fmt.Sprintf("DELETE FROM %s WHERE %s = $1", tableName, idField)
+	sql := fmt.Sprintf("DELETE FROM %s WHERE %s = $1", EscapeIdentifier(tableName), EscapeIdentifier(idField))
 	return sql, []interface{}{idValue}
 }
 
@@ -479,7 +479,7 @@ func BuildBulkInsertSQL(instances []interface{}, tableName string, pkColumn stri
 		EscapeIdentifier(tableName),
 		strings.Join(escapedColumns, ", "),
 		strings.Join(valueClauses, ", "),
-		pkColumn,
+		EscapeIdentifier(pkColumn),
 	)
 
 	return sql, allValues, columns, nil
