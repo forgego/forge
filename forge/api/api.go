@@ -1,6 +1,8 @@
 package api
 
 import (
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/forgego/forge/api/authentication"
@@ -65,16 +67,26 @@ func DefaultSettings() *Settings {
 }
 
 // Global settings instance
-var globalSettings = DefaultSettings()
+var (
+	globalSettings  atomic.Pointer[Settings]
+	settingsWriteMu sync.Mutex
+)
 
-// SetSettings sets the global API settings
+func init() {
+	globalSettings.Store(DefaultSettings())
+}
+
+// SetSettings sets the global API settings.
+// Callers must not mutate the passed Settings pointer afterwards.
 func SetSettings(settings *Settings) {
-	globalSettings = settings
+	settingsWriteMu.Lock()
+	defer settingsWriteMu.Unlock()
+	globalSettings.Store(settings)
 }
 
 // GetSettings returns the global API settings
 func GetSettings() *Settings {
-	return globalSettings
+	return globalSettings.Load()
 }
 
 // Initialize initializes the API framework with default settings
@@ -99,24 +111,53 @@ func Initialize() {
 
 // SetDefaultAuthentication sets the default authentication classes
 func SetDefaultAuthentication(authClasses ...authentication.Authentication) {
-	settings := GetSettings()
-	settings.DefaultAuthentication = authClasses
+	settingsWriteMu.Lock()
+	defer settingsWriteMu.Unlock()
+
+	cur := globalSettings.Load()
+	var next Settings
+	if cur != nil {
+		next = *cur
+	} else {
+		next = *DefaultSettings()
+	}
+	next.DefaultAuthentication = append([]authentication.Authentication(nil), authClasses...)
+	globalSettings.Store(&next)
 }
 
 // SetDefaultPermissions sets the default permission classes
 func SetDefaultPermissions(permClasses ...permissions.Permission) {
-	settings := GetSettings()
-	settings.DefaultPermissions = permClasses
+	settingsWriteMu.Lock()
+	defer settingsWriteMu.Unlock()
+
+	cur := globalSettings.Load()
+	var next Settings
+	if cur != nil {
+		next = *cur
+	} else {
+		next = *DefaultSettings()
+	}
+	next.DefaultPermissions = append([]permissions.Permission(nil), permClasses...)
+	globalSettings.Store(&next)
 }
 
 // SetDefaultThrottles sets the default throttle classes
 func SetDefaultThrottles(throttleClasses ...throttling.Throttle) {
-	settings := GetSettings()
-	settings.DefaultThrottles = throttleClasses
+	settingsWriteMu.Lock()
+	defer settingsWriteMu.Unlock()
+
+	cur := globalSettings.Load()
+	var next Settings
+	if cur != nil {
+		next = *cur
+	} else {
+		next = *DefaultSettings()
+	}
+	next.DefaultThrottles = append([]throttling.Throttle(nil), throttleClasses...)
+	globalSettings.Store(&next)
 }
 
 // SetExceptionHandler sets the global exception handler
 func SetExceptionHandler(handler exceptions.ExceptionHandler) {
 	exceptions.SetExceptionHandler(handler)
 }
-

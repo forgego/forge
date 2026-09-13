@@ -2,6 +2,7 @@ package registry
 
 import (
 	"fmt"
+	"sync"
 )
 
 // Plugin is the main interface that all plugins must implement
@@ -102,6 +103,7 @@ type APIFilter struct {
 
 // PluginRegistry maintains a registry of all plugins
 type PluginRegistry struct {
+	mu           sync.RWMutex
 	plugins      map[string]Plugin
 	modelPlugins []ModelPlugin
 	adminPlugins []AdminPlugin
@@ -117,30 +119,50 @@ var globalPluginRegistry = &PluginRegistry{
 
 // RegisterPlugin registers a plugin and applies its extensions
 func RegisterPlugin(plugin Plugin) error {
+	globalPluginRegistry.mu.Lock()
 	if _, exists := globalPluginRegistry.plugins[plugin.Name()]; exists {
+		globalPluginRegistry.mu.Unlock()
 		return fmt.Errorf("plugin %s is already registered", plugin.Name())
 	}
-
 	globalPluginRegistry.plugins[plugin.Name()] = plugin
+	globalPluginRegistry.mu.Unlock()
 
 	// Call Install (no arguments for new plugin interface)
 	if err := plugin.Install(); err != nil {
+		globalPluginRegistry.mu.Lock()
+		delete(globalPluginRegistry.plugins, plugin.Name())
+		globalPluginRegistry.mu.Unlock()
 		return fmt.Errorf("plugin %s installation failed: %w", plugin.Name(), err)
 	}
 
 	// Register by type
-	if modelPlugin, ok := plugin.(ModelPlugin); ok {
-		globalPluginRegistry.modelPlugins = append(globalPluginRegistry.modelPlugins, modelPlugin)
+	modelPlugin, okModel := plugin.(ModelPlugin)
+	adminPlugin, okAdmin := plugin.(AdminPlugin)
+	apiPlugin, okAPI := plugin.(APIPlugin)
+
+	if okModel || okAdmin || okAPI {
+		globalPluginRegistry.mu.Lock()
+		if okModel {
+			globalPluginRegistry.modelPlugins = append(globalPluginRegistry.modelPlugins, modelPlugin)
+		}
+		if okAdmin {
+			globalPluginRegistry.adminPlugins = append(globalPluginRegistry.adminPlugins, adminPlugin)
+		}
+		if okAPI {
+			globalPluginRegistry.apiPlugins = append(globalPluginRegistry.apiPlugins, apiPlugin)
+		}
+		globalPluginRegistry.mu.Unlock()
+	}
+
+	if okModel {
 		applyModelExtensions(modelPlugin)
 	}
 
-	if adminPlugin, ok := plugin.(AdminPlugin); ok {
-		globalPluginRegistry.adminPlugins = append(globalPluginRegistry.adminPlugins, adminPlugin)
+	if okAdmin {
 		applyAdminExtensions(adminPlugin)
 	}
 
-	if apiPlugin, ok := plugin.(APIPlugin); ok {
-		globalPluginRegistry.apiPlugins = append(globalPluginRegistry.apiPlugins, apiPlugin)
+	if okAPI {
 		applyAPIExtensions(apiPlugin)
 	}
 
@@ -149,6 +171,9 @@ func RegisterPlugin(plugin Plugin) error {
 
 // GetPlugin retrieves a plugin by name
 func GetPlugin(name string) (Plugin, error) {
+	globalPluginRegistry.mu.RLock()
+	defer globalPluginRegistry.mu.RUnlock()
+
 	plugin, exists := globalPluginRegistry.plugins[name]
 	if !exists {
 		return nil, fmt.Errorf("plugin %s is not registered", name)
@@ -158,7 +183,10 @@ func GetPlugin(name string) (Plugin, error) {
 
 // GetAllPlugins returns all registered plugins
 func GetAllPlugins() map[string]Plugin {
-	result := make(map[string]Plugin)
+	globalPluginRegistry.mu.RLock()
+	defer globalPluginRegistry.mu.RUnlock()
+
+	result := make(map[string]Plugin, len(globalPluginRegistry.plugins))
 	for k, v := range globalPluginRegistry.plugins {
 		result[k] = v
 	}
@@ -167,17 +195,26 @@ func GetAllPlugins() map[string]Plugin {
 
 // GetModelPlugins returns all model plugins
 func GetModelPlugins() []ModelPlugin {
-	return globalPluginRegistry.modelPlugins
+	globalPluginRegistry.mu.RLock()
+	defer globalPluginRegistry.mu.RUnlock()
+
+	return append([]ModelPlugin(nil), globalPluginRegistry.modelPlugins...)
 }
 
 // GetAdminPlugins returns all admin plugins
 func GetAdminPlugins() []AdminPlugin {
-	return globalPluginRegistry.adminPlugins
+	globalPluginRegistry.mu.RLock()
+	defer globalPluginRegistry.mu.RUnlock()
+
+	return append([]AdminPlugin(nil), globalPluginRegistry.adminPlugins...)
 }
 
 // GetAPIPlugins returns all API plugins
 func GetAPIPlugins() []APIPlugin {
-	return globalPluginRegistry.apiPlugins
+	globalPluginRegistry.mu.RLock()
+	defer globalPluginRegistry.mu.RUnlock()
+
+	return append([]APIPlugin(nil), globalPluginRegistry.apiPlugins...)
 }
 
 // applyModelExtensions applies model extensions from a plugin
