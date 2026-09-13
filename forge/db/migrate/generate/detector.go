@@ -424,10 +424,7 @@ func (d *Detector) relationChanged(current, previous generator.RelationDefinitio
 	}
 	currentOnUpdate, _ := current.Options["on_update"].(string)
 	previousOnUpdate, _ := previous.Options["on_update"].(string)
-	if currentOnUpdate != previousOnUpdate {
-		return true
-	}
-	return false
+	return currentOnUpdate != previousOnUpdate
 }
 
 // detectConstraintChanges detects constraint changes
@@ -497,4 +494,3 @@ func toSnakeCase(s string) string {
 	}
 	return string(result)
 }
-

@@ -55,6 +55,7 @@ func (c *AddAPICommand) Execute(ctx *core.Context, args []string) error {
 	if modelName == "" {
 		if err := survey.AskOne(&survey.Input{
 			Message: "Model name:",
+			//lint:ignore SA1019 strings.Title is deprecated but golang.org/x/text/cases is not a drop-in replacement
 			Default: strings.Title(resourceName),
 		}, &modelName); err != nil {
 			return err
@@ -117,7 +118,9 @@ func (c *AddAPICommand) Execute(ctx *core.Context, args []string) error {
 func generateAPICode(appName, modelName, resourceName, resourcePath string, graphql bool) string {
 	var sb strings.Builder
 
+	//lint:ignore SA1019 strings.Title is deprecated but golang.org/x/text/cases is not a drop-in replacement
 	sb.WriteString(fmt.Sprintf("\n// Register%sAPI registers the %s API endpoints\n", strings.Title(resourceName), resourceName))
+	//lint:ignore SA1019 strings.Title is deprecated but golang.org/x/text/cases is not a drop-in replacement
 	sb.WriteString(fmt.Sprintf("func Register%sAPI(router *httplib.Router) {\n", strings.Title(resourceName)))
 	sb.WriteString("\t// Create viewset\n")
 	sb.WriteString("\tviewset := api.NewBaseViewSet(\n")
@@ -145,7 +148,7 @@ func generateAPICode(appName, modelName, resourceName, resourcePath string, grap
 	sb.WriteString("\t}\n")
 	sb.WriteString("}\n\n")
 
-	sb.WriteString(fmt.Sprintf("// Fields returns the fields to serialize\n"))
+	sb.WriteString("// Fields returns the fields to serialize\n")
 	sb.WriteString(fmt.Sprintf("func (s *%sSerializer) Fields() []string {\n", modelName))
 	sb.WriteString("\treturn []string{\"id\"} // Add your fields here\n")
 	sb.WriteString("}\n")

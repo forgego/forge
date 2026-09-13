@@ -51,7 +51,7 @@ func NewSQLParserWithOptions(opts ParserOptions) *SQLParser {
 	return &SQLParser{
 		lexer:      NewLexer(),
 		classifier: NewClassifier(),
-		ddlParser:  NewDDLParserWithOptions(DDLParserOptions{Verbose: opts.Verbose}),
+		ddlParser:  NewDDLParserWithOptions(DDLParserOptions(opts)),
 		verbose:    opts.Verbose,
 		errors:     []*ParseError{},
 	}
@@ -178,4 +178,3 @@ func (p *SQLParser) getLineColumn(sql string, pos int) (line, col int) {
 	}
 	return line, col
 }
-

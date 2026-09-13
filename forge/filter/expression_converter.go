@@ -54,7 +54,7 @@ func (ec *ExpressionConverter[T]) convertFieldNode(node *FilterNode) (orm.Expres
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve field path '%s': %w", node.Field, err)
 	}
-	
+
 	// Use target schema for table name if we resolved through relations
 	tableName := ec.schema.TableName
 	if targetSchema != nil {
@@ -73,11 +73,6 @@ func (ec *ExpressionConverter[T]) convertFieldNode(node *FilterNode) (orm.Expres
 	// Create comparison expression
 	comparison := ec.createComparisonExpression(fieldExpr, op, node.Value, node.Lookup)
 	return comparison, nil
-}
-
-// createFieldExpression creates a FieldExpression based on field type
-func (ec *ExpressionConverter[T]) createFieldExpression(fieldPath string, fieldType reflect.Type) orm.Expression {
-	return ec.createFieldExpressionWithTable(fieldPath, fieldType, ec.schema.TableName)
 }
 
 // createFieldExpressionWithTable creates a FieldExpression with a specific table name
@@ -295,4 +290,3 @@ func (ec *ExpressionConverter[T]) convertNotNode(node *FilterNode) (orm.Expressi
 
 	return orm.NewQ(expr).Not(), nil
 }
-

@@ -1,15 +1,13 @@
 package generate
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/forgego/forge/config"
 	codegen "github.com/forgego/forge/codegen"
+	"github.com/forgego/forge/config"
 	"github.com/forgego/forge/db/migrate/core"
 	"github.com/forgego/forge/db/migrate/sql"
 	"github.com/forgego/forge/db/migrate/state"
@@ -372,12 +370,6 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 );`
 }
 
-// calculateChecksum calculates SHA256 checksum of SQL
-func calculateChecksum(sql string) string {
-	hash := sha256.Sum256([]byte(sql))
-	return hex.EncodeToString(hash[:])
-}
-
 // parseUint helper
 func parseUint(s string) (uint64, error) {
 	var result uint64
@@ -409,4 +401,3 @@ func toSnakeCaseFromDef(s string) string {
 	}
 	return string(result)
 }
-

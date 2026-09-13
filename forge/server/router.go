@@ -16,8 +16,8 @@ type Router struct {
 	chi.Router
 	// middleware is reserved for future use
 	// nolint:unused // Reserved for future middleware management
-	middleware []func(http.Handler) http.Handler
-	notFound   http.HandlerFunc
+	middleware       []func(http.Handler) http.Handler
+	notFound         http.HandlerFunc
 	methodNotAllowed http.HandlerFunc
 }
 
@@ -37,7 +37,7 @@ func NewRouter() *Router {
 	// If using Router standalone, you should add middleware yourself.
 
 	return &Router{
-		Router: r,
+		Router:     r,
 		middleware: []func(http.Handler) http.Handler{},
 	}
 }
@@ -108,9 +108,9 @@ func (r *Router) Trace(pattern string, handler http.HandlerFunc) {
 // With applies middleware to a route group
 func (r *Router) With(middleware ...func(http.Handler) http.Handler) *Router {
 	subRouter := &Router{
-		Router:     r.Router.With(middleware...).(chi.Router),
-		middleware: append(r.middleware, middleware...),
-		notFound:   r.notFound,
+		Router:           r.Router.With(middleware...),
+		middleware:       append(r.middleware, middleware...),
+		notFound:         r.notFound,
 		methodNotAllowed: r.methodNotAllowed,
 	}
 	return subRouter
@@ -140,4 +140,3 @@ func (r *Router) MethodNotAllowed(handler http.HandlerFunc) {
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	r.Router.ServeHTTP(w, req)
 }
-

@@ -21,13 +21,13 @@ type ModelSchema struct {
 
 // FieldInfo contains field metadata
 type FieldInfo struct {
-	Name       string
-	DBColumn   string
-	Type       reflect.Type
-	Required   bool
-	PrimaryKey bool
-	Unique     bool
-	ForeignKey *RelationInfo
+	Name            string
+	DBColumn        string
+	Type            reflect.Type
+	Required        bool
+	PrimaryKey      bool
+	Unique          bool
+	ForeignKey      *RelationInfo
 	StructFieldName string
 }
 
@@ -458,18 +458,3 @@ func (ms *ModelSchema) GetRelationDepth(path string) (int, error) {
 func splitFieldPathSchema(path string) []string {
 	return strings.Split(path, "__")
 }
-
-// Helper to convert field path to SQL (handles double underscore)
-func fieldPathToSQL(path string) string {
-	// Replace double underscore with single for SQL
-	// "author__name" -> "author.name" or JOIN syntax
-	parts := strings.Split(path, "__")
-	if len(parts) == 1 {
-		return EscapeIdentifier(parts[0])
-	}
-	// For now, just escape - JOIN logic handled elsewhere
-	return EscapeIdentifier(strings.Join(parts, "."))
-}
-
-
-

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-
-	"github.com/forgego/forge/db/dialect"
 )
 
 // prefetch handles prefetching of related objects
@@ -344,24 +342,6 @@ func (qs *BaseQuerySet[T]) fetchByIDs(ctx context.Context, schema *ModelSchema, 
 	}
 
 	return results, nil
-}
-
-// buildPlaceholdersWithDialect generates placeholders using the provided dialect.
-// This is the preferred way to build placeholders for database-agnostic SQL.
-func buildPlaceholdersWithDialect(d dialect.Dialect, n int) string {
-	return d.BuildPlaceholders(n)
-}
-
-// buildPlaceholders generates PostgreSQL-style placeholders ($1, $2, etc.).
-//
-// Deprecated: Use buildPlaceholdersWithDialect or dialect.BuildPlaceholders() instead.
-// This function remains for backward compatibility but will be removed in v3.0.
-func buildPlaceholders(n int) string {
-	parts := make([]string, n)
-	for i := 0; i < n; i++ {
-		parts[i] = fmt.Sprintf("$%d", i+1)
-	}
-	return strings.Join(parts, ", ")
 }
 
 func isZero(v interface{}) bool {

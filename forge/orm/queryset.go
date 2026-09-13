@@ -672,9 +672,7 @@ func (qs *BaseQuerySet[T]) buildSelectClause(builder *SQLBuilder) string {
 			// Update builder's paramIndex
 			builder.paramIndex = nextIndex
 			// Add args to builder
-			for _, arg := range annArgs {
-				builder.args = append(builder.args, arg)
-			}
+			builder.args = append(builder.args, annArgs...)
 			alias := EscapeIdentifier(ann.Name)
 			fields = append(fields, fmt.Sprintf("%s AS %s", annSQL, alias))
 		}
@@ -1136,7 +1134,7 @@ func (qs *BaseQuerySet[T]) Get(ctx context.Context) (*T, error) {
 	}
 
 	if len(results) > 1 {
-		return nil, fmt.Errorf("get() returned more than one %s -- it returned %d!", qs.table, len(results))
+		return nil, fmt.Errorf("get() returned more than one %s -- it returned %d", qs.table, len(results))
 	}
 
 	return results[0], nil
@@ -1462,7 +1460,7 @@ func (vqs *BaseValuesQuerySet[T]) Get(ctx context.Context) (map[string]interface
 	}
 
 	if len(results) > 1 {
-		return nil, fmt.Errorf("get() returned more than one %s -- it returned %d!", vqs.base.table, len(results))
+		return nil, fmt.Errorf("get() returned more than one %s -- it returned %d", vqs.base.table, len(results))
 	}
 
 	return results[0], nil
@@ -1570,7 +1568,7 @@ func (vls *BaseValuesListQuerySet[T]) Get(ctx context.Context) ([]interface{}, e
 	}
 
 	if len(results) > 1 {
-		return nil, fmt.Errorf("get() returned more than one %s -- it returned %d!", vls.base.table, len(results))
+		return nil, fmt.Errorf("get() returned more than one %s -- it returned %d", vls.base.table, len(results))
 	}
 
 	return results[0], nil

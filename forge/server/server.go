@@ -164,10 +164,7 @@ func (s *Server) StartWithGracefulShutdown() error {
 	}()
 
 	// Wait for interrupt signal or server error
-	select {
-	case err := <-serverErr:
-		return err
-	}
+	return <-serverErr
 }
 
 // Shutdown gracefully shuts down the server

@@ -98,7 +98,6 @@ func (l *FileStateLoader) Load() (*SchemaState, error) {
 		type fileChanges struct {
 			file    string
 			changes []core.Change
-			errors  []*parse.ParseError
 		}
 		var allFileChanges []fileChanges
 
@@ -163,16 +162,12 @@ func (l *FileStateLoader) Load() (*SchemaState, error) {
 
 		// Three-pass retry mechanism
 		// Pass 1: Process all CREATE TABLE statements
-		var deferredChanges []core.Change
 		for _, fc := range allFileChanges {
 			for _, change := range fc.changes {
 				if _, ok := change.(*core.CreateTable); ok {
 					if err := applyChangeToState(state, change); err != nil {
 						return nil, l.formatError(fc.file, change, err, "CREATE TABLE")
 					}
-				} else if _, ok := change.(*core.UnknownChange); !ok {
-					// Defer non-CREATE TABLE changes
-					deferredChanges = append(deferredChanges, change)
 				}
 			}
 		}
@@ -288,4 +283,3 @@ func applyChangeToState(state *SchemaState, change core.Change) error {
 	manager := &InMemoryState{state: state}
 	return manager.Apply([]core.Change{change})
 }
-

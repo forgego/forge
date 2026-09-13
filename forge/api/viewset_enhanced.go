@@ -216,7 +216,7 @@ func (vs *EnhancedBaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 	if offsetMethod.IsValid() {
 		results := offsetMethod.Call([]reflect.Value{reflect.ValueOf(offset)})
 		if len(results) > 0 {
-			if newQS, ok := results[0].Interface().(interface{}); ok {
+			if newQS := results[0].Interface(); newQS != nil {
 				qs = reflect.ValueOf(newQS)
 			}
 		}
@@ -226,7 +226,7 @@ func (vs *EnhancedBaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 	if limitMethod.IsValid() {
 		results := limitMethod.Call([]reflect.Value{reflect.ValueOf(pageSize)})
 		if len(results) > 0 {
-			if newQS, ok := results[0].Interface().(interface{}); ok {
+			if newQS := results[0].Interface(); newQS != nil {
 				qs = reflect.ValueOf(newQS)
 			}
 		}
@@ -785,4 +785,3 @@ func (vs *EnhancedBaseViewSet) Destroy(w http.ResponseWriter, r *http.Request) {
 
 // Ensure EnhancedBaseViewSet implements ViewSet interface
 var _ ViewSet = (*EnhancedBaseViewSet)(nil)
-

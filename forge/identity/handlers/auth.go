@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/forgego/forge/api/core"
 	"github.com/forgego/forge/identity/backends"
 	"github.com/forgego/forge/identity/models"
 	"github.com/forgego/forge/identity/serializers"
@@ -180,16 +181,10 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 // GetUserFromContext retrieves user from context
 // This will be set by authentication middleware
 func GetUserFromContext(ctx context.Context) (*models.User, bool) {
-	// Try to get user from context (set by middleware)
-	if user, ok := ctx.Value("user").(*models.User); ok {
-		return user, true
+	user, ok := core.UserFromContext(ctx)
+	if !ok {
+		return nil, false
 	}
-
-	// Try API core context
-	if user, ok := ctx.Value("api_user").(*models.User); ok {
-		return user, true
-	}
-
-	return nil, false
+	currentUser, ok := user.(*models.User)
+	return currentUser, ok
 }
-

@@ -24,7 +24,7 @@ func NewSQLPreviewWidget(sqlPreview string, estimatedCost int, estimatedRows int
 func (w *SQLPreviewWidget) Render(name string, value interface{}, attrs map[string]string) (string, error) {
 	html := `<div class="sql-preview">`
 	html += `<h4>Query Preview</h4>`
-	html += `<pre class="sql-code">` + fmt.Sprintf("%s", w.SQLPreview) + `</pre>`
+	html += `<pre class="sql-code">` + w.SQLPreview + `</pre>`
 	html += `<div class="query-stats">`
 	html += `<span>Estimated Cost: ` + fmt.Sprintf("%d", w.EstimatedCost) + `</span>`
 	html += `<span>Estimated Rows: ` + fmt.Sprintf("%d", w.EstimatedRows) + `</span>`
@@ -37,4 +37,3 @@ func (w *SQLPreviewWidget) Render(name string, value interface{}, attrs map[stri
 func (w *SQLPreviewWidget) Parse(value string) (interface{}, error) {
 	return nil, fmt.Errorf("SQL preview widget does not parse values")
 }
-

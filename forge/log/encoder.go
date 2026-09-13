@@ -301,11 +301,3 @@ func getZapFormat(format Format, config *LoggingConfig, development bool) zapcor
 	encoderConfig.EncodeLevel = TraceLowercaseLevelEncoder
 	return zapcore.NewConsoleEncoder(encoderConfig)
 }
-
-// addTraceLevel adds TRACE level support to zap
-func addTraceLevel() {
-	// TRACE level is already supported by using DebugLevel - 1
-	// This is a no-op but documents the approach
-	// TRACE = DebugLevel - 1
-}
-
