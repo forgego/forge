@@ -108,7 +108,11 @@ func ValidateInstance(instance interface{}) error {
 }
 
 // BuildInsertSQL builds an INSERT SQL statement from a model instance
-func BuildInsertSQL(instance interface{}, tableName string) (sql string, values []interface{}, columns []string, err error) {
+func BuildInsertSQL(instance interface{}, tableName string, pkColumn string) (sql string, values []interface{}, columns []string, err error) {
+	if pkColumn == "" {
+		pkColumn = "id"
+	}
+
 	instanceValue := reflect.ValueOf(instance)
 	if instanceValue.Kind() == reflect.Ptr {
 		instanceValue = instanceValue.Elem()
@@ -169,7 +173,7 @@ func BuildInsertSQL(instance interface{}, tableName string) (sql string, values 
 				col = strings.ToLower(sf.Name)
 			}
 			// Skip id auto-increment
-			if col == "id" {
+			if col == "id" || col == pkColumn {
 				continue
 			}
 			val := instanceValue.Field(i)
@@ -190,10 +194,11 @@ func BuildInsertSQL(instance interface{}, tableName string) (sql string, values 
 	}
 
 	insertSQL := fmt.Sprintf(
-		"INSERT INTO %s (%s) VALUES (%s) RETURNING id",
+		"INSERT INTO %s (%s) VALUES (%s) RETURNING %s",
 		tableName,
 		strings.Join(insertColumns, ", "),
 		strings.Join(insertPlaceholders, ", "),
+		pkColumn,
 	)
 
 	return insertSQL, insertValues, insertColumns, nil
@@ -416,14 +421,17 @@ func ExecuteInsert(ctx context.Context, database *db.DB, sql string, args []inte
 }
 
 // BuildBulkInsertSQL builds a bulk INSERT SQL statement for multiple instances
-func BuildBulkInsertSQL(instances []interface{}, tableName string) (sql string, values []interface{}, columns []string, err error) {
+func BuildBulkInsertSQL(instances []interface{}, tableName string, pkColumn string) (sql string, values []interface{}, columns []string, err error) {
 	if len(instances) == 0 {
 		return "", nil, nil, fmt.Errorf("no instances to insert")
+	}
+	if pkColumn == "" {
+		pkColumn = "id"
 	}
 
 	// Use first instance to determine columns
 	firstInstance := instances[0]
-	_, _, columns, err = BuildInsertSQL(firstInstance, tableName)
+	_, _, columns, err = BuildInsertSQL(firstInstance, tableName, pkColumn)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("failed to build insert SQL for first instance: %w", err)
 	}
@@ -439,7 +447,7 @@ func BuildBulkInsertSQL(instances []interface{}, tableName string) (sql string, 
 
 	for _, instance := range instances {
 		// Get values for this instance
-		_, instanceValues, instanceColumns, err := BuildInsertSQL(instance, tableName)
+		_, instanceValues, instanceColumns, err := BuildInsertSQL(instance, tableName, pkColumn)
 		if err != nil {
 			return "", nil, nil, fmt.Errorf("failed to build insert SQL for instance: %w", err)
 		}
@@ -467,10 +475,11 @@ func BuildBulkInsertSQL(instances []interface{}, tableName string) (sql string, 
 	}
 
 	sql = fmt.Sprintf(
-		"INSERT INTO %s (%s) VALUES %s RETURNING id",
+		"INSERT INTO %s (%s) VALUES %s RETURNING %s",
 		EscapeIdentifier(tableName),
 		strings.Join(escapedColumns, ", "),
 		strings.Join(valueClauses, ", "),
+		pkColumn,
 	)
 
 	return sql, allValues, columns, nil

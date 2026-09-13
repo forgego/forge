@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -1485,6 +1486,22 @@ func (qs *BaseQuerySet[T]) Exists(ctx context.Context) (bool, error) {
 	return count > 0, err
 }
 
+// columnFor resolves a field or column key to the database column name.
+func (qs *BaseQuerySet[T]) columnFor(key string) (string, error) {
+	if qs == nil || qs.schema == nil {
+		return key, nil
+	}
+	field := qs.schema.GetField(key)
+	if field == nil {
+		target := qs.table
+		if target == "" && qs.schema != nil {
+			target = qs.schema.TableName
+		}
+		return "", fmt.Errorf("field %s not found on %s", key, target)
+	}
+	return field.DBColumn, nil
+}
+
 // Update performs a bulk update
 func (qs *BaseQuerySet[T]) Update(ctx context.Context, updates UpdateMap) (int64, error) {
 	if qs.err != nil {
@@ -1509,8 +1526,19 @@ func (qs *BaseQuerySet[T]) Update(ctx context.Context, updates UpdateMap) (int64
 	// Build SET clause
 	var setParts []string
 
-	for fieldName, value := range updates {
-		escapedField := EscapeIdentifier(fieldName)
+	keys := make([]string, 0, len(updates))
+	for fieldName := range updates {
+		keys = append(keys, fieldName)
+	}
+	sort.Strings(keys)
+
+	for _, fieldName := range keys {
+		value := updates[fieldName]
+		col, err := qs.columnFor(fieldName)
+		if err != nil {
+			return 0, err
+		}
+		escapedField := EscapeIdentifier(col)
 
 		// Check if value is an Expression
 		if expr, ok := value.(Expression); ok {
