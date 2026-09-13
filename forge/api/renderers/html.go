@@ -2,10 +2,8 @@ package renderers
 
 import (
 	"bytes"
-	"fmt"
 	"html/template"
 	"io"
-	"reflect"
 )
 
 // HTMLRenderer renders data as HTML (for browsable API)
@@ -64,20 +62,3 @@ func getDefaultTemplate() *template.Template {
 `
 	return template.Must(template.New("default").Parse(tmpl))
 }
-
-// formatData formats data for HTML display
-func formatData(data interface{}) string {
-	if data == nil {
-		return "null"
-	}
-
-	v := reflect.ValueOf(data)
-	switch v.Kind() {
-	case reflect.Map, reflect.Slice, reflect.Array:
-		// Format as JSON-like
-		return fmt.Sprintf("%+v", data)
-	default:
-		return fmt.Sprintf("%v", data)
-	}
-}
-

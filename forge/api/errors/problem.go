@@ -22,9 +22,9 @@ type Problem struct {
 	// Code is an application-level error code (extension to RFC 7807)
 	Code string `json:"code,omitempty" xml:"code,omitempty"`
 	// Meta contains additional metadata (extension to RFC 7807)
-	Meta map[string]interface{} `json:"meta,omitempty" xml:"meta,omitempty"`
+	Meta map[string]interface{} `json:"meta,omitempty" xml:"-"`
 	// Errors contains field-level validation errors (extension for validation errors)
-	Errors map[string][]FieldError `json:"errors,omitempty" xml:"errors,omitempty"`
+	Errors map[string][]FieldError `json:"errors,omitempty" xml:"-"`
 }
 
 // FieldError represents a field-level validation error
@@ -159,4 +159,3 @@ func (p *Problem) String() string {
 func (p *Problem) Error() string {
 	return p.String()
 }
-

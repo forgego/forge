@@ -34,6 +34,7 @@ func RequestID(next http.Handler) http.Handler {
 
 // RealIP sets the client IP from X-Forwarded-For or X-Real-IP headers
 func RealIP(next http.Handler) http.Handler {
+	//lint:ignore SA1019 Retain the existing behavior until trusted-proxy configuration is available.
 	return chimw.RealIP(next)
 }
 
@@ -461,4 +462,3 @@ func Metrics(opts *MetricsOptions) Middleware {
 		})
 	}
 }
-

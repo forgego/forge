@@ -130,65 +130,6 @@ func TestSite_SetDB(t *testing.T) {
 	}
 }
 
-// MockAdminInterface for testing registry operations
-type mockAdmin struct {
-	name string
-}
-
-func (m *mockAdmin) ModelName() string                          { return m.name }
-func (m *mockAdmin) ModelType() interface{}                     { return nil }
-func (m *mockAdmin) GetMetadata(ctx interface{}, user interface{}) (interface{}, error) {
-	return nil, nil
-}
-func (m *mockAdmin) SetDB(db interface{})                       {}
-func (m *mockAdmin) Schema() interface{}                       { return nil }
-func (m *mockAdmin) Manager() interface{}                       { return nil }
-func (m *mockAdmin) ModelSchema() interface{}                   { return nil }
-func (m *mockAdmin) Config() interface{}                        { return nil }
-func (m *mockAdmin) GetQueryset(ctx interface{}) (interface{}, error) {
-	return nil, nil
-}
-func (m *mockAdmin) SaveModel(ctx interface{}, instance interface{}, isNew bool) error {
-	return nil
-}
-func (m *mockAdmin) DeleteModel(ctx interface{}, instance interface{}) error {
-	return nil
-}
-func (m *mockAdmin) ListObjects(ctx interface{}, params interface{}) (interface{}, error) {
-	return nil, nil
-}
-func (m *mockAdmin) GetObject(ctx interface{}, id interface{}) (interface{}, error) {
-	return nil, nil
-}
-func (m *mockAdmin) CreateObject(ctx interface{}, data interface{}) (interface{}, error) {
-	return nil, nil
-}
-func (m *mockAdmin) UpdateObject(ctx interface{}, id interface{}, data interface{}) (interface{}, error) {
-	return nil, nil
-}
-func (m *mockAdmin) DeleteObject(ctx interface{}, id interface{}) error {
-	return nil
-}
-func (m *mockAdmin) ExecuteAction(ctx interface{}, actionName string, ids []interface{}, params interface{}) (interface{}, error) {
-	return nil, nil
-}
-func (m *mockAdmin) Autocomplete(ctx interface{}, query string, limit int) (interface{}, error) {
-	return nil, nil
-}
-func (m *mockAdmin) HasViewPermission(ctx interface{}, user interface{}, obj interface{}) bool {
-	return true
-}
-func (m *mockAdmin) HasAddPermission(ctx interface{}, user interface{}) bool {
-	return true
-}
-func (m *mockAdmin) HasChangePermission(ctx interface{}, user interface{}, obj interface{}) bool {
-	return true
-}
-func (m *mockAdmin) HasDeletePermission(ctx interface{}, user interface{}, obj interface{}) bool {
-	return true
-}
-func (m *mockAdmin) PageType() string { return "list" }
-
 // Test that core.Registry is properly initialized
 func TestSite_RegistryOperations(t *testing.T) {
 	site := NewSite("test")

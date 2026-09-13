@@ -82,12 +82,13 @@ type RedisClient interface {
 
 // NewRedisStore creates a new Redis store
 // Example: client := redis.NewClient(&redis.Options{Addr: addr, DB: db})
-//          store := NewRedisStore(client, "idempotency:")
+//
+//	store := NewRedisStore(client, "idempotency:")
 func NewRedisStore(client interface{}, keyPrefix string) (*RedisStore, error) {
 	if keyPrefix == "" {
 		keyPrefix = "idempotency:"
 	}
-	
+
 	return &RedisStore{
 		client:    client,
 		keyPrefix: keyPrefix,
@@ -97,38 +98,38 @@ func NewRedisStore(client interface{}, keyPrefix string) (*RedisStore, error) {
 // Get retrieves a cached response from Redis
 func (s *RedisStore) Get(key string) (*CachedResponse, error) {
 	fullKey := s.keyPrefix + key
-	
+
 	// Skeleton implementation - requires Redis client library
 	// With go-redis: data, err := s.client.(*redis.Client).Get(ctx, fullKey).Bytes()
 	_ = fullKey
-	return nil, fmt.Errorf("Redis client not configured - add go-redis library")
+	return nil, fmt.Errorf("redis client not configured - add go-redis library")
 }
 
 // Set stores a cached response in Redis
 func (s *RedisStore) Set(key string, response *CachedResponse, ttl time.Duration) error {
 	fullKey := s.keyPrefix + key
-	
+
 	// Serialize response
 	data, err := json.Marshal(response)
 	if err != nil {
 		return fmt.Errorf("failed to marshal response: %w", err)
 	}
-	
+
 	// Skeleton implementation - requires Redis client library
 	// With go-redis: return s.client.(*redis.Client).Set(ctx, fullKey, data, ttl).Err()
 	_ = fullKey
 	_ = data
-	return fmt.Errorf("Redis client not configured - add go-redis library")
+	return fmt.Errorf("redis client not configured - add go-redis library")
 }
 
 // Delete removes a cached response from Redis
 func (s *RedisStore) Delete(key string) error {
 	fullKey := s.keyPrefix + key
-	
+
 	// Skeleton implementation - requires Redis client library
 	// With go-redis: return s.client.(*redis.Client).Del(ctx, fullKey).Err()
 	_ = fullKey
-	return fmt.Errorf("Redis client not configured - add go-redis library")
+	return fmt.Errorf("redis client not configured - add go-redis library")
 }
 
 // DatabaseStore is a database-based idempotency store
@@ -148,17 +149,17 @@ func NewDatabaseStore(db interface{}, tableName string) (*DatabaseStore, error) 
 	if tableName == "" {
 		tableName = "idempotency_cache"
 	}
-	
+
 	store := &DatabaseStore{
 		db:        db,
 		tableName: tableName,
 	}
-	
+
 	// Initialize table if needed
 	if err := store.ensureTable(); err != nil {
 		return nil, fmt.Errorf("failed to ensure table: %w", err)
 	}
-	
+
 	return store, nil
 }
 
@@ -175,7 +176,7 @@ func (s *DatabaseStore) ensureTable() error {
 			created_at TIMESTAMP DEFAULT NOW()
 		)
 	`, s.tableName)
-	
+
 	// Execute table creation
 	// Note: This requires proper database connection implementation
 	_ = query
@@ -189,7 +190,7 @@ func (s *DatabaseStore) Get(key string) (*CachedResponse, error) {
 		FROM %s
 		WHERE key = $1 AND expires_at > NOW()
 	`, s.tableName)
-	
+
 	// This would execute the query and scan results
 	// For now, return not found
 	_ = query
@@ -199,20 +200,20 @@ func (s *DatabaseStore) Get(key string) (*CachedResponse, error) {
 // Set stores a cached response in database
 func (s *DatabaseStore) Set(key string, response *CachedResponse, ttl time.Duration) error {
 	expiresAt := time.Now().Add(ttl)
-	
+
 	// Serialize headers
 	headersJSON, err := json.Marshal(response.Headers)
 	if err != nil {
 		return fmt.Errorf("failed to marshal headers: %w", err)
 	}
-	
+
 	query := fmt.Sprintf(`
 		INSERT INTO %s (key, status_code, headers, body, expires_at)
 		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (key) DO UPDATE
 		SET status_code = $2, headers = $3, body = $4, expires_at = $5
 	`, s.tableName)
-	
+
 	// This would execute the query
 	_ = query
 	_ = headersJSON
@@ -223,7 +224,7 @@ func (s *DatabaseStore) Set(key string, response *CachedResponse, ttl time.Durat
 // Delete removes a cached response from database
 func (s *DatabaseStore) Delete(key string) error {
 	query := fmt.Sprintf(`DELETE FROM %s WHERE key = $1`, s.tableName)
-	
+
 	// This would execute the delete
 	_ = query
 	return nil
@@ -232,9 +233,8 @@ func (s *DatabaseStore) Delete(key string) error {
 // Cleanup removes expired entries from database
 func (s *DatabaseStore) Cleanup() error {
 	query := fmt.Sprintf(`DELETE FROM %s WHERE expires_at < NOW()`, s.tableName)
-	
+
 	// This would execute the cleanup
 	_ = query
 	return nil
 }
-

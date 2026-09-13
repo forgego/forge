@@ -3,7 +3,6 @@ package api
 import (
 	"net/http"
 
-	"github.com/forgego/forge/api/exceptions"
 	"github.com/forgego/forge/api/filters"
 	"github.com/forgego/forge/api/parsers"
 	"github.com/forgego/forge/api/renderers"
@@ -75,43 +74,6 @@ func (vs *EnhancedBaseViewSetIntegrated) GetFilterBackends() []filters.FilterBac
 	return vs.FilterBackends
 }
 
-// parseRequest parses the request body using content negotiation
-func (vs *EnhancedBaseViewSetIntegrated) parseRequest(r *http.Request) (map[string]interface{}, error) {
-	parser := vs.ContentNegotiator.SelectParser(r)
-	if parser == nil {
-		// Fallback to JSON
-		parser = parsers.NewJSONParser()
-	}
-
-	var data map[string]interface{}
-	if err := parser.Parse(r.Body, &data); err != nil {
-		return nil, exceptions.NewAPIException(
-			http.StatusBadRequest,
-			"parse_error",
-			"Invalid request body",
-			nil,
-		)
-	}
-
-	return data, nil
-}
-
-// renderResponse renders the response using content negotiation
-func (vs *EnhancedBaseViewSetIntegrated) renderResponse(w http.ResponseWriter, r *http.Request, data interface{}, statusCode int) error {
-	renderer := vs.ContentNegotiator.SelectRenderer(r)
-	if renderer == nil {
-		// Fallback to JSON
-		renderer = renderers.NewJSONRenderer()
-	}
-
-	// Set content type
-	w.Header().Set("Content-Type", renderer.MediaType())
-	w.WriteHeader(statusCode)
-
-	// Render
-	return renderer.RenderToWriter(w, data)
-}
-
 // List handles GET /resource/ with full integration
 func (vs *EnhancedBaseViewSetIntegrated) List(w http.ResponseWriter, r *http.Request) {
 	vs.EnhancedBaseViewSet.List(w, r) // Delegate to base implementation
@@ -144,4 +106,3 @@ func (vs *EnhancedBaseViewSetIntegrated) Destroy(w http.ResponseWriter, r *http.
 
 // Ensure EnhancedBaseViewSetIntegrated implements ViewSet
 var _ ViewSet = (*EnhancedBaseViewSetIntegrated)(nil)
-

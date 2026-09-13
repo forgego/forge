@@ -199,17 +199,6 @@ func BuildInsertSQL(instance interface{}, tableName string) (sql string, values 
 	return insertSQL, insertValues, insertColumns, nil
 }
 
-// getColumnName extracts column name from struct field (db tag or field name)
-func getColumnName(field reflect.StructField) string {
-	if dbTag := field.Tag.Get("db"); dbTag != "" {
-		tagParts := strings.Split(dbTag, ",")
-		if tagParts[0] != "" && tagParts[0] != "-" {
-			return tagParts[0]
-		}
-	}
-	return field.Name
-}
-
 // findFieldInValue recursively searches for a struct field matching fieldName
 func findFieldInValue(v reflect.Value, fieldName string) reflect.Value {
 	if v.Kind() == reflect.Ptr {
@@ -309,7 +298,7 @@ func isZeroValue(v reflect.Value) bool {
 	case reflect.String:
 		return v.Len() == 0
 	case reflect.Bool:
-		return v.Bool() == false
+		return !v.Bool()
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return v.Int() == 0
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:

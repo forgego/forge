@@ -43,38 +43,38 @@ func FromSchema[T any](schemaInstance schema.Schema) *TypedValidator[T] {
 
 		// Apply schema constraints
 		if field.Required {
-			fieldBuilder = fieldBuilder.WithRequired()
+			fieldBuilder.WithRequired()
 		}
 
 		if field.MinLength != nil {
-			fieldBuilder = fieldBuilder.WithMinLength(*field.MinLength)
+			fieldBuilder.WithMinLength(*field.MinLength)
 		}
 
 		if field.MaxLength != nil {
-			fieldBuilder = fieldBuilder.WithMaxLength(*field.MaxLength)
+			fieldBuilder.WithMaxLength(*field.MaxLength)
 		}
 
 		if field.MinValue != nil {
-			fieldBuilder = fieldBuilder.Min(*field.MinValue)
+			fieldBuilder.Min(*field.MinValue)
 		}
 
 		if field.MaxValue != nil {
-			fieldBuilder = fieldBuilder.Max(*field.MaxValue)
+			fieldBuilder.Max(*field.MaxValue)
 		}
 
 		// Type-specific validators
 		switch field.Type {
 		case schema.TypeEmail:
-			fieldBuilder = fieldBuilder.Email()
+			fieldBuilder.Email()
 		case schema.TypeURL:
-			fieldBuilder = fieldBuilder.URL()
+			fieldBuilder.URL()
 		case schema.TypeUUID:
-			fieldBuilder = fieldBuilder.UUID()
+			fieldBuilder.UUID()
 		}
 
 		// Unique constraint
 		if field.Unique {
-			fieldBuilder = fieldBuilder.WithUnique()
+			fieldBuilder.WithUnique()
 		}
 
 		// Choices
@@ -83,11 +83,9 @@ func FromSchema[T any](schemaInstance schema.Schema) *TypedValidator[T] {
 			for i, choice := range field.Choices {
 				choices[i] = choice.Value
 			}
-			fieldBuilder = fieldBuilder.WithChoices(choices...)
+			fieldBuilder.WithChoices(choices...)
 		}
 	}
 
 	return builder.Build()
 }
-
-

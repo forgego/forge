@@ -245,7 +245,7 @@ func generateModelCode(appName, modelName, tableName string, fields []FieldDefin
 	sb.WriteString("\t}\n")
 	sb.WriteString("}\n\n")
 
-	sb.WriteString(fmt.Sprintf("// Meta returns model metadata\n"))
+	sb.WriteString("// Meta returns model metadata\n")
 	sb.WriteString(fmt.Sprintf("func (%s) Meta() schema.Meta {\n", modelName))
 	sb.WriteString("\treturn schema.Meta{\n")
 	sb.WriteString(fmt.Sprintf("\t\tTableName:        \"%s\",\n", tableName))
@@ -254,12 +254,12 @@ func generateModelCode(appName, modelName, tableName string, fields []FieldDefin
 	sb.WriteString("\t}\n")
 	sb.WriteString("}\n\n")
 
-	sb.WriteString(fmt.Sprintf("// Relations returns all relationship definitions\n"))
+	sb.WriteString("// Relations returns all relationship definitions\n")
 	sb.WriteString(fmt.Sprintf("func (%s) Relations() []schema.Relation {\n", modelName))
 	sb.WriteString("\treturn []schema.Relation{}\n")
 	sb.WriteString("}\n\n")
 
-	sb.WriteString(fmt.Sprintf("// Hooks returns model lifecycle hooks\n"))
+	sb.WriteString("// Hooks returns model lifecycle hooks\n")
 	sb.WriteString(fmt.Sprintf("func (%s) Hooks() *schema.ModelHooks {\n", modelName))
 	sb.WriteString("\treturn nil\n")
 	sb.WriteString("}\n")

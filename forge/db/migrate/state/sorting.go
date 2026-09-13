@@ -5,8 +5,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/forgego/forge/db/migrate/core"
 )
 
 // sortMigrationFiles sorts migration files by version number
@@ -38,35 +36,3 @@ func extractVersionFromFilename(filename string) uint64 {
 	}
 	return version
 }
-
-// sortChangesByType sorts changes to ensure CREATE TABLE comes before other changes
-func sortChangesByType(changes []core.Change) []core.Change {
-	// Create separate slices for different change types
-	var createTables []core.Change
-	var addColumns []core.Change
-	var addForeignKeys []core.Change
-	var otherChanges []core.Change
-
-	for _, change := range changes {
-		switch change.Type() {
-		case core.ChangeTypeCreateTable:
-			createTables = append(createTables, change)
-		case core.ChangeTypeAddColumn:
-			addColumns = append(addColumns, change)
-		case core.ChangeTypeAddForeignKey:
-			addForeignKeys = append(addForeignKeys, change)
-		default:
-			otherChanges = append(otherChanges, change)
-		}
-	}
-
-	// Combine in order: CREATE TABLE, ADD COLUMN, ADD FOREIGN KEY, others
-	result := make([]core.Change, 0, len(changes))
-	result = append(result, createTables...)
-	result = append(result, addColumns...)
-	result = append(result, addForeignKeys...)
-	result = append(result, otherChanges...)
-
-	return result
-}
-

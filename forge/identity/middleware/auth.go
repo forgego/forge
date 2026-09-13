@@ -58,9 +58,7 @@ func (m *AuthenticationMiddleware) RequireAuth(next http.Handler) http.Handler {
 			return
 		}
 
-		// Set user in context (both ways for compatibility)
-		ctx = context.WithValue(ctx, "user", user)
-		ctx = context.WithValue(ctx, core.UserKey, user)
+		// Set user in context
 		ctx = core.WithUser(ctx, user)
 		*r = *r.WithContext(ctx)
 
@@ -76,8 +74,6 @@ func (m *AuthenticationMiddleware) OptionalAuth(next http.Handler) http.Handler 
 		// Try to authenticate (don't fail if not authenticated)
 		user, _ := m.authenticateRequest(ctx, r)
 		if user != nil {
-			ctx = context.WithValue(ctx, "user", user)
-			ctx = context.WithValue(ctx, core.UserKey, user)
 			ctx = core.WithUser(ctx, user)
 			*r = *r.WithContext(ctx)
 		}
@@ -134,7 +130,7 @@ func (m *AuthenticationMiddleware) RequirePermission(permission string) func(htt
 			ctx := r.Context()
 
 			// Get user from context
-			user, ok := ctx.Value("user").(*models.User)
+			user, ok := userFromContext(ctx)
 			if !ok || user == nil {
 				forgehttp.SendError(w, http.StatusUnauthorized, "Authentication required")
 				return
@@ -183,7 +179,7 @@ func (m *AuthenticationMiddleware) RequireStaff(next http.Handler) http.Handler 
 		ctx := r.Context()
 
 		// Get user from context
-		user, ok := ctx.Value("user").(*models.User)
+		user, ok := userFromContext(ctx)
 		if !ok || user == nil {
 			forgehttp.SendError(w, http.StatusUnauthorized, "Authentication required")
 			return
@@ -204,7 +200,7 @@ func (m *AuthenticationMiddleware) RequireSuperuser(next http.Handler) http.Hand
 		ctx := r.Context()
 
 		// Get user from context
-		user, ok := ctx.Value("user").(*models.User)
+		user, ok := userFromContext(ctx)
 		if !ok || user == nil {
 			forgehttp.SendError(w, http.StatusUnauthorized, "Authentication required")
 			return
@@ -217,6 +213,15 @@ func (m *AuthenticationMiddleware) RequireSuperuser(next http.Handler) http.Hand
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func userFromContext(ctx context.Context) (*models.User, bool) {
+	user, ok := core.UserFromContext(ctx)
+	if !ok {
+		return nil, false
+	}
+	currentUser, ok := user.(*models.User)
+	return currentUser, ok
 }
 
 // extractTokenFromHeader extracts token from Authorization header

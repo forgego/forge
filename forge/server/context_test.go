@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type testContextKey string
+
 func TestContextHelpers(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 
@@ -46,9 +48,10 @@ func TestContextHelpers(t *testing.T) {
 	})
 
 	t.Run("WithContext & GetContext", func(t *testing.T) {
-		ctx := context.WithValue(context.Background(), "custom", "value")
+		const customKey testContextKey = "custom"
+		ctx := context.WithValue(context.Background(), customKey, "value")
 		req = WithContext(req, ctx)
 		assert.Equal(t, ctx, GetContext(req))
-		assert.Equal(t, "value", GetContext(req).Value("custom"))
+		assert.Equal(t, "value", GetContext(req).Value(customKey))
 	})
 }

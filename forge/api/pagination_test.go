@@ -125,9 +125,5 @@ func TestBuildPaginatedResponse_LastPage(t *testing.T) {
 	response := BuildPaginatedResponse(req, results, 5, 1, 10)
 
 	// Only one page, so no next
-	if response.Count <= response.Count {
-		// Logic depends on implementation
-		_ = response
-	}
+	assert.Nil(t, response.Next)
 }
-

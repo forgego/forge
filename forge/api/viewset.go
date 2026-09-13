@@ -138,7 +138,7 @@ func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 	if ok {
 		offsetResults := offsetMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(offset)})
 		if len(offsetResults) > 0 {
-			if newQS, ok := offsetResults[0].Interface().(interface{}); ok {
+			if newQS := offsetResults[0].Interface(); newQS != nil {
 				qs = reflect.ValueOf(newQS)
 				qsType = qs.Type()
 			}
@@ -149,7 +149,7 @@ func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 	if ok {
 		limitResults := limitMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(pageSize)})
 		if len(limitResults) > 0 {
-			if newQS, ok := limitResults[0].Interface().(interface{}); ok {
+			if newQS := limitResults[0].Interface(); newQS != nil {
 				qs = reflect.ValueOf(newQS)
 				qsType = qs.Type()
 			}
@@ -627,7 +627,7 @@ func applyFilters(qs reflect.Value, r *http.Request) reflect.Value {
 			if expr != nil {
 				results := filterMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(expr)})
 				if len(results) > 0 {
-					if newQS, ok := results[0].Interface().(interface{}); ok {
+					if newQS := results[0].Interface(); newQS != nil {
 						qs = reflect.ValueOf(newQS)
 						qsType = qs.Type()
 						// Update cached method for new queryset type
@@ -744,7 +744,7 @@ func applyOrdering(qs reflect.Value, r *http.Request) reflect.Value {
 	}
 	results := orderByMethod.Func.Call(args)
 	if len(results) > 0 {
-		if newQS, ok := results[0].Interface().(interface{}); ok {
+		if newQS := results[0].Interface(); newQS != nil {
 			return reflect.ValueOf(newQS)
 		}
 	}
