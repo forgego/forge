@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -58,3 +59,59 @@ func TestNewDBWithValidation_InvalidDSN(t *testing.T) {
 	}
 }
 
+func TestNewDBWithDriver_SQLite(t *testing.T) {
+	database, err := NewDBWithDriver("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("expected NewDBWithDriver to succeed, got error: %v", err)
+	}
+	defer database.Close()
+
+	if database.Driver != "sqlite3" {
+		t.Fatalf("expected Driver to be 'sqlite3', got %q", database.Driver)
+	}
+}
+
+func TestNewDBWithDriver_UnsupportedDriver(t *testing.T) {
+	database, err := NewDBWithDriver("mysql", "x")
+	if err == nil {
+		database.Close()
+		t.Fatal("expected error for unsupported driver 'mysql', got nil")
+	}
+	if !strings.Contains(err.Error(), "unsupported") {
+		t.Fatalf("expected unsupported driver error, got: %v", err)
+	}
+}
+
+func TestNewDBWithDriver_PostgresFailureNoFallback(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Chdir(tmpDir)
+
+	dsn := "host=127.0.0.1 port=1 user=x dbname=x sslmode=disable connect_timeout=1"
+	database, err := NewDBWithDriver("postgres", dsn)
+	if err == nil {
+		database.Close()
+		t.Fatal("expected error for unreachable postgres connection, got nil")
+	}
+
+	// Verify no SQLite file named like the DSN was created in the current dir
+	if _, statErr := os.Stat(dsn); !os.IsNotExist(statErr) {
+		t.Fatalf("expected no file named %q to exist, but statErr was %v", dsn, statErr)
+	}
+}
+
+func TestNewDB_PostgresFailureNoFallback(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Chdir(tmpDir)
+
+	dsn := "host=127.0.0.1 port=1 user=x dbname=x sslmode=disable connect_timeout=1"
+	database, err := NewDB(dsn)
+	if err == nil {
+		database.Close()
+		t.Fatal("expected error for unreachable postgres DSN, got nil")
+	}
+
+	// Verify no SQLite file named like the DSN was created in the current dir
+	if _, statErr := os.Stat(dsn); !os.IsNotExist(statErr) {
+		t.Fatalf("expected no file named %q to exist, but statErr was %v", dsn, statErr)
+	}
+}

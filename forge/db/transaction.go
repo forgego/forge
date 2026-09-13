@@ -31,7 +31,7 @@ func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) {
 }
 
 // WithTx executes a function within a transaction
-func (db *DB) WithTx(ctx context.Context, fn func(*Tx) error) error {
+func (db *DB) WithTx(ctx context.Context, fn func(*Tx) error) (err error) {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -113,4 +113,3 @@ func (sp *Savepoint) ReleaseSavepoint() error {
 	_, err := sp.tx.Exec("RELEASE SAVEPOINT " + sp.name)
 	return err
 }
-

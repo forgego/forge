@@ -16,7 +16,7 @@ import (
 // DB wraps database/sql.DB with additional functionality
 type DB struct {
 	*sql.DB
-	Driver string
+	Driver  string
 	dialect dialect.Dialect
 }
 
@@ -134,7 +134,54 @@ func NewDBFromConfig(cfg *config.Config) (*DB, error) {
 		ConnMaxIdleTime: cfgPool.ConnMaxIdleTime,
 	}
 
-	return NewDB(dsn, WithPoolConfig(poolConfig))
+	return NewDBWithDriver(driver, dsn, WithPoolConfig(poolConfig))
+}
+
+// NewDBWithDriver opens exactly one driver and never falls back.
+func NewDBWithDriver(driver, dsn string, opts ...Option) (*DB, error) {
+	var sqlDriver string
+	var d dialect.Dialect
+	var canonicalDriver string
+
+	switch driver {
+	case "postgres", "postgresql":
+		sqlDriver = "postgres"
+		canonicalDriver = "postgres"
+		d = dialect.NewPostgreSQLDialect()
+	case "sqlite", "sqlite3":
+		sqlDriver = "sqlite3"
+		canonicalDriver = "sqlite3"
+		d = dialect.NewSQLiteDialect()
+	default:
+		return nil, fmt.Errorf("unsupported database driver: %s", driver)
+	}
+
+	sqlDB, err := sql.Open(sqlDriver, dsn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database: %w", err)
+	}
+
+	if err := sqlDB.Ping(); err != nil {
+		sqlDB.Close()
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	db := &DB{
+		DB:      sqlDB,
+		Driver:  canonicalDriver,
+		dialect: d,
+	}
+
+	// Apply default pool configuration
+	defaultConfig := DefaultPoolConfig()
+	defaultConfig.Apply(db)
+
+	// Apply custom options (can override defaults)
+	for _, opt := range opts {
+		opt(db)
+	}
+
+	return db, nil
 }
 
 // NewDB creates a new database connection with optional configuration.
@@ -164,52 +211,7 @@ func NewDBFromConfig(cfg *config.Config) (*DB, error) {
 //	}
 //	db, err := db.NewDB(dsn, db.WithPoolConfig(cfg))
 func NewDB(dsn string, opts ...Option) (*DB, error) {
-	// Try PostgreSQL first
-	sqlDB, err := sql.Open("postgres", dsn)
-	if err == nil {
-		if err := sqlDB.Ping(); err == nil {
-			db := &DB{
-				DB:      sqlDB,
-				Driver:  "postgres",
-				dialect: dialect.NewPostgreSQLDialect(),
-			}
-			// Apply default pool configuration
-			defaultConfig := DefaultPoolConfig()
-			defaultConfig.Apply(db)
-			// Apply custom options (can override defaults)
-			for _, opt := range opts {
-				opt(db)
-			}
-			return db, nil
-		}
-		// Functionally close if ping failed before trying next
-		sqlDB.Close()
-	}
-
-	// Try SQLite as fallback
-	sqlDB, err = sql.Open("sqlite3", dsn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
-	}
-
-	if err := sqlDB.Ping(); err != nil {
-		sqlDB.Close()
-		return nil, fmt.Errorf("failed to ping database: %w", err)
-	}
-
-	db := &DB{
-		DB:      sqlDB,
-		Driver:  "sqlite3",
-		dialect: dialect.NewSQLiteDialect(),
-	}
-	// Apply default pool configuration
-	defaultConfig := DefaultPoolConfig()
-	defaultConfig.Apply(db)
-	// Apply custom options (can override defaults)
-	for _, opt := range opts {
-		opt(db)
-	}
-	return db, nil
+	return NewDBWithDriver(DetectDriverFromDSN(dsn), dsn, opts...)
 }
 
 // RebindPlaceholders converts PostgreSQL $N placeholders to SQLite ?N format.
