@@ -132,19 +132,6 @@ func (g *MigrationGenerator) GenerateMigrations(name string) error {
 		)
 	}
 
-	// Check if this is the first migration
-	isFirstMigration := false
-	if entries, err := os.ReadDir(g.migrationsDir); err == nil {
-		sqlFileCount := 0
-		for _, entry := range entries {
-			name := entry.Name()
-			if !entry.IsDir() && (strings.HasSuffix(name, ".up.sql") || strings.HasSuffix(name, ".down.sql")) {
-				sqlFileCount++
-			}
-		}
-		isFirstMigration = sqlFileCount == 0
-	}
-
 	// Generate SQL
 	upSQL, err := g.sqlBuilder.BuildUpSQL(changes)
 	if err != nil {
@@ -162,13 +149,6 @@ func (g *MigrationGenerator) GenerateMigrations(name string) error {
 			"failed to generate down SQL",
 			err,
 		)
-	}
-
-	// Prepend bookkeeping table to first migration
-	if isFirstMigration {
-		bookkeepingSQL := generateBookkeepingTable(g.driver)
-		upSQL = bookkeepingSQL + "\n\n" + upSQL
-		downSQL = downSQL + "\n\n" + "DROP TABLE IF EXISTS schema_migrations;"
 	}
 
 	// Get next version
@@ -343,27 +323,6 @@ func getNextVersion(migrationsDir string) (string, error) {
 	// Format with zero-padding
 	version := fmt.Sprintf("%0*d", seqDigits, nextSeq)
 	return version, nil
-}
-
-// generateBookkeepingTable generates SQL for schema_migrations table
-func generateBookkeepingTable(driver core.Driver) string {
-	if driver.IsSQLite() {
-		return `-- Create schema_migrations table for tracking applied migrations
-CREATE TABLE IF NOT EXISTS schema_migrations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
-    checksum TEXT,
-    applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);`
-	}
-
-	return `-- Create schema_migrations table for tracking applied migrations
-CREATE TABLE IF NOT EXISTS schema_migrations (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE,
-    checksum TEXT,
-    applied_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
-);`
 }
 
 // getTableNameFromDef gets the table name from a model definition (helper)
