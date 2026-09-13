@@ -1,10 +1,15 @@
 package admin
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"html"
 	"io/fs"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -148,23 +153,25 @@ func (s *Site) Handler() http.Handler {
 	apiRouter.RegisterRoutes(r)
 
 	// 2. Serve Static UI Assets
-	prefix := s.uiConfig.Prefix
+	prefix := normalizeAdminPrefix(s.uiConfig.Prefix)
 
 	// Determine the route pattern
 	// Since we might be mounted, we should use a wildcard that matches everything passed to this handler
 	// If prefix is set, StaticFS will handle stripping it from the path
 	routePattern := "/*"
 
+	transformOpt := server.WithIndexTransform(adminIndexTransform(prefix))
+
 	if s.uiConfig.Source == UISourceStatic && s.uiConfig.StaticDir != "" {
 		// Serve from local directory
-		handler := server.StaticFiles("", s.uiConfig.StaticDir, server.WithPrefix(prefix), server.WithIndexFiles("index.html"), server.WithFallback("index.html"), server.WithDisableCache(true))
+		handler := server.StaticFiles("", s.uiConfig.StaticDir, server.WithPrefix(prefix), server.WithIndexFiles("index.html"), server.WithFallback("index.html"), server.WithDisableCache(true), transformOpt)
 		r.Handle(routePattern, handler)
 		if prefix == "" {
 			r.Handle("/", handler)
 		}
 	} else if s.uiConfig.Source == UISourceEmbedded && s.uiConfig.EmbedFS != nil {
 		// Serve from embedded FS
-		handler := server.StaticFS("", s.uiConfig.EmbedFS, server.WithPrefix(prefix), server.WithIndexFiles("index.html"), server.WithFallback("index.html"), server.WithDisableCache(true))
+		handler := server.StaticFS("", s.uiConfig.EmbedFS, server.WithPrefix(prefix), server.WithIndexFiles("index.html"), server.WithFallback("index.html"), server.WithDisableCache(true), transformOpt)
 		r.Handle(routePattern, handler)
 		if prefix == "" {
 			r.Handle("/", handler)
@@ -172,4 +179,43 @@ func (s *Site) Handler() http.Handler {
 	}
 
 	return r
+}
+
+func normalizeAdminPrefix(prefix string) string {
+	prefix = strings.TrimSpace(prefix)
+	prefix = strings.Trim(prefix, "/")
+	if prefix == "" {
+		return ""
+	}
+	return "/" + prefix
+}
+
+var headTagRegex = regexp.MustCompile(`(?i)<head(\s[^>]*)?>`)
+
+func adminIndexTransform(prefix string) func([]byte) []byte {
+	return func(content []byte) []byte {
+		out := content
+
+		// Rewrite build's default "/admin/" asset base to runtime prefix
+		if prefix != "/admin" {
+			out = bytes.ReplaceAll(out, []byte("\"/admin/"), []byte("\""+prefix+"/"))
+			out = bytes.ReplaceAll(out, []byte("'/admin/"), []byte("'"+prefix+"/"))
+		}
+
+		// Inject runtime prefix meta tag immediately after <head> or prepend if absent
+		metaTag := []byte(fmt.Sprintf(`<meta name="forge-admin-prefix" content="%s">`, html.EscapeString(prefix)))
+		loc := headTagRegex.FindIndex(out)
+		if loc != nil {
+			res := make([]byte, 0, len(out)+len(metaTag))
+			res = append(res, out[:loc[1]]...)
+			res = append(res, metaTag...)
+			res = append(res, out[loc[1]:]...)
+			return res
+		}
+
+		res := make([]byte, 0, len(out)+len(metaTag))
+		res = append(res, metaTag...)
+		res = append(res, out...)
+		return res
+	}
 }

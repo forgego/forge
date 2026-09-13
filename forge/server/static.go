@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -27,22 +28,32 @@ type StaticOptions struct {
 	DisableCache bool
 	// Fallback is the file to serve if the requested file is not found (SPA support)
 	Fallback string
+	// IndexTransform rewrites the bytes of index/fallback HTML files before they are served
+	IndexTransform func([]byte) []byte
 }
 
 // DefaultStaticOptions returns default static file options
 func DefaultStaticOptions() *StaticOptions {
 	return &StaticOptions{
-		IndexFiles:   []string{"index.html"},
-		ShowIndexes:  false,
-		Prefix:       "",
-		MaxAge:       3600, // 1 hour
-		DisableCache: false,
-		Fallback:     "",
+		IndexFiles:     []string{"index.html"},
+		ShowIndexes:    false,
+		Prefix:         "",
+		MaxAge:         3600, // 1 hour
+		DisableCache:   false,
+		Fallback:       "",
+		IndexTransform: nil,
 	}
 }
 
 // StaticOption is a function that configures StaticOptions
 type StaticOption func(*StaticOptions)
+
+// WithIndexTransform rewrites the bytes of index/fallback HTML files before they are served.
+func WithIndexTransform(fn func([]byte) []byte) StaticOption {
+	return func(o *StaticOptions) {
+		o.IndexTransform = fn
+	}
+}
 
 // WithFallback sets the fallback file (SPA support)
 func WithFallback(file string) StaticOption {
@@ -137,6 +148,9 @@ func StaticFS(pattern string, filesystem fs.FS, options ...StaticOption) http.Ha
 			filePath = "."
 		}
 
+		isFallbackUsed := false
+		isIndexUsed := false
+
 		// Try to open the file
 		file, err := filesystem.Open(filePath)
 		if err != nil {
@@ -147,6 +161,7 @@ func StaticFS(pattern string, filesystem fs.FS, options ...StaticOption) http.Ha
 					if f, err := filesystem.Open(indexPath); err == nil {
 						file = f
 						filePath = indexPath
+						isIndexUsed = true
 						break
 					}
 				}
@@ -158,6 +173,7 @@ func StaticFS(pattern string, filesystem fs.FS, options ...StaticOption) http.Ha
 					if f, err := filesystem.Open(opts.Fallback); err == nil {
 						file = f
 						filePath = opts.Fallback
+						isFallbackUsed = true
 					}
 				}
 
@@ -191,19 +207,48 @@ func StaticFS(pattern string, filesystem fs.FS, options ...StaticOption) http.Ha
 			}
 
 			// Try index files
-			for _, indexFile := range opts.IndexFiles {
-				indexPath := path.Join(filePath, indexFile)
-				if f, err := filesystem.Open(indexPath); err == nil {
-					// Serve index file directly
-					defer f.Close()
-					if stat, err := f.Stat(); err == nil {
-						// Set content type
-						contentType := detectContentType(indexPath)
-						w.Header().Set("Content-Type", contentType)
-						serveContent(w, r, f, stat)
+			var indexFile fs.File
+			var indexStat fs.FileInfo
+			var indexPath string
+			for _, indexName := range opts.IndexFiles {
+				ip := path.Join(filePath, indexName)
+				if f, err := filesystem.Open(ip); err == nil {
+					if s, err := f.Stat(); err == nil && !s.IsDir() {
+						indexFile = f
+						indexStat = s
+						indexPath = ip
+						break
+					}
+					f.Close()
+				}
+			}
+
+			if indexFile != nil {
+				defer indexFile.Close()
+				file = indexFile
+				stat = indexStat
+				filePath = indexPath
+				isIndexUsed = true
+			} else if opts.Fallback != "" {
+				if f, err := filesystem.Open(opts.Fallback); err == nil {
+					if s, err := f.Stat(); err == nil && !s.IsDir() {
+						defer f.Close()
+						file = f
+						stat = s
+						filePath = opts.Fallback
+						isFallbackUsed = true
+					} else {
+						f.Close()
+						http.NotFound(w, r)
 						return
 					}
+				} else {
+					http.NotFound(w, r)
+					return
 				}
+			} else {
+				http.NotFound(w, r)
+				return
 			}
 		}
 
@@ -245,6 +290,23 @@ func StaticFS(pattern string, filesystem fs.FS, options ...StaticOption) http.Ha
 			w.Header().Set("Expires", "0")
 		}
 
+		// Rewrite index or fallback HTML documents if IndexTransform is configured
+		if opts.IndexTransform != nil && isIndexOrFallback(filePath, opts, isIndexUsed || isFallbackUsed) {
+			data, err := io.ReadAll(file)
+			if err != nil {
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+			data = opts.IndexTransform(data)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+			w.WriteHeader(http.StatusOK)
+			if r.Method != http.MethodHead {
+				w.Write(data)
+			}
+			return
+		}
+
 		// Handle range requests
 		if stat.Size() > 0 {
 			w.Header().Set("Accept-Ranges", "bytes")
@@ -254,6 +316,23 @@ func StaticFS(pattern string, filesystem fs.FS, options ...StaticOption) http.Ha
 			w.WriteHeader(http.StatusOK)
 		}
 	})
+}
+
+func isIndexOrFallback(filePath string, opts *StaticOptions, matched bool) bool {
+	if matched {
+		return true
+	}
+	cleanPath := path.Clean("/" + filePath)
+	if opts.Fallback != "" && cleanPath == path.Clean("/"+opts.Fallback) {
+		return true
+	}
+	base := path.Base(filePath)
+	for _, idx := range opts.IndexFiles {
+		if filePath == idx || base == idx || cleanPath == path.Clean("/"+idx) {
+			return true
+		}
+	}
+	return false
 }
 
 // serveContent serves file content with range request support
@@ -435,4 +514,3 @@ func detectContentType(filename string) string {
 		return "application/octet-stream"
 	}
 }
-
