@@ -3,6 +3,9 @@ package filters
 import (
 	"net/http"
 	"reflect"
+	"strings"
+
+	"github.com/forgego/forge/orm"
 )
 
 // SearchFilter provides full-text search across multiple fields
@@ -28,23 +31,42 @@ func (f *SearchFilter) FilterQueryset(r *http.Request, queryset interface{}) int
 		return queryset
 	}
 
-	// Apply search using reflection
+	searchQueries := f.buildSearchQueries(searchQuery)
+	if len(searchQueries) == 0 {
+		return queryset
+	}
+
+	return f.applySearchFilter(queryset, orm.Or(searchQueries...))
+}
+
+func (f *SearchFilter) buildSearchQueries(q string) []orm.Expression {
+	queries := make([]orm.Expression, 0, len(f.SearchFields))
+	for _, field := range f.SearchFields {
+		field = strings.TrimSpace(field)
+		if field == "" {
+			continue
+		}
+		queries = append(queries, orm.F(field).IContains(q))
+	}
+	return queries
+}
+
+func (f *SearchFilter) applySearchFilter(queryset interface{}, expr orm.Expression) interface{} {
 	qsValue := reflect.ValueOf(queryset)
 	if !qsValue.IsValid() {
 		return queryset
 	}
 
-	// Try to call Filter method with search conditions
-	// This is a simplified implementation - full version would use QueryExpr
-	searchMethod := qsValue.MethodByName("Search")
-	if searchMethod.IsValid() {
-		results := searchMethod.Call([]reflect.Value{
-			reflect.ValueOf(searchQuery),
-			reflect.ValueOf(f.SearchFields),
-		})
-		if len(results) > 0 {
-			return results[0].Interface()
-		}
+	filterMethod := qsValue.MethodByName("Filter")
+	if !filterMethod.IsValid() {
+		return queryset
+	}
+
+	results := filterMethod.Call([]reflect.Value{
+		reflect.ValueOf(expr),
+	})
+	if len(results) > 0 {
+		return results[0].Interface()
 	}
 
 	return queryset

@@ -24,6 +24,10 @@ func NewContentNegotiator(renderers []renderers.Renderer, parsers []parsers.Pars
 
 // SelectRenderer selects a renderer based on Accept header
 func (cn *ContentNegotiator) SelectRenderer(r *http.Request) renderers.Renderer {
+	if len(cn.Renderers) == 0 {
+		return nil
+	}
+
 	accept := r.Header.Get("Accept")
 	if accept == "" {
 		// Default to JSON
@@ -52,6 +56,10 @@ func (cn *ContentNegotiator) SelectRenderer(r *http.Request) renderers.Renderer 
 
 // SelectParser selects a parser based on Content-Type header
 func (cn *ContentNegotiator) SelectParser(r *http.Request) parsers.Parser {
+	if len(cn.Parsers) == 0 {
+		return nil
+	}
+
 	contentType := r.Header.Get("Content-Type")
 	if contentType == "" {
 		// Default to JSON

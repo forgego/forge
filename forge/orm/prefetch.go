@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/iancoleman/strcase"
 )
 
 // prefetch handles prefetching of related objects
@@ -172,12 +174,7 @@ func (qs *BaseQuerySet[T]) prefetchManyToMany(ctx context.Context, results []*T,
 		return err
 	}
 
-	// Handle singularization if needed.
-	// Usually standard is singular_id.
-	// Let's try to be smart or rely on user providing explicit Through table with columns.
-	// For now, assume {singular_table}_id.
-	sourceCol := strings.TrimSuffix(qs.table, "s") + "_id"
-	targetCol := strings.TrimSuffix(targetSchema.TableName, "s") + "_id"
+	sourceCol, targetCol := throughColumns(qs.schema, targetSchema, qs.table, rel.TargetModel)
 
 	query := fmt.Sprintf("SELECT %s, %s FROM %s WHERE %s IN (%s)",
 		EscapeIdentifier(sourceCol),
@@ -208,6 +205,9 @@ func (qs *BaseQuerySet[T]) prefetchManyToMany(ctx context.Context, results []*T,
 			allTargetIDs = append(allTargetIDs, tID)
 			targetIDMap[tID] = true
 		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("failed to read through table rows: %w", err)
 	}
 
 	if len(allTargetIDs) == 0 {
@@ -356,4 +356,21 @@ func getPKValue(val reflect.Value, schema *ModelSchema) interface{} {
 		return elem.FieldByName(pkField.StructFieldName).Interface()
 	}
 	return nil
+}
+
+// throughColumns returns the source and target foreign key column names for an M2M through table.
+func throughColumns(sourceSchema, targetSchema *ModelSchema, sourceTable, targetModel string) (string, string) {
+	sourceName := sourceSchema.GetModelName()
+	if sourceName == "" {
+		sourceName = strings.TrimSuffix(sourceTable, "s")
+	}
+	targetName := targetSchema.GetModelName()
+	if targetName == "" {
+		if targetModel != "" {
+			targetName = targetModel
+		} else if targetSchema != nil {
+			targetName = strings.TrimSuffix(targetSchema.TableName, "s")
+		}
+	}
+	return strcase.ToSnake(sourceName) + "_id", strcase.ToSnake(targetName) + "_id"
 }

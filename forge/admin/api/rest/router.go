@@ -35,10 +35,11 @@ type Router struct {
 	prefix   string
 	// adminPrefix is the public mount path of the admin UI, used for
 	// absolute URLs in search results. Defaults to "/admin".
-	adminPrefix  string
-	views        *savedViewStore
-	sessions     *adminSessionStore
-	loginLimiter *loginLimiter
+	adminPrefix   string
+	views         *savedViewStore
+	sessions      *adminSessionStore
+	loginLimiter  *loginLimiter
+	authenticator LoginAuthenticator
 }
 
 // NewRouter creates a new admin API router
@@ -305,64 +306,117 @@ func modelCountFromList(ctx context.Context, admin core.AdminInterface) int64 {
 	return response.Count
 }
 
-// handleLogin handles admin login
-func (r *Router) handleLogin(w http.ResponseWriter, req *http.Request) {
+func decodeLoginPayload(req *http.Request) (string, string, error) {
 	var payload struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
-
 	decoder := json.NewDecoder(req.Body)
 	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&payload); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid_body", "Invalid login payload", nil)
-		return
+	if err := decoder.Decode(&payload); err != nil || decoder.More() {
+		return "", "", errors.New("invalid login payload")
 	}
-	if decoder.More() {
-		respondError(w, http.StatusBadRequest, "invalid_body", "Invalid login payload", nil)
-		return
-	}
+	return strings.TrimSpace(payload.Username), payload.Password, nil
+}
 
-	payload.Username = strings.TrimSpace(payload.Username)
-
-	ip, _, err := net.SplitHostPort(req.RemoteAddr)
+func loginKeys(remoteAddr, username string) (string, string) {
+	ip, _, err := net.SplitHostPort(remoteAddr)
 	if err != nil {
-		ip = req.RemoteAddr
+		ip = remoteAddr
 	}
-	ipKey := "ip:" + ip
-	userKey := "user:" + strings.ToLower(payload.Username)
+	return "ip:" + ip, "user:" + strings.ToLower(username)
+}
 
-	if r.loginLimiter != nil {
-		blockedIP, remIP := r.loginLimiter.blocked(ipKey)
-		blockedUser, remUser := r.loginLimiter.blocked(userKey)
-		if blockedIP || blockedUser {
-			var longer time.Duration
-			if blockedIP && remIP > longer {
-				longer = remIP
-			}
-			if blockedUser && remUser > longer {
-				longer = remUser
-			}
-			secs := int(math.Ceil(longer.Seconds()))
-			if secs < 1 {
-				secs = 1
-			}
-			w.Header().Set("Retry-After", strconv.Itoa(secs))
-			respondError(w, http.StatusTooManyRequests, "too_many_attempts", "Too many failed login attempts. Try again later.", nil)
-			return
+func (r *Router) checkLoginRateLimit(w http.ResponseWriter, ipKey, userKey string) bool {
+	if r.loginLimiter == nil {
+		return true
+	}
+	blockedIP, remIP := r.loginLimiter.blocked(ipKey)
+	blockedUser, remUser := r.loginLimiter.blocked(userKey)
+	if !blockedIP && !blockedUser {
+		return true
+	}
+	longer := remIP
+	if blockedUser && remUser > longer {
+		longer = remUser
+	}
+	secs := int(math.Ceil(longer.Seconds()))
+	if secs < 1 {
+		secs = 1
+	}
+	w.Header().Set("Retry-After", strconv.Itoa(secs))
+	respondError(w, http.StatusTooManyRequests, "too_many_attempts", "Too many failed login attempts. Try again later.", nil)
+	return false
+}
+
+func (r *Router) authenticateAdmin(ctx context.Context, username, password string) (string, error) {
+	expUser, expPass := adminCredentials()
+	hasEnv := expUser != "" && expPass != ""
+
+	if r.authenticator == nil && !hasEnv {
+		return "", errAdminLoginDisabled
+	}
+
+	if r.authenticator != nil {
+		canonicalUser, err := r.authenticator.AuthenticateAdmin(ctx, username, password)
+		if err == nil {
+			return canonicalUser, nil
+		}
+		if !isInvalidLogin(err) {
+			return "", err
 		}
 	}
 
-	if payload.Username == "" || payload.Password == "" {
+	if hasEnv && secureEqual(username, expUser) && secureEqual(password, expPass) {
+		return expUser, nil
+	}
+
+	return "", ErrInvalidLogin
+}
+
+func (r *Router) issueAdminSession(w http.ResponseWriter, username string) {
+	token, err := r.sessions.Issue(username, 24*time.Hour)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "login_failed", "Could not create session token", nil)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"token": token,
+		"user": map[string]string{
+			"name": username,
+			"role": "superuser",
+		},
+		"expires_at": time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339),
+	})
+}
+
+// handleLogin handles admin login
+func (r *Router) handleLogin(w http.ResponseWriter, req *http.Request) {
+	username, password, err := decodeLoginPayload(req)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_body", "Invalid login payload", nil)
+		return
+	}
+
+	ipKey, userKey := loginKeys(req.RemoteAddr, username)
+	if !r.checkLoginRateLimit(w, ipKey, userKey) {
+		return
+	}
+	if username == "" || password == "" {
 		respondError(w, http.StatusBadRequest, "invalid_credentials", "Username and password are required", nil)
 		return
 	}
-	expectedUsername, expectedPassword := adminCredentials()
-	if expectedUsername == "" || expectedPassword == "" {
+
+	canonicalUser, err := r.authenticateAdmin(req.Context(), username, password)
+	if errors.Is(err, errAdminLoginDisabled) {
 		respondError(w, http.StatusServiceUnavailable, "admin_login_disabled", "Admin login is not configured (set FORGE_ADMIN_USERNAME and FORGE_ADMIN_PASSWORD)", nil)
 		return
 	}
-	if !secureEqual(payload.Username, expectedUsername) || !secureEqual(payload.Password, expectedPassword) {
+	if err != nil && !isInvalidLogin(err) {
+		respondError(w, http.StatusInternalServerError, "login_failed", "Authentication failed", nil)
+		return
+	}
+	if err != nil {
 		if r.loginLimiter != nil {
 			r.loginLimiter.fail(ipKey)
 			r.loginLimiter.fail(userKey)
@@ -375,21 +429,7 @@ func (r *Router) handleLogin(w http.ResponseWriter, req *http.Request) {
 		r.loginLimiter.success(ipKey)
 		r.loginLimiter.success(userKey)
 	}
-
-	token, err := r.sessions.Issue(payload.Username, 24*time.Hour)
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, "login_failed", "Could not create session token", nil)
-		return
-	}
-
-	respondJSON(w, http.StatusOK, map[string]interface{}{
-		"token": token,
-		"user": map[string]string{
-			"name": payload.Username,
-			"role": "superuser",
-		},
-		"expires_at": time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339),
-	})
+	r.issueAdminSession(w, canonicalUser)
 }
 
 // handleLogout revokes the current session token

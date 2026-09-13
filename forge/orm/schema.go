@@ -11,12 +11,27 @@ import (
 
 // ModelSchema contains metadata about a model
 type ModelSchema struct {
+	ModelName  string
 	TableName  string
 	Fields     []FieldInfo
 	Relations  []RelationInfo
 	Indexes    []IndexInfo
 	PrimaryKey string
 	ModelType  reflect.Type
+}
+
+// GetModelName returns the model name or falls back to ModelType.Name()
+func (ms *ModelSchema) GetModelName() string {
+	if ms == nil {
+		return ""
+	}
+	if ms.ModelName != "" {
+		return ms.ModelName
+	}
+	if ms.ModelType != nil {
+		return ms.ModelType.Name()
+	}
+	return ""
 }
 
 // FieldInfo contains field metadata
@@ -116,6 +131,7 @@ func BuildModelSchema(schemaInstance schema.Schema) (*ModelSchema, error) {
 		instanceValue = instanceValue.Elem()
 	}
 	ms.ModelType = instanceValue.Type()
+	ms.ModelName = ms.ModelType.Name()
 
 	// Get table name from meta if available
 	meta := schemaInstance.Meta()

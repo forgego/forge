@@ -29,8 +29,16 @@ func (f *OrderingFilter) FilterQueryset(r *http.Request, queryset interface{}) i
 		return queryset
 	}
 
-	// Parse ordering fields (comma-separated, - prefix for descending)
-	fields := strings.Split(orderingParam, ",")
+	ordering := f.parseOrdering(orderingParam)
+	if len(ordering) == 0 {
+		return queryset
+	}
+
+	return f.applyOrdering(queryset, ordering)
+}
+
+func (f *OrderingFilter) parseOrdering(param string) []string {
+	fields := strings.Split(param, ",")
 	var ordering []string
 
 	for _, field := range fields {
@@ -39,36 +47,49 @@ func (f *OrderingFilter) FilterQueryset(r *http.Request, queryset interface{}) i
 			continue
 		}
 
-		// Validate field is allowed
 		if len(f.OrderingFields) > 0 {
 			fieldName := strings.TrimPrefix(field, "-")
-			allowed := false
-			for _, allowedField := range f.OrderingFields {
-				if allowedField == fieldName {
-					allowed = true
-					break
-				}
-			}
-			if !allowed {
+			if !f.isFieldAllowed(fieldName) {
 				continue
 			}
 		}
 
 		ordering = append(ordering, field)
 	}
+	return ordering
+}
 
-	if len(ordering) == 0 {
-		return queryset
+func (f *OrderingFilter) isFieldAllowed(field string) bool {
+	for _, allowedField := range f.OrderingFields {
+		if allowedField == field {
+			return true
+		}
 	}
+	return false
+}
 
-	// Apply ordering using reflection
+func (f *OrderingFilter) applyOrdering(queryset interface{}, ordering []string) interface{} {
 	qsValue := reflect.ValueOf(queryset)
 	if !qsValue.IsValid() {
 		return queryset
 	}
 
 	orderByMethod := qsValue.MethodByName("OrderBy")
-	if orderByMethod.IsValid() {
+	if !orderByMethod.IsValid() {
+		return queryset
+	}
+
+	mType := orderByMethod.Type()
+	if mType.IsVariadic() {
+		args := make([]reflect.Value, len(ordering))
+		for i, field := range ordering {
+			args[i] = reflect.ValueOf(field)
+		}
+		results := orderByMethod.Call(args)
+		if len(results) > 0 {
+			return results[0].Interface()
+		}
+	} else if mType.NumIn() == 1 && reflect.TypeOf(ordering).AssignableTo(mType.In(0)) {
 		results := orderByMethod.Call([]reflect.Value{
 			reflect.ValueOf(ordering),
 		})
