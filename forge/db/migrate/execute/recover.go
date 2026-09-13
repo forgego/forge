@@ -31,10 +31,10 @@ type RecoveryMigrationInfo struct {
 
 // DirtyMigration represents a dirty migration that needs recovery
 type DirtyMigration struct {
-	Version     uint
-	Applied     bool
-	ErrorMsg    string
-	Statements  []string
+	Version    uint
+	Applied    bool
+	ErrorMsg   string
+	Statements []string
 }
 
 // RecoverDirtyState attempts to recover from a dirty migration state
@@ -46,7 +46,7 @@ func (r *Recovery) RecoverDirtyState(ctx context.Context, migrationsDir string) 
 	// Query the schema_migrations table to check for dirty migrations
 	var version uint
 	var dirty bool
-	
+
 	query := `SELECT version, dirty FROM schema_migrations ORDER BY version DESC LIMIT 1`
 	err := r.db.QueryRowContext(ctx, query).Scan(&version, &dirty)
 	if err != nil {
@@ -62,8 +62,8 @@ func (r *Recovery) RecoverDirtyState(ctx context.Context, migrationsDir string) 
 
 	// Found a dirty migration
 	dirtyMigration := &DirtyMigration{
-		Version: version,
-		Applied: true,
+		Version:  version,
+		Applied:  true,
 		ErrorMsg: fmt.Sprintf("Migration %d is marked as dirty", version),
 	}
 
@@ -108,7 +108,7 @@ func (r *Recovery) GetDirtyMigrationInfo(ctx context.Context) (*RecoveryMigratio
 func (r *Recovery) ValidateMigrationIntegrity(migrationsDir string) (map[uint]string, error) {
 	// Read all migration files and compute their checksums
 	checksums := make(map[uint]string)
-	
+
 	files, err := os.ReadDir(migrationsDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read migrations directory: %w", err)
@@ -258,20 +258,134 @@ func (r *Recovery) RollbackPartialMigration(ctx context.Context, version uint, d
 
 // splitSQL splits SQL text into individual statements
 func splitSQL(sql string) []string {
-	// Simple split by semicolon
-	// Note: This is a basic implementation and may not handle all cases
-	// (e.g., semicolons in strings or comments)
-	statements := strings.Split(sql, ";")
-	
-	result := make([]string, 0, len(statements))
-	for _, stmt := range statements {
-		stmt = strings.TrimSpace(stmt)
-		if stmt != "" {
-			result = append(result, stmt)
+	var statements []string
+	start := 0
+	n := len(sql)
+	i := 0
+
+	for i < n {
+		switch {
+		case sql[i] == '\'':
+			// Single-quoted string: scan until closing unescaped single quote
+			i++
+			for i < n {
+				if sql[i] == '\'' {
+					if i+1 < n && sql[i+1] == '\'' {
+						i += 2 // Escaped quote ''
+					} else {
+						i++
+						break
+					}
+				} else {
+					i++
+				}
+			}
+		case sql[i] == '"':
+			// Double-quoted identifier: scan until closing unescaped double quote
+			i++
+			for i < n {
+				if sql[i] == '"' {
+					if i+1 < n && sql[i+1] == '"' {
+						i += 2 // Escaped quote ""
+					} else {
+						i++
+						break
+					}
+				} else {
+					i++
+				}
+			}
+		case sql[i] == '-' && i+1 < n && sql[i+1] == '-':
+			// Line comment: scan until newline
+			i += 2
+			for i < n && sql[i] != '\n' {
+				i++
+			}
+		case sql[i] == '/' && i+1 < n && sql[i+1] == '*':
+			// Block comment: scan until */
+			i += 2
+			closed := false
+			for i+1 < n {
+				if sql[i] == '*' && sql[i+1] == '/' {
+					i += 2
+					closed = true
+					break
+				}
+				i++
+			}
+			if !closed {
+				i = n
+			}
+		case sql[i] == '$':
+			tag, ok := scanDollarTag(sql, i)
+			if ok {
+				i += len(tag)
+				closed := false
+				for i <= n-len(tag) {
+					if sql[i:i+len(tag)] == tag {
+						i += len(tag)
+						closed = true
+						break
+					}
+					i++
+				}
+				if !closed {
+					i = n
+				}
+			} else {
+				i++
+			}
+		case sql[i] == ';':
+			stmt := strings.TrimSpace(sql[start:i])
+			if stmt != "" {
+				statements = append(statements, stmt)
+			}
+			i++
+			start = i
+		default:
+			i++
 		}
 	}
-	
-	return result
+
+	if start < n {
+		stmt := strings.TrimSpace(sql[start:])
+		if stmt != "" {
+			statements = append(statements, stmt)
+		}
+	}
+
+	return statements
+}
+
+// scanDollarTag checks if sql[i:] starts a PostgreSQL dollar quote tag ($$ or $tag$).
+// Tag chars are letters, digits, underscore; must not start with a digit.
+func scanDollarTag(sql string, i int) (string, bool) {
+	n := len(sql)
+	if i >= n || sql[i] != '$' {
+		return "", false
+	}
+	if i+1 < n && sql[i+1] == '$' {
+		return "$$", true
+	}
+	if i+1 >= n {
+		return "", false
+	}
+	first := sql[i+1]
+	if !((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || first == '_') {
+		return "", false
+	}
+	j := i + 2
+	for j < n {
+		c := sql[j]
+		if c == '$' {
+			return sql[i : j+1], true
+		}
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
+			return "", false
+		}
+		j++
+	}
+	return "", false
 }
 
 // ForceCleanState forces the database to a clean state (use with caution!)
@@ -326,4 +440,3 @@ func (r *Recovery) GetAppliedMigrations(ctx context.Context) ([]RecoveryMigratio
 
 	return migrations, nil
 }
-

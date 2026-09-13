@@ -2,9 +2,11 @@ package generate
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -67,12 +69,8 @@ func (s *Squasher) SquashMigrations(startVersion, endVersion, newName string) er
 	upPath := filepath.Join(s.migrationsDir, fmt.Sprintf("%s.up.sql", newMigrationName))
 	downPath := filepath.Join(s.migrationsDir, fmt.Sprintf("%s.down.sql", newMigrationName))
 
-	if err := os.WriteFile(upPath, []byte(combinedUpSQL), 0644); err != nil {
-		return fmt.Errorf("failed to write up migration: %w", err)
-	}
-
-	if err := os.WriteFile(downPath, []byte(combinedDownSQL), 0644); err != nil {
-		return fmt.Errorf("failed to write down migration: %w", err)
+	if err := writeMigrationPair(upPath, []byte(combinedUpSQL), downPath, []byte(combinedDownSQL)); err != nil {
+		return fmt.Errorf("failed to write migrations: %w", err)
 	}
 
 	// Note: Old migrations should be archived, not deleted
@@ -137,6 +135,7 @@ func (s *Squasher) getNextVersion() (string, error) {
 	}
 
 	maxVersion := uint64(0)
+	hasVersions := false
 	for _, match := range matches {
 		basename := filepath.Base(match)
 		parts := strings.Split(basename, "_")
@@ -145,24 +144,24 @@ func (s *Squasher) getNextVersion() (string, error) {
 		}
 
 		versionStr := parts[0]
-		version := parseVersion(versionStr)
-		if version > maxVersion {
-			maxVersion = version
+		version, err := strconv.ParseUint(versionStr, 10, 64)
+		if err != nil {
+			continue
 		}
+		if !hasVersions || version > maxVersion {
+			maxVersion = version
+			hasVersions = true
+		}
+	}
+
+	if !hasVersions {
+		return "000001", nil
+	}
+
+	if maxVersion == math.MaxUint64 {
+		return "", fmt.Errorf("migration version overflow")
 	}
 
 	nextVersion := maxVersion + 1
 	return fmt.Sprintf("%06d", nextVersion), nil
 }
-
-// parseVersion parses a version string to uint64
-func parseVersion(versionStr string) uint64 {
-	var result uint64
-	for _, r := range versionStr {
-		if r >= '0' && r <= '9' {
-			result = result*10 + uint64(r-'0')
-		}
-	}
-	return result
-}
-
