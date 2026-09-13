@@ -2,6 +2,7 @@ package orm
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 )
@@ -25,6 +26,8 @@ const (
 	OpEndsWith       Operator = "ENDS_WITH"   // '%value'
 	OpIContains      Operator = "ILIKE"       // '%value%' (case-insensitive)
 	OpIExact         Operator = "IEXACT"      // 'value' (case-insensitive exact)
+	OpIStartsWith    Operator = "ISTARTSWITH"
+	OpIEndsWith      Operator = "IENDSWITH"
 	OpRange          Operator = "BETWEEN"
 	OpYear           Operator = "EXTRACT(YEAR FROM"
 	OpMonth          Operator = "EXTRACT(MONTH FROM"
@@ -146,6 +149,25 @@ func (q QueryExpr) buildCombined(paramIndex int) (string, []interface{}, int) {
 	return combinedSQL, allArgs, currentIndex
 }
 
+// toInterfaceSlice converts a slice or array of any type to []interface{}.
+// Returns (nil, false) for non-slice/array values or nil.
+func toInterfaceSlice(v interface{}) ([]interface{}, bool) {
+	if v == nil {
+		return nil, false
+	}
+	val := reflect.ValueOf(v)
+	kind := val.Kind()
+	if kind != reflect.Slice && kind != reflect.Array {
+		return nil, false
+	}
+	length := val.Len()
+	res := make([]interface{}, length)
+	for i := 0; i < length; i++ {
+		res[i] = val.Index(i).Interface()
+	}
+	return res, true
+}
+
 // buildSingle builds SQL for a single condition
 func (q QueryExpr) buildSingle(paramIndex int) (string, []interface{}, int) {
 	var sql string
@@ -154,14 +176,18 @@ func (q QueryExpr) buildSingle(paramIndex int) (string, []interface{}, int) {
 
 	// Use if-else to handle operators with same string values
 	if q.op == OpIsNull {
-		sql = fmt.Sprintf("%s IS NULL", q.field)
+		if b, ok := q.value.(bool); ok && !b {
+			sql = fmt.Sprintf("%s IS NOT NULL", q.field)
+		} else {
+			sql = fmt.Sprintf("%s IS NULL", q.field)
+		}
 	} else if q.op == OpIsNotNull {
 		sql = fmt.Sprintf("%s IS NOT NULL", q.field)
 	} else if q.op == OpIn {
 		// Handle IN clause - use PostgreSQL placeholders
-		values, ok := q.value.([]interface{})
-		if !ok {
-			return "", nil, currentIndex
+		values, ok := toInterfaceSlice(q.value)
+		if !ok || len(values) == 0 {
+			return "1=0", nil, currentIndex
 		}
 		placeholders := make([]string, len(values))
 		for i := range placeholders {
@@ -171,9 +197,9 @@ func (q QueryExpr) buildSingle(paramIndex int) (string, []interface{}, int) {
 		sql = fmt.Sprintf("%s IN (%s)", q.field, strings.Join(placeholders, ", "))
 		currentIndex += len(values)
 	} else if q.op == OpNotIn {
-		values, ok := q.value.([]interface{})
-		if !ok {
-			return "", nil, currentIndex
+		values, ok := toInterfaceSlice(q.value)
+		if !ok || len(values) == 0 {
+			return "1=1", nil, currentIndex
 		}
 		placeholders := make([]string, len(values))
 		for i := range placeholders {
@@ -207,7 +233,7 @@ func (q QueryExpr) buildSingle(paramIndex int) (string, []interface{}, int) {
 		}
 		currentIndex++
 	} else if q.op == OpIContains {
-		sql = fmt.Sprintf("%s ILIKE $%d", q.field, currentIndex)
+		sql = fmt.Sprintf("LOWER(%s) LIKE LOWER($%d)", q.field, currentIndex)
 		if strVal, ok := q.value.(string); ok {
 			args = []interface{}{"%" + strVal + "%"}
 		} else {
@@ -215,23 +241,37 @@ func (q QueryExpr) buildSingle(paramIndex int) (string, []interface{}, int) {
 		}
 		currentIndex++
 	} else if q.op == OpIExact {
-		sql = fmt.Sprintf("%s ILIKE $%d", q.field, currentIndex)
+		sql = fmt.Sprintf("LOWER(%s) LIKE LOWER($%d)", q.field, currentIndex)
 		if strVal, ok := q.value.(string); ok {
 			args = []interface{}{strVal}
 		} else {
 			return "", nil, currentIndex
 		}
 		currentIndex++
-	} else if q.op == OpRange {
-		values, ok := q.value.([]interface{})
-		if !ok || len(values) != 2 {
+	} else if q.op == OpIStartsWith {
+		sql = fmt.Sprintf("LOWER(%s) LIKE LOWER($%d)", q.field, currentIndex)
+		if strVal, ok := q.value.(string); ok {
+			args = []interface{}{strVal + "%"}
+		} else {
 			return "", nil, currentIndex
 		}
-		if len(values) == 2 {
-			sql = fmt.Sprintf("%s BETWEEN $%d AND $%d", q.field, currentIndex, currentIndex+1)
-			args = []interface{}{values[0], values[1]}
-			currentIndex += 2
+		currentIndex++
+	} else if q.op == OpIEndsWith {
+		sql = fmt.Sprintf("LOWER(%s) LIKE LOWER($%d)", q.field, currentIndex)
+		if strVal, ok := q.value.(string); ok {
+			args = []interface{}{"%" + strVal}
+		} else {
+			return "", nil, currentIndex
 		}
+		currentIndex++
+	} else if q.op == OpRange {
+		values, ok := toInterfaceSlice(q.value)
+		if !ok || len(values) != 2 {
+			return "1=0", nil, currentIndex
+		}
+		sql = fmt.Sprintf("%s BETWEEN $%d AND $%d", q.field, currentIndex, currentIndex+1)
+		args = []interface{}{values[0], values[1]}
+		currentIndex += 2
 	} else if q.op == OpYear {
 		sql = fmt.Sprintf("EXTRACT(YEAR FROM %s) = $%d", q.field, currentIndex)
 		args = []interface{}{q.value}

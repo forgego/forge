@@ -191,6 +191,16 @@ func (qs *BaseQuerySet[T]) getDialect() (interface {
 	return nil, fmt.Errorf("database connection not set on QuerySet")
 }
 
+// newSQLBuilder creates an SQLBuilder configured with the queryset's dialect if available.
+func (qs *BaseQuerySet[T]) newSQLBuilder() *SQLBuilder {
+	if qs != nil && qs.db != nil {
+		if d, err := GetDialect(qs.db); err == nil && d != nil {
+			return NewSQLBuilderWithDialect(d)
+		}
+	}
+	return NewSQLBuilder()
+}
+
 // rebindSQL adapts a SQL query for the active database driver (e.g. converting ILIKE to LIKE for SQLite).
 func (qs *BaseQuerySet[T]) rebindSQL(query string) string {
 	if r, ok := qs.db.(interface{ RebindPlaceholders(string) string }); ok && r != nil {
@@ -502,16 +512,14 @@ func (qs *BaseQuerySet[T]) All(ctx context.Context) ([]*T, error) {
 
 // buildSQL builds the SQL query
 func (qs *BaseQuerySet[T]) buildSQL() (string, []interface{}, error) {
-	builder := NewSQLBuilder()
+	builder := qs.newSQLBuilder()
 
-	// Build JOINs first (populates qs.joins and qs.joinMap)
+	// Build select_related JOINs first (populates qs.joins and qs.joinMap)
 	qs.buildJoinClause(builder)
 
-	// Build SELECT clause
-	selectClause := qs.buildSelectClause(builder)
-
-	// Build FROM clause
-	fromClause := fmt.Sprintf("FROM %s", EscapeIdentifier(qs.table))
+	// Set join resolver for WHERE / ORDER BY relation path resolution
+	var pathJoins []string
+	builder.SetJoinResolver(qs.createJoinResolver(&pathJoins))
 
 	// Build WHERE clause
 	whereClause, _, whereErr := qs.buildWhereClause(builder)
@@ -520,7 +528,17 @@ func (qs *BaseQuerySet[T]) buildSQL() (string, []interface{}, error) {
 	}
 
 	// Build ORDER BY clause
-	orderByClause := qs.buildOrderByClause(builder)
+	orderByClause, orderErr := qs.buildOrderByClause(builder)
+	if orderErr != nil {
+		return "", nil, orderErr
+	}
+
+	// Build SELECT clause (qualifies main table columns when path joins are present)
+	hasPathJoins := len(pathJoins) > 0
+	selectClause := qs.buildSelectClause(builder, hasPathJoins)
+
+	// Build FROM clause
+	fromClause := fmt.Sprintf("FROM %s", EscapeIdentifier(qs.table))
 
 	// Build LIMIT/OFFSET
 	limitClause := qs.buildLimitClause()
@@ -530,6 +548,9 @@ func (qs *BaseQuerySet[T]) buildSQL() (string, []interface{}, error) {
 	parts := []string{selectClause, fromClause}
 	if len(qs.joins) > 0 {
 		parts = append(parts, strings.Join(qs.joins, " "))
+	}
+	if len(pathJoins) > 0 {
+		parts = append(parts, strings.Join(pathJoins, " "))
 	}
 	if whereClause != "" {
 		parts = append(parts, whereClause)
@@ -548,6 +569,49 @@ func (qs *BaseQuerySet[T]) buildSQL() (string, []interface{}, error) {
 	args := builder.Args()
 
 	return qs.rebindSQL(sql), args, nil
+}
+
+// fkColumnFor resolves the FK column on schema pointing to rel
+func fkColumnFor(schema *ModelSchema, rel *RelationInfo) string {
+	if schema == nil || rel == nil {
+		return ""
+	}
+
+	for _, f := range schema.Fields {
+		if strings.EqualFold(f.DBColumn, rel.Name) || strings.EqualFold(f.Name, rel.Name) {
+			return f.DBColumn
+		}
+		if f.StructFieldName == rel.Name {
+			return f.DBColumn
+		}
+		if f.StructFieldName == rel.Name+"ID" {
+			return f.DBColumn
+		}
+		if strings.EqualFold(f.DBColumn, rel.Name+"_id") {
+			return f.DBColumn
+		}
+		if strings.HasSuffix(f.Name, "ID") && strings.HasPrefix(strings.ToLower(f.Name), strings.ToLower(rel.Name)) {
+			return f.DBColumn
+		}
+	}
+
+	guess := strings.ToLower(rel.Name) + "_id"
+	if f := schema.GetField(guess); f != nil {
+		return f.DBColumn
+	}
+
+	if strings.HasSuffix(strings.ToLower(rel.Name), "_id") {
+		if f := schema.GetField(strings.ToLower(rel.Name)); f != nil {
+			return f.DBColumn
+		}
+	}
+
+	guess = strings.ToLower(rel.TargetModel) + "_id"
+	if f := schema.GetField(guess); f != nil {
+		return f.DBColumn
+	}
+
+	return ""
 }
 
 // buildJoinClause builds the JOIN clause
@@ -577,66 +641,21 @@ func (qs *BaseQuerySet[T]) buildJoinClause(builder *SQLBuilder) {
 		alias := EscapeIdentifier(rel.Name)
 		mainTable := EscapeIdentifier(qs.table)
 
-		// Try to find the FK column
-		// Strategy:
-		// 1. Direct match with field DBColumn, Name, or StructFieldName
-		// 2. Look for field with DBColumn = rel.Name + "_id" (lowercase)
-		// 3. Look for field with Name = rel.Name + "ID"
-		// 4. Look for target model name + "_id"
-		fkColumn := ""
-
-		for _, f := range qs.schema.Fields {
-			if strings.EqualFold(f.DBColumn, rel.Name) || strings.EqualFold(f.Name, rel.Name) {
-				fkColumn = f.DBColumn
-				break
-			}
-			if f.StructFieldName == rel.Name {
-				fkColumn = f.DBColumn
-				break
-			}
-			if f.StructFieldName == rel.Name+"ID" {
-				fkColumn = f.DBColumn
-				break
-			}
-			if strings.EqualFold(f.DBColumn, rel.Name+"_id") {
-				fkColumn = f.DBColumn
-				break
-			}
-			if strings.HasSuffix(f.Name, "ID") && strings.HasPrefix(f.Name, rel.Name) {
-				fkColumn = f.DBColumn
-				break
-			}
-		}
-
-		if fkColumn == "" {
-			guess := strings.ToLower(rel.Name) + "_id"
-			if f := qs.schema.GetField(guess); f != nil {
-				fkColumn = f.DBColumn
-			}
-		}
-
-		if fkColumn == "" && strings.HasSuffix(strings.ToLower(rel.Name), "_id") {
-			if f := qs.schema.GetField(strings.ToLower(rel.Name)); f != nil {
-				fkColumn = f.DBColumn
-			}
-		}
-
-		if fkColumn == "" {
-			guess := strings.ToLower(rel.TargetModel) + "_id"
-			if f := qs.schema.GetField(guess); f != nil {
-				fkColumn = f.DBColumn
-			}
-		}
-
+		fkColumn := fkColumnFor(qs.schema, rel)
 		if fkColumn == "" {
 			continue // Could not determine join condition
+		}
+
+		targetPk := targetSchema.PrimaryKey
+		if targetPk == "" {
+			targetPk = "id"
 		}
 
 		// JOIN target_table "Alias" ON main_table.fk = "Alias".pk
 		joinSQL := fmt.Sprintf("LEFT OUTER JOIN %s %s ON %s.%s = %s.%s",
 			joinTable, alias,
 			mainTable, EscapeIdentifier(fkColumn),
-			alias, EscapeIdentifier(targetSchema.PrimaryKey))
+			alias, EscapeIdentifier(targetPk))
 
 		qs.joins = append(qs.joins, joinSQL)
 		qs.joinMap[path] = true
@@ -644,23 +663,151 @@ func (qs *BaseQuerySet[T]) buildJoinClause(builder *SQLBuilder) {
 		qs.joinMap[strings.ToLower(rel.Name)] = true
 		qs.joinMap[rel.TargetModel] = true
 		qs.joinMap[strings.ToLower(rel.TargetModel)] = true
+		qs.joinMap[alias] = true
+	}
+}
+
+func (qs *BaseQuerySet[T]) createJoinResolver(pathJoins *[]string) JoinResolver {
+	return func(parts []string) (string, string, error) {
+		if len(parts) <= 1 {
+			return "", "", fmt.Errorf("invalid relation path: %v", parts)
+		}
+		currentSchema := qs.schema
+		parentRef := EscapeIdentifier(qs.table)
+		var currentAlias string
+
+		for i := 0; i < len(parts)-1; i++ {
+			part := parts[i]
+			if currentSchema == nil {
+				return "", "", fmt.Errorf("cannot traverse relation %s: schema is nil", part)
+			}
+			rel := currentSchema.GetRelation(part)
+			if rel == nil {
+				return "", "", fmt.Errorf("relation %s not found in model %s", part, currentSchema.TableName)
+			}
+
+			targetSchema, err := GetModelSchemaByName(rel.TargetModel)
+			if err != nil {
+				return "", "", fmt.Errorf("failed to resolve target model %s for relation %s: %w", rel.TargetModel, part, err)
+			}
+
+			hopAlias := strings.Join(parts[:i+1], "__")
+			currentAlias = hopAlias
+
+			// Check if already joined (dedupe with qs.joinMap)
+			if i == 0 && qs.joinMap[rel.Name] {
+				currentAlias = rel.Name
+				hopAlias = rel.Name
+			}
+
+			if !qs.joinMap[hopAlias] {
+				targetPk := targetSchema.PrimaryKey
+				if targetPk == "" {
+					targetPk = "id"
+				}
+
+				fkColumn := fkColumnFor(currentSchema, rel)
+				var joinSQL string
+				if fkColumn != "" {
+					joinSQL = fmt.Sprintf("LEFT JOIN %s AS %s ON %s.%s = %s.%s",
+						EscapeIdentifier(targetSchema.TableName),
+						EscapeIdentifier(hopAlias),
+						EscapeIdentifier(hopAlias),
+						EscapeIdentifier(targetPk),
+						parentRef,
+						EscapeIdentifier(fkColumn),
+					)
+				} else {
+					// Check for reverse relation where targetSchema has FK pointing to currentSchema
+					var reverseFK string
+					for _, r := range targetSchema.Relations {
+						if (currentSchema.ModelType != nil && r.TargetModel == currentSchema.ModelType.Name()) || r.TargetModel == currentSchema.TableName {
+							reverseFK = fkColumnFor(targetSchema, &r)
+							if reverseFK != "" {
+								break
+							}
+						}
+					}
+					if reverseFK == "" {
+						guess := strings.ToLower(currentSchema.TableName) + "_id"
+						if f := targetSchema.GetField(guess); f != nil {
+							reverseFK = f.DBColumn
+						}
+						if reverseFK == "" && currentSchema.ModelType != nil {
+							guess = strings.ToLower(currentSchema.ModelType.Name()) + "_id"
+							if f := targetSchema.GetField(guess); f != nil {
+								reverseFK = f.DBColumn
+							}
+						}
+					}
+					currentPk := currentSchema.PrimaryKey
+					if currentPk == "" {
+						currentPk = "id"
+					}
+					if reverseFK != "" {
+						joinSQL = fmt.Sprintf("LEFT JOIN %s AS %s ON %s.%s = %s.%s",
+							EscapeIdentifier(targetSchema.TableName),
+							EscapeIdentifier(hopAlias),
+							EscapeIdentifier(hopAlias),
+							EscapeIdentifier(reverseFK),
+							parentRef,
+							EscapeIdentifier(currentPk),
+						)
+					} else {
+						return "", "", fmt.Errorf("cannot determine join condition for relation %s", part)
+					}
+				}
+
+				*pathJoins = append(*pathJoins, joinSQL)
+				qs.joinMap[hopAlias] = true
+			}
+
+			parentRef = EscapeIdentifier(currentAlias)
+			currentSchema = targetSchema
+		}
+
+		lastPart := parts[len(parts)-1]
+		if currentSchema == nil {
+			return "", "", fmt.Errorf("target schema is nil for field %s", lastPart)
+		}
+		field := currentSchema.GetField(lastPart)
+		if field == nil {
+			return "", "", fmt.Errorf("field %s not found in model %s", lastPart, currentSchema.TableName)
+		}
+		column := field.DBColumn
+		if column == "" {
+			column = field.Name
+		}
+		return currentAlias, column, nil
 	}
 }
 
 // buildSelectClause builds the SELECT clause
-func (qs *BaseQuerySet[T]) buildSelectClause(builder *SQLBuilder) string {
+func (qs *BaseQuerySet[T]) buildSelectClause(builder *SQLBuilder, hasPathJoins bool) string {
 	var fields []string
 
 	if len(qs.selectFields) > 0 {
 		for _, field := range qs.selectFields {
-			fields = append(fields, EscapeIdentifier(field))
+			if hasPathJoins && !strings.Contains(field, ".") {
+				fields = append(fields, EscapeIdentifier(qs.table)+"."+EscapeIdentifier(field))
+			} else {
+				fields = append(fields, EscapeIdentifier(field))
+			}
 		}
 	} else if len(qs.onlyFields) > 0 {
 		for _, field := range qs.onlyFields {
-			fields = append(fields, EscapeIdentifier(field))
+			if hasPathJoins && !strings.Contains(field, ".") {
+				fields = append(fields, EscapeIdentifier(qs.table)+"."+EscapeIdentifier(field))
+			} else {
+				fields = append(fields, EscapeIdentifier(field))
+			}
 		}
 	} else {
-		fields = []string{"*"}
+		if hasPathJoins {
+			fields = []string{EscapeIdentifier(qs.table) + ".*"}
+		} else {
+			fields = []string{"*"}
+		}
 	}
 
 	// Add annotations to SELECT
@@ -745,14 +892,21 @@ func (qs *BaseQuerySet[T]) buildWhereClause(builder *SQLBuilder) (string, []inte
 }
 
 // buildOrderByClause builds the ORDER BY clause
-func (qs *BaseQuerySet[T]) buildOrderByClause(builder *SQLBuilder) string {
+func (qs *BaseQuerySet[T]) buildOrderByClause(builder *SQLBuilder) (string, error) {
 	if len(qs.orderBy) == 0 {
-		return ""
+		return "", nil
 	}
 
 	var parts []string
 	for _, field := range qs.orderBy {
 		escaped := EscapeIdentifier(field.Field)
+		if builder != nil && strings.Contains(field.Field, "__") {
+			resolved, err := builder.resolveColumn(field.Field)
+			if err != nil {
+				return "", fmt.Errorf("failed to resolve order by field %s: %w", field.Field, err)
+			}
+			escaped = resolved
+		}
 		if field.Ascending {
 			parts = append(parts, escaped+" ASC")
 		} else {
@@ -760,7 +914,7 @@ func (qs *BaseQuerySet[T]) buildOrderByClause(builder *SQLBuilder) string {
 		}
 	}
 
-	return "ORDER BY " + strings.Join(parts, ", ")
+	return "ORDER BY " + strings.Join(parts, ", "), nil
 }
 
 // buildLimitClause builds the LIMIT clause
@@ -1191,17 +1345,42 @@ func (qs *BaseQuerySet[T]) Count(ctx context.Context) (int64, error) {
 		return 0, err
 	}
 
-	builder := NewSQLBuilder()
-	selectClause := fmt.Sprintf("SELECT COUNT(*) FROM %s", EscapeIdentifier(qs.table))
+	builder := qs.newSQLBuilder()
+	qs.buildJoinClause(builder)
+
+	var pathJoins []string
+	builder.SetJoinResolver(qs.createJoinResolver(&pathJoins))
+
 	whereClause, _, whereErr := qs.buildWhereClause(builder)
 	if whereErr != nil {
 		return 0, whereErr
 	}
 
-	sql := selectClause
-	if whereClause != "" {
-		sql += " " + whereClause
+	var selectClause string
+	if len(pathJoins) > 0 {
+		pkCol := "id"
+		if qs.schema != nil && qs.schema.PrimaryKey != "" {
+			pkCol = qs.schema.PrimaryKey
+		}
+		selectClause = fmt.Sprintf("SELECT COUNT(DISTINCT %s.%s) FROM %s",
+			EscapeIdentifier(qs.table), EscapeIdentifier(pkCol), EscapeIdentifier(qs.table))
+	} else {
+		selectClause = fmt.Sprintf("SELECT COUNT(*) FROM %s", EscapeIdentifier(qs.table))
 	}
+
+	var parts []string
+	parts = append(parts, selectClause)
+	if len(qs.joins) > 0 {
+		parts = append(parts, strings.Join(qs.joins, " "))
+	}
+	if len(pathJoins) > 0 {
+		parts = append(parts, strings.Join(pathJoins, " "))
+	}
+	if whereClause != "" {
+		parts = append(parts, whereClause)
+	}
+
+	sql := strings.Join(parts, " ")
 
 	var count int64
 	err = db.QueryRowContext(ctx, qs.rebindSQL(sql), builder.Args()...).Scan(&count)
@@ -1232,7 +1411,12 @@ func (qs *BaseQuerySet[T]) Update(ctx context.Context, updates UpdateMap) (int64
 		return 0, err
 	}
 
-	builder := NewSQLBuilder()
+	builder := qs.newSQLBuilder()
+	var joinCalled bool
+	builder.SetJoinResolver(func(parts []string) (string, string, error) {
+		joinCalled = true
+		return "", "", fmt.Errorf("filtering by related fields is not supported in update")
+	})
 
 	// Build SET clause
 	var setParts []string
@@ -1245,6 +1429,9 @@ func (qs *BaseQuerySet[T]) Update(ctx context.Context, updates UpdateMap) (int64
 			// Build expression SQL
 			exprSQL, _, err := expr.ToSQL(builder)
 			if err != nil {
+				if joinCalled {
+					return 0, fmt.Errorf("filtering by related fields is not supported in update")
+				}
 				return 0, fmt.Errorf("failed to build expression SQL for field %s: %w", fieldName, err)
 			}
 			setParts = append(setParts, fmt.Sprintf("%s = %s", escapedField, exprSQL))
@@ -1258,7 +1445,13 @@ func (qs *BaseQuerySet[T]) Update(ctx context.Context, updates UpdateMap) (int64
 	// Build WHERE clause
 	whereClause, _, whereErr := qs.buildWhereClause(builder)
 	if whereErr != nil {
+		if joinCalled {
+			return 0, fmt.Errorf("filtering by related fields is not supported in update")
+		}
 		return 0, whereErr
+	}
+	if joinCalled {
+		return 0, fmt.Errorf("filtering by related fields is not supported in update")
 	}
 
 	// Combine all args
@@ -1313,12 +1506,23 @@ func (qs *BaseQuerySet[T]) Delete(ctx context.Context) (int64, error) {
 		return 0, err
 	}
 
-	builder := NewSQLBuilder()
+	builder := qs.newSQLBuilder()
+	var joinCalled bool
+	builder.SetJoinResolver(func(parts []string) (string, string, error) {
+		joinCalled = true
+		return "", "", fmt.Errorf("filtering by related fields is not supported in delete")
+	})
 
 	// Build WHERE clause
 	whereClause, _, whereErr := qs.buildWhereClause(builder)
 	if whereErr != nil {
+		if joinCalled {
+			return 0, fmt.Errorf("filtering by related fields is not supported in delete")
+		}
 		return 0, whereErr
+	}
+	if joinCalled {
+		return 0, fmt.Errorf("filtering by related fields is not supported in delete")
 	}
 
 	// Build SQL

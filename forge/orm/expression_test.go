@@ -187,7 +187,9 @@ func TestFieldExpression_StringOperations(t *testing.T) {
 		builder := NewSQLBuilder()
 		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
-		assert.Contains(t, sql, "ILIKE")
+		assert.Contains(t, sql, "LOWER(")
+		assert.Contains(t, sql, " LIKE LOWER(")
+		assert.NotContains(t, sql, "ILIKE")
 		assert.Len(t, builder.Args(), 1)
 	})
 
@@ -196,7 +198,9 @@ func TestFieldExpression_StringOperations(t *testing.T) {
 		builder := NewSQLBuilder()
 		sql, _, err := expr.ToSQL(builder)
 		require.NoError(t, err)
-		assert.Contains(t, sql, "ILIKE")
+		assert.Contains(t, sql, "LOWER(")
+		assert.Contains(t, sql, " LIKE LOWER(")
+		assert.NotContains(t, sql, "ILIKE")
 		assert.Len(t, builder.Args(), 1)
 	})
 }

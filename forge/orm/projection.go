@@ -78,7 +78,7 @@ func (pqs *ProjectionQuerySet[T, P]) All(ctx context.Context) ([]*P, error) {
 	}
 
 	// Build SQL with only selected fields
-	sqlBuilder := NewSQLBuilder()
+	sqlBuilder := baseQS.newSQLBuilder()
 
 	// Build SELECT clause with projection fields
 	selectClause := "SELECT "
@@ -263,6 +263,3 @@ func toSnakeCase(s string) string {
 	}
 	return result
 }
-
-
-

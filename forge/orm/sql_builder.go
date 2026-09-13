@@ -3,12 +3,20 @@ package orm
 import (
 	"fmt"
 	"strings"
+
+	"github.com/forgego/forge/db/dialect"
 )
+
+// JoinResolver resolves a relation path to an alias and target database column.
+// parts contains all segments of the path (e.g. ["customer", "name"]).
+type JoinResolver func(parts []string) (alias string, column string, err error)
 
 // SQLBuilder provides safe SQL building with proper escaping and parameter binding
 type SQLBuilder struct {
-	paramIndex int
-	args       []interface{}
+	paramIndex   int
+	args         []interface{}
+	dialect      dialect.Dialect
+	joinResolver JoinResolver
 }
 
 // NewSQLBuilder creates a new SQL builder
@@ -17,6 +25,46 @@ func NewSQLBuilder() *SQLBuilder {
 		paramIndex: 1,
 		args:       []interface{}{},
 	}
+}
+
+// NewSQLBuilderWithDialect creates a new SQL builder with the specified dialect
+func NewSQLBuilderWithDialect(d dialect.Dialect) *SQLBuilder {
+	return &SQLBuilder{
+		paramIndex: 1,
+		args:       []interface{}{},
+		dialect:    d,
+	}
+}
+
+// SetJoinResolver sets an optional join resolver for resolving relation paths.
+func (b *SQLBuilder) SetJoinResolver(r JoinResolver) {
+	if b != nil {
+		b.joinResolver = r
+	}
+}
+
+// resolveColumn resolves a field path to an escaped column identifier, resolving relation joins if a resolver is set.
+func (b *SQLBuilder) resolveColumn(fieldPath string) (string, error) {
+	if b == nil || b.joinResolver == nil {
+		return EscapeIdentifier(fieldPath), nil
+	}
+	parts := splitFieldPath(fieldPath)
+	if len(parts) <= 1 {
+		return EscapeIdentifier(fieldPath), nil
+	}
+	alias, column, err := b.joinResolver(parts)
+	if err != nil {
+		return "", err
+	}
+	return EscapeIdentifier(alias) + "." + EscapeIdentifier(column), nil
+}
+
+func (b *SQLBuilder) isSQLite() bool {
+	if b == nil || b.dialect == nil {
+		return false
+	}
+	name := strings.ToLower(b.dialect.Name())
+	return name == "sqlite" || name == "sqlite3"
 }
 
 // EscapeIdentifier escapes SQL identifiers (table/column names) to prevent SQL injection
@@ -129,9 +177,17 @@ func (b *SQLBuilder) BuildOrderBy(orderBy []string) string {
 		// Handle descending order (fields starting with "-")
 		if strings.HasPrefix(field, "-") {
 			fieldName := strings.TrimPrefix(field, "-")
-			parts = append(parts, EscapeIdentifier(fieldName)+" DESC")
+			col, err := b.resolveColumn(fieldName)
+			if err != nil {
+				col = EscapeIdentifier(fieldName)
+			}
+			parts = append(parts, col+" DESC")
 		} else {
-			parts = append(parts, EscapeIdentifier(field)+" ASC")
+			col, err := b.resolveColumn(field)
+			if err != nil {
+				col = EscapeIdentifier(field)
+			}
+			parts = append(parts, col+" ASC")
 		}
 	}
 
@@ -215,6 +271,3 @@ func (b *SQLBuilder) BuildDelete(table string) string {
 	escapedTable := EscapeIdentifier(table)
 	return "DELETE FROM " + escapedTable
 }
-
-
-

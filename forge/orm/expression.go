@@ -48,6 +48,16 @@ func (f Field[T]) Table() string {
 
 // ToSQL converts field expression to SQL
 func (f Field[T]) ToSQL(builder *SQLBuilder) (string, []interface{}, error) {
+	if builder != nil && strings.Contains(f.fieldPath, "__") {
+		col, err := builder.resolveColumn(f.fieldPath)
+		if err != nil {
+			return "", nil, err
+		}
+		if builder.joinResolver == nil && f.table != "" && !strings.Contains(f.fieldPath, ".") {
+			return EscapeIdentifier(f.table) + "." + col, nil, nil
+		}
+		return col, nil, nil
+	}
 	// Escape identifier - handle table prefix if needed
 	if f.table != "" && !strings.Contains(f.fieldPath, ".") {
 		escaped := EscapeIdentifier(f.table) + "." + EscapeIdentifier(f.fieldPath)
@@ -411,33 +421,55 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 			return "", nil, fmt.Errorf("EndsWith operator requires string value")
 		}
 	} else if c.Op == OpIContains {
-		// ILIKE '%value%'
 		if strVal, ok := c.Value.(string); ok {
 			pattern := "%" + strVal + "%"
 			placeholder := builder.AddArg(pattern)
-			sql = fmt.Sprintf("%s ILIKE %s", fieldSQL, placeholder)
+			sql = fmt.Sprintf("LOWER(%s) LIKE LOWER(%s)", fieldSQL, placeholder)
 		} else {
 			return "", nil, fmt.Errorf("IContains operator requires string value")
 		}
 	} else if c.Op == OpIExact {
-		// ILIKE 'value'
 		if strVal, ok := c.Value.(string); ok {
 			placeholder := builder.AddArg(strVal)
-			sql = fmt.Sprintf("%s ILIKE %s", fieldSQL, placeholder)
+			sql = fmt.Sprintf("LOWER(%s) LIKE LOWER(%s)", fieldSQL, placeholder)
 		} else {
 			return "", nil, fmt.Errorf("IExact operator requires string value")
+		}
+	} else if c.Op == OpIStartsWith {
+		if strVal, ok := c.Value.(string); ok {
+			pattern := strVal + "%"
+			placeholder := builder.AddArg(pattern)
+			sql = fmt.Sprintf("LOWER(%s) LIKE LOWER(%s)", fieldSQL, placeholder)
+		} else {
+			return "", nil, fmt.Errorf("IStartsWith operator requires string value")
+		}
+	} else if c.Op == OpIEndsWith {
+		if strVal, ok := c.Value.(string); ok {
+			pattern := "%" + strVal
+			placeholder := builder.AddArg(pattern)
+			sql = fmt.Sprintf("LOWER(%s) LIKE LOWER(%s)", fieldSQL, placeholder)
+		} else {
+			return "", nil, fmt.Errorf("IEndsWith operator requires string value")
 		}
 	} else {
 		// Use switch for operators with unique values
 		switch c.Op {
 		case OpIsNull:
-			sql = fmt.Sprintf("%s IS NULL", fieldSQL)
+			if b, ok := c.Value.(bool); ok && !b {
+				sql = fmt.Sprintf("%s IS NOT NULL", fieldSQL)
+			} else {
+				sql = fmt.Sprintf("%s IS NULL", fieldSQL)
+			}
 		case OpIsNotNull:
 			sql = fmt.Sprintf("%s IS NOT NULL", fieldSQL)
 		case OpIn:
-			values, ok := c.Value.([]T)
+			values, ok := toInterfaceSlice(c.Value)
 			if !ok {
 				return "", nil, fmt.Errorf("IN operator requires slice value")
+			}
+			if len(values) == 0 {
+				sql = "1=0"
+				break
 			}
 			placeholders := make([]string, len(values))
 			for i, val := range values {
@@ -445,9 +477,13 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 			}
 			sql = fmt.Sprintf("%s IN (%s)", fieldSQL, strings.Join(placeholders, ", "))
 		case OpNotIn:
-			values, ok := c.Value.([]T)
+			values, ok := toInterfaceSlice(c.Value)
 			if !ok {
 				return "", nil, fmt.Errorf("NOT IN operator requires slice value")
+			}
+			if len(values) == 0 {
+				sql = "1=1"
+				break
 			}
 			placeholders := make([]string, len(values))
 			for i, val := range values {
@@ -455,13 +491,36 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 			}
 			sql = fmt.Sprintf("%s NOT IN (%s)", fieldSQL, strings.Join(placeholders, ", "))
 		case OpRange:
-			values, ok := c.Value.([]T)
-			if !ok || len(values) != 2 {
+			values, ok := toInterfaceSlice(c.Value)
+			if !ok {
 				return "", nil, fmt.Errorf("Range operator requires slice of 2 values")
+			}
+			if len(values) != 2 {
+				sql = "1=0"
+				break
 			}
 			placeholder1 := builder.AddArg(values[0])
 			placeholder2 := builder.AddArg(values[1])
 			sql = fmt.Sprintf("%s BETWEEN %s AND %s", fieldSQL, placeholder1, placeholder2)
+		case OpYear, OpMonth, OpDay:
+			var part, fmtCode string
+			switch c.Op {
+			case OpYear:
+				part = "YEAR"
+				fmtCode = "%Y"
+			case OpMonth:
+				part = "MONTH"
+				fmtCode = "%m"
+			case OpDay:
+				part = "DAY"
+				fmtCode = "%d"
+			}
+			placeholder := builder.AddArg(c.Value)
+			if builder.isSQLite() {
+				sql = fmt.Sprintf("CAST(strftime('%s', %s) AS INTEGER) = %s", fmtCode, fieldSQL, placeholder)
+			} else {
+				sql = fmt.Sprintf("EXTRACT(%s FROM %s) = %s", part, fieldSQL, placeholder)
+			}
 		default:
 			// Standard operators (=, !=, >, >=, <, <=)
 			placeholder := builder.AddArg(c.Value)
@@ -708,6 +767,43 @@ func F(fieldPath string) FieldRef {
 // NewFieldRef creates a field reference
 func NewFieldRef(fieldPath string) FieldRef {
 	return FieldRef{path: fieldPath}
+}
+
+// Path returns the field path
+func (f FieldRef) Path() string {
+	return f.path
+}
+
+// ToSQL converts field reference to SQL
+func (f FieldRef) ToSQL(builder *SQLBuilder) (string, []interface{}, error) {
+	if builder != nil && strings.Contains(f.path, "__") {
+		col, err := builder.resolveColumn(f.path)
+		if err != nil {
+			return "", nil, err
+		}
+		return col, nil, nil
+	}
+	return EscapeIdentifier(f.path), nil, nil
+}
+
+// Resolve validates the field reference exists in schema
+func (f FieldRef) Resolve(schema *ModelSchema) error {
+	parts := splitFieldPath(f.path)
+	if len(parts) == 0 {
+		return fmt.Errorf("empty field path")
+	}
+	if len(parts) == 1 {
+		field := schema.GetField(parts[0])
+		if field == nil {
+			if schema.GetRelation(parts[0]) != nil {
+				return fmt.Errorf("path %s resolves to relation, not a field", f.path)
+			}
+			return fmt.Errorf("field %s not found in model", parts[0])
+		}
+		return nil
+	}
+	_, err := resolveNestedFieldPath(schema, parts)
+	return err
 }
 
 // FieldRef methods (Eq, Ne, etc.)
