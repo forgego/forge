@@ -40,22 +40,31 @@ func (p *IsAdminUser) GetCode() string {
 	return "permission_denied"
 }
 
-// isAdmin checks if a user is an admin using reflection
-func isAdmin(user interface{}) bool {
-	// Try to get IsAdmin method
-	if adminMethod := getMethod(user, "IsAdmin"); adminMethod.IsValid() {
-		results := adminMethod.Call(nil)
+// boolMember checks if obj has a bool method or field with the given name
+func boolMember(obj interface{}, name string) (value, found bool) {
+	if m := getMethod(obj, name); m.IsValid() && m.Type().NumIn() == 0 {
+		results := m.Call(nil)
 		if len(results) > 0 {
-			if isAdmin, ok := results[0].Interface().(bool); ok {
-				return isAdmin
+			if v, ok := results[0].Interface().(bool); ok {
+				return v, true
 			}
 		}
 	}
 
-	// Try to get IsAdmin field
-	if adminField := getField(user, "IsAdmin"); adminField.IsValid() {
-		if isAdmin, ok := adminField.Interface().(bool); ok {
-			return isAdmin
+	if f := getField(obj, name); f.IsValid() {
+		if v, ok := f.Interface().(bool); ok {
+			return v, true
+		}
+	}
+
+	return false, false
+}
+
+// isAdmin checks if a user is an admin using reflection
+func isAdmin(user interface{}) bool {
+	for _, name := range []string{"IsAdmin", "IsStaff", "IsSuperuser"} {
+		if val, found := boolMember(user, name); found && val {
+			return true
 		}
 	}
 
