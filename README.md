@@ -139,6 +139,10 @@ Run `forge --help` to see all commands and flags.
 
 ## Documentation & Support
 
+- Docs index: [docs/README.md](docs/README.md)
+- Product: [PRD](docs/PRD.md) • [Design](docs/DESIGN.md) • [Roadmap](docs/ROADMAP.md)
+- Maintenance: [Tech debt](docs/TECH-DEBT.md) • [Known issues](docs/BUGS.md)
+- Admin design: [admin-ui-system](docs/design/admin-ui-system.md)
 - Docs: https://hamidrabedi.github.io/foreit/
 - Issues: https://github.com/hamidrabedi/foreit/issues
 - Security policy: [SECURITY.md](SECURITY.md)

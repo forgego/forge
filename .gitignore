@@ -88,6 +88,16 @@ node_modules/
 .turbo/
 
 # AI/Code Assistant tools (personal configs)
+.local/
+.codex/
+CLAUDE.md
+.specify/
+.agents/skills/speckit-*/
+# Historical execution prompts; durable design and curated specs remain public.
+/docs/design/tasks/
+/docs/design/admin-ui-tasks.md
+/docs/design/backend-tasks.md
+/docs/design/backend-handoff.md
 .agent/
 .claude/
 .continue/
