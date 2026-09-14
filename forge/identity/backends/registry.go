@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/forgego/forge/identity/models"
+	"github.com/forgego/forge/identity/repository"
 )
 
 // backendRegistry implements BackendRegistry interface
@@ -99,5 +100,5 @@ func (r *backendRegistry) GetUser(ctx context.Context, identifier string) (*mode
 		}
 	}
 
-	return nil, fmt.Errorf("user not found")
+	return nil, repository.ErrUserNotFound
 }

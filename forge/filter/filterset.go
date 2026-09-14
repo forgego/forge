@@ -10,13 +10,12 @@ import (
 
 // FilterSet is the main entry point for filtering
 type FilterSet[T any] struct {
-	schema    *orm.ModelSchema
-	filters   map[string]Filter[T]
-	ast       *FilterNode
-	security  *SecurityConfig
-	optimizer *QueryOptimizer
-	queryset  orm.QuerySet[T]
-	sink      func(*FilterNode)
+	schema   *orm.ModelSchema
+	filters  map[string]Filter[T]
+	ast      *FilterNode
+	security *SecurityConfig
+	queryset orm.QuerySet[T]
+	sink     func(*FilterNode)
 }
 
 // GetSecurityConfig returns the security configuration
@@ -32,10 +31,9 @@ func NewFilterSet[T any]() (*FilterSet[T], error) {
 	}
 
 	return &FilterSet[T]{
-		schema:    schema,
-		filters:   make(map[string]Filter[T]),
-		security:  NewSecurityConfig(),
-		optimizer: NewQueryOptimizer(),
+		schema:   schema,
+		filters:  make(map[string]Filter[T]),
+		security: NewSecurityConfig(),
 	}, nil
 }
 
@@ -158,12 +156,11 @@ func (fs *FilterSet[T]) GetFilters() map[string]Filter[T] {
 // Copy creates a copy of the filterset
 func (fs *FilterSet[T]) Copy() *FilterSet[T] {
 	copy := &FilterSet[T]{
-		schema:    fs.schema,
-		filters:   make(map[string]Filter[T]),
-		security:  fs.security,
-		optimizer: fs.optimizer,
-		queryset:  fs.queryset,
-		sink:      fs.sink,
+		schema:   fs.schema,
+		filters:  make(map[string]Filter[T]),
+		security: fs.security,
+		queryset: fs.queryset,
+		sink:     fs.sink,
 	}
 
 	// Copy filters
@@ -320,11 +317,10 @@ type QueryBuilder[T any] struct {
 func NewQueryBuilder[T any](fs *FilterSet[T]) *QueryBuilder[T] {
 	qb := &QueryBuilder[T]{nodes: make([]*FilterNode, 0)}
 	child := &FilterSet[T]{
-		schema:    fs.schema,
-		filters:   fs.filters,
-		security:  fs.security,
-		optimizer: fs.optimizer,
-		queryset:  fs.queryset,
+		schema:   fs.schema,
+		filters:  fs.filters,
+		security: fs.security,
+		queryset: fs.queryset,
 	}
 	child.sink = func(n *FilterNode) { qb.nodes = append(qb.nodes, n) }
 	qb.fs = child

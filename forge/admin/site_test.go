@@ -2,8 +2,6 @@ package admin
 
 import (
 	"testing"
-
-	"github.com/forgego/forge/admin/core"
 )
 
 func TestNewSite(t *testing.T) {
@@ -173,19 +171,4 @@ func TestSite_IndexView(t *testing.T) {
 	if handler == nil {
 		t.Error("IndexView() returned nil")
 	}
-}
-
-// Test type aliases
-func TestTypeAliases(t *testing.T) {
-	// Test that type aliases are properly defined
-	var _ Config[struct{}] = core.Config[struct{}]{}
-	var _ Action[struct{}] = core.Action[struct{}]{}
-	var _ Filter[struct{}] = core.Filter[struct{}]{}
-	var _ Plugin = core.Plugin(nil)
-	var _ Field = core.Field(nil)
-	var _ Method = core.Method("")
-	var _ Fieldset[struct{}] = core.Fieldset[struct{}]{}
-	var _ InlineRelationConfig = core.InlineRelationConfig{}
-	var _ InlineConfig = core.InlineConfig{}
-	var _ Choice = core.Choice{}
 }

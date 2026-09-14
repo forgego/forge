@@ -8,37 +8,52 @@ import (
 	"github.com/forgego/forge/api/throttling"
 )
 
-// GetDefaultAuthentication returns default authentication classes
+// GetDefaultAuthentication returns default authentication classes.
 func GetDefaultAuthentication() []authentication.Authentication {
 	settings := GetSettings()
+	if settings == nil {
+		return nil
+	}
 	return settings.DefaultAuthentication
 }
 
-// GetDefaultPermissions returns default permission classes
+// GetDefaultPermissions returns default permission classes.
 func GetDefaultPermissions() []permissions.Permission {
 	settings := GetSettings()
+	if settings == nil {
+		return nil
+	}
 	return settings.DefaultPermissions
 }
 
-// GetDefaultThrottles returns default throttle classes
+// GetDefaultThrottles returns default throttle classes.
 func GetDefaultThrottles() []throttling.Throttle {
 	settings := GetSettings()
+	if settings == nil {
+		return nil
+	}
 	return settings.DefaultThrottles
 }
 
-// GetDefaultRenderers returns default renderers
+// GetDefaultRenderers returns default renderers.
 func GetDefaultRenderers() []renderers.Renderer {
 	settings := GetSettings()
+	if settings == nil {
+		return nil
+	}
 	return settings.DefaultRenderers
 }
 
-// GetDefaultParsers returns default parsers
+// GetDefaultParsers returns default parsers.
 func GetDefaultParsers() []parsers.Parser {
 	settings := GetSettings()
+	if settings == nil {
+		return nil
+	}
 	return settings.DefaultParsers
 }
 
-// SetupDefaultAPI sets up the API with sensible defaults
+// SetupDefaultAPI sets up the API with sensible defaults.
 func SetupDefaultAPI() {
 	Initialize()
 
@@ -55,36 +70,54 @@ func SetupDefaultAPI() {
 	)
 }
 
-// SetDefaultRenderers sets default renderers
+// SetupCompleteAPI sets up a complete API with all features.
+func SetupCompleteAPI() {
+	// Initialize with defaults
+	Initialize()
+
+	// Set up default renderers
+	SetDefaultRenderers(
+		renderers.NewJSONRenderer(),
+		renderers.NewXMLRenderer(),
+		renderers.NewHTMLRenderer(),
+	)
+
+	// Set up default parsers
+	SetDefaultParsers(
+		parsers.NewJSONParser(),
+		parsers.NewFormParser(),
+		parsers.NewMultiPartParser(),
+	)
+}
+
+// SetDefaultRenderers sets default renderers.
 func SetDefaultRenderers(rendererList ...renderers.Renderer) {
-	settings := GetSettings()
-	settings.DefaultRenderers = rendererList
+	settingsWriteMu.Lock()
+	defer settingsWriteMu.Unlock()
+
+	cur := globalSettings.Load()
+	var next Settings
+	if cur != nil {
+		next = *cur
+	} else {
+		next = *DefaultSettings()
+	}
+	next.DefaultRenderers = append([]renderers.Renderer(nil), rendererList...)
+	globalSettings.Store(&next)
 }
 
-// SetDefaultParsers sets default parsers
+// SetDefaultParsers sets default parsers.
 func SetDefaultParsers(parserList ...parsers.Parser) {
-	settings := GetSettings()
-	settings.DefaultParsers = parserList
-}
+	settingsWriteMu.Lock()
+	defer settingsWriteMu.Unlock()
 
-// CreateDefaultViewSet creates a viewset with default settings
-func CreateDefaultViewSet(serializer func() Serializer, queryset, model interface{}) *EnhancedBaseViewSetIntegrated {
-	vs := NewEnhancedBaseViewSetIntegrated(serializer, queryset, model)
-
-	// Apply defaults from settings
-	settings := GetSettings()
-
-	if len(settings.DefaultAuthentication) > 0 {
-		vs.AuthenticationClasses = settings.DefaultAuthentication
+	cur := globalSettings.Load()
+	var next Settings
+	if cur != nil {
+		next = *cur
+	} else {
+		next = *DefaultSettings()
 	}
-
-	if len(settings.DefaultPermissions) > 0 {
-		vs.PermissionClasses = settings.DefaultPermissions
-	}
-
-	if len(settings.DefaultThrottles) > 0 {
-		vs.ThrottleClasses = settings.DefaultThrottles
-	}
-
-	return vs
+	next.DefaultParsers = append([]parsers.Parser(nil), parserList...)
+	globalSettings.Store(&next)
 }

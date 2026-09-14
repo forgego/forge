@@ -16,7 +16,7 @@ type Dialect interface {
 
 	// Placeholder returns the placeholder for the given position (1-indexed).
 	// PostgreSQL: $1, $2, $3...
-	// SQLite/MySQL: ?, ?, ?
+	// SQLite: ?, ?, ?
 	Placeholder(position int) string
 
 	// BuildPlaceholders generates n placeholders joined by ", ".
@@ -26,7 +26,6 @@ type Dialect interface {
 
 	// QuoteIdentifier quotes a table or column name.
 	// PostgreSQL: "table_name"
-	// MySQL: `table_name`
 	// SQLite: "table_name" or `table_name`
 	QuoteIdentifier(name string) string
 
@@ -36,19 +35,16 @@ type Dialect interface {
 	// AutoIncrementType returns the auto-increment type declaration.
 	// PostgreSQL: "GENERATED ALWAYS AS IDENTITY" or "SERIAL"
 	// SQLite: "AUTOINCREMENT"
-	// MySQL: "AUTO_INCREMENT"
 	AutoIncrementType() string
 
 	// SupportsReturning returns true if the dialect supports RETURNING clause.
 	// PostgreSQL: true
 	// SQLite: true (3.35+)
-	// MySQL: false (uses LAST_INSERT_ID())
 	SupportsReturning() bool
 
 	// CurrentTime returns the current time function.
 	// PostgreSQL: "NOW()" or "CURRENT_TIMESTAMP"
 	// SQLite: "datetime('now')"
-	// MySQL: "NOW()"
 	CurrentTime() string
 
 	// CurrentTimestamp returns the current timestamp function name.
@@ -57,7 +53,6 @@ type Dialect interface {
 	// BooleanLiteral returns the boolean literal representation.
 	// PostgreSQL: TRUE, FALSE
 	// SQLite: 1, 0
-	// MySQL: TRUE, FALSE
 	BooleanLiteral(value bool) string
 
 	// LimitOffset generates LIMIT and OFFSET clause.
@@ -71,7 +66,6 @@ type Dialect interface {
 	// ConcatOperator returns the string concatenation operator or function.
 	// PostgreSQL: "||" or CONCAT()
 	// SQLite: "||"
-	// MySQL: CONCAT()
 	ConcatOperator() string
 
 	// CreateTableOptions returns dialect-specific CREATE TABLE options.
@@ -81,7 +75,6 @@ type Dialect interface {
 	// OnConflictDoNothing returns the dialect-specific ON CONFLICT DO NOTHING clause.
 	// PostgreSQL: "ON CONFLICT DO NOTHING"
 	// SQLite: "ON CONFLICT DO NOTHING" or "INSERT OR IGNORE"
-	// MySQL: "INSERT IGNORE"
 	OnConflictDoNothing() string
 
 	// OnConflictDoUpdate returns the dialect-specific ON CONFLICT DO UPDATE clause.
@@ -104,7 +97,7 @@ type PlaceholderStyle int
 const (
 	// PositionalStyle uses positional placeholders like $1, $2, $3 (PostgreSQL)
 	PositionalStyle PlaceholderStyle = iota
-	// QuestionMarkStyle uses question mark placeholders like ?, ?, ? (SQLite, MySQL)
+	// QuestionMarkStyle uses question mark placeholders like ?, ?, ? (SQLite)
 	QuestionMarkStyle
 )
 

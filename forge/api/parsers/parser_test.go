@@ -1,6 +1,7 @@
 package parsers
 
 import (
+	"encoding/xml"
 	"strings"
 	"testing"
 
@@ -84,12 +85,17 @@ func TestXMLParser_Parse(t *testing.T) {
 	xmlData := `<root><name>John</name><email>john@example.com</email></root>`
 	reader := strings.NewReader(xmlData)
 
-	var result map[string]interface{}
-	err := parser.Parse(reader, &result)
+	type Person struct {
+		XMLName xml.Name `xml:"root"`
+		Name    string   `xml:"name"`
+		Email   string   `xml:"email"`
+	}
 
-	// XML parsing might require specific structure
-	_ = err
-	_ = result
+	var result Person
+	err := parser.Parse(reader, &result)
+	require.NoError(t, err)
+	assert.Equal(t, "John", result.Name)
+	assert.Equal(t, "john@example.com", result.Email)
 }
 
 func TestXMLParser_MediaType(t *testing.T) {

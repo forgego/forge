@@ -12,7 +12,7 @@ import (
 
 // Predefined errors
 var (
-	ErrUserNotFound         = fmt.Errorf("user not found")
+	ErrUserNotFound         = repository.ErrUserNotFound
 	ErrEmailExists          = fmt.Errorf("email already exists")
 	ErrUsernameExists       = fmt.Errorf("username already exists")
 	ErrInvalidEmail         = fmt.Errorf("invalid email address")

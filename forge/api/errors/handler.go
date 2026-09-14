@@ -23,6 +23,8 @@ type HandlerConfig struct {
 	LinkHeaderURL string
 	// HandlePanics enables panic recovery
 	HandlePanics bool
+	// CustomMapper maps application errors to custom RFC 7807 problems (optional)
+	CustomMapper func(err error, r *http.Request) *Problem
 }
 
 // DefaultHandlerConfig returns a default handler configuration
@@ -95,14 +97,21 @@ func (h *Handler) HandleError(w http.ResponseWriter, r *http.Request, err error)
 		return
 	}
 
-	// Get instance URI from request
-	instance := r.URL.Path
-	if r.URL.RawQuery != "" {
-		instance += "?" + r.URL.RawQuery
+	var problem *Problem
+	if h.config.CustomMapper != nil {
+		problem = h.config.CustomMapper(err, r)
 	}
 
-	// Map error to Problem Details
-	problem := h.mapper.MapError(err, instance)
+	if problem == nil {
+		// Get instance URI from request
+		instance := r.URL.Path
+		if r.URL.RawQuery != "" {
+			instance += "?" + r.URL.RawQuery
+		}
+
+		// Map error to Problem Details
+		problem = h.mapper.MapError(err, instance)
+	}
 
 	// Add request ID if available in context
 	if requestID := GetRequestIDFromContext(r.Context()); requestID != "" {
@@ -267,4 +276,17 @@ func (w *errorResponseWriter) handlePanic(rec interface{}) {
 		return
 	}
 	w.handler.HandlePanic(w, w.request, rec)
+}
+
+// NewWriter creates an error writer function using the provided handler configuration.
+func NewWriter(cfg *HandlerConfig) func(http.ResponseWriter, *http.Request, error) {
+	handler := NewHandler(cfg)
+	return func(w http.ResponseWriter, r *http.Request, err error) {
+		handler.HandleError(w, r, err)
+	}
+}
+
+// WriteError writes an error as an RFC 7807 problem response.
+func WriteError(w http.ResponseWriter, r *http.Request, err error) {
+	NewHandler(DefaultHandlerConfig()).HandleError(w, r, err)
 }

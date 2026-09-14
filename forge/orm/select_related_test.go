@@ -132,9 +132,7 @@ func TestSelectRelated_SQLite(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "select_related_test.sqlite")
 
 	database, err := db.NewDB(dbPath)
-	if err != nil {
-		t.Skipf("skipping sqlite test: %v", err)
-	}
+	require.NoError(t, err)
 	defer database.Close()
 
 	_, err = database.Exec(`

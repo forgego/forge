@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/forgego/forge/tests/helpers"
 	"github.com/forgego/forge/tests/testhelpers"
 )
 
@@ -40,14 +39,14 @@ func TestGINIndexCreation(t *testing.T) {
 			attributes JSONB
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Create GIN index on JSONB column
 	createIndexSQL := `CREATE INDEX idx_products_attributes_gin ON products USING GIN (attributes)`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createIndexSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createIndexSQL)
 
 	// Verify GIN index exists
-	helpers.AssertGINIndexExists(ctx, t, postgresDB, "products", "idx_products_attributes_gin")
+	testhelpers.AssertGINIndexExists(ctx, t, postgresDB, "products", "idx_products_attributes_gin")
 }
 
 // TestGiSTIndexCreation tests creating GiST indexes
@@ -70,7 +69,7 @@ func TestGiSTIndexCreation(t *testing.T) {
 	defer postgresDB.Close()
 
 	// Cleanup tables before creating
-	helpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"documents"})
+	testhelpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"documents"})
 
 	// Create table with geometric or full-text search column
 	// For this test, we'll use a text column with GiST (though typically used for geometric types)
@@ -81,15 +80,15 @@ func TestGiSTIndexCreation(t *testing.T) {
 			content TEXT
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Create GiST index (typically used for geometric types, but can be used for full-text search)
 	// Note: For full-text search, GIN is more common, but GiST can be used
 	createIndexSQL := `CREATE INDEX idx_documents_content_gist ON documents USING GIST (to_tsvector('english', content))`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createIndexSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createIndexSQL)
 
 	// Verify GiST index exists
-	helpers.AssertGiSTIndexExists(ctx, t, postgresDB, "documents", "idx_documents_content_gist")
+	testhelpers.AssertGiSTIndexExists(ctx, t, postgresDB, "documents", "idx_documents_content_gist")
 }
 
 // TestJSONBColumnOperations tests JSONB column operations
@@ -112,7 +111,7 @@ func TestJSONBColumnOperations(t *testing.T) {
 	defer postgresDB.Close()
 
 	// Cleanup tables before creating
-	helpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"products"})
+	testhelpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"products"})
 
 	// Create table with JSONB column
 	createTableSQL := `
@@ -123,11 +122,11 @@ func TestJSONBColumnOperations(t *testing.T) {
 			metadata JSONB
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Verify JSONB columns exist
-	helpers.AssertJSONBColumn(ctx, t, postgresDB, "products", "attributes")
-	helpers.AssertJSONBColumn(ctx, t, postgresDB, "products", "metadata")
+	testhelpers.AssertJSONBColumn(ctx, t, postgresDB, "products", "attributes")
+	testhelpers.AssertJSONBColumn(ctx, t, postgresDB, "products", "metadata")
 
 	// Insert JSONB data
 	testData := map[string]interface{}{
@@ -184,7 +183,7 @@ func TestArrayColumnTypes(t *testing.T) {
 	defer postgresDB.Close()
 
 	// Cleanup tables before creating
-	helpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"products"})
+	testhelpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"products"})
 
 	// Create table with array columns
 	createTableSQL := `
@@ -196,12 +195,12 @@ func TestArrayColumnTypes(t *testing.T) {
 			prices NUMERIC(10, 2)[]
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Verify array columns exist
-	helpers.AssertArrayColumn(ctx, t, postgresDB, "products", "tags", "text")
-	helpers.AssertArrayColumn(ctx, t, postgresDB, "products", "category_ids", "integer")
-	helpers.AssertArrayColumn(ctx, t, postgresDB, "products", "prices", "numeric")
+	testhelpers.AssertArrayColumn(ctx, t, postgresDB, "products", "tags", "text")
+	testhelpers.AssertArrayColumn(ctx, t, postgresDB, "products", "category_ids", "integer")
+	testhelpers.AssertArrayColumn(ctx, t, postgresDB, "products", "prices", "numeric")
 
 	// Insert array data using PostgreSQL array syntax
 	// Use array literal syntax directly in SQL for proper type handling
@@ -244,10 +243,10 @@ func TestCustomPostgreSQLTypes(t *testing.T) {
 
 	// Create custom type
 	createTypeSQL := `CREATE TYPE order_status AS ENUM ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTypeSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTypeSQL)
 
 	// Verify custom type exists
-	helpers.AssertCustomType(ctx, t, postgresDB, "order_status")
+	testhelpers.AssertCustomType(ctx, t, postgresDB, "order_status")
 
 	// Create table using custom type
 	createTableSQL := `
@@ -257,7 +256,7 @@ func TestCustomPostgreSQLTypes(t *testing.T) {
 			status order_status DEFAULT 'pending'
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Insert data using custom type
 	insertSQL := `INSERT INTO orders (order_number, status) VALUES ($1, $2)`
@@ -291,7 +290,7 @@ func TestPartialIndex(t *testing.T) {
 	defer postgresDB.Close()
 
 	// Cleanup tables before creating
-	helpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"products"})
+	testhelpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"products"})
 
 	// Create table
 	createTableSQL := `
@@ -302,14 +301,14 @@ func TestPartialIndex(t *testing.T) {
 			status VARCHAR(50)
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Create partial index (only for active products)
 	createIndexSQL := `CREATE INDEX idx_products_active ON products(name) WHERE is_active = true`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createIndexSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createIndexSQL)
 
 	// Verify partial index exists
-	helpers.AssertPartialIndex(ctx, t, postgresDB, "products", "idx_products_active", "is_active = true")
+	testhelpers.AssertPartialIndex(ctx, t, postgresDB, "products", "idx_products_active", "is_active = true")
 }
 
 // TestFunctionalIndex tests functional indexes
@@ -332,7 +331,7 @@ func TestFunctionalIndex(t *testing.T) {
 	defer postgresDB.Close()
 
 	// Cleanup tables before creating
-	helpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"users"})
+	testhelpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"users"})
 
 	// Create table
 	createTableSQL := `
@@ -342,14 +341,14 @@ func TestFunctionalIndex(t *testing.T) {
 			username VARCHAR(150) NOT NULL
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Create functional index (case-insensitive email search)
 	createIndexSQL := `CREATE INDEX idx_users_email_lower ON users(LOWER(email))`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createIndexSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createIndexSQL)
 
 	// Verify functional index exists
-	helpers.AssertFunctionalIndex(ctx, t, postgresDB, "users", "idx_users_email_lower", "LOWER(email)")
+	testhelpers.AssertFunctionalIndex(ctx, t, postgresDB, "users", "idx_users_email_lower", "LOWER(email)")
 }
 
 // TestCoveringIndex tests covering indexes with INCLUDE columns
@@ -372,7 +371,7 @@ func TestCoveringIndex(t *testing.T) {
 	defer postgresDB.Close()
 
 	// Cleanup tables before creating
-	helpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"orders"})
+	testhelpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"orders"})
 
 	// Create table
 	createTableSQL := `
@@ -383,14 +382,14 @@ func TestCoveringIndex(t *testing.T) {
 			total_amount NUMERIC(12, 2)
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Create covering index with INCLUDE columns
 	createIndexSQL := `CREATE INDEX idx_orders_customer_date ON orders(customer_id, order_date) INCLUDE (total_amount)`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createIndexSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createIndexSQL)
 
 	// Verify covering index exists
-	helpers.AssertCoveringIndex(ctx, t, postgresDB, "orders", "idx_orders_customer_date", []string{"total_amount"})
+	testhelpers.AssertCoveringIndex(ctx, t, postgresDB, "orders", "idx_orders_customer_date", []string{"total_amount"})
 }
 
 // TestUUIDType tests UUID column type
@@ -414,7 +413,7 @@ func TestUUIDType(t *testing.T) {
 
 	// Enable UUID extension
 	enableExtensionSQL := `CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, enableExtensionSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, enableExtensionSQL)
 
 	// Create table with UUID column
 	createTableSQL := `
@@ -424,10 +423,10 @@ func TestUUIDType(t *testing.T) {
 			email VARCHAR(254) NOT NULL
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Verify UUID column exists
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "users", "uuid")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "users", "uuid")
 
 	// Insert data with UUID
 	insertSQL := `INSERT INTO users (email) VALUES ($1)`
@@ -462,7 +461,7 @@ func TestNumericPrecision(t *testing.T) {
 	defer postgresDB.Close()
 
 	// Cleanup tables before creating
-	helpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"products"})
+	testhelpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"products"})
 
 	// Create table with NUMERIC columns
 	createTableSQL := `
@@ -473,11 +472,11 @@ func TestNumericPrecision(t *testing.T) {
 			discount NUMERIC(5, 2) DEFAULT 0.00
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Verify columns exist
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "products", "price")
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "products", "discount")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "products", "price")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "products", "discount")
 
 	// Insert data with precise decimal values
 	insertSQL := `INSERT INTO products (name, price, discount) VALUES ($1, $2, $3)`
@@ -512,7 +511,7 @@ func TestTimestampWithTimeZone(t *testing.T) {
 	defer postgresDB.Close()
 
 	// Cleanup tables before creating
-	helpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"events"})
+	testhelpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"events"})
 
 	// Create table with TIMESTAMP WITH TIME ZONE
 	createTableSQL := `
@@ -523,11 +522,11 @@ func TestTimestampWithTimeZone(t *testing.T) {
 			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Verify columns exist
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "events", "created_at")
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "events", "updated_at")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "events", "created_at")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "events", "updated_at")
 
 	// Insert data
 	insertSQL := `INSERT INTO events (name) VALUES ($1)`

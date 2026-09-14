@@ -13,7 +13,6 @@ import (
 
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/db/migrate"
-	"github.com/forgego/forge/tests/helpers"
 	"github.com/forgego/forge/tests/testhelpers"
 )
 
@@ -387,7 +386,7 @@ func (OptionsModel) Relations() []schema.Relation {
 	require.NoError(t, err)
 
 	// Verify table was created
-	helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "options_models")
+	testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "options_models")
 
 	// List all columns to see what was actually created
 	rows, err := postgresDB.QueryContext(ctx, `

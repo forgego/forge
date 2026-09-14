@@ -2,7 +2,6 @@ package exceptions
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -20,25 +19,6 @@ func TestAPIException_Error(t *testing.T) {
 	assert.Equal(t, "Test error message", err.Error())
 	assert.Equal(t, http.StatusBadRequest, err.Status)
 	assert.Equal(t, "test_error", err.Code)
-}
-
-func TestAPIException_ToResponse(t *testing.T) {
-	err := NewAPIException(
-		http.StatusBadRequest,
-		"test_error",
-		"Test error message",
-		map[string][]string{
-			"field1": {"Error 1", "Error 2"},
-		},
-	)
-
-	response := err.ToResponse()
-
-	assert.True(t, response.Error)
-	assert.Equal(t, "test_error", response.Code)
-	assert.Equal(t, "Test error message", response.Message)
-	assert.NotNil(t, response.Details)
-	assert.Contains(t, response.Details, "field1")
 }
 
 func TestValidationError(t *testing.T) {
@@ -122,96 +102,4 @@ func TestUnsupportedMediaType(t *testing.T) {
 
 	assert.Equal(t, http.StatusUnsupportedMediaType, err.Status)
 	assert.Equal(t, "unsupported_media_type", err.Code)
-}
-
-func TestDefaultExceptionHandler(t *testing.T) {
-	handler := NewDefaultExceptionHandler()
-
-	tests := []struct {
-		name     string
-		err      error
-		expected string
-	}{
-		{"ValidationError", NewValidationError(nil), "validation_error"},
-		{"AuthenticationFailed", NewAuthenticationFailed(""), "authentication_failed"},
-		{"NotAuthenticated", NewNotAuthenticated(""), "not_authenticated"},
-		{"PermissionDenied", NewPermissionDenied(""), "permission_denied"},
-		{"NotFound", NewNotFound(""), "not_found"},
-		{"Throttled", NewThrottled("", 0), "throttled"},
-		{"APIException", NewAPIException(500, "test", "test", nil), "test"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/test", nil)
-			response := handler.HandleException(tt.err, req)
-
-			assert.NotNil(t, response)
-			assert.True(t, response.Error)
-			assert.Equal(t, tt.expected, response.Code)
-		})
-	}
-}
-
-func TestHandleExceptionHTTP(t *testing.T) {
-	tests := []struct {
-		name       string
-		err        error
-		statusCode int
-	}{
-		{"ValidationError", NewValidationError(nil), http.StatusBadRequest},
-		{"AuthenticationFailed", NewAuthenticationFailed(""), http.StatusUnauthorized},
-		{"PermissionDenied", NewPermissionDenied(""), http.StatusForbidden},
-		{"NotFound", NewNotFound(""), http.StatusNotFound},
-		{"Throttled", NewThrottled("", 5*time.Minute), http.StatusTooManyRequests},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/test", nil)
-			w := httptest.NewRecorder()
-
-			HandleExceptionHTTP(w, req, tt.err, nil)
-
-			assert.Equal(t, tt.statusCode, w.Code)
-
-			// Check for Retry-After header for throttled requests
-			if _, ok := tt.err.(*Throttled); ok {
-				assert.Contains(t, w.Header().Get("Retry-After"), "300")
-			}
-		})
-	}
-}
-
-func TestHandleExceptionHTTP_Throttled_RetryAfter(t *testing.T) {
-	err := NewThrottled("Too many requests", 5*time.Minute)
-	req := httptest.NewRequest("GET", "/test", nil)
-	w := httptest.NewRecorder()
-
-	HandleExceptionHTTP(w, req, err, nil)
-
-	assert.Equal(t, http.StatusTooManyRequests, w.Code)
-	assert.Equal(t, "300", w.Header().Get("Retry-After"))
-}
-
-func TestExceptionHandler_UnknownError(t *testing.T) {
-	handler := NewDefaultExceptionHandler()
-	req := httptest.NewRequest("GET", "/test", nil)
-
-	// Unknown error type
-	unknownErr := &CustomError{Message: "Unknown error"}
-	response := handler.HandleException(unknownErr, req)
-
-	assert.NotNil(t, response)
-	assert.True(t, response.Error)
-	assert.Equal(t, "internal_error", response.Code)
-}
-
-// CustomError for testing unknown error types
-type CustomError struct {
-	Message string
-}
-
-func (e *CustomError) Error() string {
-	return e.Message
 }

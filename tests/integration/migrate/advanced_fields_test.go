@@ -12,7 +12,6 @@ import (
 
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/db/migrate"
-	"github.com/forgego/forge/tests/helpers"
 	"github.com/forgego/forge/tests/testhelpers"
 )
 
@@ -94,8 +93,8 @@ func (Product) Relations() []schema.Relation {
 	require.NoError(t, err)
 
 	// Verify generated column exists and works
-	helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "products")
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "products", "price_with_tax")
+	testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "products")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "products", "price_with_tax")
 
 	// Insert test data and verify generated column calculation
 	_, err = postgresDB.ExecContext(ctx, `
@@ -197,8 +196,8 @@ func (Article) Relations() []schema.Relation {
 	require.NoError(t, err)
 
 	// Verify custom column name
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "articles", "article_title")
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "articles", "slug")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "articles", "article_title")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "articles", "slug")
 
 	// Verify index on slug exists
 	var indexExists bool
@@ -303,11 +302,11 @@ func (Employee) Relations() []schema.Relation {
 	require.NoError(t, err)
 
 	// Verify table and constraints
-	helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "employees")
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "employees", "email")
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "employees", "employee_id")
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "employees", "age")
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "employees", "salary")
+	testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "employees")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "employees", "email")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "employees", "employee_id")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "employees", "age")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "employees", "salary")
 
 	// Test unique constraint on email
 	_, err = postgresDB.ExecContext(ctx, `
@@ -399,7 +398,7 @@ func (Task) Relations() []schema.Relation {
 	require.NoError(t, err)
 
 	// Verify table exists
-	helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "tasks")
+	testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "tasks")
 
 	// Insert row without specifying default fields
 	_, err = postgresDB.ExecContext(ctx, `INSERT INTO tasks (title) VALUES ('Test Task')`)

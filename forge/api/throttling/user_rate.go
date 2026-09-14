@@ -7,120 +7,87 @@ import (
 	"time"
 
 	"github.com/forgego/forge/api/authentication"
+	internalratelimit "github.com/forgego/forge/internal/ratelimit"
 )
 
-// UserRateThrottle throttles authenticated user requests
+// UserRateThrottle throttles authenticated user requests.
 type UserRateThrottle struct {
-	// Rate is the rate limit (e.g., "1000/day")
-	Rate string
-	// Cache is the cache backend for storing throttle data
-	Cache CacheBackend
-	// Scope is the scope identifier for this throttle
-	Scope string
+	Rate     string
+	Scope    string
+	store    Store
+	parseErr error
 }
 
-// NewUserRateThrottle creates a new user rate throttle
-func NewUserRateThrottle(rate string, cache CacheBackend) *UserRateThrottle {
+// NewUserRateThrottle creates a new user rate throttle.
+func NewUserRateThrottle(rate string) *UserRateThrottle {
+	limit, window, err := parseRate(rate)
+	var store Store
+	if err == nil {
+		store = internalratelimit.NewFixedWindowCounter(limit, window)
+	}
 	return &UserRateThrottle{
-		Rate:  rate,
-		Cache: cache,
-		Scope: "user",
+		Rate:     rate,
+		Scope:    "user",
+		store:    store,
+		parseErr: err,
 	}
 }
 
-// AllowRequest checks if the authenticated request should be allowed
+// NewUserRateThrottleWithStore creates a new user rate throttle with a custom store.
+func NewUserRateThrottleWithStore(rate string, store Store) *UserRateThrottle {
+	throttle := NewUserRateThrottle(rate)
+	throttle.store = store
+	return throttle
+}
+
+// WithStore sets the rate limit store.
+func (t *UserRateThrottle) WithStore(store Store) *UserRateThrottle {
+	t.store = store
+	return t
+}
+
+// AllowRequest checks whether the authenticated request should be allowed.
 func (t *UserRateThrottle) AllowRequest(r *http.Request, view interface{}) (bool, time.Duration, error) {
-	// Get authenticated user
-	_, ok := authentication.GetUserFromRequest(r)
-	if !ok {
-		// Not authenticated, don't throttle (let AnonRateThrottle handle it)
+	if t.parseErr != nil {
+		return true, 0, t.parseErr
+	}
+	if t.store == nil {
 		return true, 0, nil
 	}
-
-	scope := t.GetScope(r, view)
-	key := "throttle_user_" + scope
-
-	return t.checkRate(key, t.Rate)
+	key := "throttle_user_" + t.GetScope(r, view)
+	allowed, retryAfter := t.store.Allow(key)
+	return allowed, retryAfter, nil
 }
 
-// GetScope returns the scope identifier (user ID)
+// GetScope returns the authenticated user's ID.
 func (t *UserRateThrottle) GetScope(r *http.Request, view interface{}) string {
 	user, ok := authentication.GetUserFromRequest(r)
 	if !ok {
-		return ""
+		return getClientIP(r)
 	}
-
-	// Try to get user ID
-	if id := getUserID(user); id != nil {
-		return formatID(id)
-	}
-
-	// User exists but no ID found - use empty string as scope
-	return ""
+	return formatID(getUserID(user))
 }
 
-// checkRate checks if the rate limit is exceeded
-func (t *UserRateThrottle) checkRate(key, rate string) (bool, time.Duration, error) {
-	if t.Cache == nil {
-		return true, 0, nil
-	}
-
-	limit, duration, err := parseRate(rate)
-	if err != nil {
-		return true, 0, err
-	}
-
-	if c, ok := t.Cache.(atomicCounter); ok {
-		return c.IncrementWithinLimit(key, limit, duration)
-	}
-
-	count, err := t.Cache.GetInt(key)
-	if err != nil {
-		count = 0
-	}
-
-	if count >= limit {
-		ttl := t.Cache.GetTTL(key)
-		return false, ttl, nil
-	}
-
-	newCount := count + 1
-	if err := t.Cache.Set(key, newCount, duration); err != nil {
-		return true, 0, err
-	}
-
-	return true, 0, nil
-}
-
-// getUserID gets the user ID from a user object
 func getUserID(user interface{}) interface{} {
-	// Use reflection to get ID
-	v := reflect.ValueOf(user)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
+	value := reflect.ValueOf(user)
+	if value.Kind() == reflect.Ptr {
+		value = value.Elem()
 	}
-
-	// Try GetID method
-	if method := v.MethodByName("GetID"); method.IsValid() {
+	if method := value.MethodByName("GetID"); method.IsValid() {
 		results := method.Call(nil)
 		if len(results) > 0 {
 			return results[0].Interface()
 		}
 	}
-
-	// Try ID field
-	if field := v.FieldByName("ID"); field.IsValid() {
+	if field := value.FieldByName("ID"); field.IsValid() {
 		return field.Interface()
 	}
-
 	return nil
 }
 
-// formatID formats an ID as a string
 func formatID(id interface{}) string {
 	if id == nil {
 		return ""
 	}
-	// Convert to string
 	return fmt.Sprintf("%v", id)
 }

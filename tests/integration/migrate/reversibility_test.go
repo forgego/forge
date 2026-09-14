@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/forgego/forge/db"
-	"github.com/forgego/forge/tests/helpers"
 	"github.com/forgego/forge/tests/testhelpers"
 )
 
@@ -85,11 +84,11 @@ func TestMigrationUpDown(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify tables exist
-	helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "users")
-	helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "posts")
+	testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "users")
+	testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "posts")
 
 	// Verify migration state using the existing runner
-	helpers.AssertMigrationStateWithRunner(ctx, t, database, migrationsDir, 2, false, runner)
+	testhelpers.AssertMigrationStateWithRunner(ctx, t, database, migrationsDir, 2, false, runner)
 
 	// Rollback one migration
 	err = runner.Rollback(ctx)
@@ -104,10 +103,10 @@ func TestMigrationUpDown(t *testing.T) {
 	require.Error(t, err, "posts table should not exist after rollback")
 
 	// Verify users table still exists
-	helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "users")
+	testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "users")
 
 	// Verify migration state using the existing runner
-	helpers.AssertMigrationStateWithRunner(ctx, t, database, migrationsDir, 1, false, runner)
+	testhelpers.AssertMigrationStateWithRunner(ctx, t, database, migrationsDir, 1, false, runner)
 
 	// Rollback again
 	err = runner.Rollback(ctx)
@@ -121,7 +120,7 @@ func TestMigrationUpDown(t *testing.T) {
 	require.Error(t, err, "users table should not exist after rollback")
 
 	// Verify migration state using the existing runner
-	helpers.AssertMigrationStateWithRunner(ctx, t, database, migrationsDir, 0, false, runner)
+	testhelpers.AssertMigrationStateWithRunner(ctx, t, database, migrationsDir, 0, false, runner)
 }
 
 // TestMigrationRollbackSequence tests rolling back multiple migrations in sequence
@@ -198,14 +197,14 @@ func TestMigrationRollbackSequence(t *testing.T) {
 
 	// Verify all tables exist
 	for _, mig := range migrations {
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", mig.table)
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", mig.table)
 	}
 
 	// Verify migration state using the existing runner
-	helpers.AssertMigrationStateWithRunner(ctx, t, database, migrationsDir, 3, false, runner)
+	testhelpers.AssertMigrationStateWithRunner(ctx, t, database, migrationsDir, 3, false, runner)
 
 	// Rollback all migrations using the existing runner
-	err = helpers.RollbackMigrationSequence(ctx, t, database, migrationsDir, 3, runner)
+	err = testhelpers.RollbackMigrationSequence(ctx, t, database, migrationsDir, 3, runner)
 	require.NoError(t, err)
 
 	// Verify all tables are gone
@@ -219,7 +218,7 @@ func TestMigrationRollbackSequence(t *testing.T) {
 	}
 
 	// Verify migration state
-	helpers.AssertMigrationState(ctx, t, database, migrationsDir, 0, false)
+	testhelpers.AssertMigrationState(ctx, t, database, migrationsDir, 0, false)
 }
 
 // TestMigrationReapplyAfterRollback tests reapplying migrations after rollback
@@ -277,7 +276,7 @@ func TestMigrationReapplyAfterRollback(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify table exists
-	helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "users")
+	testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "users")
 
 	// Rollback
 	err = runner.Rollback(ctx)
@@ -296,10 +295,10 @@ func TestMigrationReapplyAfterRollback(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify table exists again
-	helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "users")
+	testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "users")
 
 	// Verify migration state
-	helpers.AssertMigrationState(ctx, t, database, migrationsDir, 1, false)
+	testhelpers.AssertMigrationState(ctx, t, database, migrationsDir, 1, false)
 }
 
 // TestMigrationDownWithData tests rolling back migrations that have data
@@ -358,10 +357,10 @@ func TestMigrationDownWithData(t *testing.T) {
 
 	// Insert data
 	insertSQL := `INSERT INTO users (username, email) VALUES ('testuser', 'test@example.com')`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, insertSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, insertSQL)
 
 	// Verify data exists
-	helpers.AssertRowCount(ctx, t, postgresDB, "users", 1)
+	testhelpers.AssertRowCount(ctx, t, postgresDB, "users", 1)
 
 	// Rollback (should succeed even with data if using DROP TABLE IF EXISTS)
 	err = runner.Rollback(ctx)
@@ -451,7 +450,7 @@ func TestMigrationPartialRollback(t *testing.T) {
 
 	// Verify all tables exist
 	for _, mig := range migrations {
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", mig.table)
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", mig.table)
 	}
 
 	// Rollback to version 1
@@ -459,7 +458,7 @@ func TestMigrationPartialRollback(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify only table1 exists
-	helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "table1")
+	testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "table1")
 
 	// Verify table2 and table3 are gone
 	var exists int
@@ -476,5 +475,5 @@ func TestMigrationPartialRollback(t *testing.T) {
 	require.Error(t, err, "table3 should not exist")
 
 	// Verify migration state
-	helpers.AssertMigrationState(ctx, t, database, migrationsDir, 1, false)
+	testhelpers.AssertMigrationState(ctx, t, database, migrationsDir, 1, false)
 }

@@ -383,6 +383,39 @@ func (mr *MigrationRunner) Rollback(ctx context.Context) error {
 	return nil
 }
 
+// RollbackSteps rolls back a specified number of migration steps
+func (mr *MigrationRunner) RollbackSteps(ctx context.Context, steps int) error {
+	if steps <= 0 {
+		return fmt.Errorf("steps must be greater than 0, got %d", steps)
+	}
+
+	// Check current version before rolling back
+	currentVersion, dirty, err := mr.migrate.Version()
+	if err != nil {
+		if err == migrate.ErrNilVersion {
+			return fmt.Errorf("no migrations to rollback: database is at version 0")
+		}
+		return fmt.Errorf("failed to check current migration version: %w", err)
+	}
+
+	if dirty {
+		return fmt.Errorf("cannot rollback: database is in a dirty state (version %d). Use Force() to resolve or manually fix the issue", currentVersion)
+	}
+
+	if currentVersion == 0 {
+		return fmt.Errorf("no migrations to rollback: database is at version 0")
+	}
+
+	// Rollback n steps
+	if err := mr.migrate.Steps(-steps); err != nil {
+		if err == migrate.ErrNoChange {
+			return fmt.Errorf("no migrations to rollback")
+		}
+		return fmt.Errorf("failed to rollback migration: %w", err)
+	}
+	return nil
+}
+
 // RollbackTo rolls back to a specific version
 func (mr *MigrationRunner) RollbackTo(ctx context.Context, version uint) error {
 	// Check current version

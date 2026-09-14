@@ -27,21 +27,3 @@ func NewAPIException(status int, code, message string, details interface{}) *API
 		Details: details,
 	}
 }
-
-// ErrorResponse represents an error response
-type ErrorResponse struct {
-	Error   bool        `json:"error"`
-	Code    string      `json:"code"`
-	Message string      `json:"message"`
-	Details interface{} `json:"details,omitempty"`
-}
-
-// ToResponse converts an exception to an error response
-func (e *APIException) ToResponse() *ErrorResponse {
-	return &ErrorResponse{
-		Error:   true,
-		Code:    e.Code,
-		Message: e.Message,
-		Details: e.Details,
-	}
-}

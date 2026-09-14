@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBeginTx_NilDB(t *testing.T) {
@@ -319,9 +320,7 @@ func TestValidateSavepointNameUnicodeLetters(t *testing.T) {
 func setupTransactionTestDB(t *testing.T) *DB {
 	t.Helper()
 	sqlDB, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		t.Skipf("sqlite3 not available (CGO required): %v", err)
-	}
+	require.NoError(t, err)
 	sqlDB.SetMaxOpenConns(1)
 	t.Cleanup(func() {
 		_ = sqlDB.Close()

@@ -67,7 +67,7 @@ func (b *tokenBackend) GetUser(ctx context.Context, identifier string) (*models.
 	// Get user
 	user, err := b.userRepo.GetByID(ctx, session.UserID)
 	if err != nil {
-		return nil, fmt.Errorf("user not found")
+		return nil, repository.ErrUserNotFound
 	}
 
 	// Check if user is active

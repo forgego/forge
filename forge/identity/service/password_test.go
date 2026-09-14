@@ -250,9 +250,21 @@ func TestPasswordService_ResetPassword(t *testing.T) {
 	})
 
 	t.Run("fails with expired token", func(t *testing.T) {
-		// Create expired token (would need to manipulate expiry)
-		// This is a placeholder for when token expiry is implemented
-		t.Skip("Token expiry testing requires time manipulation")
+		rawToken := "expired-reset-token"
+		hashedToken, hashErr := utils.HashPassword(rawToken)
+		require.NoError(t, hashErr)
+
+		token := &models.PasswordResetToken{
+			UserID:    user.ID,
+			Token:     hashedToken,
+			ExpiresAt: time.Now().Add(-1 * time.Hour),
+		}
+		err := tokenRepo.CreatePasswordResetToken(ctx, token)
+		require.NoError(t, err)
+
+		err = service.ResetPassword(ctx, rawToken, "NewPassword123!")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "expired")
 	})
 
 	t.Run("resets password when token is stored hashed", func(t *testing.T) {

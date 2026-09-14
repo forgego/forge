@@ -3,6 +3,8 @@ package registry
 import (
 	"fmt"
 	"sync"
+
+	forgeerrors "github.com/forgego/forge/errors"
 )
 
 // Plugin is the main interface that all plugins must implement
@@ -119,6 +121,13 @@ var globalPluginRegistry = &PluginRegistry{
 
 // RegisterPlugin registers a plugin and applies its extensions
 func RegisterPlugin(plugin Plugin) error {
+	if _, ok := plugin.(AdminPlugin); ok {
+		return forgeerrors.NewNotImplementedError("registry admin plugin extensions")
+	}
+	if _, ok := plugin.(APIPlugin); ok {
+		return forgeerrors.NewNotImplementedError("registry API plugin extensions")
+	}
+
 	globalPluginRegistry.mu.Lock()
 	if _, exists := globalPluginRegistry.plugins[plugin.Name()]; exists {
 		globalPluginRegistry.mu.Unlock()
@@ -135,35 +144,15 @@ func RegisterPlugin(plugin Plugin) error {
 		return fmt.Errorf("plugin %s installation failed: %w", plugin.Name(), err)
 	}
 
-	// Register by type
 	modelPlugin, okModel := plugin.(ModelPlugin)
-	adminPlugin, okAdmin := plugin.(AdminPlugin)
-	apiPlugin, okAPI := plugin.(APIPlugin)
-
-	if okModel || okAdmin || okAPI {
+	if okModel {
 		globalPluginRegistry.mu.Lock()
-		if okModel {
-			globalPluginRegistry.modelPlugins = append(globalPluginRegistry.modelPlugins, modelPlugin)
-		}
-		if okAdmin {
-			globalPluginRegistry.adminPlugins = append(globalPluginRegistry.adminPlugins, adminPlugin)
-		}
-		if okAPI {
-			globalPluginRegistry.apiPlugins = append(globalPluginRegistry.apiPlugins, apiPlugin)
-		}
+		globalPluginRegistry.modelPlugins = append(globalPluginRegistry.modelPlugins, modelPlugin)
 		globalPluginRegistry.mu.Unlock()
 	}
 
 	if okModel {
 		applyModelExtensions(modelPlugin)
-	}
-
-	if okAdmin {
-		applyAdminExtensions(adminPlugin)
-	}
-
-	if okAPI {
-		applyAPIExtensions(apiPlugin)
 	}
 
 	return nil
@@ -226,18 +215,6 @@ func applyModelExtensions(plugin ModelPlugin) {
 			fmt.Printf("Warning: plugin %s failed to extend model %s: %v\n", plugin.Name(), name, err)
 		}
 	}
-}
-
-// applyAdminExtensions applies admin extensions from a plugin
-func applyAdminExtensions(plugin AdminPlugin) {
-	// This would be called when admin models are registered
-	// For now, it's a placeholder - full implementation would integrate with admin registry
-}
-
-// applyAPIExtensions applies API extensions from a plugin
-func applyAPIExtensions(plugin APIPlugin) {
-	// This would be called when API viewsets are registered
-	// For now, it's a placeholder - full implementation would integrate with API router
 }
 
 // BasePlugin provides a base implementation for plugins

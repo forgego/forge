@@ -5,6 +5,7 @@ import (
 	"html"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/alexedwards/scs/v2"
@@ -179,6 +180,22 @@ func NewXSS() *XSS {
 // EscapeHTML escapes HTML special characters
 func (x *XSS) EscapeHTML(s string) string {
 	return html.EscapeString(s)
+}
+
+// SanitizeHTMLStrict escapes all HTML so the content renders as text.
+func (x *XSS) SanitizeHTMLStrict(htmlContent string) string {
+	return x.EscapeHTML(htmlContent)
+}
+
+// SanitizeInput removes null bytes and escapes HTML in user input.
+func (x *XSS) SanitizeInput(input string) string {
+	// Remove null bytes
+	input = strings.ReplaceAll(input, "\x00", "")
+
+	// Escape HTML
+	input = x.EscapeHTML(input)
+
+	return input
 }
 
 // SafeString represents a string that is safe to output without escaping

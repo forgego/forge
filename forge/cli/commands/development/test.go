@@ -2,6 +2,7 @@ package development
 
 import (
 	"fmt"
+	"os/exec"
 
 	"github.com/forgego/forge/cli/core"
 	"github.com/spf13/cobra"
@@ -29,31 +30,30 @@ func (c *TestCommand) Definition() *cobra.Command {
 
 // Execute runs the command logic
 func (c *TestCommand) Execute(ctx *core.Context, args []string) error {
-	// Use go test to run tests
-	// This is a wrapper around go test
 	testDir := "."
 	if len(args) > 0 {
 		testDir = args[0]
 	}
 
-	// Get verbose flag
 	verbose, _ := ctx.Cmd.Flags().GetBool("verbose")
-
-	// Get coverage flag
 	coverage, _ := ctx.Cmd.Flags().GetBool("coverage")
 
 	fmt.Printf("Running tests in %s...\n", testDir)
-	fmt.Println("Note: This is a basic wrapper. Use 'go test' directly for full features.")
 
-	// For MVP, just inform user to use go test directly
-	// Full implementation would execute go test programmatically
-	fmt.Println("To run tests, use: go test ./...")
+	cmd := exec.CommandContext(ctx.Cmd.Context(), "go", buildGoTestArgs(verbose, coverage)...)
+	cmd.Dir = testDir
+	cmd.Stdout = ctx.Cmd.OutOrStdout()
+	cmd.Stderr = ctx.Cmd.ErrOrStderr()
+	return cmd.Run()
+}
+
+func buildGoTestArgs(verbose, coverage bool) []string {
+	args := []string{"test"}
 	if verbose {
-		fmt.Println("  with -v for verbose output")
+		args = append(args, "-v")
 	}
 	if coverage {
-		fmt.Println("  with -cover for coverage")
+		args = append(args, "-cover")
 	}
-
-	return nil
+	return append(args, "./...")
 }

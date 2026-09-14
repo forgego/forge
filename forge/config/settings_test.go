@@ -2,6 +2,7 @@ package config
 
 import (
 	"testing"
+	"time"
 )
 
 func TestLoadSettings(t *testing.T) {
@@ -73,6 +74,22 @@ func TestLoadSettings_ServerSettings(t *testing.T) {
 		{"GracefulTimeout", settings.Server.GracefulTimeout, 30},
 	}
 
+	durationTests := []struct {
+		name     string
+		got      time.Duration
+		expected time.Duration
+	}{
+		{"ConnMaxLifetime", settings.Database.ConnMaxLifetime, 5 * time.Minute},
+		{"ConnMaxIdleTime", settings.Database.ConnMaxIdleTime, 2 * time.Minute},
+	}
+	for _, tt := range durationTests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.got != tt.expected {
+				t.Errorf("Database.%s = %v, want %v", tt.name, tt.got, tt.expected)
+			}
+		})
+	}
+
 	for _, tt := range testsInt {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.got != tt.expected {
@@ -122,10 +139,6 @@ func TestLoadSettings_DatabaseSettings(t *testing.T) {
 		{"Port", settings.Database.Port, 5432},
 		{"MaxOpenConns", settings.Database.MaxOpenConns, 25},
 		{"MaxIdleConns", settings.Database.MaxIdleConns, 10},
-		// ConnMaxLifetime and ConnMaxIdleTime are duration strings in config,
-		// but LoadSettings uses GetInt which returns 0 for non-integer values
-		{"ConnMaxLifetime", settings.Database.ConnMaxLifetime, 0},
-		{"ConnMaxIdleTime", settings.Database.ConnMaxIdleTime, 0},
 	}
 
 	for _, tt := range testsInt {
@@ -352,8 +365,8 @@ func TestDatabaseSettings_Struct(t *testing.T) {
 		Port:            5432,
 		MaxOpenConns:    100,
 		MaxIdleConns:    20,
-		ConnMaxLifetime: 600,
-		ConnMaxIdleTime: 300,
+		ConnMaxLifetime: 10 * time.Minute,
+		ConnMaxIdleTime: 5 * time.Minute,
 	}
 
 	if db.Driver != "postgres" {

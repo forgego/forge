@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/forgego/forge/api/authentication"
-	"github.com/forgego/forge/api/exceptions"
 	"github.com/forgego/forge/api/parsers"
 	"github.com/forgego/forge/api/permissions"
 	"github.com/forgego/forge/api/renderers"
@@ -155,9 +154,4 @@ func SetDefaultThrottles(throttleClasses ...throttling.Throttle) {
 	}
 	next.DefaultThrottles = append([]throttling.Throttle(nil), throttleClasses...)
 	globalSettings.Store(&next)
-}
-
-// SetExceptionHandler sets the global exception handler
-func SetExceptionHandler(handler exceptions.ExceptionHandler) {
-	exceptions.SetExceptionHandler(handler)
 }

@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/forgego/forge/tests/helpers"
 	"github.com/forgego/forge/tests/testhelpers"
 )
 
@@ -32,7 +31,7 @@ func TestColumnRename(t *testing.T) {
 	defer postgresDB.Close()
 
 	// Cleanup tables before creating
-	helpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"users"})
+	testhelpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"users"})
 
 	// Create initial table
 	createTableSQL := `
@@ -43,15 +42,15 @@ func TestColumnRename(t *testing.T) {
 			created_at TIMESTAMP DEFAULT NOW()
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Insert test data
 	insertSQL := `INSERT INTO users (username, email) VALUES ('testuser', 'test@example.com')`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, insertSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, insertSQL)
 
 	// Rename column
 	renameSQL := `ALTER TABLE users RENAME COLUMN username TO user_name`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, renameSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, renameSQL)
 
 	// Verify old column doesn't exist
 	var exists int
@@ -63,7 +62,7 @@ func TestColumnRename(t *testing.T) {
 	require.Equal(t, sql.ErrNoRows, err)
 
 	// Verify new column exists
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "users", "user_name")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "users", "user_name")
 
 	// Verify data is preserved
 	var username string
@@ -91,7 +90,7 @@ func TestColumnTypeChange(t *testing.T) {
 	defer postgresDB.Close()
 
 	// Cleanup tables before creating
-	helpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"products"})
+	testhelpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"products"})
 
 	// Create initial table
 	createTableSQL := `
@@ -101,15 +100,15 @@ func TestColumnTypeChange(t *testing.T) {
 			name VARCHAR(200) NOT NULL
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Insert test data
 	insertSQL := `INSERT INTO products (name, price) VALUES ('Test Product', 100)`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, insertSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, insertSQL)
 
 	// Change column type from INTEGER to NUMERIC
 	alterSQL := `ALTER TABLE products ALTER COLUMN price TYPE NUMERIC(12, 2) USING price::NUMERIC(12, 2)`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, alterSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, alterSQL)
 
 	// Verify column type changed
 	var dataType string
@@ -146,7 +145,7 @@ func TestTableRename(t *testing.T) {
 	defer postgresDB.Close()
 
 	// Cleanup tables before creating
-	helpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"old_table", "new_table"})
+	testhelpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"old_table", "new_table"})
 
 	// Create initial table
 	createTableSQL := `
@@ -155,15 +154,15 @@ func TestTableRename(t *testing.T) {
 			name VARCHAR(200) NOT NULL
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Insert test data
 	insertSQL := `INSERT INTO old_table (name) VALUES ('Test Data')`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, insertSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, insertSQL)
 
 	// Rename table
 	renameSQL := `ALTER TABLE old_table RENAME TO new_table`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, renameSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, renameSQL)
 
 	// Verify old table doesn't exist
 	var exists int
@@ -175,7 +174,7 @@ func TestTableRename(t *testing.T) {
 	require.Equal(t, sql.ErrNoRows, err)
 
 	// Verify new table exists
-	helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "new_table")
+	testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "new_table")
 
 	// Verify data is preserved
 	var name string
@@ -203,7 +202,7 @@ func TestAddColumnWithDefault(t *testing.T) {
 	defer postgresDB.Close()
 
 	// Cleanup tables before creating
-	helpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"users"})
+	testhelpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"users"})
 
 	// Create initial table
 	createTableSQL := `
@@ -212,18 +211,18 @@ func TestAddColumnWithDefault(t *testing.T) {
 			username VARCHAR(150) NOT NULL
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Insert test data
 	insertSQL := `INSERT INTO users (username) VALUES ('testuser')`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, insertSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, insertSQL)
 
 	// Add column with default
 	addColumnSQL := `ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT true NOT NULL`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, addColumnSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, addColumnSQL)
 
 	// Verify column exists
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "users", "is_active")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "users", "is_active")
 
 	// Verify existing row has default value
 	var isActive bool
@@ -251,7 +250,7 @@ func TestAddNotNullColumnWithoutDefault(t *testing.T) {
 	defer postgresDB.Close()
 
 	// Cleanup tables before creating
-	helpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"users"})
+	testhelpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"users"})
 
 	// Create initial table with data
 	createTableSQL := `
@@ -260,14 +259,14 @@ func TestAddNotNullColumnWithoutDefault(t *testing.T) {
 			username VARCHAR(150) NOT NULL
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	insertSQL := `INSERT INTO users (username) VALUES ('testuser')`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, insertSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, insertSQL)
 
 	// Try to add NOT NULL column without default - should fail
 	addColumnSQL := `ALTER TABLE users ADD COLUMN email VARCHAR(254) NOT NULL`
-	err = helpers.RunSQLExpectError(ctx, postgresDB, addColumnSQL)
+	err = testhelpers.RunSQLExpectError(ctx, postgresDB, addColumnSQL)
 	require.Error(t, err, "adding NOT NULL column without default should fail when table has data")
 }
 
@@ -297,11 +296,11 @@ func TestDropColumn(t *testing.T) {
 			old_field VARCHAR(100)
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Drop column
 	dropColumnSQL := `ALTER TABLE users DROP COLUMN old_field`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, dropColumnSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, dropColumnSQL)
 
 	// Verify column doesn't exist
 	var exists int
@@ -332,7 +331,7 @@ func TestAddForeignKey(t *testing.T) {
 	defer postgresDB.Close()
 
 	// Cleanup tables before creating
-	helpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"users", "posts"})
+	testhelpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"users", "posts"})
 
 	// Create parent table
 	createUsersSQL := `
@@ -341,7 +340,7 @@ func TestAddForeignKey(t *testing.T) {
 			username VARCHAR(150) NOT NULL
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createUsersSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createUsersSQL)
 
 	// Create child table without FK
 	createPostsSQL := `
@@ -351,16 +350,16 @@ func TestAddForeignKey(t *testing.T) {
 			user_id BIGINT
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createPostsSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createPostsSQL)
 
 	// Add foreign key
 	addFKSQL := `ALTER TABLE posts ADD CONSTRAINT fk_posts_user_id 
 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, addFKSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, addFKSQL)
 
 	// Verify FK exists
-	helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "posts", "user_id")
-	helpers.AssertForeignKeyCascade(ctx, t, postgresDB, "posts", "user_id", helpers.CascadeCASCADE)
+	testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "posts", "user_id")
+	testhelpers.AssertForeignKeyCascade(ctx, t, postgresDB, "posts", "user_id", testhelpers.CascadeCASCADE)
 }
 
 // TestDropForeignKey tests dropping a foreign key constraint
@@ -382,7 +381,7 @@ func TestDropForeignKey(t *testing.T) {
 	defer postgresDB.Close()
 
 	// Cleanup tables before creating
-	helpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"users", "posts"})
+	testhelpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"users", "posts"})
 
 	// Create tables with FK
 	createUsersSQL := `
@@ -391,7 +390,7 @@ func TestDropForeignKey(t *testing.T) {
 			username VARCHAR(150) NOT NULL
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createUsersSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createUsersSQL)
 
 	createPostsSQL := `
 		CREATE TABLE posts (
@@ -400,7 +399,7 @@ func TestDropForeignKey(t *testing.T) {
 			user_id BIGINT REFERENCES users(id) ON DELETE CASCADE
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createPostsSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createPostsSQL)
 
 	// Get constraint name
 	var constraintName string
@@ -413,7 +412,7 @@ func TestDropForeignKey(t *testing.T) {
 
 	// Drop foreign key
 	dropFKSQL := `ALTER TABLE posts DROP CONSTRAINT ` + constraintName
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, dropFKSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, dropFKSQL)
 
 	// Verify FK doesn't exist
 	var exists int
@@ -450,21 +449,21 @@ func TestAddUniqueConstraint(t *testing.T) {
 			email VARCHAR(254) NOT NULL
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Add unique constraint
 	addUniqueSQL := `ALTER TABLE users ADD CONSTRAINT unique_email UNIQUE (email)`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, addUniqueSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, addUniqueSQL)
 
 	// Verify constraint exists
-	helpers.AssertConstraintExistsEnhanced(ctx, t, postgresDB, "users", "unique_email", "UNIQUE")
+	testhelpers.AssertConstraintExistsEnhanced(ctx, t, postgresDB, "users", "unique_email", "UNIQUE")
 
 	// Verify uniqueness is enforced
 	insert1 := `INSERT INTO users (email) VALUES ('test@example.com')`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, insert1)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, insert1)
 
 	insert2 := `INSERT INTO users (email) VALUES ('test@example.com')`
-	err = helpers.RunSQLExpectError(ctx, postgresDB, insert2)
+	err = testhelpers.RunSQLExpectError(ctx, postgresDB, insert2)
 	require.Error(t, err, "duplicate email should fail")
 }
 
@@ -494,29 +493,29 @@ func TestCompositeUniqueConstraint(t *testing.T) {
 			role_id BIGINT NOT NULL
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Add composite unique constraint
 	addUniqueSQL := `ALTER TABLE user_roles ADD CONSTRAINT unique_user_role UNIQUE (user_id, role_id)`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, addUniqueSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, addUniqueSQL)
 
 	// Verify constraint exists
-	helpers.AssertConstraintExistsEnhanced(ctx, t, postgresDB, "user_roles", "unique_user_role", "UNIQUE")
+	testhelpers.AssertConstraintExistsEnhanced(ctx, t, postgresDB, "user_roles", "unique_user_role", "UNIQUE")
 
 	// Verify uniqueness is enforced
 	insert1 := `INSERT INTO user_roles (user_id, role_id) VALUES (1, 1)`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, insert1)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, insert1)
 
 	insert2 := `INSERT INTO user_roles (user_id, role_id) VALUES (1, 1)`
-	err = helpers.RunSQLExpectError(ctx, postgresDB, insert2)
+	err = testhelpers.RunSQLExpectError(ctx, postgresDB, insert2)
 	require.Error(t, err, "duplicate user_id+role_id should fail")
 
 	// But different combinations should work
 	insert3 := `INSERT INTO user_roles (user_id, role_id) VALUES (1, 2)`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, insert3)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, insert3)
 
 	insert4 := `INSERT INTO user_roles (user_id, role_id) VALUES (2, 1)`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, insert4)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, insert4)
 }
 
 // TestAddIndex tests adding an index
@@ -538,7 +537,7 @@ func TestAddIndex(t *testing.T) {
 	defer postgresDB.Close()
 
 	// Cleanup tables before creating
-	helpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"users"})
+	testhelpers.CleanupTables(ctx, t, postgresDB, "postgres", []string{"users"})
 
 	// Create table
 	createTableSQL := `
@@ -548,14 +547,14 @@ func TestAddIndex(t *testing.T) {
 			username VARCHAR(150) NOT NULL
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	// Add index
 	addIndexSQL := `CREATE INDEX idx_users_email ON users(email)`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, addIndexSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, addIndexSQL)
 
 	// Verify index exists
-	helpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "users", "idx_users_email")
+	testhelpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "users", "idx_users_email")
 }
 
 // TestDropIndex tests dropping an index
@@ -583,14 +582,14 @@ func TestDropIndex(t *testing.T) {
 			email VARCHAR(254) NOT NULL
 		)
 	`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, createTableSQL)
 
 	addIndexSQL := `CREATE INDEX idx_users_email ON users(email)`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, addIndexSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, addIndexSQL)
 
 	// Drop index
 	dropIndexSQL := `DROP INDEX idx_users_email`
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, dropIndexSQL)
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, dropIndexSQL)
 
 	// Verify index doesn't exist
 	var exists int

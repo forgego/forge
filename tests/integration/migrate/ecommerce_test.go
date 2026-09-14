@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/forgego/forge/db"
-	"github.com/forgego/forge/tests/helpers"
 	"github.com/forgego/forge/tests/testhelpers"
 )
 
@@ -46,7 +45,7 @@ func TestFullEcommerceSchemaMigration(t *testing.T) {
 	modelsDir := filepath.Join("testdata", "ecommerce_models")
 
 	// Generate migration from all ecommerce models
-	err = helpers.CreateMigrationFromModels(t, modelsDir, migrationsDir, "initial_ecommerce_schema")
+	err = testhelpers.CreateMigrationFromModels(t, modelsDir, migrationsDir, "initial_ecommerce_schema")
 	require.NoError(t, err, "failed to generate migration from ecommerce models")
 
 	// Create database connection using db package
@@ -55,7 +54,7 @@ func TestFullEcommerceSchemaMigration(t *testing.T) {
 	defer database.Close()
 
 	// Apply migration
-	err = helpers.ApplyMigrationSequence(ctx, t, database, migrationsDir)
+	err = testhelpers.ApplyMigrationSequence(ctx, t, database, migrationsDir)
 	require.NoError(t, err, "failed to apply ecommerce migration")
 
 	// Expected tables from all 15 ecommerce models
@@ -79,69 +78,69 @@ func TestFullEcommerceSchemaMigration(t *testing.T) {
 
 	// Verify all tables exist
 	for _, tableName := range expectedTables {
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", tableName)
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", tableName)
 	}
 
 	// Verify key relationships exist
 	// Customer -> Order (FK with PROTECT)
-	helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "orders", "customer_id")
-	helpers.AssertForeignKeyCascade(ctx, t, postgresDB, "orders", "customer_id", helpers.CascadeRESTRICT)
+	testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "orders", "customer_id")
+	testhelpers.AssertForeignKeyCascade(ctx, t, postgresDB, "orders", "customer_id", testhelpers.CascadeRESTRICT)
 
 	// Product -> Brand (FK with SET_NULL)
-	helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "products", "brand_id")
-	helpers.AssertForeignKeyCascade(ctx, t, postgresDB, "products", "brand_id", helpers.CascadeSET_NULL)
+	testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "products", "brand_id")
+	testhelpers.AssertForeignKeyCascade(ctx, t, postgresDB, "products", "brand_id", testhelpers.CascadeSET_NULL)
 
 	// Product -> Supplier (FK with SET_NULL)
-	helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "products", "supplier_id")
-	helpers.AssertForeignKeyCascade(ctx, t, postgresDB, "products", "supplier_id", helpers.CascadeSET_NULL)
+	testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "products", "supplier_id")
+	testhelpers.AssertForeignKeyCascade(ctx, t, postgresDB, "products", "supplier_id", testhelpers.CascadeSET_NULL)
 
 	// Order -> OrderItem (FK with CASCADE)
-	helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "order_items", "order_id")
-	helpers.AssertForeignKeyCascade(ctx, t, postgresDB, "order_items", "order_id", helpers.CascadeCASCADE)
+	testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "order_items", "order_id")
+	testhelpers.AssertForeignKeyCascade(ctx, t, postgresDB, "order_items", "order_id", testhelpers.CascadeCASCADE)
 
 	// Product -> ProductVariant (FK with CASCADE)
-	helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "product_variants", "product_id")
-	helpers.AssertForeignKeyCascade(ctx, t, postgresDB, "product_variants", "product_id", helpers.CascadeCASCADE)
+	testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "product_variants", "product_id")
+	testhelpers.AssertForeignKeyCascade(ctx, t, postgresDB, "product_variants", "product_id", testhelpers.CascadeCASCADE)
 
 	// Customer -> CustomerProfile (OneToOne with CASCADE)
-	helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "customer_profiles", "customer_id")
+	testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "customer_profiles", "customer_id")
 
 	// Verify PostgreSQL-specific data types
 	// UUID columns
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "customers", "uuid")
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "products", "sku")
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "orders", "order_number")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "customers", "uuid")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "products", "sku")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "orders", "order_number")
 
 	// JSONB columns
-	helpers.AssertJSONBColumn(ctx, t, postgresDB, "products", "attributes")
-	helpers.AssertJSONBColumn(ctx, t, postgresDB, "products", "images")
-	helpers.AssertJSONBColumn(ctx, t, postgresDB, "products", "seo_data")
-	helpers.AssertJSONBColumn(ctx, t, postgresDB, "customers", "metadata")
-	helpers.AssertJSONBColumn(ctx, t, postgresDB, "orders", "metadata")
+	testhelpers.AssertJSONBColumn(ctx, t, postgresDB, "products", "attributes")
+	testhelpers.AssertJSONBColumn(ctx, t, postgresDB, "products", "images")
+	testhelpers.AssertJSONBColumn(ctx, t, postgresDB, "products", "seo_data")
+	testhelpers.AssertJSONBColumn(ctx, t, postgresDB, "customers", "metadata")
+	testhelpers.AssertJSONBColumn(ctx, t, postgresDB, "orders", "metadata")
 
 	// DECIMAL/NUMERIC columns
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "products", "price")
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "orders", "total_amount")
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "customers", "lifetime_value")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "products", "price")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "orders", "total_amount")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "customers", "lifetime_value")
 
 	// TIMESTAMP WITH TIME ZONE columns (DateTime fields)
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "products", "created_at")
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "orders", "placed_at")
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "customers", "last_login")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "products", "created_at")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "orders", "placed_at")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "customers", "last_login")
 
 	// Verify indexes
 	// Unique indexes
-	helpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "customers", "idx_customer_email")
-	helpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "customers", "idx_customer_uuid")
-	helpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "products", "idx_product_sku")
-	helpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "products", "idx_product_slug")
-	helpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "orders", "idx_order_order_number")
+	testhelpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "customers", "idx_customer_email")
+	testhelpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "customers", "idx_customer_uuid")
+	testhelpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "products", "idx_product_sku")
+	testhelpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "products", "idx_product_slug")
+	testhelpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "orders", "idx_order_order_number")
 
 	// Non-unique indexes
-	helpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "products", "idx_product_status")
-	helpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "products", "idx_product_is_active")
-	helpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "orders", "idx_order_customer_id")
-	helpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "orders", "idx_order_status")
+	testhelpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "products", "idx_product_status")
+	testhelpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "products", "idx_product_is_active")
+	testhelpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "orders", "idx_order_customer_id")
+	testhelpers.AssertIndexExists(ctx, t, postgresDB, "postgres", "orders", "idx_order_status")
 
 	// Verify GIN indexes for JSONB columns (if created)
 	// Note: GIN indexes may need to be created manually or via migration
