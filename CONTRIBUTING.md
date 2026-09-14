@@ -109,8 +109,8 @@ npm run build
 
 ```bash
 # Update your fork
-git checkout main
-git pull upstream main
+git checkout master
+git pull upstream master
 
 # Create a feature branch
 git checkout -b feature/your-feature-name
@@ -201,6 +201,8 @@ test(migration): add tests for column renaming
 
 - **Automated Checks**: CI tests, security scans, linting
 - **Code Review**: At least one maintainer review required
+- **Review baseline**: [Review standard](docs/REVIEWING.md), including affected flows and architecture.
+- **Documentation ownership**: [Public/local policy](docs/DOCUMENTATION-POLICY.md).
 - **Security Review**: Automatic security scan on all PRs
 - **Testing**: All tests must pass
 - **Documentation**: Docs must be updated
