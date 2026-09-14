@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/forgego/forge/db"
-	"github.com/forgego/forge/tests/helpers"
 	"github.com/forgego/forge/tests/testhelpers"
 )
 
@@ -62,7 +61,7 @@ func TestIncrementalEcommerceMigrations(t *testing.T) {
 		copyModelFile(t, baseModelsDir, phase1ModelsDir, "customer.go")
 
 		// Generate migration
-		err = helpers.CreateMigrationFromModels(t, phase1ModelsDir, migrationsDir, "001_core_models")
+		err = testhelpers.CreateMigrationFromModels(t, phase1ModelsDir, migrationsDir, "001_core_models")
 		require.NoError(t, err)
 
 		// Create runner after migrations are generated
@@ -72,12 +71,12 @@ func TestIncrementalEcommerceMigrations(t *testing.T) {
 		defer runner.Close()
 
 		// Apply migration using the runner
-		err = helpers.ApplyMigrationSequence(ctx, t, database, migrationsDir, runner)
+		err = testhelpers.ApplyMigrationSequence(ctx, t, database, migrationsDir, runner)
 		require.NoError(t, err)
 
 		// Verify tables exist
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "addresses")
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "customers")
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "addresses")
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "customers")
 
 		// Verify customer profile table doesn't exist yet
 		// (we'll add it in a later phase)
@@ -99,7 +98,7 @@ func TestIncrementalEcommerceMigrations(t *testing.T) {
 		copyModelFile(t, baseModelsDir, phase2ModelsDir, "customer_profile.go")
 
 		// Generate migration
-		err = helpers.CreateMigrationFromModels(t, phase2ModelsDir, migrationsDir, "002_customer_profile")
+		err = testhelpers.CreateMigrationFromModels(t, phase2ModelsDir, migrationsDir, "002_customer_profile")
 		require.NoError(t, err)
 
 		// Create runner after migrations are generated
@@ -108,12 +107,12 @@ func TestIncrementalEcommerceMigrations(t *testing.T) {
 		defer runner.Close()
 
 		// Apply migration using the runner
-		err = helpers.ApplyMigrationSequence(ctx, t, database, migrationsDir, runner)
+		err = testhelpers.ApplyMigrationSequence(ctx, t, database, migrationsDir, runner)
 		require.NoError(t, err)
 
 		// Verify new table exists
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "customer_profiles")
-		helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "customer_profiles", "customer_id")
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "customer_profiles")
+		testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "customer_profiles", "customer_id")
 	})
 
 	// Phase 3: Add product-related models (Brand, Supplier, Category, Product)
@@ -136,7 +135,7 @@ func TestIncrementalEcommerceMigrations(t *testing.T) {
 		copyModelFile(t, baseModelsDir, phase3ModelsDir, "product.go")
 
 		// Generate migration
-		err = helpers.CreateMigrationFromModels(t, phase3ModelsDir, migrationsDir, "003_product_models")
+		err = testhelpers.CreateMigrationFromModels(t, phase3ModelsDir, migrationsDir, "003_product_models")
 		require.NoError(t, err)
 
 		// Create runner after migrations are generated
@@ -145,23 +144,23 @@ func TestIncrementalEcommerceMigrations(t *testing.T) {
 		defer runner.Close()
 
 		// Apply migration using the runner
-		err = helpers.ApplyMigrationSequence(ctx, t, database, migrationsDir, runner)
+		err = testhelpers.ApplyMigrationSequence(ctx, t, database, migrationsDir, runner)
 		require.NoError(t, err)
 
 		// Verify new tables exist
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "brands")
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "suppliers")
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "categories")
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "products")
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "brands")
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "suppliers")
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "categories")
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "products")
 
 		// Verify relationships
-		helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "products", "brand_id")
-		helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "products", "supplier_id")
+		testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "products", "brand_id")
+		testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "products", "supplier_id")
 
 		// Verify many-to-many relationship table (products_categories)
 		// Note: ManyToMany creates a junction table
 		// The junction table name might vary, so we'll skip this check for now
-		// helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "products_categories")
+		// testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "products_categories")
 	})
 
 	// Phase 4: Add product variants and inventory
@@ -186,7 +185,7 @@ func TestIncrementalEcommerceMigrations(t *testing.T) {
 		copyModelFile(t, baseModelsDir, phase4ModelsDir, "inventory.go")
 
 		// Generate migration
-		err = helpers.CreateMigrationFromModels(t, phase4ModelsDir, migrationsDir, "004_product_variants")
+		err = testhelpers.CreateMigrationFromModels(t, phase4ModelsDir, migrationsDir, "004_product_variants")
 		require.NoError(t, err)
 
 		// Create runner after migrations are generated
@@ -195,16 +194,16 @@ func TestIncrementalEcommerceMigrations(t *testing.T) {
 		defer runner.Close()
 
 		// Apply migration using the runner
-		err = helpers.ApplyMigrationSequence(ctx, t, database, migrationsDir, runner)
+		err = testhelpers.ApplyMigrationSequence(ctx, t, database, migrationsDir, runner)
 		require.NoError(t, err)
 
 		// Verify new tables
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "product_variants")
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "inventory")
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "product_variants")
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "inventory")
 
 		// Verify relationships
-		helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "product_variants", "product_id")
-		helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "inventory", "product_id")
+		testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "product_variants", "product_id")
+		testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "inventory", "product_id")
 	})
 
 	// Phase 5: Add order-related models
@@ -231,7 +230,7 @@ func TestIncrementalEcommerceMigrations(t *testing.T) {
 		copyModelFile(t, baseModelsDir, phase5ModelsDir, "order_item.go")
 
 		// Generate migration
-		err = helpers.CreateMigrationFromModels(t, phase5ModelsDir, migrationsDir, "005_order_models")
+		err = testhelpers.CreateMigrationFromModels(t, phase5ModelsDir, migrationsDir, "005_order_models")
 		require.NoError(t, err)
 
 		// Create runner after migrations are generated
@@ -240,19 +239,19 @@ func TestIncrementalEcommerceMigrations(t *testing.T) {
 		defer runner.Close()
 
 		// Apply migration using the runner
-		err = helpers.ApplyMigrationSequence(ctx, t, database, migrationsDir, runner)
+		err = testhelpers.ApplyMigrationSequence(ctx, t, database, migrationsDir, runner)
 		require.NoError(t, err)
 
 		// Verify new tables
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "orders")
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "order_items")
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "orders")
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "order_items")
 
 		// Verify relationships
-		helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "orders", "customer_id")
-		helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "orders", "billing_address_id")
-		helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "orders", "shipping_address_id")
-		helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "order_items", "order_id")
-		helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "order_items", "product_id")
+		testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "orders", "customer_id")
+		testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "orders", "billing_address_id")
+		testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "orders", "shipping_address_id")
+		testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "order_items", "order_id")
+		testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "order_items", "product_id")
 	})
 
 	// Phase 6: Add payment and shipping models
@@ -281,7 +280,7 @@ func TestIncrementalEcommerceMigrations(t *testing.T) {
 		copyModelFile(t, baseModelsDir, phase6ModelsDir, "shipping.go")
 
 		// Generate migration
-		err = helpers.CreateMigrationFromModels(t, phase6ModelsDir, migrationsDir, "006_payment_shipping")
+		err = testhelpers.CreateMigrationFromModels(t, phase6ModelsDir, migrationsDir, "006_payment_shipping")
 		require.NoError(t, err)
 
 		// Create runner after migrations are generated
@@ -290,16 +289,16 @@ func TestIncrementalEcommerceMigrations(t *testing.T) {
 		defer runner.Close()
 
 		// Apply migration using the runner
-		err = helpers.ApplyMigrationSequence(ctx, t, database, migrationsDir, runner)
+		err = testhelpers.ApplyMigrationSequence(ctx, t, database, migrationsDir, runner)
 		require.NoError(t, err)
 
 		// Verify new tables
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "payments")
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "shipping")
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "payments")
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "shipping")
 
 		// Verify relationships
-		helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "payments", "order_id")
-		helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "shipping", "order_id")
+		testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "payments", "order_id")
+		testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "shipping", "order_id")
 	})
 
 	// Phase 7: Add remaining models (Review, Warehouse)
@@ -330,7 +329,7 @@ func TestIncrementalEcommerceMigrations(t *testing.T) {
 		copyModelFile(t, baseModelsDir, phase7ModelsDir, "warehouse.go")
 
 		// Generate migration
-		err = helpers.CreateMigrationFromModels(t, phase7ModelsDir, migrationsDir, "007_remaining_models")
+		err = testhelpers.CreateMigrationFromModels(t, phase7ModelsDir, migrationsDir, "007_remaining_models")
 		require.NoError(t, err)
 
 		// Create runner after migrations are generated
@@ -339,16 +338,16 @@ func TestIncrementalEcommerceMigrations(t *testing.T) {
 		defer runner.Close()
 
 		// Apply migration using the runner
-		err = helpers.ApplyMigrationSequence(ctx, t, database, migrationsDir, runner)
+		err = testhelpers.ApplyMigrationSequence(ctx, t, database, migrationsDir, runner)
 		require.NoError(t, err)
 
 		// Verify new tables
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "reviews")
-		helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "warehouses")
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "reviews")
+		testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "warehouses")
 
 		// Verify relationships
-		helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "reviews", "product_id")
-		helpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "reviews", "customer_id")
+		testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "reviews", "product_id")
+		testhelpers.AssertForeignKeyExists(ctx, t, postgresDB, "postgres", "reviews", "customer_id")
 	})
 
 	// Final verification: all tables should exist
@@ -393,7 +392,7 @@ func TestIncrementalEcommerceMigrations(t *testing.T) {
 		require.NoError(t, err)
 		defer database.Close()
 
-		helpers.AssertMigrationState(ctx, t, database, migrationsDir, 7, false)
+		testhelpers.AssertMigrationState(ctx, t, database, migrationsDir, 7, false)
 	})
 }
 

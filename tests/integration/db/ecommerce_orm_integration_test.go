@@ -13,7 +13,6 @@ import (
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
-	"github.com/forgego/forge/tests/helpers"
 	"github.com/forgego/forge/tests/testhelpers"
 )
 
@@ -97,18 +96,18 @@ func TestEcommerceCatalogMigrations(t *testing.T) {
 	modelsDir, err := ecommerceCatalogModelsDir()
 	require.NoError(t, err)
 
-	err = helpers.CreateMigrationFromModels(t, modelsDir, migrationsDir, "catalog_schema")
+	err = testhelpers.CreateMigrationFromModels(t, modelsDir, migrationsDir, "catalog_schema")
 	require.NoError(t, err)
 
 	database, err := db.NewDB(dsn)
 	require.NoError(t, err)
 	defer database.Close()
 
-	err = helpers.ApplyMigrationSequence(ctx, t, database, migrationsDir)
+	err = testhelpers.ApplyMigrationSequence(ctx, t, database, migrationsDir)
 	require.NoError(t, err)
 
-	helpers.AssertTableExists(ctx, t, postgresDB, "postgres", "categories")
-	helpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "categories", "slug")
+	testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "categories")
+	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "categories", "slug")
 }
 
 func TestORMCRUDWithRelations(t *testing.T) {
@@ -124,7 +123,7 @@ func TestORMCRUDWithRelations(t *testing.T) {
 	defer func() { _ = cleanup() }()
 	defer postgresDB.Close()
 
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, `
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, `
 		CREATE TABLE authors (
 			id BIGSERIAL PRIMARY KEY,
 			name TEXT NOT NULL,
@@ -132,7 +131,7 @@ func TestORMCRUDWithRelations(t *testing.T) {
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)
 	`)
-	helpers.RunSQLExpectSuccess(ctx, t, postgresDB, `
+	testhelpers.RunSQLExpectSuccess(ctx, t, postgresDB, `
 		CREATE TABLE books (
 			id BIGSERIAL PRIMARY KEY,
 			title TEXT NOT NULL,

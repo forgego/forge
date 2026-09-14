@@ -71,9 +71,7 @@ func (m *ErrorMapper) MapError(err error, instance string) *Problem {
 	case *exceptions.APIException:
 		return m.mapAPIException(e, instance)
 	default:
-		// Unknown error - sanitize and return as internal error
-		sanitizedMsg := m.sanitizer.SanitizeError(err)
-		return m.mapInternalError(sanitizedMsg, instance)
+		return m.mapInternalError("An internal error occurred", instance)
 	}
 }
 

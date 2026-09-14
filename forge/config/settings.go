@@ -1,6 +1,9 @@
 package config
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 // Settings represents framework settings structure
 type Settings struct {
@@ -50,8 +53,8 @@ type DatabaseSettings struct {
 	Port            int
 	MaxOpenConns    int
 	MaxIdleConns    int
-	ConnMaxLifetime int
-	ConnMaxIdleTime int
+	ConnMaxLifetime time.Duration
+	ConnMaxIdleTime time.Duration
 }
 
 // SecuritySettings contains security-related settings
@@ -106,8 +109,8 @@ func LoadSettings(cfg *Config) *Settings {
 			SSLMode:         cfg.GetString("database.sslmode", "disable"),
 			MaxOpenConns:    cfg.GetInt("database.max_open_conns", 25),
 			MaxIdleConns:    cfg.GetInt("database.max_idle_conns", 5),
-			ConnMaxLifetime: cfg.GetInt("database.conn_max_lifetime", 300),
-			ConnMaxIdleTime: cfg.GetInt("database.conn_max_idle_time", 600),
+			ConnMaxLifetime: cfg.GetDuration("database.conn_max_lifetime", 5*time.Minute),
+			ConnMaxIdleTime: cfg.GetDuration("database.conn_max_idle_time", 2*time.Minute),
 		},
 		Security: SecuritySettings{
 			SecretKey:       cfg.GetString("security.secret_key", ""),

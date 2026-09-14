@@ -107,3 +107,43 @@ func TestNewMigrationRunner_EmptyDriver(t *testing.T) {
 	require.Nil(t, runner)
 	require.Contains(t, err.Error(), "database driver is unknown")
 }
+
+func TestMigrationRunner_RollbackSteps(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_rollback.db")
+	database, err := NewDBWithDriver("sqlite3", dbPath)
+	require.NoError(t, err)
+	defer database.Close()
+
+	migrationsDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000001_first.up.sql"), []byte("CREATE TABLE t1(id INTEGER);"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000001_first.down.sql"), []byte("DROP TABLE t1;"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000002_second.up.sql"), []byte("CREATE TABLE t2(id INTEGER);"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000002_second.down.sql"), []byte("DROP TABLE t2;"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000003_third.up.sql"), []byte("CREATE TABLE t3(id INTEGER);"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000003_third.down.sql"), []byte("DROP TABLE t3;"), 0644))
+
+	runner, err := NewMigrationRunner(database, migrationsDir)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// Invalid step counts return error
+	require.Error(t, runner.RollbackSteps(ctx, 0))
+	require.Error(t, runner.RollbackSteps(ctx, -1))
+
+	// Migrate all 3 steps
+	require.NoError(t, runner.Migrate(ctx))
+
+	v, dirty, err := runner.Version(ctx)
+	require.NoError(t, err)
+	require.False(t, dirty)
+	require.Equal(t, uint(3), v)
+
+	// Rollback 2 steps
+	require.NoError(t, runner.RollbackSteps(ctx, 2))
+
+	v, dirty, err = runner.Version(ctx)
+	require.NoError(t, err)
+	require.False(t, dirty)
+	require.Equal(t, uint(1), v)
+}

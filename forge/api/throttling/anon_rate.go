@@ -4,86 +4,64 @@ import (
 	"net/http"
 	"time"
 
+	internalratelimit "github.com/forgego/forge/internal/ratelimit"
 	"github.com/forgego/forge/netutil"
 )
 
-// AnonRateThrottle throttles anonymous (unauthenticated) requests
+// AnonRateThrottle throttles anonymous requests by client IP.
 type AnonRateThrottle struct {
-	// Rate is the rate limit (e.g., "100/hour")
-	Rate string
-	// Cache is the cache backend for storing throttle data
-	Cache CacheBackend
-	// Scope is the scope identifier for this throttle
-	Scope string
+	Rate     string
+	Scope    string
+	store    Store
+	parseErr error
 }
 
-// NewAnonRateThrottle creates a new anonymous rate throttle
-func NewAnonRateThrottle(rate string, cache CacheBackend) *AnonRateThrottle {
+// NewAnonRateThrottle creates a new anonymous rate throttle.
+func NewAnonRateThrottle(rate string) *AnonRateThrottle {
+	limit, window, err := parseRate(rate)
+	var store Store
+	if err == nil {
+		store = internalratelimit.NewFixedWindowCounter(limit, window)
+	}
 	return &AnonRateThrottle{
-		Rate:  rate,
-		Cache: cache,
-		Scope: "anon",
+		Rate:     rate,
+		Scope:    "anon",
+		store:    store,
+		parseErr: err,
 	}
 }
 
-// AllowRequest checks if the anonymous request should be allowed
-func (t *AnonRateThrottle) AllowRequest(r *http.Request, view interface{}) (bool, time.Duration, error) {
-	// Only throttle if user is not authenticated
-	// In a real implementation, check if user is authenticated
-	// For now, always apply to anonymous requests
-
-	scope := t.GetScope(r, view)
-	key := "throttle_anon_" + scope
-
-	return t.checkRate(key, t.Rate)
+// NewAnonRateThrottleWithStore creates a new anonymous rate throttle with a custom store.
+func NewAnonRateThrottleWithStore(rate string, store Store) *AnonRateThrottle {
+	throttle := NewAnonRateThrottle(rate)
+	throttle.store = store
+	return throttle
 }
 
-// GetScope returns the scope identifier
+// WithStore sets the rate limit store.
+func (t *AnonRateThrottle) WithStore(store Store) *AnonRateThrottle {
+	t.store = store
+	return t
+}
+
+// AllowRequest checks whether the anonymous request should be allowed.
+func (t *AnonRateThrottle) AllowRequest(r *http.Request, view interface{}) (bool, time.Duration, error) {
+	if t.parseErr != nil {
+		return true, 0, t.parseErr
+	}
+	if t.store == nil {
+		return true, 0, nil
+	}
+	key := "throttle_anon_" + t.GetScope(r, view)
+	allowed, retryAfter := t.store.Allow(key)
+	return allowed, retryAfter, nil
+}
+
+// GetScope returns the client IP address for anonymous users.
 func (t *AnonRateThrottle) GetScope(r *http.Request, view interface{}) string {
-	// Use IP address as scope for anonymous users
 	return getClientIP(r)
 }
 
-// checkRate checks if the rate limit is exceeded
-func (t *AnonRateThrottle) checkRate(key, rate string) (bool, time.Duration, error) {
-	if t.Cache == nil {
-		// No cache, allow all requests
-		return true, 0, nil
-	}
-
-	// Parse rate (e.g., "100/hour")
-	limit, duration, err := parseRate(rate)
-	if err != nil {
-		return true, 0, err
-	}
-
-	if c, ok := t.Cache.(atomicCounter); ok {
-		return c.IncrementWithinLimit(key, limit, duration)
-	}
-
-	// Get current count
-	count, err := t.Cache.GetInt(key)
-	if err != nil {
-		count = 0
-	}
-
-	// Check if limit exceeded
-	if count >= limit {
-		// Get TTL to calculate wait duration
-		ttl := t.Cache.GetTTL(key)
-		return false, ttl, nil
-	}
-
-	// Increment count
-	newCount := count + 1
-	if err := t.Cache.Set(key, newCount, duration); err != nil {
-		return true, 0, err
-	}
-
-	return true, 0, nil
-}
-
-// getClientIP gets the client IP address from request
 func getClientIP(r *http.Request) string {
 	return netutil.ClientIP(r, netutil.TrustedProxies())
 }

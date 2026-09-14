@@ -378,12 +378,8 @@ func TestDetectDialectFromDriver(t *testing.T) {
 	}
 }
 
-// Interface compliance tests
-
-func TestPostgreSQLDialect_ImplementsDialect(t *testing.T) {
-	var _ Dialect = NewPostgreSQLDialect()
-}
-
-func TestSQLiteDialect_ImplementsDialect(t *testing.T) {
-	var _ Dialect = NewSQLiteDialect()
-}
+// Interface compliance assertions
+var (
+	_ Dialect = (*PostgreSQLDialect)(nil)
+	_ Dialect = (*SQLiteDialect)(nil)
+)

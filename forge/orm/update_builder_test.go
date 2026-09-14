@@ -11,42 +11,41 @@ func TestNewUpdateBuilder(t *testing.T) {
 	qs, err := NewQuerySet[testModel]("test_table")
 	require.NoError(t, err)
 
-	// UpdateBuilder requires schema registration which testModel doesn't have
-	// This will fail, so we skip the test
-	_, err = NewUpdateBuilder[testModel](qs)
-	if err != nil {
-		t.Skipf("Schema not registered for testModel, skipping UpdateBuilder tests: %v", err)
-		return
-	}
-	// If we get here, schema was registered (unlikely for testModel)
+	ub, err := NewUpdateBuilder[testModel](qs)
+	require.NoError(t, err)
+	assert.NotNil(t, ub)
 }
 
 func TestUpdateBuilder_Set(t *testing.T) {
 	qs, err := NewQuerySet[testModel]("test_table")
 	require.NoError(t, err)
 
-	// UpdateBuilder requires schema registration which testModel doesn't have
 	ub, err := NewUpdateBuilder[testModel](qs)
-	if err != nil {
-		t.Skipf("Schema not registered for testModel, skipping UpdateBuilder tests: %v", err)
-		return
-	}
+	require.NoError(t, err)
 
 	// Set string value (using interface{} since Set doesn't have type parameter)
 	ub = ub.Set("name", "New Name")
 	assert.NotNil(t, ub)
+	assert.NoError(t, ub.err)
+	assert.Equal(t, "New Name", ub.updates["name"])
 
 	// Set float value
 	ub = ub.Set("price", 29.99)
 	assert.NotNil(t, ub)
+	assert.NoError(t, ub.err)
+	assert.Equal(t, 29.99, ub.updates["price"])
 
 	// Set int value
 	ub = ub.Set("id", int64(1))
 	assert.NotNil(t, ub)
+	assert.NoError(t, ub.err)
+	assert.Equal(t, int64(1), ub.updates["id"])
 
 	// Set bool value
 	ub = ub.Set("available", true)
 	assert.NotNil(t, ub)
+	assert.NoError(t, ub.err)
+	assert.Equal(t, true, ub.updates["available"])
 }
 
 func TestUpdateBuilder_SetExpr(t *testing.T) {
@@ -54,16 +53,15 @@ func TestUpdateBuilder_SetExpr(t *testing.T) {
 	require.NoError(t, err)
 
 	ub, err := NewUpdateBuilder[testModel](qs)
-	if err != nil {
-		t.Skipf("Schema not registered for testModel, skipping UpdateBuilder tests: %v", err)
-		return
-	}
+	require.NoError(t, err)
 
 	priceField := NewField[float64]("price", "test_table")
 	// SetExpr requires an Expression - use the field itself
 	// This tests that SetExpr accepts expressions
 	ub = ub.SetExpr("price", priceField)
 	assert.NotNil(t, ub)
+	assert.NoError(t, ub.err)
+	assert.Equal(t, priceField, ub.updates["price"])
 }
 
 func TestUpdateBuilder_SetField(t *testing.T) {
@@ -71,15 +69,14 @@ func TestUpdateBuilder_SetField(t *testing.T) {
 	require.NoError(t, err)
 
 	ub, err := NewUpdateBuilder[testModel](qs)
-	if err != nil {
-		t.Skipf("Schema not registered for testModel, skipping UpdateBuilder tests: %v", err)
-		return
-	}
+	require.NoError(t, err)
 
 	sourceField := NewField[string]("name", "test_table")
 	// Use a field that exists - set email to name value
 	ub = ub.SetField("email", sourceField)
 	assert.NotNil(t, ub)
+	assert.NoError(t, ub.err)
+	assert.Equal(t, sourceField, ub.updates["email"])
 }
 
 func TestUpdateBuilder_Increment(t *testing.T) {
@@ -87,18 +84,19 @@ func TestUpdateBuilder_Increment(t *testing.T) {
 	require.NoError(t, err)
 
 	ub, err := NewUpdateBuilder[testModel](qs)
-	if err != nil {
-		t.Skipf("Schema not registered for testModel, skipping UpdateBuilder tests: %v", err)
-		return
-	}
+	require.NoError(t, err)
 
 	// Increment int64
 	ub = ub.Increment("id", int64(1))
 	assert.NotNil(t, ub)
+	assert.NoError(t, ub.err)
+	assert.NotNil(t, ub.updates["id"])
 
 	// Increment float64
 	ub = ub.Increment("price", 0.5)
 	assert.NotNil(t, ub)
+	assert.NoError(t, ub.err)
+	assert.NotNil(t, ub.updates["price"])
 }
 
 func TestUpdateBuilder_Decrement(t *testing.T) {
@@ -106,18 +104,19 @@ func TestUpdateBuilder_Decrement(t *testing.T) {
 	require.NoError(t, err)
 
 	ub, err := NewUpdateBuilder[testModel](qs)
-	if err != nil {
-		t.Skipf("Schema not registered for testModel, skipping UpdateBuilder tests: %v", err)
-		return
-	}
+	require.NoError(t, err)
 
 	// Decrement int64
 	ub = ub.Decrement("id", int64(1))
 	assert.NotNil(t, ub)
+	assert.NoError(t, ub.err)
+	assert.NotNil(t, ub.updates["id"])
 
 	// Decrement float64
 	ub = ub.Decrement("price", 0.5)
 	assert.NotNil(t, ub)
+	assert.NoError(t, ub.err)
+	assert.NotNil(t, ub.updates["price"])
 }
 
 func TestUpdateBuilder_Chaining(t *testing.T) {
@@ -125,10 +124,7 @@ func TestUpdateBuilder_Chaining(t *testing.T) {
 	require.NoError(t, err)
 
 	ub, err := NewUpdateBuilder[testModel](qs)
-	if err != nil {
-		t.Skipf("Schema not registered for testModel, skipping UpdateBuilder tests: %v", err)
-		return
-	}
+	require.NoError(t, err)
 
 	// Chain multiple operations
 	ub = ub.
@@ -137,6 +133,10 @@ func TestUpdateBuilder_Chaining(t *testing.T) {
 		Increment("id", int64(1))
 
 	assert.NotNil(t, ub)
+	assert.NoError(t, ub.err)
+	assert.Equal(t, "Updated Name", ub.updates["name"])
+	assert.Equal(t, 29.99, ub.updates["price"])
+	assert.NotNil(t, ub.updates["id"])
 }
 
 // GetUpdates is not exported - would need integration test to verify updates

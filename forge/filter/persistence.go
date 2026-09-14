@@ -3,8 +3,12 @@ package filter
 import (
 	"context"
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"time"
 )
+
+var filterIDCounter atomic.Uint64
 
 // SavedFilter represents a persisted filter
 type SavedFilter struct {
@@ -34,6 +38,7 @@ type FilterStorage interface {
 
 // InMemoryFilterStorage is an in-memory filter storage
 type InMemoryFilterStorage struct {
+	mu      sync.RWMutex
 	filters map[string]*SavedFilter
 }
 
@@ -50,6 +55,9 @@ func (s *InMemoryFilterStorage) Save(filter *SavedFilter) error {
 		return fmt.Errorf("filter ID cannot be empty")
 	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	filter.CreatedAt = time.Now()
 	filter.UpdatedAt = time.Now()
 	s.filters[filter.ID] = filter
@@ -58,6 +66,9 @@ func (s *InMemoryFilterStorage) Save(filter *SavedFilter) error {
 
 // Load loads a filter by ID
 func (s *InMemoryFilterStorage) Load(id string) (*SavedFilter, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	filter, ok := s.filters[id]
 	if !ok {
 		return nil, fmt.Errorf("filter not found: %s", id)
@@ -67,12 +78,18 @@ func (s *InMemoryFilterStorage) Load(id string) (*SavedFilter, error) {
 
 // Delete deletes a filter
 func (s *InMemoryFilterStorage) Delete(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	delete(s.filters, id)
 	return nil
 }
 
 // List lists filters for an owner
 func (s *InMemoryFilterStorage) List(ownerID string) ([]*SavedFilter, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	filters := make([]*SavedFilter, 0)
 	for _, filter := range s.filters {
 		if filter.OwnerID == ownerID || filter.Public {
@@ -84,6 +101,9 @@ func (s *InMemoryFilterStorage) List(ownerID string) ([]*SavedFilter, error) {
 
 // Update updates a filter
 func (s *InMemoryFilterStorage) Update(filter *SavedFilter) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if _, ok := s.filters[filter.ID]; !ok {
 		return fmt.Errorf("filter not found: %s", filter.ID)
 	}
@@ -100,8 +120,8 @@ func SaveFilter[T any](fs *FilterSet[T], name, description string, storage Filte
 		return nil, fmt.Errorf("no filter AST to save")
 	}
 
-	// Generate ID (in production, use UUID)
-	id := fmt.Sprintf("filter_%d", time.Now().UnixNano())
+	// Generate unique ID
+	id := fmt.Sprintf("filter_%d_%d", time.Now().UnixNano(), filterIDCounter.Add(1))
 
 	filter := &SavedFilter{
 		ID:            id,
@@ -153,7 +173,7 @@ func PreviewFilter[T any](fs *FilterSet[T], ctx context.Context, limit int) (int
 	}
 
 	// Get limited count
-	qs = qs.Limit(int(limit))
+	qs = qs.Limit(limit)
 	count, err := qs.Count(ctx)
 	if err != nil {
 		return 0, err

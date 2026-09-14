@@ -2,13 +2,13 @@ package execute
 
 import (
 	"context"
-	"crypto/sha256"
 	"database/sql"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/forgego/forge/db/migrate/verify"
 )
 
 // Recovery handles migration recovery operations
@@ -133,7 +133,7 @@ func (r *Recovery) ValidateMigrationIntegrity(migrationsDir string) (map[uint]st
 
 		// Compute checksum
 		filePath := filepath.Join(migrationsDir, name)
-		checksum, err := computeFileChecksum(filePath)
+		checksum, err := verify.NewChecksumValidator(migrationsDir).CalculateChecksum(filePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to compute checksum for %s: %w", name, err)
 		}
@@ -142,22 +142,6 @@ func (r *Recovery) ValidateMigrationIntegrity(migrationsDir string) (map[uint]st
 	}
 
 	return checksums, nil
-}
-
-// computeFileChecksum computes SHA256 checksum of a file
-func computeFileChecksum(filePath string) (string, error) {
-	f, err := os.Open(filePath)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return "", err
-	}
-
-	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
 // CompareChecksums compares current file checksums with stored checksums

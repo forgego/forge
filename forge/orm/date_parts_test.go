@@ -1,6 +1,7 @@
 package orm
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -219,7 +220,53 @@ func TestQuerySet_DateParts_SQL(t *testing.T) {
 }
 
 func TestDateParts_SQLiteIntegration(t *testing.T) {
-	// No sqlite in-memory helper exists in orm/*_test.go (grep found only select_related_test.go using temp files inline).
-	// Per task instructions: "If no helper exists, skip this test with a comment — do not build a helper."
-	t.Skip("skipping SQLite integration test: no sqlite in-memory helper exists in orm")
+	database, err := db.NewDBWithDriver("sqlite3", ":memory:", db.WithMaxOpenConns(1))
+	require.NoError(t, err)
+	defer database.Close()
+
+	_, err = database.Exec(`
+		CREATE TABLE users (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			email TEXT UNIQUE,
+			created_at TIMESTAMP
+		);
+	`)
+	require.NoError(t, err)
+
+	_, err = GetModelSchema[User]()
+	require.NoError(t, err)
+
+	t2023 := time.Date(2023, 1, 15, 10, 0, 0, 0, time.UTC)
+	t2024May := time.Date(2024, 5, 20, 12, 0, 0, 0, time.UTC)
+	t2024Nov := time.Date(2024, 11, 5, 14, 0, 0, 0, time.UTC)
+
+	_, err = database.Exec(`INSERT INTO users (name, email, created_at) VALUES (?, ?, ?)`, "Alice", "alice@example.com", t2023)
+	require.NoError(t, err)
+	_, err = database.Exec(`INSERT INTO users (name, email, created_at) VALUES (?, ?, ?)`, "Bob", "bob@example.com", t2024May)
+	require.NoError(t, err)
+	_, err = database.Exec(`INSERT INTO users (name, email, created_at) VALUES (?, ?, ?)`, "Charlie", "charlie@example.com", t2024Nov)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	qs, err := NewQuerySet[User]("users")
+	require.NoError(t, err)
+	qs = qs.SetDB(database)
+
+	// Filter by year 2024
+	users2024, err := qs.Filter(Where("created_at", OpYear, 2024)).All(ctx)
+	require.NoError(t, err)
+	assert.Len(t, users2024, 2)
+
+	// Filter by month 5
+	usersMay, err := qs.Filter(Where("created_at", OpMonth, 5)).All(ctx)
+	require.NoError(t, err)
+	require.Len(t, usersMay, 1)
+	assert.Equal(t, "Bob", usersMay[0].Name)
+
+	// Filter by day 15
+	usersDay15, err := qs.Filter(Where("created_at", OpDay, 15)).All(ctx)
+	require.NoError(t, err)
+	require.Len(t, usersDay15, 1)
+	assert.Equal(t, "Alice", usersDay15[0].Name)
 }

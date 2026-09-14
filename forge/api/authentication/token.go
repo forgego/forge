@@ -54,7 +54,7 @@ func (a *TokenAuthentication) Authenticate(r *http.Request) (*AuthResult, error)
 	}
 
 	if user == nil {
-		return nil, ErrInvalidToken // token supplied but not recognised: reject instead of falling through
+		return nil, ErrInvalidToken // token supplied but not recognized: reject instead of falling through
 	}
 
 	// Success

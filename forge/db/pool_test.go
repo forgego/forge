@@ -265,11 +265,6 @@ func TestPoolConfigApplyPartial(t *testing.T) {
 	}
 }
 
-func TestOptionType(t *testing.T) {
-	// Test that Option type is correctly defined as a function
-	var _ Option = func(db *DB) {}
-}
-
 func TestPoolConfigStruct(t *testing.T) {
 	// Test that PoolConfig struct has all expected fields
 	config := PoolConfig{

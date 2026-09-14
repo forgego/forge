@@ -5,6 +5,7 @@ import (
 
 	"github.com/forgego/forge/api/authentication"
 	"github.com/forgego/forge/api/core"
+	apierrors "github.com/forgego/forge/api/errors"
 	"github.com/forgego/forge/api/exceptions"
 )
 
@@ -20,14 +21,14 @@ func APIMiddleware() core.Middleware {
 				if err := recover(); err != nil {
 					// Convert panic to exception
 					if apiErr, ok := err.(*exceptions.APIException); ok {
-						exceptions.HandleExceptionHTTP(w, r, apiErr, nil)
+						apierrors.WriteError(w, r, apiErr)
 					} else {
-						exceptions.HandleExceptionHTTP(w, r, exceptions.NewAPIException(
+						apierrors.WriteError(w, r, exceptions.NewAPIException(
 							http.StatusInternalServerError,
 							"internal_error",
 							"Internal server error",
 							nil,
-						), nil)
+						))
 					}
 				}
 			}()
@@ -45,7 +46,7 @@ func AuthenticationMiddleware(authClasses []authentication.Authentication) core.
 			if len(authClasses) > 0 {
 				result, err := authentication.AuthenticateRequest(r, authClasses)
 				if err != nil {
-					exceptions.HandleExceptionHTTP(w, r, exceptions.NewAuthenticationFailed(err.Error()), nil)
+					apierrors.WriteError(w, r, exceptions.NewAuthenticationFailed(err.Error()))
 					return
 				}
 

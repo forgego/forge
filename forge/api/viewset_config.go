@@ -2,19 +2,27 @@ package api
 
 import (
 	"net/http"
+
+	"github.com/forgego/forge/api/authentication"
+	"github.com/forgego/forge/api/permissions"
+	"github.com/forgego/forge/api/throttling"
 )
 
 // ViewSetConfig represents configuration for a generic viewset
 type ViewSetConfig struct {
-	Model        interface{}
-	Queryset     interface{} // Manager or QuerySet
-	Serializer   Serializer
-	ListFields   []string
-	DetailFields []string
-	Filterable   []string
-	Searchable   []string
-	Ordering     []string
-	PerPage      int
+	Model          interface{}
+	Queryset       interface{} // Manager or QuerySet
+	Serializer     Serializer
+	ListFields     []string
+	DetailFields   []string
+	Filterable     []string
+	Searchable     []string
+	Ordering       []string
+	PerPage        int
+	Authentication []authentication.Authentication
+	Permissions    []permissions.Permission
+	Throttles      []throttling.Throttle
+	ErrorWriter    func(http.ResponseWriter, *http.Request, error)
 
 	// Internal viewset created lazily
 	viewSet *ConfigurableViewSet
@@ -35,6 +43,10 @@ func NewConfigurableViewSet(config *ViewSetConfig) *ConfigurableViewSet {
 
 	// Create base viewset with nil queryset (will be handled dynamically)
 	base := NewBaseViewSet(serializerFactory, config.Queryset, config.Model)
+	base.Authentication = config.Authentication
+	base.Permissions = config.Permissions
+	base.Throttles = config.Throttles
+	base.ErrorWriter = config.ErrorWriter
 
 	return &ConfigurableViewSet{
 		BaseViewSet: base,

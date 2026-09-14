@@ -3,6 +3,12 @@ package log
 import (
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestNewLogger(t *testing.T) {
@@ -46,11 +52,19 @@ func TestLoggerWithFields(t *testing.T) {
 }
 
 func TestLoggerTrace(t *testing.T) {
-	logger, _ := NewLogger(true)
+	core, logs := observer.New(zapcore.DebugLevel - 1)
+	logger := &Logger{
+		Logger: zap.New(core),
+		config: DefaultLoggingConfig(true),
+	}
 	defer logger.Sync()
 
-	// Trace should not panic
 	logger.Trace("trace message")
+
+	require.Equal(t, 1, logs.Len())
+	entry := logs.All()[0]
+	assert.Equal(t, "trace message", entry.Message)
+	assert.Equal(t, zapcore.DebugLevel-1, entry.Level)
 }
 
 func TestQuickLogger(t *testing.T) {

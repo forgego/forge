@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -130,7 +131,7 @@ func (h *UserHandler) Retrieve(w http.ResponseWriter, r *http.Request) {
 	// Get user
 	user, err := h.userService.GetUser(ctx, id)
 	if err != nil {
-		if err == service.ErrUserNotFound {
+		if errors.Is(err, service.ErrUserNotFound) {
 			forgehttp.SendError(w, http.StatusNotFound, "User not found")
 		} else {
 			forgehttp.SendError(w, http.StatusInternalServerError, err.Error())
@@ -186,7 +187,7 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	// Update user
 	user, err := h.userService.UpdateUser(ctx, id, req)
 	if err != nil {
-		if err == service.ErrUserNotFound {
+		if errors.Is(err, service.ErrUserNotFound) {
 			forgehttp.SendError(w, http.StatusNotFound, "User not found")
 		} else if err == service.ErrEmailExists {
 			forgehttp.SendError(w, http.StatusConflict, err.Error())
@@ -215,7 +216,7 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	// Delete user
 	if err := h.userService.DeleteUser(ctx, id); err != nil {
-		if err == service.ErrUserNotFound {
+		if errors.Is(err, service.ErrUserNotFound) {
 			forgehttp.SendError(w, http.StatusNotFound, "User not found")
 		} else {
 			forgehttp.SendError(w, http.StatusInternalServerError, err.Error())
