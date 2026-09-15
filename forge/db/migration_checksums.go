@@ -2,17 +2,14 @@ package db
 
 import (
 	"context"
-	"crypto/sha256"
 	"database/sql"
 	"database/sql/driver"
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
 	"time"
 
+	"github.com/forgego/forge/db/migrate/checksum"
 	"github.com/golang-migrate/migrate/v4"
 )
 
@@ -25,6 +22,7 @@ const postgresMigrationChecksumsDDL = `CREATE TABLE IF NOT EXISTS forge_migratio
 const sqliteMigrationChecksumsDDL = `CREATE TABLE IF NOT EXISTS forge_migration_checksums (version INTEGER PRIMARY KEY, up_sha256 TEXT NOT NULL, down_sha256 TEXT, applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)`
 
 type checksumExecutor interface {
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 	ExecContext(context.Context, string, ...any) (sql.Result, error)
 }
 
@@ -70,59 +68,29 @@ type migrationFilePair struct{ up, down string }
 type migrationFileIndex map[uint]migrationFilePair
 
 func indexMigrationFiles(path string) (migrationFileIndex, error) {
-	entries, err := os.ReadDir(path)
+	files, err := checksum.IndexMigrationFiles(path)
 	if err != nil {
-		return nil, fmt.Errorf("read migrations: %w", err)
+		return nil, err
 	}
-	index := make(migrationFileIndex)
-	for _, entry := range entries {
-		name := entry.Name()
-		prefix, _, ok := strings.Cut(name, "_")
-		n, err := strconv.ParseUint(prefix, 10, strconv.IntSize)
-		if entry.IsDir() || !ok || err != nil {
-			continue
-		}
-		pair := index[uint(n)]
-		switch {
-		case strings.HasSuffix(name, ".up.sql"):
-			pair.up = filepath.Join(path, name)
-		case strings.HasSuffix(name, ".down.sql"):
-			pair.down = filepath.Join(path, name)
-		default:
-			continue
-		}
-		index[uint(n)] = pair
+	index := make(migrationFileIndex, len(files))
+	for version, pair := range files {
+		index[version] = migrationFilePair{up: pair.Up, down: pair.Down}
 	}
 	return index, nil
 }
 
+// MigrationFileChecksums computes hashes for one migration version.
+func MigrationFileChecksums(path string, version uint) (string, *string, error) {
+	return checksum.MigrationFileChecksums(path, version)
+}
+
 func migrationFileChecksums(path string, version uint) (string, *string, error) {
-	index, err := indexMigrationFiles(path)
-	if err != nil {
-		return "", nil, err
-	}
-	return index.checksums(version)
+	return MigrationFileChecksums(path, version)
 }
 
 func (index migrationFileIndex) checksums(version uint) (string, *string, error) {
 	pair := index[version]
-	if pair.up == "" {
-		return "", nil, fmt.Errorf("up migration file for version %d not found", version)
-	}
-	up, err := os.ReadFile(pair.up)
-	if err != nil {
-		return "", nil, fmt.Errorf("read up migration version %d: %w", version, err)
-	}
-	upHash := fmt.Sprintf("%x", sha256.Sum256(up))
-	if pair.down == "" {
-		return upHash, nil, nil
-	}
-	down, err := os.ReadFile(pair.down)
-	if err != nil {
-		return "", nil, fmt.Errorf("read down migration version %d: %w", version, err)
-	}
-	downHash := fmt.Sprintf("%x", sha256.Sum256(down))
-	return upHash, &downHash, nil
+	return (checksum.FileIndex{version: {Up: pair.up, Down: pair.down}}).Checksums(version)
 }
 
 func (mr *MigrationRunner) applyChecksumSteps(ctx context.Context, executor checksumExecutor, target *uint) error {

@@ -2,10 +2,15 @@ package migrations
 
 import (
 	"bytes"
+	"database/sql"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/forgego/forge/db"
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRenderMigrationStatus_DirtyState(t *testing.T) {
@@ -114,4 +119,36 @@ func TestRenderMigrationFiles_SortsFileNames(t *testing.T) {
 	if !(first < second && second < third) {
 		t.Fatalf("expected files to be sorted, got: %q", text)
 	}
+}
+
+func TestStatusCommand_Execute_DirtyDB(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "dirty.db")
+
+	rawDB, err := sql.Open("sqlite3", dbPath)
+	require.NoError(t, err)
+	_, err = rawDB.Exec(`CREATE TABLE schema_migrations (version uint NOT NULL PRIMARY KEY, dirty boolean NOT NULL);`)
+	require.NoError(t, err)
+	_, err = rawDB.Exec(`INSERT INTO schema_migrations (version, dirty) VALUES (1, 1);`)
+	require.NoError(t, err)
+	rawDB.Close()
+
+	migFile := filepath.Join(tmpDir, "000001_init.up.sql")
+	require.NoError(t, os.WriteFile(migFile, []byte("CREATE TABLE dummy (id INT);"), 0644))
+
+	t.Setenv("FORGE_DATABASE_DRIVER", "sqlite")
+	t.Setenv("FORGE_DATABASE_NAME", dbPath)
+
+	cmd := NewStatusCommand().Definition()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"--path", tmpDir})
+
+	err = cmd.Execute()
+	require.Error(t, err)
+	output := out.String()
+	require.Contains(t, output, "Status: DIRTY")
+	require.Contains(t, output, "Manual intervention required")
+	require.Contains(t, output, "Verification error:")
 }

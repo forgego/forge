@@ -2,13 +2,17 @@ package db
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/forgego/forge/db/migrate/checksum"
 	"github.com/forgego/forge/db/migrate/execute"
 	"github.com/forgego/forge/db/migrate/verify"
 	"github.com/golang-migrate/migrate/v4"
@@ -17,6 +21,138 @@ import (
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
+
+// ErrChecksumBaselineBlocked is returned when migration execution is blocked by a baseline verification failure.
+var ErrChecksumBaselineBlocked = errors.New("checksum baseline verification blocked")
+
+// verifyBaselineBeforeMigration checks the baseline for all applied versions and blocks
+// if any applied version is mismatched or missing against forge_migration_checksums.
+// Unverified versions do not block. Dirty state and lookup failures do not block here;
+// the caller reports dirty state separately. Rollback and Force never call this.
+// It uses the single hashing implementation in forge/db/migrate/checksum and the
+// runner's migration file index, avoiding a dependency on the execute package's
+// recovery helper. Returns an error wrapping ErrChecksumBaselineBlocked if blocked.
+func (mr *MigrationRunner) verifyBaselineBeforeMigration(ctx context.Context, executor checksumExecutor) error {
+	// 1. Current applied version from schema_migrations.
+	var currentVersion uint
+	var dirty bool
+	rows, err := executor.QueryContext(ctx, `SELECT version, dirty FROM schema_migrations ORDER BY version DESC LIMIT 1`)
+	if err != nil {
+		// No applied versions (or unreadable state): nothing to verify.
+		return nil
+	}
+	if !rows.Next() {
+		_ = rows.Close()
+		return nil
+	}
+	if err := rows.Scan(&currentVersion, &dirty); err != nil {
+		_ = rows.Close()
+		return nil
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return nil
+	}
+	// Close before any further query: on PostgreSQL the executor may be a
+	// single dedicated *sql.Conn which cannot run a second query while rows
+	// are still open ("conn busy").
+	if err := rows.Close(); err != nil {
+		return nil
+	}
+	if dirty || currentVersion == 0 {
+		return nil
+	}
+
+	// 2. Recorded baseline checksums for applied versions.
+	type baselineRow struct {
+		upSha256   string
+		downSha256 sql.NullString
+	}
+	baselineRows := make(map[uint]baselineRow)
+	baselineQuery, err := executor.QueryContext(ctx, `SELECT version, up_sha256, down_sha256 FROM forge_migration_checksums WHERE version <= $1`, currentVersion)
+	if err != nil {
+		return fmt.Errorf("query migration checksum baseline: %w", err)
+	}
+	for baselineQuery.Next() {
+		var v uint
+		var row baselineRow
+		if err := baselineQuery.Scan(&v, &row.upSha256, &row.downSha256); err != nil {
+			_ = baselineQuery.Close()
+			return fmt.Errorf("scan migration checksum baseline: %w", err)
+		}
+		baselineRows[v] = row
+	}
+	if err := baselineQuery.Err(); err != nil {
+		_ = baselineQuery.Close()
+		return fmt.Errorf("read migration checksum baseline: %w", err)
+	}
+	if err := baselineQuery.Close(); err != nil {
+		return fmt.Errorf("close migration checksum baseline rows: %w", err)
+	}
+
+	// 3. Applied versions: every indexed file version <= current, plus the current
+	// version itself even if its file is gone, plus recorded baseline versions.
+	index := mr.sourceIndex
+	if index == nil {
+		var err error
+		index, err = indexMigrationFiles(mr.migrationsPath)
+		if err != nil {
+			return nil
+		}
+	}
+	appliedSet := map[uint]bool{currentVersion: true}
+	for v := range index {
+		if v <= currentVersion {
+			appliedSet[v] = true
+		}
+	}
+	for v := range baselineRows {
+		if v <= currentVersion {
+			appliedSet[v] = true
+		}
+	}
+
+	// 4. Compare each applied version against its file hashes and baseline row.
+	appliedVersions := make([]uint, 0, len(appliedSet))
+	for v := range appliedSet {
+		appliedVersions = append(appliedVersions, v)
+	}
+	sort.Slice(appliedVersions, func(i, j int) bool { return appliedVersions[i] < appliedVersions[j] })
+	for _, v := range appliedVersions {
+		upHash, downHashPtr, fileErr := index.checksums(v)
+		if fileErr != nil {
+			if errors.Is(fileErr, checksum.ErrUpFileNotFound) || errors.Is(fileErr, os.ErrNotExist) {
+				return fmt.Errorf("%w: version %d is missing (.up.sql file for version %d missing)", ErrChecksumBaselineBlocked, v, v)
+			}
+			return nil
+		}
+		row, hasRow := baselineRows[v]
+		if !hasRow {
+			continue
+		}
+		upMatches := upHash == strings.TrimSpace(row.upSha256)
+		dbHasDown := row.downSha256.Valid && strings.TrimSpace(row.downSha256.String) != ""
+		fileHasDown := downHashPtr != nil
+		downMatches := true
+		if dbHasDown || fileHasDown {
+			if dbHasDown && fileHasDown {
+				downMatches = strings.TrimSpace(row.downSha256.String) == *downHashPtr
+			} else {
+				downMatches = false
+			}
+		}
+		if !upMatches || !downMatches {
+			mismatchDetail := "up hash mismatch"
+			if !upMatches && !downMatches {
+				mismatchDetail = "up and down hash mismatch"
+			} else if upMatches {
+				mismatchDetail = "down hash mismatch"
+			}
+			return fmt.Errorf("%w: version %d is mismatched (%s)", ErrChecksumBaselineBlocked, v, mismatchDetail)
+		}
+	}
+	return nil
+}
 
 // MigrationRunner handles migration execution using golang-migrate
 type MigrationRunner struct {
@@ -199,6 +335,11 @@ func (mr *MigrationRunner) migrateWithChecksums(ctx context.Context, executor ch
 		return fmt.Errorf("database is in a dirty state (version %d). Use Force() to resolve or manually fix the issue", currentVersion)
 	}
 
+	// Verify baseline before migrating: block if any applied version is mismatched or missing
+	if err := mr.verifyBaselineBeforeMigration(ctx, executor); err != nil {
+		return err
+	}
+
 	// Validate checksums for pending migrations before applying
 	if err := mr.validatePendingMigrationChecksums(ctx, currentVersion); err != nil {
 		return fmt.Errorf("checksum validation failed: %w", err)
@@ -351,6 +492,11 @@ func (mr *MigrationRunner) migrateToWithChecksums(ctx context.Context, executor 
 
 	if dirty {
 		return fmt.Errorf("cannot migrate: database is in a dirty state (version %d). Use Force() to resolve or manually fix the issue", currentVersion)
+	}
+
+	// Verify baseline before migrating: block if any applied version is mismatched or missing
+	if err := mr.verifyBaselineBeforeMigration(ctx, executor); err != nil {
+		return err
 	}
 
 	// Check if target version is valid
@@ -641,4 +787,98 @@ func (mr *MigrationRunner) Close() error {
 	}
 
 	return nil
+}
+
+// AdoptChecksumBaseline adopts existing applied migrations into the checksum baseline table.
+// Under the same lock helper used for applying, it creates the table if missing and inserts rows
+// for applied versions that have no row, using current file hashes. It never overwrites an existing row.
+// Returns the slice of adopted versions. If a migration file is missing, it returns an error naming the version.
+func (mr *MigrationRunner) AdoptChecksumBaseline(ctx context.Context) ([]uint, error) {
+	var adopted []uint
+	err := mr.withMigrationChecksums(ctx, func(executor checksumExecutor) error {
+		currentVersion, dirty, err := mr.migrate.Version()
+		if err != nil {
+			if errors.Is(err, migrate.ErrNilVersion) {
+				return nil
+			}
+			return fmt.Errorf("failed to get migration version: %w", err)
+		}
+		if dirty {
+			return fmt.Errorf("database is in a dirty state (version %d). Resolve before adopting baseline", currentVersion)
+		}
+		if currentVersion == 0 {
+			return nil
+		}
+
+		// Query existing versions in forge_migration_checksums
+		rows, err := executor.QueryContext(ctx, "SELECT version FROM forge_migration_checksums")
+		if err != nil {
+			return fmt.Errorf("failed to query existing checksums: %w", err)
+		}
+		defer rows.Close()
+
+		existing := make(map[uint]bool)
+		for rows.Next() {
+			var v uint
+			if err := rows.Scan(&v); err != nil {
+				return fmt.Errorf("failed to scan existing checksum version: %w", err)
+			}
+			existing[v] = true
+		}
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("error reading existing checksums: %w", err)
+		}
+
+		// Determine applied versions:
+		// every migration file version <= current schema_migrations version,
+		// plus current version itself even if its file is gone.
+		appliedSet := make(map[uint]bool)
+		appliedSet[currentVersion] = true
+
+		index, err := indexMigrationFiles(mr.migrationsPath)
+		if err != nil {
+			return err
+		}
+		for v := range index {
+			if v <= currentVersion {
+				appliedSet[v] = true
+			}
+		}
+
+		// Also check existing in forge_migration_checksums <= currentVersion
+		for v := range existing {
+			if v <= currentVersion {
+				appliedSet[v] = true
+			}
+		}
+
+		var sortedApplied []uint
+		for v := range appliedSet {
+			sortedApplied = append(sortedApplied, v)
+		}
+		sort.Slice(sortedApplied, func(i, j int) bool { return sortedApplied[i] < sortedApplied[j] })
+
+		for _, v := range sortedApplied {
+			upHash, downHash, err := index.checksums(v)
+			if err != nil {
+				return fmt.Errorf("cannot adopt baseline: migration file for version %d is missing: %w", v, err)
+			}
+
+			if existing[v] {
+				continue
+			}
+
+			_, err = executor.ExecContext(ctx,
+				`INSERT INTO forge_migration_checksums (version, up_sha256, down_sha256) VALUES ($1, $2, $3)`,
+				v, upHash, downHash,
+			)
+			if err != nil {
+				return fmt.Errorf("failed to insert checksum for version %d: %w", v, err)
+			}
+			adopted = append(adopted, v)
+		}
+
+		return nil
+	})
+	return adopted, err
 }

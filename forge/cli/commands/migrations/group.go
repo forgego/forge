@@ -24,6 +24,7 @@ func NewMigrateGroup() *MigrateGroup {
 			NewSquashCommand(),
 			NewFakeCommand(),
 			NewRecoverCommand(),
+			NewBaselineCommand(),
 		},
 	}
 }
@@ -31,9 +32,10 @@ func NewMigrateGroup() *MigrateGroup {
 // Definition returns the cobra command definition for the group
 func (g *MigrateGroup) Definition() *cobra.Command {
 	return &cobra.Command{
-		Use:   "migrate",
-		Short: "Migration management commands",
-		Long:  "Commands for managing database migrations",
+		Use:     "migrate",
+		Aliases: []string{"migrations"},
+		Short:   "Migration management commands",
+		Long:    "Commands for managing database migrations",
 	}
 }
 

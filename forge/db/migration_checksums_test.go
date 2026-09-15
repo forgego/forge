@@ -3,12 +3,14 @@ package db
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/forgego/forge/db/migrate/execute"
 	"github.com/forgego/forge/internal/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -105,6 +107,14 @@ func testChecksumBaseline(t *testing.T, database *DB) {
 	}
 	require.NoError(t, runner.Up(ctx))
 	assertRows(3)
+	// Adoption must share the lock connection even when the pool has only two.
+	_, err = database.Exec("DELETE FROM forge_migration_checksums")
+	require.NoError(t, err)
+	adopted, err := runner.AdoptChecksumBaseline(ctx)
+	require.NoError(t, err)
+	require.Equal(t, []uint{1, 2, 3}, adopted)
+	assertRows(3)
+
 	require.NoError(t, runner.Rollback(ctx))
 	assertRows(2)
 	require.NoError(t, runner.Up(ctx))
@@ -304,4 +314,151 @@ func TestChecksumBaseline_EmptyRollbackReconciles(t *testing.T) {
 	var count int
 	require.NoError(t, database.QueryRow("SELECT count(*) FROM forge_migration_checksums").Scan(&count))
 	require.Zero(t, count)
+}
+
+func TestChecksumBaseline_VerifyDifferentDownStem(t *testing.T) {
+	database, runner := checksumRegressionRunner(t)
+	ctx := context.Background()
+	recovery := execute.NewRecovery(database.DB)
+	report, err := recovery.VerifyAgainstBaseline(ctx, runner.migrationsPath)
+	require.NoError(t, err)
+	require.True(t, report.AllVerified())
+	_, err = database.Exec("DELETE FROM forge_migration_checksums")
+	require.NoError(t, err)
+	adopted, err := runner.AdoptChecksumBaseline(ctx)
+	require.NoError(t, err)
+	require.Equal(t, []uint{1, 2, 3}, adopted)
+	report, err = recovery.VerifyAgainstBaseline(ctx, runner.migrationsPath)
+	require.NoError(t, err)
+	require.True(t, report.AllVerified())
+	require.NoError(t, os.WriteFile(filepath.Join(runner.migrationsPath, "1_create_rollback.down.sql"), []byte("SELECT 3;"), 0600))
+	report, err = recovery.VerifyAgainstBaseline(ctx, runner.migrationsPath)
+	require.NoError(t, err)
+	require.Equal(t, execute.BaselineMismatched, report.Entries[0].Status)
+}
+
+func TestChecksumBaseline_RunnerUpBlockedOnMismatch(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "test.db")
+	database, err := NewDBWithDriver("sqlite3", dbPath)
+	require.NoError(t, err)
+	defer database.Close()
+
+	file1Up := filepath.Join(dir, "000001_first.up.sql")
+	file1Down := filepath.Join(dir, "000001_first.down.sql")
+	file2Up := filepath.Join(dir, "000002_second.up.sql")
+	file2Down := filepath.Join(dir, "000002_second.down.sql")
+
+	require.NoError(t, os.WriteFile(file1Up, []byte("CREATE TABLE t1 (id INT);\n"), 0600))
+	require.NoError(t, os.WriteFile(file1Down, []byte("DROP TABLE t1;\n"), 0600))
+	require.NoError(t, os.WriteFile(file2Up, []byte("CREATE TABLE t2 (id INT);\n"), 0600))
+	require.NoError(t, os.WriteFile(file2Down, []byte("DROP TABLE t2;\n"), 0600))
+
+	runner, err := NewMigrationRunner(database, dir)
+	require.NoError(t, err)
+	defer runner.Close()
+
+	// Apply migration 1 only
+	require.NoError(t, runner.MigrateTo(ctx, 1))
+	v, dirty, err := runner.Version(ctx)
+	require.NoError(t, err)
+	require.Equal(t, uint(1), v)
+	require.False(t, dirty)
+
+	// Edit migration 1's applied file
+	require.NoError(t, os.WriteFile(file1Up, []byte("CREATE TABLE t1_modified (id INT);\n"), 0600))
+
+	// runner.Up must fail with ErrChecksumBaselineBlocked and apply nothing new
+	err = runner.Up(ctx)
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrChecksumBaselineBlocked)
+
+	// Verify nothing new was applied: version is still 1, table t2 does not exist
+	v, dirty, err = runner.Version(ctx)
+	require.NoError(t, err)
+	require.Equal(t, uint(1), v)
+	require.False(t, dirty)
+
+	var t2Count int
+	require.NoError(t, database.QueryRow("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='t2'").Scan(&t2Count))
+	require.Zero(t, t2Count)
+
+	// Rollback must not be blocked (recovery must stay possible)
+	require.NoError(t, runner.Rollback(ctx))
+	v, _, _ = runner.Version(ctx)
+	require.Equal(t, uint(0), v)
+}
+
+func TestChecksumBaseline_RunnerUpBlockedOnMismatch_Postgres(t *testing.T) {
+	sqlDB := testutils.SetupTestDB(t)
+	t.Cleanup(func() { _ = sqlDB.Close() })
+	// Use an isolated schema without altering other tests' migration state.
+	schema := fmt.Sprintf("checksum_baseline_blocked_%d", time.Now().UnixNano())
+	_, err := sqlDB.Exec("CREATE SCHEMA " + schema)
+	require.NoError(t, err)
+	t.Cleanup(func() { _, _ = sqlDB.Exec("DROP SCHEMA " + schema + " CASCADE") })
+	// SET is session-local, so initialize every connection used by this runner.
+	sqlDB.SetMaxOpenConns(2)
+	sqlDB.SetMaxIdleConns(2)
+	forConnections := make([]interface{ Close() error }, 0, 2)
+	for i := 0; i < 2; i++ {
+		conn, err := sqlDB.Conn(context.Background())
+		require.NoError(t, err)
+		_, err = conn.ExecContext(context.Background(), "SET search_path TO "+schema)
+		require.NoError(t, err)
+		forConnections = append(forConnections, conn)
+	}
+	for _, conn := range forConnections {
+		require.NoError(t, conn.Close())
+	}
+	database := &DB{DB: sqlDB, Driver: "postgres"}
+
+	ctx := context.Background()
+	dir := t.TempDir()
+
+	file1Up := filepath.Join(dir, "000001_first.up.sql")
+	file1Down := filepath.Join(dir, "000001_first.down.sql")
+	file2Up := filepath.Join(dir, "000002_second.up.sql")
+	file2Down := filepath.Join(dir, "000002_second.down.sql")
+
+	require.NoError(t, os.WriteFile(file1Up, []byte("CREATE TABLE t1 (id INT);\n"), 0600))
+	require.NoError(t, os.WriteFile(file1Down, []byte("DROP TABLE t1;\n"), 0600))
+	require.NoError(t, os.WriteFile(file2Up, []byte("CREATE TABLE t2 (id INT);\n"), 0600))
+	require.NoError(t, os.WriteFile(file2Down, []byte("DROP TABLE t2;\n"), 0600))
+
+	runner, err := NewMigrationRunner(database, dir)
+	require.NoError(t, err)
+	defer runner.Close()
+
+	// Apply migration 1 only
+	require.NoError(t, runner.MigrateTo(ctx, 1))
+	v, dirty, err := runner.Version(ctx)
+	require.NoError(t, err)
+	require.Equal(t, uint(1), v)
+	require.False(t, dirty)
+
+	// Edit migration 1's applied file
+	require.NoError(t, os.WriteFile(file1Up, []byte("CREATE TABLE t1_modified (id INT);\n"), 0600))
+
+	// runner.Up must fail with ErrChecksumBaselineBlocked and apply nothing new
+	err = runner.Up(ctx)
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrChecksumBaselineBlocked)
+	require.True(t, errors.Is(err, ErrChecksumBaselineBlocked))
+
+	// Verify nothing new was applied: version is still 1, table t2 does not exist
+	v, dirty, err = runner.Version(ctx)
+	require.NoError(t, err)
+	require.Equal(t, uint(1), v)
+	require.False(t, dirty)
+
+	var t2Count int
+	require.NoError(t, sqlDB.QueryRow("SELECT count(*) FROM information_schema.tables WHERE table_schema = $1 AND table_name = 't2'", schema).Scan(&t2Count))
+	require.Zero(t, t2Count)
+
+	// Rollback must not be blocked (recovery must stay possible)
+	require.NoError(t, runner.Rollback(ctx))
+	v, _, _ = runner.Version(ctx)
+	require.Equal(t, uint(0), v)
 }

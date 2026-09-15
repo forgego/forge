@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"sort"
 
 	"github.com/forgego/forge/cli/core"
 	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/db/migrate/execute"
 	"github.com/spf13/cobra"
 )
 
@@ -27,6 +27,11 @@ func (c *StatusCommand) Definition() *cobra.Command {
 		Use:   "status",
 		Short: "Show migration status",
 		Long:  "Display the current migration status, including applied and pending migrations",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := core.NewContext()
+			ctx.Cmd = cmd
+			return c.Execute(ctx, args)
+		},
 	}
 	cmd.Flags().String("path", "./migrations", "Path to migrations directory")
 	return cmd
@@ -43,29 +48,50 @@ func (c *StatusCommand) Execute(ctx *core.Context, args []string) error {
 		migrationsPath = "./migrations"
 	}
 
+	out := ctx.Cmd.OutOrStdout()
+
 	// List migration files first (works without DB)
 	pattern := filepath.Join(migrationsPath, "*_*.up.sql")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
-		fmt.Printf("[WARN] Could not read migration files from %q: %v\n\n", migrationsPath, err)
+		fmt.Fprintf(out, "[WARN] Could not read migration files from %q: %v\n\n", migrationsPath, err)
 	} else {
-		renderMigrationFiles(os.Stdout, matches)
+		renderMigrationFiles(out, matches)
 	}
 
 	// Try to connect to database for detailed status
 	database, err := db.NewDBFromConfig(ctx.Config)
 	if err != nil {
-		fmt.Println("[WARN] Could not connect to database - showing file listing only")
-		fmt.Println("       To see database status, ensure database is configured and running")
+		fmt.Fprintln(out, "[WARN] Could not connect to database - showing file listing only")
+		fmt.Fprintln(out, "       To see database status, ensure database is configured and running")
 		return nil
 	}
 	defer database.Close()
 
+	// Checksum baseline verification. A verification error (e.g. dirty DB) is
+	// non-fatal here: the normal status is still printed below, then the
+	// verification error is printed and a non-nil error is returned.
+	rec := execute.NewRecovery(database.DB)
+	baselineReport, verifyCheckErr := rec.VerifyAgainstBaseline(ctx.Cmd.Context(), migrationsPath)
+	var baselineErr error
+	if verifyCheckErr != nil {
+		baselineErr = fmt.Errorf("failed to verify checksum baseline: %w", verifyCheckErr)
+	} else {
+		renderChecksumBaseline(out, baselineReport)
+
+		if !baselineReport.AllVerified() {
+			baselineErr = fmt.Errorf("checksum baseline verification failed")
+		}
+	}
+
 	// Create migration runner
 	runner, err := db.NewMigrationRunner(database, migrationsPath)
 	if err != nil {
-		fmt.Println("[WARN] Could not create migration runner - showing file listing only")
-		return nil
+		fmt.Fprintln(out, "[WARN] Could not create migration runner - showing file listing only")
+		if verifyCheckErr != nil {
+			fmt.Fprintf(out, "Verification error: %v\n", verifyCheckErr)
+		}
+		return baselineErr
 	}
 	defer runner.Close()
 
@@ -73,12 +99,18 @@ func (c *StatusCommand) Execute(ctx *core.Context, args []string) error {
 	cmdCtx := context.Background()
 	status, err := runner.Status(cmdCtx)
 	if err != nil {
-		fmt.Println("[WARN] Could not get database status - showing file listing only")
-		return nil
+		fmt.Fprintln(out, "[WARN] Could not get database status - showing file listing only")
+		if verifyCheckErr != nil {
+			fmt.Fprintf(out, "Verification error: %v\n", verifyCheckErr)
+		}
+		return baselineErr
 	}
 	if status == nil {
-		fmt.Println("[WARN] Database returned empty migration status - showing file listing only")
-		return nil
+		fmt.Fprintln(out, "[WARN] Database returned empty migration status - showing file listing only")
+		if verifyCheckErr != nil {
+			fmt.Fprintf(out, "Verification error: %v\n", verifyCheckErr)
+		}
+		return baselineErr
 	}
 
 	// Try to get detailed status (if available)
@@ -87,8 +119,36 @@ func (c *StatusCommand) Execute(ctx *core.Context, args []string) error {
 		detailedStatus = nil
 	}
 
-	renderMigrationStatus(os.Stdout, status, detailedStatus)
-	return nil
+	renderMigrationStatus(out, status, detailedStatus)
+
+	if verifyCheckErr != nil {
+		fmt.Fprintf(out, "Verification error: %v\n", verifyCheckErr)
+	}
+
+	return baselineErr
+}
+
+func renderChecksumBaseline(out io.Writer, report *execute.BaselineReport) {
+	if report == nil {
+		return
+	}
+	counts := report.Counts()
+	fmt.Fprintln(out, "\nChecksum baseline:")
+	fmt.Fprintf(out, "  Counts: %d verified, %d mismatched, %d missing, %d unverified\n",
+		counts[execute.BaselineStatusVerified],
+		counts[execute.BaselineStatusMismatched],
+		counts[execute.BaselineStatusMissing],
+		counts[execute.BaselineStatusUnverified],
+	)
+	for _, entry := range report.Entries {
+		if entry.Status != execute.BaselineStatusVerified {
+			if entry.Detail != "" {
+				fmt.Fprintf(out, "  %d  %s  %s\n", entry.Version, entry.Status, entry.Detail)
+			} else {
+				fmt.Fprintf(out, "  %d  %s\n", entry.Version, entry.Status)
+			}
+		}
+	}
 }
 
 func renderMigrationFiles(out io.Writer, matches []string) {
