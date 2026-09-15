@@ -3,13 +3,86 @@ package execute
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
+	"github.com/forgego/forge/db/migrate/checksum"
 	"github.com/forgego/forge/db/migrate/verify"
 )
+
+// BaselineStatus represents the status of an applied migration compared against the baseline.
+type BaselineStatus string
+
+const (
+	BaselineVerified   BaselineStatus = "verified"
+	BaselineMismatched BaselineStatus = "mismatched"
+	BaselineMissing    BaselineStatus = "missing"
+	BaselineUnverified BaselineStatus = "unverified"
+
+	BaselineStatusVerified   = BaselineVerified
+	BaselineStatusMismatched = BaselineMismatched
+	BaselineStatusMissing    = BaselineMissing
+	BaselineStatusUnverified = BaselineUnverified
+)
+
+// BaselineEntry represents the baseline verification result for a single migration version.
+type BaselineEntry struct {
+	Version uint
+	Status  BaselineStatus
+	Detail  string
+}
+
+// BaselineReport represents the aggregate report of baseline verification.
+type BaselineReport struct {
+	Entries []BaselineEntry
+}
+
+// AllVerified returns true if every applied migration entry is verified.
+func (r *BaselineReport) AllVerified() bool {
+	if r == nil || len(r.Entries) == 0 {
+		return true
+	}
+	for _, e := range r.Entries {
+		if e.Status != BaselineStatusVerified {
+			return false
+		}
+	}
+	return true
+}
+
+// HasBlocking returns true when any entry is mismatched or missing.
+func (r *BaselineReport) HasBlocking() bool {
+	if r == nil {
+		return false
+	}
+	for _, e := range r.Entries {
+		if e.Status == BaselineStatusMismatched || e.Status == BaselineStatusMissing {
+			return true
+		}
+	}
+	return false
+}
+
+// Counts returns the count of entries by status.
+func (r *BaselineReport) Counts() map[BaselineStatus]int {
+	counts := map[BaselineStatus]int{
+		BaselineStatusVerified:   0,
+		BaselineStatusMismatched: 0,
+		BaselineStatusMissing:    0,
+		BaselineStatusUnverified: 0,
+	}
+	if r == nil {
+		return counts
+	}
+	for _, e := range r.Entries {
+		counts[e.Status]++
+	}
+	return counts
+}
 
 // Recovery handles migration recovery operations
 type Recovery struct {
@@ -104,7 +177,171 @@ func (r *Recovery) GetDirtyMigrationInfo(ctx context.Context) (*RecoveryMigratio
 	return info, nil
 }
 
-// ValidateMigrationIntegrity validates that migration files haven't been modified
+// VerifyAgainstBaseline verifies applied migrations against the baseline in forge_migration_checksums.
+// It is strictly read-only and never creates or alters database tables.
+func (r *Recovery) VerifyAgainstBaseline(ctx context.Context, migrationsDir string) (*BaselineReport, error) {
+	if r.db == nil {
+		return nil, fmt.Errorf("database connection is nil")
+	}
+
+	report := &BaselineReport{
+		Entries: []BaselineEntry{},
+	}
+
+	// 1. Query schema_migrations for the current version.
+	var currentVersion uint
+	var dirty bool
+	err := r.db.QueryRowContext(ctx, `SELECT version, dirty FROM schema_migrations ORDER BY version DESC LIMIT 1`).Scan(&currentVersion, &dirty)
+	if err != nil {
+		if err == sql.ErrNoRows || isTableNotExist(err) {
+			// No migrations have been applied yet: "When there is no applied version, it is all verified."
+			return report, nil
+		}
+		return nil, fmt.Errorf("failed to query schema_migrations: %w", err)
+	}
+
+	if dirty {
+		return nil, fmt.Errorf("database is in a dirty state (version %d)", currentVersion)
+	}
+
+	if currentVersion == 0 {
+		return report, nil
+	}
+
+	// 2. Query forge_migration_checksums for recorded baseline checksums.
+	type baselineRow struct {
+		upSha256   string
+		downSha256 sql.NullString
+	}
+	baselineRows := make(map[uint]baselineRow)
+
+	rows, err := r.db.QueryContext(ctx, `SELECT version, up_sha256, down_sha256 FROM forge_migration_checksums WHERE version <= $1`, currentVersion)
+	if err != nil {
+		if !isTableNotExist(err) {
+			return nil, fmt.Errorf("failed to query forge_migration_checksums: %w", err)
+		}
+		// If table does not exist, baselineRows remains empty (all versions will be unverified)
+	} else {
+		defer rows.Close()
+		for rows.Next() {
+			var v uint
+			var row baselineRow
+			if err := rows.Scan(&v, &row.upSha256, &row.downSha256); err != nil {
+				return nil, fmt.Errorf("failed to scan migration checksum row: %w", err)
+			}
+			baselineRows[v] = row
+		}
+		if err := rows.Err(); err != nil {
+			return nil, fmt.Errorf("error reading migration checksum rows: %w", err)
+		}
+	}
+
+	// 3. Collect applied versions:
+	// "applied = every migration file version <= the current schema_migrations version,
+	// plus the current version itself even if its file is gone"
+	appliedSet := make(map[uint]bool)
+	appliedSet[currentVersion] = true
+
+	index, err := checksum.IndexMigrationFiles(migrationsDir)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+	for v := range index {
+		if v <= currentVersion {
+			appliedSet[v] = true
+		}
+	}
+
+	// Also include any version present in forge_migration_checksums <= currentVersion
+	for v := range baselineRows {
+		if v <= currentVersion {
+			appliedSet[v] = true
+		}
+	}
+
+	sortedVersions := make([]uint, 0, len(appliedSet))
+	for v := range appliedSet {
+		sortedVersions = append(sortedVersions, v)
+	}
+	sort.Slice(sortedVersions, func(i, j int) bool { return sortedVersions[i] < sortedVersions[j] })
+
+	// 4. Check each applied version against file and baseline row
+	for _, v := range sortedVersions {
+		upHash, downHashPtr, fileErr := index.Checksums(v)
+		if fileErr != nil {
+			if !errors.Is(fileErr, checksum.ErrUpFileNotFound) && !errors.Is(fileErr, os.ErrNotExist) {
+				return nil, fileErr
+			}
+			// .up.sql file does not exist
+			report.Entries = append(report.Entries, BaselineEntry{
+				Version: v,
+				Status:  BaselineStatusMissing,
+				Detail:  fmt.Sprintf(".up.sql file for version %d missing", v),
+			})
+			continue
+		}
+
+		row, hasRow := baselineRows[v]
+		if !hasRow {
+			report.Entries = append(report.Entries, BaselineEntry{
+				Version: v,
+				Status:  BaselineStatusUnverified,
+				Detail:  "no checksum baseline recorded",
+			})
+			continue
+		}
+
+		upMatches := (upHash == strings.TrimSpace(row.upSha256))
+
+		dbHasDown := row.downSha256.Valid && strings.TrimSpace(row.downSha256.String) != ""
+		fileHasDown := (downHashPtr != nil)
+		downMatches := true
+		if dbHasDown || fileHasDown {
+			if dbHasDown && fileHasDown {
+				downMatches = (strings.TrimSpace(row.downSha256.String) == *downHashPtr)
+			} else {
+				downMatches = false
+			}
+		}
+
+		if upMatches && downMatches {
+			report.Entries = append(report.Entries, BaselineEntry{
+				Version: v,
+				Status:  BaselineStatusVerified,
+				Detail:  "",
+			})
+		} else {
+			var detail string
+			if !upMatches && !downMatches {
+				detail = "up and down hash mismatch"
+			} else if !upMatches {
+				detail = "up hash mismatch"
+			} else {
+				detail = "down hash mismatch"
+			}
+			report.Entries = append(report.Entries, BaselineEntry{
+				Version: v,
+				Status:  BaselineStatusMismatched,
+				Detail:  detail,
+			})
+		}
+	}
+
+	return report, nil
+}
+
+func isTableNotExist(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "no such table") ||
+		strings.Contains(msg, "does not exist") ||
+		strings.Contains(msg, "undefined table")
+}
+
+// ValidateMigrationIntegrity computes migration file hashes.
+// Note: this only computes hashes of files and does not compare with what was applied to the database.
 func (r *Recovery) ValidateMigrationIntegrity(migrationsDir string) (map[uint]string, error) {
 	// Read all migration files and compute their checksums
 	checksums := make(map[uint]string)
@@ -144,7 +381,8 @@ func (r *Recovery) ValidateMigrationIntegrity(migrationsDir string) (map[uint]st
 	return checksums, nil
 }
 
-// CompareChecksums compares current file checksums with stored checksums
+// CompareChecksums compares file hashes with caller-supplied hashes.
+// Note: this only computes hashes of files and does not compare with what was applied to the database.
 func (r *Recovery) CompareChecksums(migrationsDir string, storedChecksums map[uint]string) ([]uint, error) {
 	currentChecksums, err := r.ValidateMigrationIntegrity(migrationsDir)
 	if err != nil {

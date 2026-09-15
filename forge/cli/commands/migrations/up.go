@@ -12,6 +12,7 @@ import (
 
 	"github.com/forgego/forge/cli/core"
 	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/db/migrate/execute"
 	"github.com/spf13/cobra"
 )
 
@@ -30,6 +31,11 @@ func (c *UpCommand) Definition() *cobra.Command {
 		Short:   "Apply migrations",
 		Long:    "Apply pending migrations to the database",
 		Aliases: []string{"apply"},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := core.NewContext()
+			ctx.Cmd = cmd
+			return c.Execute(ctx, args)
+		},
 	}
 	cmd.Flags().String("path", "./migrations", "Path to migrations directory")
 	cmd.Flags().Bool("dry-run", false, "Preview migrations without applying them")
@@ -47,13 +53,15 @@ func (c *UpCommand) Execute(ctx *core.Context, args []string) error {
 		migrationsPath = "./migrations"
 	}
 
+	out := ctx.Cmd.OutOrStdout()
+
 	// Check for dry-run flag first (doesn't need DB connection)
 	dryRun, _ := ctx.Cmd.Flags().GetBool("dry-run")
 
 	if dryRun {
 		// Dry-run mode: show what would be executed
-		fmt.Println("Dry-run mode: Preview of migrations that would be applied:")
-		fmt.Println()
+		fmt.Fprintln(out, "Dry-run mode: Preview of migrations that would be applied:")
+		fmt.Fprintln(out)
 
 		// Find all migration files
 		pattern := filepath.Join(migrationsPath, "*_*.up.sql")
@@ -68,10 +76,26 @@ func (c *UpCommand) Execute(ctx *core.Context, args []string) error {
 		database, err := db.NewDBFromConfig(ctx.Config)
 		if err == nil {
 			defer database.Close()
+			cmdCtx := context.Background()
+			rec := execute.NewRecovery(database.DB)
+			report, err := rec.VerifyAgainstBaseline(cmdCtx, migrationsPath)
+			if err == nil && report != nil {
+				if report.HasBlocking() {
+					var blocking []string
+					for _, e := range report.Entries {
+						if e.Status == execute.BaselineStatusMismatched || e.Status == execute.BaselineStatusMissing {
+							blocking = append(blocking, fmt.Sprintf("%d (%s)", e.Version, e.Status))
+						}
+					}
+					return fmt.Errorf("migration baseline verification failed for version(s): %s; run 'forge migrations recover --verify' to inspect", strings.Join(blocking, ", "))
+				}
+				if report.Counts()[execute.BaselineStatusUnverified] > 0 {
+					fmt.Fprintln(out, "Hint: unverified migrations exist; run 'forge migrations baseline --adopt' to record baseline checksums")
+				}
+			}
 			runner, err := db.NewMigrationRunner(database, migrationsPath)
 			if err == nil {
 				defer runner.Close()
-				cmdCtx := context.Background()
 				ver, _, err := runner.Version(cmdCtx)
 				if err == nil {
 					currentVersion = ver
@@ -95,14 +119,14 @@ func (c *UpCommand) Execute(ctx *core.Context, args []string) error {
 
 		if len(pendingMigrations) == 0 {
 			if currentVersion == 0 {
-				fmt.Println("  All migration files would be applied (database not connected to check current version)")
+				fmt.Fprintln(out, "  All migration files would be applied (database not connected to check current version)")
 			} else {
-				fmt.Println("  No pending migrations")
+				fmt.Fprintln(out, "  No pending migrations")
 			}
 			return nil
 		}
 
-		fmt.Printf("  Would apply %d migration(s):\n\n", len(pendingMigrations))
+		fmt.Fprintf(out, "  Would apply %d migration(s):\n\n", len(pendingMigrations))
 		for i, migFile := range pendingMigrations {
 			content, err := os.ReadFile(migFile)
 			if err != nil {
@@ -110,8 +134,8 @@ func (c *UpCommand) Execute(ctx *core.Context, args []string) error {
 			}
 
 			basename := filepath.Base(migFile)
-			fmt.Printf("  Migration %d: %s\n", i+1, basename)
-			fmt.Println("  SQL Preview (first 20 lines):")
+			fmt.Fprintf(out, "  Migration %d: %s\n", i+1, basename)
+			fmt.Fprintln(out, "  SQL Preview (first 20 lines):")
 			lines := strings.Split(string(content), "\n")
 			previewLines := lines
 			if len(lines) > 20 {
@@ -119,16 +143,16 @@ func (c *UpCommand) Execute(ctx *core.Context, args []string) error {
 			}
 			for _, line := range previewLines {
 				if strings.TrimSpace(line) != "" {
-					fmt.Printf("    %s\n", line)
+					fmt.Fprintf(out, "    %s\n", line)
 				}
 			}
 			if len(lines) > 20 {
-				fmt.Printf("    ... (%d more lines)\n", len(lines)-20)
+				fmt.Fprintf(out, "    ... (%d more lines)\n", len(lines)-20)
 			}
-			fmt.Println()
+			fmt.Fprintln(out)
 		}
 
-		fmt.Println("(No changes were made to the database)")
+		fmt.Fprintln(out, "(No changes were made to the database)")
 		return nil
 	}
 
@@ -139,6 +163,29 @@ func (c *UpCommand) Execute(ctx *core.Context, args []string) error {
 	}
 	defer database.Close()
 
+	cmdCtx := context.Background()
+
+	// Before applying, verify against baseline
+	rec := execute.NewRecovery(database.DB)
+	report, err := rec.VerifyAgainstBaseline(cmdCtx, migrationsPath)
+	if err != nil {
+		return fmt.Errorf("failed to verify migration baseline: %w", err)
+	}
+	if report != nil {
+		if report.HasBlocking() {
+			var blocking []string
+			for _, e := range report.Entries {
+				if e.Status == execute.BaselineStatusMismatched || e.Status == execute.BaselineStatusMissing {
+					blocking = append(blocking, fmt.Sprintf("%d (%s)", e.Version, e.Status))
+				}
+			}
+			return fmt.Errorf("migration baseline verification failed for version(s): %s; run 'forge migrations recover --verify' to inspect", strings.Join(blocking, ", "))
+		}
+		if report.Counts()[execute.BaselineStatusUnverified] > 0 {
+			fmt.Fprintln(out, "Hint: unverified migrations exist; run 'forge migrations baseline --adopt' to record baseline checksums")
+		}
+	}
+
 	// Create migration runner
 	runner, err := db.NewMigrationRunner(database, migrationsPath)
 	if err != nil {
@@ -147,11 +194,10 @@ func (c *UpCommand) Execute(ctx *core.Context, args []string) error {
 	defer runner.Close()
 
 	// Apply migrations
-	cmdCtx := context.Background()
 	if err := runner.Migrate(cmdCtx); err != nil {
 		return fmt.Errorf("migration failed: %w", err)
 	}
 
-	fmt.Println("✓ Migrations applied successfully")
+	fmt.Fprintln(out, "✓ Migrations applied successfully")
 	return nil
 }
