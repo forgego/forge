@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"syscall"
 	"testing"
 	"time"
 
@@ -11,6 +12,8 @@ import (
 	"github.com/forgego/forge/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func TestNewServer_Initialization(t *testing.T) {
@@ -121,6 +124,82 @@ func TestServer_Shutdown(t *testing.T) {
 	if err != nil && err != http.ErrServerClosed {
 		t.Errorf("expected no error or ErrServerClosed, got %v", err)
 	}
+}
+
+type fakeSyncWriteSyncer struct {
+	syncCalled bool
+}
+
+func (f *fakeSyncWriteSyncer) Write(p []byte) (int, error) {
+	return len(p), nil
+}
+
+func (f *fakeSyncWriteSyncer) Sync() error {
+	f.syncCalled = true
+	return nil
+}
+
+type einvalSyncWriteSyncer struct {
+	syncCalled bool
+}
+
+func (f *einvalSyncWriteSyncer) Write(p []byte) (int, error) {
+	return len(p), nil
+}
+
+func (f *einvalSyncWriteSyncer) Sync() error {
+	f.syncCalled = true
+	return syscall.EINVAL
+}
+
+func TestServer_Shutdown_SyncsLogger(t *testing.T) {
+	cfg := config.NewConfig()
+	settings := &config.Settings{
+		Server: config.ServerSettings{
+			GracefulTimeout: 1,
+		},
+	}
+	syncer := &fakeSyncWriteSyncer{}
+	core := zapcore.NewCore(
+		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
+		syncer,
+		zap.DebugLevel,
+	)
+	logger := &log.Logger{
+		Logger: zap.New(core),
+	}
+
+	server, err := NewServer(cfg, settings, logger)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	err = server.Shutdown(ctx)
+	if err != nil && err != http.ErrServerClosed {
+		t.Errorf("expected no error or ErrServerClosed, got %v", err)
+	}
+	assert.True(t, syncer.syncCalled, "expected logger Sync to be called after Shutdown")
+
+	t.Run("ignores EINVAL from sync", func(t *testing.T) {
+		syncerEINVAL := &einvalSyncWriteSyncer{}
+		coreEINVAL := zapcore.NewCore(
+			zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
+			syncerEINVAL,
+			zap.DebugLevel,
+		)
+		loggerEINVAL := &log.Logger{
+			Logger: zap.New(coreEINVAL),
+		}
+
+		serverEINVAL, err := NewServer(cfg, settings, loggerEINVAL)
+		require.NoError(t, err)
+
+		ctx := context.Background()
+		err = serverEINVAL.Shutdown(ctx)
+		if err != nil && err != http.ErrServerClosed {
+			t.Errorf("expected no error or ErrServerClosed, got %v", err)
+		}
+		assert.True(t, syncerEINVAL.syncCalled, "expected logger Sync to be called")
+	})
 }
 
 func TestNewServer_NilInputs(t *testing.T) {

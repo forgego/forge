@@ -2,6 +2,7 @@ package log
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -122,4 +123,18 @@ func TestBuilderWithFile(t *testing.T) {
 		t.Fatal("Builder with file returned nil")
 	}
 	defer logger.Sync()
+}
+
+func TestLoggerCloseFlushesAndClosesFileOutput(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "app.log")
+	logger, err := NewBuilder().Production().AddFileOutput(path, LevelInfo, 1, 1, 1, false).Build()
+	require.NoError(t, err)
+
+	logger.Info("persisted entry")
+	require.NoError(t, logger.Close())
+	require.NoError(t, logger.Close())
+
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Contains(t, string(data), "persisted entry")
 }

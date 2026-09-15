@@ -45,6 +45,7 @@ func (r *HookRegistry) ProcessHooks(entry zapcore.Entry, fields []zapcore.Field)
 type HookCore struct {
 	zapcore.Core
 	registry *HookRegistry
+	bound    []zapcore.Field
 }
 
 // NewHookCore creates a new hook core
@@ -55,11 +56,93 @@ func NewHookCore(core zapcore.Core, registry *HookRegistry) *HookCore {
 	}
 }
 
+// Check determines whether the entry should be logged
+func (c *HookCore) Check(entry zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
+	if !c.Enabled(entry.Level) {
+		return ce
+	}
+	downstream := c.Core.Check(entry, nil)
+	if downstream == nil {
+		return ce
+	}
+	return ce.AddCore(entry, &hookedCheckedWrite{core: c, downstream: downstream})
+}
+
+// With adds structured context to the Core
+func (c *HookCore) With(fields []zapcore.Field) zapcore.Core {
+	bound := make([]zapcore.Field, len(c.bound)+len(fields))
+	copy(bound, c.bound)
+	copy(bound[len(c.bound):], fields)
+	return &HookCore{
+		Core:     c.Core.With(fields),
+		registry: c.registry,
+		bound:    bound,
+	}
+}
+
 // Write processes hooks before writing
 func (c *HookCore) Write(entry zapcore.Entry, fields []zapcore.Field) error {
-	entry, fields, shouldLog := c.registry.ProcessHooks(entry, fields)
+	downstream := c.Core.Check(entry, nil)
+	if downstream == nil {
+		return nil
+	}
+	hw := &hookedCheckedWrite{core: c, downstream: downstream}
+	return hw.Write(entry, fields)
+}
+
+type hookedCheckedWrite struct {
+	core       *HookCore
+	downstream *zapcore.CheckedEntry
+}
+
+func (h *hookedCheckedWrite) Enabled(lvl zapcore.Level) bool {
+	return h.core.Enabled(lvl)
+}
+
+func (h *hookedCheckedWrite) With(fields []zapcore.Field) zapcore.Core {
+	return h.core.With(fields)
+}
+
+func (h *hookedCheckedWrite) Check(entry zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
+	return ce.AddCore(entry, h)
+}
+
+func (h *hookedCheckedWrite) Sync() error {
+	return h.core.Sync()
+}
+
+func (h *hookedCheckedWrite) Write(entry zapcore.Entry, fields []zapcore.Field) error {
+	var allFields []zapcore.Field
+	if len(h.core.bound) == 0 {
+		allFields = fields
+	} else if len(fields) == 0 {
+		allFields = h.core.bound
+	} else {
+		allFields = make([]zapcore.Field, len(h.core.bound)+len(fields))
+		copy(allFields, h.core.bound)
+		copy(allFields[len(h.core.bound):], fields)
+	}
+
+	entry, processedFields, shouldLog := h.core.registry.ProcessHooks(entry, allFields)
 	if !shouldLog {
 		return nil // Skip logging
 	}
-	return c.Core.Write(entry, fields)
+
+	var outFields []zapcore.Field
+	if len(processedFields) >= len(h.core.bound) {
+		outFields = processedFields[len(h.core.bound):]
+	}
+
+	downstream := h.downstream
+	if entry.Level != downstream.Entry.Level {
+		// A changed level can select different outputs. Preserve the original
+		// check otherwise, so samplers only count the entry once.
+		downstream = h.core.Core.Check(entry, nil)
+		if downstream == nil {
+			return nil
+		}
+	}
+	downstream.Entry = entry
+	downstream.Write(outFields...)
+	return nil
 }

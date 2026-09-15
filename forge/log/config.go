@@ -47,6 +47,8 @@ type LoggingConfig struct {
 	Development DevelopmentConfig `yaml:"development" json:"development"`
 	// Production settings
 	Production ProductionConfig `yaml:"production" json:"production"`
+	// Hooks are lifecycle hooks for log entries
+	Hooks []Hook `yaml:"-" json:"-"`
 }
 
 // OutputConfig configures a log output destination

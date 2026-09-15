@@ -2,10 +2,13 @@ package exporters
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zapcore"
 )
@@ -61,4 +64,62 @@ func TestFileExporter_RotatesWhenMaxSizeExceeded(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, currentData)
 	require.Equal(t, byte('B'), currentData[0])
+}
+
+type fakeWriteSyncer struct {
+	syncErr error
+}
+
+func (f *fakeWriteSyncer) Write(p []byte) (int, error) { return len(p), nil }
+func (f *fakeWriteSyncer) Sync() error                 { return f.syncErr }
+
+func TestFileExporter_Close_CallsCloserOnSyncError(t *testing.T) {
+	closed := false
+	exp := &FileExporter{
+		writer: &fakeWriteSyncer{syncErr: errors.New("sync failed")},
+		level:  zapcore.InfoLevel,
+		closer: func() error {
+			closed = true
+			return nil
+		},
+	}
+
+	err := exp.Close()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "sync failed")
+	assert.True(t, closed, "closer must be called even when Sync fails")
+}
+
+func TestFileExporter_Close_IgnoresEINVAL(t *testing.T) {
+	closed := false
+	exp := &FileExporter{
+		writer: &fakeWriteSyncer{syncErr: syscall.EINVAL},
+		level:  zapcore.InfoLevel,
+		closer: func() error {
+			closed = true
+			return nil
+		},
+	}
+
+	err := exp.Close()
+	assert.NoError(t, err)
+	assert.True(t, closed)
+}
+
+func TestFileExporter_Close_JoinsBothErrors(t *testing.T) {
+	closed := false
+	exp := &FileExporter{
+		writer: &fakeWriteSyncer{syncErr: errors.New("sync failed")},
+		level:  zapcore.InfoLevel,
+		closer: func() error {
+			closed = true
+			return errors.New("closer failed")
+		},
+	}
+
+	err := exp.Close()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "sync failed")
+	assert.Contains(t, err.Error(), "closer failed")
+	assert.True(t, closed)
 }
