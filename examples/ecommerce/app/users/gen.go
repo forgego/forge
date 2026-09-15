@@ -32,7 +32,7 @@ func (m *User) Validate() error {
 
 // UserObjects provides type-safe operations for User
 // Uses generic orm.Manager[User] and orm.BaseQuerySet[User]
-var UserObjects, _ = orm.NewManager[User]("users_user")
+var UserObjects = orm.MustNewManager[User]("users_user")
 
 // UserFields provides type-safe field access for User
 type UserFields struct {
@@ -82,7 +82,7 @@ func (m *Group) Validate() error {
 
 // GroupObjects provides type-safe operations for Group
 // Uses generic orm.Manager[Group] and orm.BaseQuerySet[Group]
-var GroupObjects, _ = orm.NewManager[Group]("auth_group")
+var GroupObjects = orm.MustNewManager[Group]("auth_group")
 
 // GroupFields provides type-safe field access for Group
 type GroupFields struct {

@@ -38,7 +38,7 @@ func (m *Cart) Validate() error {
 
 // CartObjects provides type-safe operations for Cart
 // Uses generic orm.Manager[Cart] and orm.BaseQuerySet[Cart]
-var CartObjects, _ = orm.NewManager[Cart]("carts")
+var CartObjects = orm.MustNewManager[Cart]("carts")
 
 // CartFields provides type-safe field access for Cart
 type CartFields struct {
@@ -108,7 +108,7 @@ func (m *CartItem) Validate() error {
 
 // CartItemObjects provides type-safe operations for CartItem
 // Uses generic orm.Manager[CartItem] and orm.BaseQuerySet[CartItem]
-var CartItemObjects, _ = orm.NewManager[CartItem]("cart_items")
+var CartItemObjects = orm.MustNewManager[CartItem]("cart_items")
 
 // CartItemFields provides type-safe field access for CartItem
 type CartItemFields struct {
@@ -215,7 +215,7 @@ func (m *Order) Validate() error {
 
 // OrderObjects provides type-safe operations for Order
 // Uses generic orm.Manager[Order] and orm.BaseQuerySet[Order]
-var OrderObjects, _ = orm.NewManager[Order]("orders")
+var OrderObjects = orm.MustNewManager[Order]("orders")
 
 // OrderFields provides type-safe field access for Order
 type OrderFields struct {
@@ -371,7 +371,7 @@ func (m *OrderItem) Validate() error {
 
 // OrderItemObjects provides type-safe operations for OrderItem
 // Uses generic orm.Manager[OrderItem] and orm.BaseQuerySet[OrderItem]
-var OrderItemObjects, _ = orm.NewManager[OrderItem]("order_items")
+var OrderItemObjects = orm.MustNewManager[OrderItem]("order_items")
 
 // OrderItemFields provides type-safe field access for OrderItem
 type OrderItemFields struct {
@@ -450,7 +450,7 @@ func (m *Payment) Validate() error {
 
 // PaymentObjects provides type-safe operations for Payment
 // Uses generic orm.Manager[Payment] and orm.BaseQuerySet[Payment]
-var PaymentObjects, _ = orm.NewManager[Payment]("payments")
+var PaymentObjects = orm.MustNewManager[Payment]("payments")
 
 // PaymentFields provides type-safe field access for Payment
 type PaymentFields struct {
@@ -530,7 +530,7 @@ func (m *Shipment) Validate() error {
 
 // ShipmentObjects provides type-safe operations for Shipment
 // Uses generic orm.Manager[Shipment] and orm.BaseQuerySet[Shipment]
-var ShipmentObjects, _ = orm.NewManager[Shipment]("shipments")
+var ShipmentObjects = orm.MustNewManager[Shipment]("shipments")
 
 // ShipmentFields provides type-safe field access for Shipment
 type ShipmentFields struct {

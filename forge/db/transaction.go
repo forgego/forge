@@ -113,3 +113,19 @@ func (sp *Savepoint) ReleaseSavepoint() error {
 	_, err := sp.tx.Exec("RELEASE SAVEPOINT " + sp.name)
 	return err
 }
+
+// DB returns the parent database instance.
+func (tx *Tx) DB() *DB {
+	if tx == nil {
+		return nil
+	}
+	return tx.db
+}
+
+// RebindPlaceholders delegates placeholder rebinding to the parent database.
+func (tx *Tx) RebindPlaceholders(query string) string {
+	if tx != nil && tx.db != nil {
+		return tx.db.RebindPlaceholders(query)
+	}
+	return query
+}

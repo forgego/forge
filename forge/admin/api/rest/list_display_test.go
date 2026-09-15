@@ -439,3 +439,105 @@ func TestHandleList_RealSQLiteIntegration(t *testing.T) {
 	assert.Equal(t, "Parent Bob", resp.Display["parent"][fmt.Sprint(p2)])
 	assert.Len(t, resp.Display["parent"], 2, "Null parent contributes nothing")
 }
+
+func TestAttachDisplayLabels_Characterization(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		rows       []map[string]interface{}
+		relations  []core.RelationMetadata
+		labels     map[string]string
+		want       map[string]map[string]string
+		labelCalls int
+	}{
+		{"foreign key labels", []map[string]interface{}{{"author_id": 10}, {"author": map[string]interface{}{"id": 20}}}, []core.RelationMetadata{{Name: "author", Type: "ForeignKey", RelatedModel: "authors"}}, map[string]string{"10": "Alice", "20": "Bob"}, map[string]map[string]string{"author": {"10": "Alice", "20": "Bob"}}, 1},
+		{"missing related rows", []map[string]interface{}{{"author_id": 10}}, []core.RelationMetadata{{Name: "author", Type: "ForeignKey", RelatedModel: "authors"}}, map[string]string{}, nil, 1},
+		{"nil and absent values", []map[string]interface{}{{"author_id": nil}, {"title": "untagged"}}, []core.RelationMetadata{{Name: "author", Type: "ForeignKey", RelatedModel: "authors"}}, map[string]string{"10": "Alice"}, nil, 0},
+		{"choice and unlabelled fields", []map[string]interface{}{{"status": "draft", "title": "Post"}}, []core.RelationMetadata{{Name: "status", Type: "Choices", RelatedModel: "authors"}}, map[string]string{"draft": "Draft"}, nil, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			registry := core.NewRegistry()
+			related := &mockResolverAdmin{mockAdmin: mockAdmin{modelName: "authors"}, labels: tc.labels}
+			require.NoError(t, registry.Register(related))
+			admin := &mockAdmin{metadata: &core.Metadata{Relations: tc.relations}}
+			response := &core.PaginatedResponse{Results: tc.rows}
+
+			NewRouter(registry).attachDisplayLabels(context.Background(), admin, nil, response)
+
+			assert.Equal(t, tc.want, response.Display)
+			assert.Equal(t, tc.labelCalls, related.labelCalls)
+		})
+	}
+}
+
+func TestAttachDisplayLabels_Characterization_EdgeCases(t *testing.T) {
+	t.Run("various ID formats and deduplication", func(t *testing.T) {
+		registry := core.NewRegistry()
+		related := &mockResolverAdmin{
+			mockAdmin: mockAdmin{modelName: "authors"},
+			labels:    map[string]string{"10": "Alice", "20": "Bob", "30": "Carol", "40": "Dave"},
+		}
+		require.NoError(t, registry.Register(related))
+		admin := &mockAdmin{metadata: &core.Metadata{
+			Relations: []core.RelationMetadata{{Name: "author", Type: "ForeignKey", RelatedModel: "authors"}},
+		}}
+
+		rows := []map[string]interface{}{
+			{"author": map[string]interface{}{"ID": 20}}, // uppercase ID in map
+			{"Author_id": 30},         // case-insensitive match
+			{"author": float64(40.0)}, // float64
+			{"author_id": 10},         // regular
+			{"author_id": 10},         // duplicate
+			{"author": map[string]interface{}{"other": "foo"}}, // map without id/ID
+		}
+		response := &core.PaginatedResponse{Results: rows}
+
+		NewRouter(registry).attachDisplayLabels(context.Background(), admin, nil, response)
+
+		require.NotNil(t, response.Display)
+		assert.Equal(t, map[string]string{
+			"10": "Alice",
+			"20": "Bob",
+			"30": "Carol",
+			"40": "Dave",
+		}, response.Display["author"])
+		assert.Equal(t, 1, related.labelCalls)
+		assert.Len(t, related.calledIDs, 4)
+	})
+
+	t.Run("nil and error guards", func(t *testing.T) {
+		registry := core.NewRegistry()
+		admin := &mockAdmin{metadata: &core.Metadata{
+			Relations: []core.RelationMetadata{{Name: "author", Type: "ForeignKey", RelatedModel: "authors"}},
+		}}
+
+		// Nil registry
+		resp := &core.PaginatedResponse{Results: []map[string]interface{}{{"author_id": 10}}}
+		NewRouter(nil).attachDisplayLabels(context.Background(), admin, nil, resp)
+		assert.Nil(t, resp.Display)
+
+		// Nil response
+		NewRouter(registry).attachDisplayLabels(context.Background(), admin, nil, nil)
+
+		// Nil Results
+		respNilRes := &core.PaginatedResponse{Results: nil}
+		NewRouter(registry).attachDisplayLabels(context.Background(), admin, nil, respNilRes)
+		assert.Nil(t, respNilRes.Display)
+
+		// Metadata error
+		adminErr := &mockAdmin{metadataErr: assert.AnError}
+		respMetaErr := &core.PaginatedResponse{Results: []map[string]interface{}{{"author_id": 10}}}
+		NewRouter(registry).attachDisplayLabels(context.Background(), adminErr, nil, respMetaErr)
+		assert.Nil(t, respMetaErr.Display)
+
+		// Empty relations
+		adminEmptyRel := &mockAdmin{metadata: &core.Metadata{Relations: nil}}
+		respEmptyRel := &core.PaginatedResponse{Results: []map[string]interface{}{{"author_id": 10}}}
+		NewRouter(registry).attachDisplayLabels(context.Background(), adminEmptyRel, nil, respEmptyRel)
+		assert.Nil(t, respEmptyRel.Display)
+
+		// Non-slice results (cannot unmarshal to []map[string]interface{})
+		respBadRows := &core.PaginatedResponse{Results: "not-a-slice"}
+		NewRouter(registry).attachDisplayLabels(context.Background(), admin, nil, respBadRows)
+		assert.Nil(t, respBadRows.Display)
+	})
+}

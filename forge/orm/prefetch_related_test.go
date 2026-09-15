@@ -153,3 +153,31 @@ func TestPrefetchRelated_Integration(t *testing.T) {
 	assert.True(t, tagNames["Go"])
 	assert.True(t, tagNames["Forge"])
 }
+
+func TestPrefetchRelated_BareSQLTx(t *testing.T) {
+	database, err := db.NewDBWithDriver("sqlite3", ":memory:")
+	require.NoError(t, err)
+	defer database.Close()
+	ctx := context.Background()
+	tx, err := database.DB.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	defer tx.Rollback()
+	_, err = tx.ExecContext(ctx, `
+ CREATE TABLE tags (id INTEGER PRIMARY KEY, name TEXT);
+ CREATE TABLE articles (id INTEGER PRIMARY KEY, title TEXT, user_id INTEGER, created_at TIMESTAMP);
+ CREATE TABLE article_tags (article_id INTEGER, tag_id INTEGER);
+ INSERT INTO tags VALUES (1, 'Go');
+ INSERT INTO articles (id, title) VALUES (1, 'Transactions');
+ INSERT INTO article_tags VALUES (1, 1);
+ `)
+	require.NoError(t, err)
+	_, err = GetModelSchema[Tag]()
+	require.NoError(t, err)
+	qs, err := NewQuerySet[Article]("articles")
+	require.NoError(t, err)
+	articles, err := qs.SetDB(tx).PrefetchRelated("Tags").All(ctx)
+	require.NoError(t, err)
+	require.Len(t, articles, 1)
+	require.Len(t, articles[0].Tags, 1)
+	assert.Equal(t, "Go", articles[0].Tags[0].Name)
+}

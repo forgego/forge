@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"regexp"
+	"strings"
 	"time"
 
 	"github.com/forgego/forge/config"
@@ -238,14 +238,77 @@ func (db *DB) Rebind(query string) string {
 	return db.RebindPlaceholders(query)
 }
 
-var (
-	paramRegex = regexp.MustCompile(`\$([0-9]+)`)
-	ilikeRegex = regexp.MustCompile(`(?i)\bILIKE\b`)
-)
+func isWordChar(b byte) bool {
+	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9') || b == '_'
+}
+
+func isILikeWord(query string, i int) bool {
+	if i+5 > len(query) || !strings.EqualFold(query[i:i+5], "ILIKE") {
+		return false
+	}
+	if i > 0 && isWordChar(query[i-1]) {
+		return false
+	}
+	if i+5 < len(query) && isWordChar(query[i+5]) {
+		return false
+	}
+	return true
+}
+
+func handleInString(query string, i int, b *strings.Builder) (int, bool) {
+	ch := query[i]
+	b.WriteByte(ch)
+	if ch == '\'' {
+		if i+1 < len(query) && query[i+1] == '\'' {
+			b.WriteByte('\'')
+			return i + 2, true
+		}
+		return i + 1, false
+	}
+	return i + 1, true
+}
+
+func handleDollarPlaceholder(query string, i int, b *strings.Builder) int {
+	b.WriteByte('?')
+	i++
+	for i < len(query) && query[i] >= '0' && query[i] <= '9' {
+		b.WriteByte(query[i])
+		i++
+	}
+	return i
+}
 
 func rebindPostgresToSQLite(query string) string {
-	query = ilikeRegex.ReplaceAllString(query, "LIKE")
-	return paramRegex.ReplaceAllString(query, "?$1")
+	var b strings.Builder
+	b.Grow(len(query))
+	inString := false
+	n := len(query)
+
+	for i := 0; i < n; {
+		if inString {
+			i, inString = handleInString(query, i, &b)
+			continue
+		}
+		if query[i] == '\'' {
+			inString = true
+			b.WriteByte('\'')
+			i++
+			continue
+		}
+		if query[i] == '$' && i+1 < n && query[i+1] >= '0' && query[i+1] <= '9' {
+			i = handleDollarPlaceholder(query, i, &b)
+			continue
+		}
+		if isILikeWord(query, i) {
+			b.WriteString("LIKE")
+			i += 5
+			continue
+		}
+		b.WriteByte(query[i])
+		i++
+	}
+
+	return b.String()
 }
 
 // QueryContext executes a query that returns rows, rebinding placeholders and dialect for the driver.

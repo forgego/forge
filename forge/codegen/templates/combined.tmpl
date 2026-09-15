@@ -26,7 +26,7 @@ func (m *{{ .Name }}) Validate() error {
 
 // {{ .Name }}Objects provides type-safe operations for {{ .Name }}
 // Uses generic orm.Manager[{{ .Name }}] and orm.BaseQuerySet[{{ .Name }}]
-var {{ .Name }}Objects, _ = orm.NewManager[{{ .Name }}]("{{ if .Meta.TableName }}{{ .Meta.TableName }}{{ else }}{{ .Name | ToSnake }}s{{ end }}")
+var {{ .Name }}Objects = orm.MustNewManager[{{ .Name }}]("{{ if .Meta.TableName }}{{ .Meta.TableName }}{{ else }}{{ .Name | ToSnake }}s{{ end }}")
 
 {{- $tableName := .Meta.TableName }}
 {{- if not $tableName }}

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/forgego/forge/db/migrate/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,7 +40,7 @@ func (Item) Meta() schema.Meta {
 	modelFile := filepath.Join(modelsDir, "item.go")
 	require.NoError(t, os.WriteFile(modelFile, []byte(modelSrc), 0644))
 
-	gen, err := NewMigrationGeneratorWithDefaults(modelsDir, migrationsDir)
+	gen, err := NewMigrationGeneratorForDriver(modelsDir, migrationsDir, core.DriverSQLite)
 	require.NoError(t, err)
 
 	err = gen.GenerateMigrations("create_items")

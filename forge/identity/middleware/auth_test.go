@@ -1,10 +1,13 @@
 package middleware
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +15,7 @@ import (
 	"github.com/forgego/forge/identity/models"
 	"github.com/forgego/forge/identity/repository"
 	"github.com/forgego/forge/identity/service"
+	"github.com/gorilla/csrf"
 )
 
 type permissionServiceStub struct {
@@ -290,7 +294,7 @@ func TestAuthenticateRequest_SessionAuth(t *testing.T) {
 
 			mw := NewAuthenticationMiddleware(nil, sessionRepo, userRepo)
 
-			req := httptest.NewRequest(http.MethodGet, "/test", nil)
+			req := httptest.NewRequest(http.MethodGet, "https://example.com/test", nil)
 			if tt.sessionKey != "" {
 				if tt.useCookie {
 					req.AddCookie(&http.Cookie{Name: "session_key", Value: tt.sessionKey})
@@ -315,6 +319,149 @@ func TestAuthenticateRequest_SessionAuth(t *testing.T) {
 				if user != nil {
 					t.Fatalf("expected nil user, got %+v", user)
 				}
+			}
+		})
+	}
+}
+
+func TestAuthenticateRequest_CookiePostRequiresCSRF(t *testing.T) {
+	mw := newSessionAuthMiddleware()
+	req := httptest.NewRequest(http.MethodPost, "https://example.com/test", nil)
+	req.AddCookie(&http.Cookie{Name: "session_key", Value: "valid-key"})
+
+	user, err := mw.authenticateRequest(req.Context(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if user != nil {
+		t.Fatalf("expected unauthenticated request, got user %+v", user)
+	}
+}
+
+func TestAuthenticateRequest_CookiePostWithoutCSRFLogsWarningOnce(t *testing.T) {
+	var logs bytes.Buffer
+	originalLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	t.Cleanup(func() {
+		slog.SetDefault(originalLogger)
+	})
+
+	mw := newSessionAuthMiddleware()
+	for range 2 {
+		req := httptest.NewRequest(http.MethodPost, "https://example.com/protected", nil)
+		req.AddCookie(&http.Cookie{Name: "session_key", Value: "valid-key"})
+
+		user, err := mw.authenticateRequest(req.Context(), req)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if user != nil {
+			t.Fatalf("expected unauthenticated request, got user %+v", user)
+		}
+	}
+
+	if count := strings.Count(logs.String(), "session cookie ignored on unsafe request: CSRF middleware is not mounted on this route"); count != 1 {
+		t.Fatalf("expected one CSRF middleware warning, got %d: %s", count, logs.String())
+	}
+	if !strings.Contains(logs.String(), "method=POST") || !strings.Contains(logs.String(), "path=/protected") {
+		t.Fatalf("expected warning to include request method and path, got: %s", logs.String())
+	}
+}
+
+func TestAuthenticateRequest_CookiePostWithCSRFIsAuthenticated(t *testing.T) {
+	mw := newSessionAuthMiddleware()
+	csrfMiddleware := csrf.Protect([]byte("01234567890123456789012345678901"), csrf.Secure(false), csrf.TrustedOrigins([]string{"example.com"}))
+	getHandler := csrfMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(csrf.Token(r)))
+	}))
+	getRec := httptest.NewRecorder()
+	getHandler.ServeHTTP(getRec, httptest.NewRequest(http.MethodGet, "https://example.com/test", nil))
+
+	csrfToken := getRec.Body.String()
+	if csrfToken == "" {
+		t.Fatal("expected CSRF token from GET request")
+	}
+	postReq := httptest.NewRequest(http.MethodPost, "https://example.com/test", nil)
+	postReq.AddCookie(&http.Cookie{Name: "session_key", Value: "valid-key"})
+	for _, cookie := range getRec.Result().Cookies() {
+		postReq.AddCookie(cookie)
+	}
+	postReq.Header.Set("X-CSRF-Token", csrfToken)
+	postReq.Header.Set("Referer", "https://example.com/")
+	postRec := httptest.NewRecorder()
+	csrfMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, err := mw.authenticateRequest(r.Context(), r)
+		if err != nil || user == nil {
+			t.Errorf("expected authenticated request, user=%+v err=%v", user, err)
+		}
+	})).ServeHTTP(postRec, postReq)
+	if postRec.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, postRec.Code, postRec.Body.String())
+	}
+}
+
+func TestAuthenticateRequest_CookieGetIsAuthenticated(t *testing.T) {
+	mw := newSessionAuthMiddleware()
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req.AddCookie(&http.Cookie{Name: "session_key", Value: "valid-key"})
+
+	user, err := mw.authenticateRequest(req.Context(), req)
+	if err != nil || user == nil {
+		t.Fatalf("expected authenticated request, user=%+v err=%v", user, err)
+	}
+}
+
+func TestAuthenticateRequest_HeaderPostDoesNotRequireCSRF(t *testing.T) {
+	mw := newSessionAuthMiddleware()
+	req := httptest.NewRequest(http.MethodPost, "/test", nil)
+	req.Header.Set("X-Session-Key", "valid-key")
+
+	user, err := mw.authenticateRequest(req.Context(), req)
+	if err != nil || user == nil {
+		t.Fatalf("expected authenticated request, user=%+v err=%v", user, err)
+	}
+}
+
+func newSessionAuthMiddleware() *AuthenticationMiddleware {
+	future := time.Now().Add(time.Hour)
+	return NewAuthenticationMiddleware(nil,
+		&fakeSessionRepo{getByKeyFn: func(context.Context, string) (*models.UserSession, error) {
+			return &models.UserSession{UserID: 1, ExpiresAt: &future}, nil
+		}},
+		&fakeUserRepo{getByIDFn: func(context.Context, int64) (*models.User, error) {
+			return &models.User{ID: 1, IsActive: true}, nil
+		}},
+	)
+}
+
+func TestSanitizeLogValue(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "plain string",
+			input: "/api/v1/resource",
+			want:  "/api/v1/resource",
+		},
+		{
+			name:  "string with \r\n",
+			input: "/api/v1/resource\r\nmalicious-log-entry",
+			want:  "/api/v1/resourcemalicious-log-entry",
+		},
+		{
+			name:  "string with only \n",
+			input: "/api/v1/resource\nmalicious-log-entry",
+			want:  "/api/v1/resourcemalicious-log-entry",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := sanitizeLogValue(tt.input)
+			if got != tt.want {
+				t.Fatalf("sanitizeLogValue(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
 	}

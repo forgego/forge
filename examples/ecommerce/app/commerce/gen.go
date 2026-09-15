@@ -35,7 +35,7 @@ func (m *ShippingMethod) Validate() error {
 
 // ShippingMethodObjects provides type-safe operations for ShippingMethod
 // Uses generic orm.Manager[ShippingMethod] and orm.BaseQuerySet[ShippingMethod]
-var ShippingMethodObjects, _ = orm.NewManager[ShippingMethod]("shipping_methods")
+var ShippingMethodObjects = orm.MustNewManager[ShippingMethod]("shipping_methods")
 
 // ShippingMethodFields provides type-safe field access for ShippingMethod
 type ShippingMethodFields struct {
@@ -97,7 +97,7 @@ func (m *PaymentMethod) Validate() error {
 
 // PaymentMethodObjects provides type-safe operations for PaymentMethod
 // Uses generic orm.Manager[PaymentMethod] and orm.BaseQuerySet[PaymentMethod]
-var PaymentMethodObjects, _ = orm.NewManager[PaymentMethod]("payment_methods")
+var PaymentMethodObjects = orm.MustNewManager[PaymentMethod]("payment_methods")
 
 // PaymentMethodFields provides type-safe field access for PaymentMethod
 type PaymentMethodFields struct {
@@ -158,7 +158,7 @@ func (m *TaxRate) Validate() error {
 
 // TaxRateObjects provides type-safe operations for TaxRate
 // Uses generic orm.Manager[TaxRate] and orm.BaseQuerySet[TaxRate]
-var TaxRateObjects, _ = orm.NewManager[TaxRate]("tax_rates")
+var TaxRateObjects = orm.MustNewManager[TaxRate]("tax_rates")
 
 // TaxRateFields provides type-safe field access for TaxRate
 type TaxRateFields struct {
@@ -219,7 +219,7 @@ func (m *Currency) Validate() error {
 
 // CurrencyObjects provides type-safe operations for Currency
 // Uses generic orm.Manager[Currency] and orm.BaseQuerySet[Currency]
-var CurrencyObjects, _ = orm.NewManager[Currency]("currencies")
+var CurrencyObjects = orm.MustNewManager[Currency]("currencies")
 
 // CurrencyFields provides type-safe field access for Currency
 type CurrencyFields struct {
@@ -268,7 +268,7 @@ func (m *ExchangeRate) Validate() error {
 
 // ExchangeRateObjects provides type-safe operations for ExchangeRate
 // Uses generic orm.Manager[ExchangeRate] and orm.BaseQuerySet[ExchangeRate]
-var ExchangeRateObjects, _ = orm.NewManager[ExchangeRate]("exchange_rates")
+var ExchangeRateObjects = orm.MustNewManager[ExchangeRate]("exchange_rates")
 
 // ExchangeRateFields provides type-safe field access for ExchangeRate
 type ExchangeRateFields struct {

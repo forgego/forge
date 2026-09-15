@@ -2,7 +2,6 @@ package orm
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"reflect"
 )
@@ -71,7 +70,6 @@ func (pqs *ProjectionQuerySet[T, P]) All(ctx context.Context) ([]*P, error) {
 		return nil, fmt.Errorf("projection requires BaseQuerySet")
 	}
 
-	var db *sql.DB
 	db, err := baseQS.getDB(ctx)
 	if err != nil {
 		return nil, err

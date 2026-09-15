@@ -91,5 +91,13 @@ func (d *PostgreSQLDialect) LikeEscape() string {
 	return "\\"
 }
 
+// CaseInsensitiveLike returns a case-insensitive LIKE expression for PostgreSQL.
+func (d *PostgreSQLDialect) CaseInsensitiveLike(column, placeholder string) string {
+	return fmt.Sprintf("%s ILIKE %s", column, placeholder)
+}
+
 // Ensure PostgreSQLDialect implements Dialect interface
 var _ Dialect = (*PostgreSQLDialect)(nil)
+
+// Ensure PostgreSQLDialect implements CaseInsensitiveLiker interface
+var _ CaseInsensitiveLiker = (*PostgreSQLDialect)(nil)

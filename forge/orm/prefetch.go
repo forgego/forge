@@ -44,18 +44,17 @@ func (qs *BaseQuerySet[T]) prefetchForeignKey(ctx context.Context, results []*T,
 	// rel.FieldName is the struct field name of the relation (e.g. "User")
 	// We need the FK field (e.g. "UserID")
 	// RelationInfo doesn't explicitly store "SourceField", but we can try to infer or check schema
-	fkField := ""
-	for _, f := range qs.schema.Fields {
-		if f.StructFieldName == rel.Name+"ID" {
-			fkField = f.StructFieldName
-			break
-		}
-		// Try to match by type if it's a pointer to the relation type? No, simple naming convention for now.
-	}
-
-	// Fallback: Check if there's a field with "ID" suffix
+	fkField := rel.FKStructField
 	if fkField == "" {
-		fkField = rel.Name + "ID"
+		for _, f := range qs.schema.Fields {
+			if f.StructFieldName == rel.Name+"ID" {
+				fkField = f.StructFieldName
+				break
+			}
+		}
+		if fkField == "" {
+			fkField = rel.Name + "ID"
+		}
 	}
 
 	// Iterate results to collect IDs
@@ -174,7 +173,11 @@ func (qs *BaseQuerySet[T]) prefetchManyToMany(ctx context.Context, results []*T,
 		return err
 	}
 
-	sourceCol, targetCol := throughColumns(qs.schema, targetSchema, qs.table, rel.TargetModel)
+	sourceCol := rel.ThroughSourceColumn
+	targetCol := rel.ThroughTargetColumn
+	if sourceCol == "" || targetCol == "" {
+		sourceCol, targetCol = throughColumns(qs.schema, targetSchema, qs.table, rel.TargetModel)
+	}
 
 	query := fmt.Sprintf("SELECT %s, %s FROM %s WHERE %s IN (%s)",
 		EscapeIdentifier(sourceCol),

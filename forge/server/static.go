@@ -111,211 +111,212 @@ func StaticFiles(pattern, root string, options ...StaticOption) http.Handler {
 // StaticFS serves static files from an fs.FS (including embed.FS)
 func StaticFS(pattern string, filesystem fs.FS, options ...StaticOption) http.Handler {
 	opts := DefaultStaticOptions()
-	for _, opt := range options {
-		opt(opts)
+	for _, option := range options {
+		option(opts)
 	}
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Get the file path from the URL
-		urlPath := r.URL.Path
+		serveStaticRequest(w, r, pattern, filesystem, opts)
+	})
+}
 
-		// Remove the pattern prefix if specified
-		if opts.Prefix != "" {
-			if !strings.HasPrefix(urlPath, opts.Prefix) {
-				http.NotFound(w, r)
-				return
-			}
-			urlPath = strings.TrimPrefix(urlPath, opts.Prefix)
-		} else if pattern != "" && pattern != "/" {
-			// Remove pattern from path
-			if !strings.HasPrefix(urlPath, pattern) {
-				http.NotFound(w, r)
-				return
-			}
-			urlPath = strings.TrimPrefix(urlPath, pattern)
-		}
-
-		// Clean the path to prevent directory traversal
-		urlPath = path.Clean("/" + urlPath)
-		if strings.Contains(urlPath, "..") {
-			http.Error(w, "Invalid path", http.StatusBadRequest)
+func serveStaticRequest(w http.ResponseWriter, r *http.Request, pattern string, filesystem fs.FS, opts *StaticOptions) {
+	filePath, urlPath, ok := staticFilePath(w, r, pattern, opts)
+	if !ok {
+		return
+	}
+	file, filePath, fallback, index, ok := openStaticFile(filesystem, filePath, opts)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	defer file.Close()
+	stat, err := file.Stat()
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	if stat.IsDir() {
+		file, stat, filePath, fallback, index, ok = resolveStaticDirectory(w, r, filesystem, filePath, urlPath, opts)
+		if !ok {
 			return
-		}
-
-		// Remove leading slash for filesystem
-		filePath := strings.TrimPrefix(urlPath, "/")
-		if filePath == "" {
-			filePath = "."
-		}
-
-		isFallbackUsed := false
-		isIndexUsed := false
-
-		// Try to open the file
-		file, err := filesystem.Open(filePath)
-		if err != nil {
-			// If file not found, try index files if it's a directory request
-			if os.IsNotExist(err) && len(opts.IndexFiles) > 0 {
-				for _, indexFile := range opts.IndexFiles {
-					indexPath := path.Join(filePath, indexFile)
-					if f, err := filesystem.Open(indexPath); err == nil {
-						file = f
-						filePath = indexPath
-						isIndexUsed = true
-						break
-					}
-				}
-			}
-
-			if file == nil {
-				// Try fallback if configured (SPA support)
-				if opts.Fallback != "" {
-					if f, err := filesystem.Open(opts.Fallback); err == nil {
-						file = f
-						filePath = opts.Fallback
-						isFallbackUsed = true
-					}
-				}
-
-				if file == nil {
-					http.NotFound(w, r)
-					return
-				}
-			}
 		}
 		defer file.Close()
+	}
+	serveStaticResponse(w, r, file, stat, filePath, opts, index || fallback)
+}
 
-		// Get file info
-		stat, err := file.Stat()
+func staticFilePath(w http.ResponseWriter, r *http.Request, pattern string, opts *StaticOptions) (string, string, bool) {
+	urlPath := r.URL.Path
+	if opts.Prefix != "" {
+		if !strings.HasPrefix(urlPath, opts.Prefix) {
+			http.NotFound(w, r)
+			return "", "", false
+		}
+		urlPath = strings.TrimPrefix(urlPath, opts.Prefix)
+	} else if pattern != "" && pattern != "/" {
+		if !strings.HasPrefix(urlPath, pattern) {
+			http.NotFound(w, r)
+			return "", "", false
+		}
+		urlPath = strings.TrimPrefix(urlPath, pattern)
+	}
+	urlPath = path.Clean("/" + urlPath)
+	if strings.Contains(urlPath, "..") {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return "", "", false
+	}
+	filePath := strings.TrimPrefix(urlPath, "/")
+	if filePath == "" {
+		filePath = "."
+	}
+	return filePath, urlPath, true
+}
+
+func openStaticFile(filesystem fs.FS, filePath string, opts *StaticOptions) (fs.File, string, bool, bool, bool) {
+	file, err := filesystem.Open(filePath)
+	if err == nil {
+		return file, filePath, false, false, true
+	}
+	if os.IsNotExist(err) {
+		if file, indexPath, ok := openIndexFile(filesystem, filePath, opts.IndexFiles); ok {
+			return file, indexPath, false, true, true
+		}
+	}
+	if file, ok := openFallbackFile(filesystem, opts.Fallback); ok {
+		return file, opts.Fallback, true, false, true
+	}
+	return nil, "", false, false, false
+}
+
+func openIndexFile(filesystem fs.FS, filePath string, indexFiles []string) (fs.File, string, bool) {
+	for _, indexFile := range indexFiles {
+		indexPath := path.Join(filePath, indexFile)
+		if file, err := filesystem.Open(indexPath); err == nil {
+			return file, indexPath, true
+		}
+	}
+	return nil, "", false
+}
+
+func openFallbackFile(filesystem fs.FS, fallback string) (fs.File, bool) {
+	if fallback == "" {
+		return nil, false
+	}
+	file, err := filesystem.Open(fallback)
+	return file, err == nil
+}
+
+func resolveStaticDirectory(w http.ResponseWriter, r *http.Request, filesystem fs.FS, filePath, urlPath string, opts *StaticOptions) (fs.File, fs.FileInfo, string, bool, bool, bool) {
+	if opts.ShowIndexes {
+		serveDirectoryIndex(w, urlPath)
+		return nil, nil, "", false, false, false
+	}
+	if file, stat, indexPath, ok := openDirectoryIndex(filesystem, filePath, opts.IndexFiles); ok {
+		return file, stat, indexPath, false, true, true
+	}
+	if file, stat, ok := openRegularFallback(filesystem, opts.Fallback); ok {
+		return file, stat, opts.Fallback, true, false, true
+	}
+	http.NotFound(w, r)
+	return nil, nil, "", false, false, false
+}
+
+func serveDirectoryIndex(w http.ResponseWriter, urlPath string) {
+	safePath := html.EscapeString(urlPath)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprintf(w, "<html><head><title>Index of %s</title></head><body><h1>Index of %s</h1><ul>", safePath, safePath)
+	fmt.Fprint(w, "</ul></body></html>")
+}
+
+func openDirectoryIndex(filesystem fs.FS, filePath string, indexFiles []string) (fs.File, fs.FileInfo, string, bool) {
+	for _, indexName := range indexFiles {
+		indexPath := path.Join(filePath, indexName)
+		file, err := filesystem.Open(indexPath)
 		if err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
+			continue
 		}
-
-		// If it's a directory, try index files or show listing
-		if stat.IsDir() {
-			if opts.ShowIndexes {
-				// Directory listing (simplified - in production, use a proper template).
-				// The request path is HTML-escaped: it is reflected into the
-				// response and must never break out of the markup.
-				safePath := html.EscapeString(urlPath)
-				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-				fmt.Fprintf(w, "<html><head><title>Index of %s</title></head><body><h1>Index of %s</h1><ul>", safePath, safePath)
-				// Note: This is a simplified listing. For production, use a proper directory listing implementation.
-				fmt.Fprintf(w, "</ul></body></html>")
-				return
-			}
-
-			// Try index files
-			var indexFile fs.File
-			var indexStat fs.FileInfo
-			var indexPath string
-			for _, indexName := range opts.IndexFiles {
-				ip := path.Join(filePath, indexName)
-				if f, err := filesystem.Open(ip); err == nil {
-					if s, err := f.Stat(); err == nil && !s.IsDir() {
-						indexFile = f
-						indexStat = s
-						indexPath = ip
-						break
-					}
-					f.Close()
-				}
-			}
-
-			if indexFile != nil {
-				defer indexFile.Close()
-				file = indexFile
-				stat = indexStat
-				filePath = indexPath
-				isIndexUsed = true
-			} else if opts.Fallback != "" {
-				if f, err := filesystem.Open(opts.Fallback); err == nil {
-					if s, err := f.Stat(); err == nil && !s.IsDir() {
-						defer f.Close()
-						file = f
-						stat = s
-						filePath = opts.Fallback
-						isFallbackUsed = true
-					} else {
-						f.Close()
-						http.NotFound(w, r)
-						return
-					}
-				} else {
-					http.NotFound(w, r)
-					return
-				}
-			} else {
-				http.NotFound(w, r)
-				return
-			}
+		stat, statErr := file.Stat()
+		if statErr == nil && !stat.IsDir() {
+			return file, stat, indexPath, true
 		}
+		file.Close()
+	}
+	return nil, nil, "", false
+}
 
-		// Set content type
-		contentType := detectContentType(filePath)
-		w.Header().Set("Content-Type", contentType)
+func openRegularFallback(filesystem fs.FS, fallback string) (fs.File, fs.FileInfo, bool) {
+	file, ok := openFallbackFile(filesystem, fallback)
+	if !ok {
+		return nil, nil, false
+	}
+	stat, err := file.Stat()
+	if err == nil && !stat.IsDir() {
+		return file, stat, true
+	}
+	file.Close()
+	return nil, nil, false
+}
 
-		// Set cache headers
-		if !opts.DisableCache {
-			if opts.MaxAge > 0 {
-				w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", opts.MaxAge))
-			}
-			// Set ETag
-			etag := generateETag(stat)
-			w.Header().Set("ETag", etag)
+func serveStaticResponse(w http.ResponseWriter, r *http.Request, file fs.File, stat fs.FileInfo, filePath string, opts *StaticOptions, matched bool) {
+	w.Header().Set("Content-Type", detectContentType(filePath))
+	if writeStaticCacheHeaders(w, r, stat, opts) {
+		return
+	}
+	if opts.IndexTransform != nil && isIndexOrFallback(filePath, opts, matched) {
+		serveTransformedStaticFile(w, r, file, opts.IndexTransform)
+		return
+	}
+	if stat.Size() > 0 {
+		w.Header().Set("Accept-Ranges", "bytes")
+		serveContent(w, r, file, stat)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
 
-			// Check If-None-Match
-			if match := r.Header.Get("If-None-Match"); match != "" {
-				if match == etag || match == "*" {
-					w.WriteHeader(http.StatusNotModified)
-					return
-				}
-			}
+func writeStaticCacheHeaders(w http.ResponseWriter, r *http.Request, stat fs.FileInfo, opts *StaticOptions) bool {
+	if opts.DisableCache {
+		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, private")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
+		return false
+	}
+	if opts.MaxAge > 0 {
+		w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", opts.MaxAge))
+	}
+	etag := generateETag(stat)
+	w.Header().Set("ETag", etag)
+	if r.Header.Get("If-None-Match") == etag || r.Header.Get("If-None-Match") == "*" {
+		w.WriteHeader(http.StatusNotModified)
+		return true
+	}
+	modTime := stat.ModTime()
+	w.Header().Set("Last-Modified", modTime.UTC().Format(http.TimeFormat))
+	if modifiedSince(r, modTime) {
+		w.WriteHeader(http.StatusNotModified)
+		return true
+	}
+	return false
+}
 
-			// Set Last-Modified
-			modTime := stat.ModTime()
-			w.Header().Set("Last-Modified", modTime.UTC().Format(http.TimeFormat))
+func modifiedSince(r *http.Request, modTime time.Time) bool {
+	modified, err := time.Parse(http.TimeFormat, r.Header.Get("If-Modified-Since"))
+	return err == nil && modTime.UTC().Before(modified.Add(time.Second))
+}
 
-			// Check If-Modified-Since
-			if t, err := time.Parse(http.TimeFormat, r.Header.Get("If-Modified-Since")); err == nil {
-				if modTime.UTC().Before(t.Add(1 * time.Second)) {
-					w.WriteHeader(http.StatusNotModified)
-					return
-				}
-			}
-		} else {
-			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, private")
-			w.Header().Set("Pragma", "no-cache")
-			w.Header().Set("Expires", "0")
-		}
-
-		// Rewrite index or fallback HTML documents if IndexTransform is configured
-		if opts.IndexTransform != nil && isIndexOrFallback(filePath, opts, isIndexUsed || isFallbackUsed) {
-			data, err := io.ReadAll(file)
-			if err != nil {
-				http.Error(w, "Internal server error", http.StatusInternalServerError)
-				return
-			}
-			data = opts.IndexTransform(data)
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.Header().Set("Content-Length", strconv.Itoa(len(data)))
-			w.WriteHeader(http.StatusOK)
-			if r.Method != http.MethodHead {
-				w.Write(data)
-			}
-			return
-		}
-
-		// Handle range requests
-		if stat.Size() > 0 {
-			w.Header().Set("Accept-Ranges", "bytes")
-			serveContent(w, r, file, stat)
-		} else {
-			// Empty file
-			w.WriteHeader(http.StatusOK)
-		}
-	})
+func serveTransformedStaticFile(w http.ResponseWriter, r *http.Request, file fs.File, transform func([]byte) []byte) {
+	data, err := io.ReadAll(file)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	data = transform(data)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	w.WriteHeader(http.StatusOK)
+	if r.Method != http.MethodHead {
+		w.Write(data)
+	}
 }
 
 func isIndexOrFallback(filePath string, opts *StaticOptions, matched bool) bool {
@@ -395,75 +396,86 @@ func parseRange(s string, size int64) ([]byteRange, error) {
 	if !strings.HasPrefix(s, "bytes=") {
 		return nil, fmt.Errorf("invalid range")
 	}
-
-	s = s[6:] // Remove "bytes="
-	ranges := []byteRange{}
-
-	for _, ra := range strings.Split(s, ",") {
-		ra = strings.TrimSpace(ra)
-		if ra == "" {
-			continue
+	var ranges []byteRange
+	for _, value := range strings.Split(s[6:], ",") {
+		byteRange, valid, err := parseByteRange(strings.TrimSpace(value), size)
+		if err != nil {
+			return nil, err
 		}
-
-		i := strings.Index(ra, "-")
-		if i < 0 {
-			return nil, fmt.Errorf("invalid range")
+		if valid {
+			ranges = append(ranges, byteRange)
 		}
-
-		start, end := strings.TrimSpace(ra[:i]), strings.TrimSpace(ra[i+1:])
-
-		var r byteRange
-		if start == "" {
-			// Suffix range: -500 means last 500 bytes
-			if end == "" {
-				return nil, fmt.Errorf("invalid range")
-			}
-			suffix, err := parseInt64(end)
-			if err != nil {
-				return nil, err
-			}
-			if suffix > size {
-				suffix = size
-			}
-			r.start = size - suffix
-			r.end = size - 1
-		} else {
-			// Start specified
-			var err error
-			r.start, err = parseInt64(start)
-			if err != nil {
-				return nil, err
-			}
-			if r.start < 0 {
-				r.start = 0
-			}
-			if r.start >= size {
-				continue // Skip unsatisfiable range
-			}
-
-			if end == "" {
-				// No end specified, serve to end
-				r.end = size - 1
-			} else {
-				r.end, err = parseInt64(end)
-				if err != nil {
-					return nil, err
-				}
-				if r.end >= size {
-					r.end = size - 1
-				}
-			}
-		}
-
-		if r.start > r.end {
-			continue // Skip invalid range
-		}
-
-		r.length = r.end - r.start + 1
-		ranges = append(ranges, r)
 	}
-
 	return ranges, nil
+}
+
+func parseByteRange(value string, size int64) (byteRange, bool, error) {
+	if value == "" {
+		return byteRange{}, false, nil
+	}
+	separator := strings.Index(value, "-")
+	if separator < 0 {
+		return byteRange{}, false, fmt.Errorf("invalid range")
+	}
+	start, end := strings.TrimSpace(value[:separator]), strings.TrimSpace(value[separator+1:])
+	if start == "" {
+		return parseSuffixRange(end, size)
+	}
+	return parseStartRange(start, end, size)
+}
+
+func parseSuffixRange(end string, size int64) (byteRange, bool, error) {
+	if end == "" {
+		return byteRange{}, false, fmt.Errorf("invalid range")
+	}
+	suffix, err := parseInt64(end)
+	if err != nil {
+		return byteRange{}, false, err
+	}
+	if suffix > size {
+		suffix = size
+	}
+	return completeRange(byteRange{start: size - suffix, end: size - 1})
+}
+
+func parseStartRange(start, end string, size int64) (byteRange, bool, error) {
+	rangeStart, err := parseInt64(start)
+	if err != nil {
+		return byteRange{}, false, err
+	}
+	if rangeStart < 0 {
+		rangeStart = 0
+	}
+	if rangeStart >= size {
+		return byteRange{}, false, nil
+	}
+	rangeEnd, err := rangeEnd(end, size)
+	if err != nil {
+		return byteRange{}, false, err
+	}
+	return completeRange(byteRange{start: rangeStart, end: rangeEnd})
+}
+
+func rangeEnd(end string, size int64) (int64, error) {
+	if end == "" {
+		return size - 1, nil
+	}
+	rangeEnd, err := parseInt64(end)
+	if err != nil {
+		return 0, err
+	}
+	if rangeEnd >= size {
+		return size - 1, nil
+	}
+	return rangeEnd, nil
+}
+
+func completeRange(value byteRange) (byteRange, bool, error) {
+	if value.start > value.end {
+		return byteRange{}, false, nil
+	}
+	value.length = value.end - value.start + 1
+	return value, true, nil
 }
 
 // parseInt64 parses an integer string

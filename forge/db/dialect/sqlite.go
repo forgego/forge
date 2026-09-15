@@ -94,5 +94,13 @@ func (d *SQLiteDialect) LikeEscape() string {
 	return "\\"
 }
 
+// CaseInsensitiveLike returns a case-insensitive LIKE expression for SQLite.
+func (d *SQLiteDialect) CaseInsensitiveLike(column, placeholder string) string {
+	return fmt.Sprintf("LOWER(%s) LIKE LOWER(%s)", column, placeholder)
+}
+
 // Ensure SQLiteDialect implements Dialect interface
 var _ Dialect = (*SQLiteDialect)(nil)
+
+// Ensure SQLiteDialect implements CaseInsensitiveLiker interface
+var _ CaseInsensitiveLiker = (*SQLiteDialect)(nil)

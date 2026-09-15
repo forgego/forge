@@ -32,7 +32,7 @@ func (m *Category) Validate() error {
 
 // CategoryObjects provides type-safe operations for Category
 // Uses generic orm.Manager[Category] and orm.BaseQuerySet[Category]
-var CategoryObjects, _ = orm.NewManager[Category]("categories")
+var CategoryObjects = orm.MustNewManager[Category]("categories")
 
 // CategoryFields provides type-safe field access for Category
 type CategoryFields struct {
@@ -85,7 +85,7 @@ func (m *Brand) Validate() error {
 
 // BrandObjects provides type-safe operations for Brand
 // Uses generic orm.Manager[Brand] and orm.BaseQuerySet[Brand]
-var BrandObjects, _ = orm.NewManager[Brand]("brands")
+var BrandObjects = orm.MustNewManager[Brand]("brands")
 
 // BrandFields provides type-safe field access for Brand
 type BrandFields struct {
@@ -156,7 +156,7 @@ func (m *Product) Validate() error {
 
 // ProductObjects provides type-safe operations for Product
 // Uses generic orm.Manager[Product] and orm.BaseQuerySet[Product]
-var ProductObjects, _ = orm.NewManager[Product]("products")
+var ProductObjects = orm.MustNewManager[Product]("products")
 
 // ProductFields provides type-safe field access for Product
 type ProductFields struct {
@@ -266,7 +266,7 @@ func (m *ProductVariant) Validate() error {
 
 // ProductVariantObjects provides type-safe operations for ProductVariant
 // Uses generic orm.Manager[ProductVariant] and orm.BaseQuerySet[ProductVariant]
-var ProductVariantObjects, _ = orm.NewManager[ProductVariant]("product_variants")
+var ProductVariantObjects = orm.MustNewManager[ProductVariant]("product_variants")
 
 // ProductVariantFields provides type-safe field access for ProductVariant
 type ProductVariantFields struct {
@@ -350,7 +350,7 @@ func (m *ProductImage) Validate() error {
 
 // ProductImageObjects provides type-safe operations for ProductImage
 // Uses generic orm.Manager[ProductImage] and orm.BaseQuerySet[ProductImage]
-var ProductImageObjects, _ = orm.NewManager[ProductImage]("product_images")
+var ProductImageObjects = orm.MustNewManager[ProductImage]("product_images")
 
 // ProductImageFields provides type-safe field access for ProductImage
 type ProductImageFields struct {
@@ -400,7 +400,7 @@ func (m *ProductAttribute) Validate() error {
 
 // ProductAttributeObjects provides type-safe operations for ProductAttribute
 // Uses generic orm.Manager[ProductAttribute] and orm.BaseQuerySet[ProductAttribute]
-var ProductAttributeObjects, _ = orm.NewManager[ProductAttribute]("product_attributes")
+var ProductAttributeObjects = orm.MustNewManager[ProductAttribute]("product_attributes")
 
 // ProductAttributeFields provides type-safe field access for ProductAttribute
 type ProductAttributeFields struct {
@@ -443,7 +443,7 @@ func (m *ProductAttributeValue) Validate() error {
 
 // ProductAttributeValueObjects provides type-safe operations for ProductAttributeValue
 // Uses generic orm.Manager[ProductAttributeValue] and orm.BaseQuerySet[ProductAttributeValue]
-var ProductAttributeValueObjects, _ = orm.NewManager[ProductAttributeValue]("product_attribute_values")
+var ProductAttributeValueObjects = orm.MustNewManager[ProductAttributeValue]("product_attribute_values")
 
 // ProductAttributeValueFields provides type-safe field access for ProductAttributeValue
 type ProductAttributeValueFields struct {

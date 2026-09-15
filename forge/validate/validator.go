@@ -195,92 +195,62 @@ func formatValidationErrors(err error) error {
 
 // getErrorMessage returns a user-friendly error message for a validation error
 func getErrorMessage(fe validator.FieldError) string {
-	switch fe.Tag() {
-	case "required":
-		return "is required"
-	case "email":
-		return "must be a valid email address"
-	case "url":
-		return "must be a valid URL"
-	case "uuid":
-		return "must be a valid UUID"
-	case "min":
-		return fmt.Sprintf("must be at least %s characters", fe.Param())
-	case "max":
-		return fmt.Sprintf("must be at most %s characters", fe.Param())
-	case "len":
-		return fmt.Sprintf("must be exactly %s characters", fe.Param())
-	case "gte":
-		return fmt.Sprintf("must be greater than or equal to %s", fe.Param())
-	case "lte":
-		return fmt.Sprintf("must be less than or equal to %s", fe.Param())
-	case "gt":
-		return fmt.Sprintf("must be greater than %s", fe.Param())
-	case "lt":
-		return fmt.Sprintf("must be less than %s", fe.Param())
-	case "eq":
-		return fmt.Sprintf("must equal %s", fe.Param())
-	case "ne":
-		return fmt.Sprintf("must not equal %s", fe.Param())
-	case "oneof":
-		return fmt.Sprintf("must be one of: %s", fe.Param())
-	case "numeric":
-		return "must be numeric"
-	case "alpha":
-		return "must contain only letters"
-	case "alphanum":
-		return "must contain only letters and numbers"
-	case "alphaunicode":
-		return "must contain only unicode letters"
-	case "alphanumunicode":
-		return "must contain only unicode letters and numbers"
-	case "number":
-		return "must be a number"
-	case "boolean":
-		return "must be a boolean"
-	case "datetime":
-		return "must be a valid datetime"
-	case "date":
-		return "must be a valid date"
-	case "timezone":
-		return "must be a valid timezone"
-	case "ip":
-		return "must be a valid IP address"
-	case "ipv4":
-		return "must be a valid IPv4 address"
-	case "ipv6":
-		return "must be a valid IPv6 address"
-	case "mac":
-		return "must be a valid MAC address"
-	case "base64":
-		return "must be valid base64"
-	case "base64url":
-		return "must be valid base64url"
-	case "json":
-		return "must be valid JSON"
-	case "jwt":
-		return "must be a valid JWT"
-	case "hostname":
-		return "must be a valid hostname"
-	case "fqdn":
-		return "must be a valid FQDN"
-	case "uri":
-		return "must be a valid URI"
-	case "url_encoded":
-		return "must be URL encoded"
-	case "slug":
-		return "must be a valid slug (lowercase letters, numbers, hyphens, underscores)"
-	case "phone":
-		return "must be a valid phone number"
-	case "choices":
-		return "must be one of the allowed choices"
-	case "decimal_max_digits":
-		return fmt.Sprintf("must have at most %s digits", fe.Param())
-	case "decimal_places":
-		return fmt.Sprintf("must have at most %s decimal places", fe.Param())
-	default:
-		return fmt.Sprintf("failed validation for tag '%s'", fe.Tag())
+	if message, ok := validationMessages[fe.Tag()]; ok {
+		return message(fe.Field(), fe.Param())
 	}
+	return fmt.Sprintf("failed validation for tag '%s'", fe.Tag())
+}
+
+var validationMessages = map[string]func(string, string) string{
+	"required":           constantValidationMessage("is required"),
+	"email":              constantValidationMessage("must be a valid email address"),
+	"url":                constantValidationMessage("must be a valid URL"),
+	"uuid":               constantValidationMessage("must be a valid UUID"),
+	"min":                parameterValidationMessage("must be at least %s characters"),
+	"max":                parameterValidationMessage("must be at most %s characters"),
+	"len":                parameterValidationMessage("must be exactly %s characters"),
+	"gte":                parameterValidationMessage("must be greater than or equal to %s"),
+	"lte":                parameterValidationMessage("must be less than or equal to %s"),
+	"gt":                 parameterValidationMessage("must be greater than %s"),
+	"lt":                 parameterValidationMessage("must be less than %s"),
+	"eq":                 parameterValidationMessage("must equal %s"),
+	"ne":                 parameterValidationMessage("must not equal %s"),
+	"oneof":              parameterValidationMessage("must be one of: %s"),
+	"numeric":            constantValidationMessage("must be numeric"),
+	"alpha":              constantValidationMessage("must contain only letters"),
+	"alphanum":           constantValidationMessage("must contain only letters and numbers"),
+	"alphaunicode":       constantValidationMessage("must contain only unicode letters"),
+	"alphanumunicode":    constantValidationMessage("must contain only unicode letters and numbers"),
+	"number":             constantValidationMessage("must be a number"),
+	"boolean":            constantValidationMessage("must be a boolean"),
+	"datetime":           constantValidationMessage("must be a valid datetime"),
+	"date":               constantValidationMessage("must be a valid date"),
+	"timezone":           constantValidationMessage("must be a valid timezone"),
+	"ip":                 constantValidationMessage("must be a valid IP address"),
+	"ipv4":               constantValidationMessage("must be a valid IPv4 address"),
+	"ipv6":               constantValidationMessage("must be a valid IPv6 address"),
+	"mac":                constantValidationMessage("must be a valid MAC address"),
+	"base64":             constantValidationMessage("must be valid base64"),
+	"base64url":          constantValidationMessage("must be valid base64url"),
+	"json":               constantValidationMessage("must be valid JSON"),
+	"jwt":                constantValidationMessage("must be a valid JWT"),
+	"hostname":           constantValidationMessage("must be a valid hostname"),
+	"fqdn":               constantValidationMessage("must be a valid FQDN"),
+	"uri":                constantValidationMessage("must be a valid URI"),
+	"url_encoded":        constantValidationMessage("must be URL encoded"),
+	"slug":               constantValidationMessage("must be a valid slug (lowercase letters, numbers, hyphens, underscores)"),
+	"phone":              constantValidationMessage("must be a valid phone number"),
+	"choices":            constantValidationMessage("must be one of the allowed choices"),
+	"decimal_max_digits": parameterValidationMessage("must have at most %s digits"),
+	"decimal_places":     parameterValidationMessage("must have at most %s decimal places"),
+}
+
+func constantValidationMessage(message string) func(string, string) string {
+	return func(string, string) string { return message }
+}
+
+func parameterValidationMessage(format string) func(string, string) string {
+	return func(_ string, param string) string { return fmt.Sprintf(format, param) }
 }
 
 // RegisterCustomValidator registers a custom validation function

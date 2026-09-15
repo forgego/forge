@@ -15,10 +15,15 @@ type Context struct {
 	Cmd      *cobra.Command
 }
 
-// NewContext creates a new command context
+// NewContext creates a new command context with default configuration.
 func NewContext() *Context {
+	return NewContextWithConfig(config.NewConfig())
+}
+
+// NewContextWithConfig creates a new command context from the CLI configuration.
+func NewContextWithConfig(cfg *config.Config) *Context {
 	return &Context{
-		Config: config.NewConfig(),
+		Config: cfg,
 	}
 }
 
