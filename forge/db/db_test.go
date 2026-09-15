@@ -115,3 +115,24 @@ func TestNewDB_PostgresFailureNoFallback(t *testing.T) {
 		t.Fatalf("expected no file named %q to exist, but statErr was %v", dsn, statErr)
 	}
 }
+
+func TestDB_RebindPlaceholders_SkipsLiterals(t *testing.T) {
+	d := &DB{Driver: "sqlite"}
+
+	input := "SELECT * FROM notes WHERE title ILIKE $1 AND note = 'costs $1 ILIKE' AND author = 'O''Reilly $2'"
+	expected := "SELECT * FROM notes WHERE title LIKE ?1 AND note = 'costs $1 ILIKE' AND author = 'O''Reilly $2'"
+
+	got := d.RebindPlaceholders(input)
+	if got != expected {
+		t.Fatalf("got %q, want %q", got, expected)
+	}
+}
+
+func TestRebindPlaceholders_SQLiteBackslashBeforeQuote(t *testing.T) {
+	database := &DB{Driver: "sqlite3"}
+	query := `SELECT * FROM t WHERE note = 'C:\' AND title ILIKE $1`
+	want := `SELECT * FROM t WHERE note = 'C:\' AND title LIKE ?1`
+	if got := database.RebindPlaceholders(query); got != want {
+		t.Fatalf("RebindPlaceholders() = %q, want %q", got, want)
+	}
+}

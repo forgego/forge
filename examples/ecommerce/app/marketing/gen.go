@@ -46,7 +46,7 @@ func (m *Coupon) Validate() error {
 
 // CouponObjects provides type-safe operations for Coupon
 // Uses generic orm.Manager[Coupon] and orm.BaseQuerySet[Coupon]
-var CouponObjects, _ = orm.NewManager[Coupon]("coupons")
+var CouponObjects = orm.MustNewManager[Coupon]("coupons")
 
 // CouponFields provides type-safe field access for Coupon
 type CouponFields struct {
@@ -124,7 +124,7 @@ func (m *CouponUsage) Validate() error {
 
 // CouponUsageObjects provides type-safe operations for CouponUsage
 // Uses generic orm.Manager[CouponUsage] and orm.BaseQuerySet[CouponUsage]
-var CouponUsageObjects, _ = orm.NewManager[CouponUsage]("coupon_usage")
+var CouponUsageObjects = orm.MustNewManager[CouponUsage]("coupon_usage")
 
 // CouponUsageFields provides type-safe field access for CouponUsage
 type CouponUsageFields struct {
@@ -178,7 +178,7 @@ func (m *Review) Validate() error {
 
 // ReviewObjects provides type-safe operations for Review
 // Uses generic orm.Manager[Review] and orm.BaseQuerySet[Review]
-var ReviewObjects, _ = orm.NewManager[Review]("reviews")
+var ReviewObjects = orm.MustNewManager[Review]("reviews")
 
 // ReviewFields provides type-safe field access for Review
 type ReviewFields struct {
@@ -247,7 +247,7 @@ func (m *ReviewImage) Validate() error {
 
 // ReviewImageObjects provides type-safe operations for ReviewImage
 // Uses generic orm.Manager[ReviewImage] and orm.BaseQuerySet[ReviewImage]
-var ReviewImageObjects, _ = orm.NewManager[ReviewImage]("review_images")
+var ReviewImageObjects = orm.MustNewManager[ReviewImage]("review_images")
 
 // ReviewImageFields provides type-safe field access for ReviewImage
 type ReviewImageFields struct {
@@ -289,7 +289,7 @@ func (m *ReviewHelpfulness) Validate() error {
 
 // ReviewHelpfulnessObjects provides type-safe operations for ReviewHelpfulness
 // Uses generic orm.Manager[ReviewHelpfulness] and orm.BaseQuerySet[ReviewHelpfulness]
-var ReviewHelpfulnessObjects, _ = orm.NewManager[ReviewHelpfulness]("review_helpfulness")
+var ReviewHelpfulnessObjects = orm.MustNewManager[ReviewHelpfulness]("review_helpfulness")
 
 // ReviewHelpfulnessFields provides type-safe field access for ReviewHelpfulness
 type ReviewHelpfulnessFields struct {
@@ -336,7 +336,7 @@ func (m *ProductQuestion) Validate() error {
 
 // ProductQuestionObjects provides type-safe operations for ProductQuestion
 // Uses generic orm.Manager[ProductQuestion] and orm.BaseQuerySet[ProductQuestion]
-var ProductQuestionObjects, _ = orm.NewManager[ProductQuestion]("product_questions")
+var ProductQuestionObjects = orm.MustNewManager[ProductQuestion]("product_questions")
 
 // ProductQuestionFields provides type-safe field access for ProductQuestion
 type ProductQuestionFields struct {

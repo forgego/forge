@@ -21,6 +21,7 @@
 - Type-safe ORM and migrations
 - Code generation for models and admin
 - Extensible plugin system
+- Auto generation of admin pages from models
 
 ## Quick Start
 

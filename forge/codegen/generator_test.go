@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGenerator_GenerateAndAPI(t *testing.T) {
+func TestGeneratorGenerateEmitsMustNewManagerDeclaration(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	modelSrc := `package testmodels
@@ -61,7 +61,7 @@ func (Product) Hooks() *schema.ModelHooks {
 	genBytes, err := os.ReadFile(genFile)
 	require.NoError(t, err)
 	assert.Contains(t, string(genBytes), "type ProductGenerated struct")
-	assert.Contains(t, string(genBytes), "var ProductObjects, _ = orm.NewManager[Product]")
+	assert.Contains(t, string(genBytes), "var ProductObjects = orm.MustNewManager[Product]")
 
 	// Verify api_gen.go
 	apiGenFile := filepath.Join(tmpDir, "api_gen.go")

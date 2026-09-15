@@ -116,26 +116,27 @@ func (q QueryExpr) Not() QueryExpr {
 
 // ToSQL converts the QueryExpr to SQL with parameters
 // paramIndex is the starting parameter index (1-based for PostgreSQL)
-func (q QueryExpr) ToSQL(paramIndex int) (string, []interface{}, int) {
-	if len(q.children) > 0 {
-		return q.buildCombined(paramIndex)
+func (q QueryExpr) ToSQL(paramIndex int, placeholder ...func(int) string) (string, []interface{}, int) {
+	ph := defaultPlaceholder
+	if len(placeholder) > 0 && placeholder[0] != nil {
+		ph = placeholder[0]
 	}
 
-	if q.combiner != "" {
-		return q.buildCombined(paramIndex)
+	if len(q.children) > 0 || q.combiner != "" {
+		return q.buildCombined(paramIndex, ph)
 	}
 
-	return q.buildSingle(paramIndex)
+	return q.buildSingle(paramIndex, ph)
 }
 
 // buildCombined builds SQL for combined conditions (AND/OR)
-func (q QueryExpr) buildCombined(paramIndex int) (string, []interface{}, int) {
+func (q QueryExpr) buildCombined(paramIndex int, ph func(int) string) (string, []interface{}, int) {
 	var parts []string
 	var allArgs []interface{}
 	currentIndex := paramIndex
 
 	for _, child := range q.children {
-		sql, args, nextIndex := child.ToSQL(currentIndex)
+		sql, args, nextIndex := child.ToSQL(currentIndex, ph)
 		parts = append(parts, fmt.Sprintf("(%s)", sql))
 		allArgs = append(allArgs, args...)
 		currentIndex = nextIndex
@@ -168,134 +169,107 @@ func toInterfaceSlice(v interface{}) ([]interface{}, bool) {
 	return res, true
 }
 
-// buildSingle builds SQL for a single condition
-func (q QueryExpr) buildSingle(paramIndex int) (string, []interface{}, int) {
-	var sql string
-	var args []interface{}
-	currentIndex := paramIndex
-
-	// Use if-else to handle operators with same string values
-	if q.op == OpIsNull {
-		if b, ok := q.value.(bool); ok && !b {
-			sql = fmt.Sprintf("%s IS NOT NULL", q.field)
-		} else {
-			sql = fmt.Sprintf("%s IS NULL", q.field)
-		}
-	} else if q.op == OpIsNotNull {
-		sql = fmt.Sprintf("%s IS NOT NULL", q.field)
-	} else if q.op == OpIn {
-		// Handle IN clause - use PostgreSQL placeholders
+func buildInOrRange(q QueryExpr, currentIndex int, ph func(int) string) (string, []interface{}, int, bool) {
+	if q.op == OpIn || q.op == OpNotIn {
 		values, ok := toInterfaceSlice(q.value)
 		if !ok || len(values) == 0 {
-			return "1=0", nil, currentIndex
+			if q.op == OpIn {
+				return "1=0", nil, currentIndex, true
+			}
+			return "1=1", nil, currentIndex, true
 		}
 		placeholders := make([]string, len(values))
 		for i := range placeholders {
-			placeholders[i] = fmt.Sprintf("$%d", currentIndex+i)
-			args = append(args, values[i])
+			placeholders[i] = ph(currentIndex + i)
 		}
-		sql = fmt.Sprintf("%s IN (%s)", q.field, strings.Join(placeholders, ", "))
-		currentIndex += len(values)
-	} else if q.op == OpNotIn {
-		values, ok := toInterfaceSlice(q.value)
-		if !ok || len(values) == 0 {
-			return "1=1", nil, currentIndex
+		opStr := "IN"
+		if q.op == OpNotIn {
+			opStr = "NOT IN"
 		}
-		placeholders := make([]string, len(values))
-		for i := range placeholders {
-			placeholders[i] = fmt.Sprintf("$%d", currentIndex+i)
-			args = append(args, values[i])
-		}
-		sql = fmt.Sprintf("%s NOT IN (%s)", q.field, strings.Join(placeholders, ", "))
-		currentIndex += len(values)
-	} else if q.op == OpContains {
-		sql = fmt.Sprintf("%s LIKE $%d", q.field, currentIndex)
-		if strVal, ok := q.value.(string); ok {
-			args = []interface{}{"%" + strVal + "%"}
-		} else {
-			return "", nil, currentIndex
-		}
-		currentIndex++
-	} else if q.op == OpStartsWith {
-		sql = fmt.Sprintf("%s LIKE $%d", q.field, currentIndex)
-		if strVal, ok := q.value.(string); ok {
-			args = []interface{}{strVal + "%"}
-		} else {
-			return "", nil, currentIndex
-		}
-		currentIndex++
-	} else if q.op == OpEndsWith {
-		sql = fmt.Sprintf("%s LIKE $%d", q.field, currentIndex)
-		if strVal, ok := q.value.(string); ok {
-			args = []interface{}{"%" + strVal}
-		} else {
-			return "", nil, currentIndex
-		}
-		currentIndex++
-	} else if q.op == OpIContains {
-		sql = fmt.Sprintf("LOWER(%s) LIKE LOWER($%d)", q.field, currentIndex)
-		if strVal, ok := q.value.(string); ok {
-			args = []interface{}{"%" + strVal + "%"}
-		} else {
-			return "", nil, currentIndex
-		}
-		currentIndex++
-	} else if q.op == OpIExact {
-		sql = fmt.Sprintf("LOWER(%s) LIKE LOWER($%d)", q.field, currentIndex)
-		if strVal, ok := q.value.(string); ok {
-			args = []interface{}{strVal}
-		} else {
-			return "", nil, currentIndex
-		}
-		currentIndex++
-	} else if q.op == OpIStartsWith {
-		sql = fmt.Sprintf("LOWER(%s) LIKE LOWER($%d)", q.field, currentIndex)
-		if strVal, ok := q.value.(string); ok {
-			args = []interface{}{strVal + "%"}
-		} else {
-			return "", nil, currentIndex
-		}
-		currentIndex++
-	} else if q.op == OpIEndsWith {
-		sql = fmt.Sprintf("LOWER(%s) LIKE LOWER($%d)", q.field, currentIndex)
-		if strVal, ok := q.value.(string); ok {
-			args = []interface{}{"%" + strVal}
-		} else {
-			return "", nil, currentIndex
-		}
-		currentIndex++
-	} else if q.op == OpRange {
+		sql := fmt.Sprintf("%s %s (%s)", q.field, opStr, strings.Join(placeholders, ", "))
+		return sql, values, currentIndex + len(values), true
+	}
+	if q.op == OpRange {
 		values, ok := toInterfaceSlice(q.value)
 		if !ok || len(values) != 2 {
-			return "1=0", nil, currentIndex
+			return "1=0", nil, currentIndex, true
 		}
-		sql = fmt.Sprintf("%s BETWEEN $%d AND $%d", q.field, currentIndex, currentIndex+1)
-		args = []interface{}{values[0], values[1]}
-		currentIndex += 2
-	} else if q.op == OpYear {
-		sql = fmt.Sprintf("EXTRACT(YEAR FROM %s) = $%d", q.field, currentIndex)
-		args = []interface{}{q.value}
-		currentIndex++
-	} else if q.op == OpMonth {
-		sql = fmt.Sprintf("EXTRACT(MONTH FROM %s) = $%d", q.field, currentIndex)
-		args = []interface{}{q.value}
-		currentIndex++
-	} else if q.op == OpDay {
-		sql = fmt.Sprintf("EXTRACT(DAY FROM %s) = $%d", q.field, currentIndex)
-		args = []interface{}{q.value}
-		currentIndex++
-	} else {
-		// Standard operators (=, !=, >, >=, <, <=) - use PostgreSQL placeholders
-		sql = fmt.Sprintf("%s %s $%d", q.field, q.op, currentIndex)
-		args = []interface{}{q.value}
-		currentIndex++
+		sql := fmt.Sprintf("%s BETWEEN %s AND %s", q.field, ph(currentIndex), ph(currentIndex+1))
+		return sql, []interface{}{values[0], values[1]}, currentIndex + 2, true
 	}
+	return "", nil, currentIndex, false
+}
 
+func buildLikeExpr(q QueryExpr, currentIndex int, ph func(int) string) (string, []interface{}, int, bool) {
+	strVal, ok := q.value.(string)
+	if !ok {
+		return "", nil, currentIndex, false
+	}
+	switch q.op {
+	case OpContains:
+		return fmt.Sprintf("%s LIKE %s", q.field, ph(currentIndex)), []interface{}{"%" + strVal + "%"}, currentIndex + 1, true
+	case OpStartsWith:
+		return fmt.Sprintf("%s LIKE %s", q.field, ph(currentIndex)), []interface{}{strVal + "%"}, currentIndex + 1, true
+	case OpEndsWith:
+		return fmt.Sprintf("%s LIKE %s", q.field, ph(currentIndex)), []interface{}{"%" + strVal}, currentIndex + 1, true
+	case OpIContains:
+		return fmt.Sprintf("LOWER(%s) LIKE LOWER(%s)", q.field, ph(currentIndex)), []interface{}{"%" + strVal + "%"}, currentIndex + 1, true
+	case OpIExact:
+		return fmt.Sprintf("LOWER(%s) LIKE LOWER(%s)", q.field, ph(currentIndex)), []interface{}{strVal}, currentIndex + 1, true
+	case OpIStartsWith:
+		return fmt.Sprintf("LOWER(%s) LIKE LOWER(%s)", q.field, ph(currentIndex)), []interface{}{strVal + "%"}, currentIndex + 1, true
+	case OpIEndsWith:
+		return fmt.Sprintf("LOWER(%s) LIKE LOWER(%s)", q.field, ph(currentIndex)), []interface{}{"%" + strVal}, currentIndex + 1, true
+	default:
+		return "", nil, currentIndex, false
+	}
+}
+
+func buildDateExtract(q QueryExpr, currentIndex int, ph func(int) string) (string, []interface{}, int, bool) {
+	var part string
+	switch q.op {
+	case OpYear:
+		part = "YEAR"
+	case OpMonth:
+		part = "MONTH"
+	case OpDay:
+		part = "DAY"
+	default:
+		return "", nil, currentIndex, false
+	}
+	sql := fmt.Sprintf("EXTRACT(%s FROM %s) = %s", part, q.field, ph(currentIndex))
+	return sql, []interface{}{q.value}, currentIndex + 1, true
+}
+
+func (q QueryExpr) wrapNegated(sql string) string {
 	if q.negated {
-		sql = fmt.Sprintf("NOT (%s)", sql)
+		return fmt.Sprintf("NOT (%s)", sql)
 	}
+	return sql
+}
 
-	return sql, args, currentIndex
+// buildSingle builds SQL for a single condition
+func (q QueryExpr) buildSingle(paramIndex int, ph func(int) string) (string, []interface{}, int) {
+	if q.op == OpIsNull {
+		if b, ok := q.value.(bool); ok && !b {
+			return q.wrapNegated(fmt.Sprintf("%s IS NOT NULL", q.field)), nil, paramIndex
+		}
+		return q.wrapNegated(fmt.Sprintf("%s IS NULL", q.field)), nil, paramIndex
+	}
+	if q.op == OpIsNotNull {
+		return q.wrapNegated(fmt.Sprintf("%s IS NOT NULL", q.field)), nil, paramIndex
+	}
+	if sql, args, next, ok := buildInOrRange(q, paramIndex, ph); ok {
+		return q.wrapNegated(sql), args, next
+	}
+	if sql, args, next, ok := buildLikeExpr(q, paramIndex, ph); ok {
+		return q.wrapNegated(sql), args, next
+	}
+	if sql, args, next, ok := buildDateExtract(q, paramIndex, ph); ok {
+		return q.wrapNegated(sql), args, next
+	}
+	sql := fmt.Sprintf("%s %s %s", q.field, q.op, ph(paramIndex))
+	return q.wrapNegated(sql), []interface{}{q.value}, paramIndex + 1
 }
 
 // RegisterQueryExpr registers a custom query expression type

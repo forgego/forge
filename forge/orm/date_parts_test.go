@@ -84,19 +84,19 @@ func TestComparisonExpression_DateParts_SQLite(t *testing.T) {
 			name:        "OpYear",
 			op:          OpYear,
 			val:         2024,
-			expectedSQL: `CAST(strftime('%Y', "created_at") AS INTEGER) = $1`,
+			expectedSQL: `CAST(strftime('%Y', "created_at") AS INTEGER) = ?`,
 		},
 		{
 			name:        "OpMonth",
 			op:          OpMonth,
 			val:         5,
-			expectedSQL: `CAST(strftime('%m', "created_at") AS INTEGER) = $1`,
+			expectedSQL: `CAST(strftime('%m', "created_at") AS INTEGER) = ?`,
 		},
 		{
 			name:        "OpDay",
 			op:          OpDay,
 			val:         15,
-			expectedSQL: `CAST(strftime('%d', "created_at") AS INTEGER) = $1`,
+			expectedSQL: `CAST(strftime('%d', "created_at") AS INTEGER) = ?`,
 		},
 	}
 
@@ -125,7 +125,7 @@ func TestComparisonExpression_DateParts_SQLite(t *testing.T) {
 		builder := NewSQLBuilderWithDialect(sqliteDialect)
 		sql, args, err := expr.ToSQL(builder)
 		require.NoError(t, err)
-		assert.Equal(t, `CAST(strftime('%Y', "users"."created_at") AS INTEGER) = $1`, sql)
+		assert.Equal(t, `CAST(strftime('%Y', "users"."created_at") AS INTEGER) = ?`, sql)
 		assert.Equal(t, []interface{}{2024}, args)
 	})
 }
@@ -215,7 +215,7 @@ func TestQuerySet_DateParts_SQL(t *testing.T) {
 	qs2 = qs2.SetDB(sqliteDB).Filter(Where("created_at", OpYear, 2024))
 	sql2, args2, err := qs2.(*BaseQuerySet[User]).buildSQL()
 	require.NoError(t, err)
-	assert.Contains(t, sql2, `CAST(strftime('%Y', "created_at") AS INTEGER) = ?1`)
+	assert.Contains(t, sql2, `CAST(strftime('%Y', "created_at") AS INTEGER) = ?`)
 	assert.Equal(t, []interface{}{2024}, args2)
 }
 

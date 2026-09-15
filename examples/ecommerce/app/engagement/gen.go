@@ -29,7 +29,7 @@ func (m *RecentlyViewed) Validate() error {
 
 // RecentlyViewedObjects provides type-safe operations for RecentlyViewed
 // Uses generic orm.Manager[RecentlyViewed] and orm.BaseQuerySet[RecentlyViewed]
-var RecentlyViewedObjects, _ = orm.NewManager[RecentlyViewed]("recently_viewed")
+var RecentlyViewedObjects = orm.MustNewManager[RecentlyViewed]("recently_viewed")
 
 // RecentlyViewedFields provides type-safe field access for RecentlyViewed
 type RecentlyViewedFields struct {
@@ -73,7 +73,7 @@ func (m *ProductComparison) Validate() error {
 
 // ProductComparisonObjects provides type-safe operations for ProductComparison
 // Uses generic orm.Manager[ProductComparison] and orm.BaseQuerySet[ProductComparison]
-var ProductComparisonObjects, _ = orm.NewManager[ProductComparison]("product_comparisons")
+var ProductComparisonObjects = orm.MustNewManager[ProductComparison]("product_comparisons")
 
 // ProductComparisonFields provides type-safe field access for ProductComparison
 type ProductComparisonFields struct {
@@ -122,7 +122,7 @@ func (m *Notification) Validate() error {
 
 // NotificationObjects provides type-safe operations for Notification
 // Uses generic orm.Manager[Notification] and orm.BaseQuerySet[Notification]
-var NotificationObjects, _ = orm.NewManager[Notification]("notifications")
+var NotificationObjects = orm.MustNewManager[Notification]("notifications")
 
 // NotificationFields provides type-safe field access for Notification
 type NotificationFields struct {
@@ -185,7 +185,7 @@ func (m *CustomerActivity) Validate() error {
 
 // CustomerActivityObjects provides type-safe operations for CustomerActivity
 // Uses generic orm.Manager[CustomerActivity] and orm.BaseQuerySet[CustomerActivity]
-var CustomerActivityObjects, _ = orm.NewManager[CustomerActivity]("customer_activities")
+var CustomerActivityObjects = orm.MustNewManager[CustomerActivity]("customer_activities")
 
 // CustomerActivityFields provides type-safe field access for CustomerActivity
 type CustomerActivityFields struct {
@@ -240,7 +240,7 @@ func (m *AbandonedCartReminder) Validate() error {
 
 // AbandonedCartReminderObjects provides type-safe operations for AbandonedCartReminder
 // Uses generic orm.Manager[AbandonedCartReminder] and orm.BaseQuerySet[AbandonedCartReminder]
-var AbandonedCartReminderObjects, _ = orm.NewManager[AbandonedCartReminder]("abandoned_cart_reminders")
+var AbandonedCartReminderObjects = orm.MustNewManager[AbandonedCartReminder]("abandoned_cart_reminders")
 
 // AbandonedCartReminderFields provides type-safe field access for AbandonedCartReminder
 type AbandonedCartReminderFields struct {
@@ -294,7 +294,7 @@ func (m *UserSegment) Validate() error {
 
 // UserSegmentObjects provides type-safe operations for UserSegment
 // Uses generic orm.Manager[UserSegment] and orm.BaseQuerySet[UserSegment]
-var UserSegmentObjects, _ = orm.NewManager[UserSegment]("user_segments")
+var UserSegmentObjects = orm.MustNewManager[UserSegment]("user_segments")
 
 // UserSegmentFields provides type-safe field access for UserSegment
 type UserSegmentFields struct {
@@ -345,7 +345,7 @@ func (m *SegmentRule) Validate() error {
 
 // SegmentRuleObjects provides type-safe operations for SegmentRule
 // Uses generic orm.Manager[SegmentRule] and orm.BaseQuerySet[SegmentRule]
-var SegmentRuleObjects, _ = orm.NewManager[SegmentRule]("segment_rules")
+var SegmentRuleObjects = orm.MustNewManager[SegmentRule]("segment_rules")
 
 // SegmentRuleFields provides type-safe field access for SegmentRule
 type SegmentRuleFields struct {

@@ -39,7 +39,7 @@ func (m *SupportTicket) Validate() error {
 
 // SupportTicketObjects provides type-safe operations for SupportTicket
 // Uses generic orm.Manager[SupportTicket] and orm.BaseQuerySet[SupportTicket]
-var SupportTicketObjects, _ = orm.NewManager[SupportTicket]("support_tickets")
+var SupportTicketObjects = orm.MustNewManager[SupportTicket]("support_tickets")
 
 // SupportTicketFields provides type-safe field access for SupportTicket
 type SupportTicketFields struct {
@@ -106,7 +106,7 @@ func (m *SupportMessage) Validate() error {
 
 // SupportMessageObjects provides type-safe operations for SupportMessage
 // Uses generic orm.Manager[SupportMessage] and orm.BaseQuerySet[SupportMessage]
-var SupportMessageObjects, _ = orm.NewManager[SupportMessage]("support_messages")
+var SupportMessageObjects = orm.MustNewManager[SupportMessage]("support_messages")
 
 // SupportMessageFields provides type-safe field access for SupportMessage
 type SupportMessageFields struct {
@@ -168,7 +168,7 @@ func (m *ReturnRequest) Validate() error {
 
 // ReturnRequestObjects provides type-safe operations for ReturnRequest
 // Uses generic orm.Manager[ReturnRequest] and orm.BaseQuerySet[ReturnRequest]
-var ReturnRequestObjects, _ = orm.NewManager[ReturnRequest]("return_requests")
+var ReturnRequestObjects = orm.MustNewManager[ReturnRequest]("return_requests")
 
 // ReturnRequestFields provides type-safe field access for ReturnRequest
 type ReturnRequestFields struct {
@@ -249,7 +249,7 @@ func (m *LiveChatSession) Validate() error {
 
 // LiveChatSessionObjects provides type-safe operations for LiveChatSession
 // Uses generic orm.Manager[LiveChatSession] and orm.BaseQuerySet[LiveChatSession]
-var LiveChatSessionObjects, _ = orm.NewManager[LiveChatSession]("live_chat_sessions")
+var LiveChatSessionObjects = orm.MustNewManager[LiveChatSession]("live_chat_sessions")
 
 // LiveChatSessionFields provides type-safe field access for LiveChatSession
 type LiveChatSessionFields struct {
@@ -313,7 +313,7 @@ func (m *FAQ) Validate() error {
 
 // FAQObjects provides type-safe operations for FAQ
 // Uses generic orm.Manager[FAQ] and orm.BaseQuerySet[FAQ]
-var FAQObjects, _ = orm.NewManager[FAQ]("faqs")
+var FAQObjects = orm.MustNewManager[FAQ]("faqs")
 
 // FAQFields provides type-safe field access for FAQ
 type FAQFields struct {
@@ -369,7 +369,7 @@ func (m *Attachment) Validate() error {
 
 // AttachmentObjects provides type-safe operations for Attachment
 // Uses generic orm.Manager[Attachment] and orm.BaseQuerySet[Attachment]
-var AttachmentObjects, _ = orm.NewManager[Attachment]("attachments")
+var AttachmentObjects = orm.MustNewManager[Attachment]("attachments")
 
 // AttachmentFields provides type-safe field access for Attachment
 type AttachmentFields struct {
@@ -422,7 +422,7 @@ func (m *ReturnItem) Validate() error {
 
 // ReturnItemObjects provides type-safe operations for ReturnItem
 // Uses generic orm.Manager[ReturnItem] and orm.BaseQuerySet[ReturnItem]
-var ReturnItemObjects, _ = orm.NewManager[ReturnItem]("return_items")
+var ReturnItemObjects = orm.MustNewManager[ReturnItem]("return_items")
 
 // ReturnItemFields provides type-safe field access for ReturnItem
 type ReturnItemFields struct {
@@ -475,7 +475,7 @@ func (m *StatusChange) Validate() error {
 
 // StatusChangeObjects provides type-safe operations for StatusChange
 // Uses generic orm.Manager[StatusChange] and orm.BaseQuerySet[StatusChange]
-var StatusChangeObjects, _ = orm.NewManager[StatusChange]("status_changes")
+var StatusChangeObjects = orm.MustNewManager[StatusChange]("status_changes")
 
 // StatusChangeFields provides type-safe field access for StatusChange
 type StatusChangeFields struct {
@@ -523,7 +523,7 @@ func (m *ChatMessage) Validate() error {
 
 // ChatMessageObjects provides type-safe operations for ChatMessage
 // Uses generic orm.Manager[ChatMessage] and orm.BaseQuerySet[ChatMessage]
-var ChatMessageObjects, _ = orm.NewManager[ChatMessage]("chat_messages")
+var ChatMessageObjects = orm.MustNewManager[ChatMessage]("chat_messages")
 
 // ChatMessageFields provides type-safe field access for ChatMessage
 type ChatMessageFields struct {

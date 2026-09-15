@@ -3,8 +3,10 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/forgego/forge/api/core"
 	"github.com/forgego/forge/identity/backends"
@@ -12,6 +14,7 @@ import (
 	"github.com/forgego/forge/identity/repository"
 	"github.com/forgego/forge/identity/service"
 	forgehttp "github.com/forgego/forge/server"
+	"github.com/gorilla/csrf"
 )
 
 // AuthenticationMiddleware authenticates requests
@@ -20,6 +23,7 @@ type AuthenticationMiddleware struct {
 	sessionRepo     repository.SessionRepository
 	userRepo        repository.UserRepository
 	permissionSvc   service.PermissionService
+	csrfWarningOnce sync.Once
 }
 
 // NewAuthenticationMiddleware creates a new authentication middleware
@@ -82,7 +86,8 @@ func (m *AuthenticationMiddleware) OptionalAuth(next http.Handler) http.Handler 
 	})
 }
 
-// authenticateRequest attempts to authenticate the request
+// authenticateRequest authenticates session cookies on unsafe methods only after CSRF validation ran.
+// Header-based session keys and safe methods do not require CSRF validation.
 func (m *AuthenticationMiddleware) authenticateRequest(ctx context.Context, r *http.Request) (*models.User, error) {
 	// Try token-based authentication first (from Authorization header)
 	authHeader := r.Header.Get("Authorization")
@@ -101,12 +106,21 @@ func (m *AuthenticationMiddleware) authenticateRequest(ctx context.Context, r *h
 
 	// Try session-based authentication
 	sessionKey := r.Header.Get("X-Session-Key")
+	cookieSession := false
 	if sessionKey == "" {
 		// Try to get from cookie
 		cookie, err := r.Cookie("session_key")
 		if err == nil {
 			sessionKey = cookie.Value
+			cookieSession = true
 		}
+	}
+
+	if cookieSession && isUnsafeMethod(r.Method) && csrf.Token(r) == "" {
+		m.csrfWarningOnce.Do(func() {
+			slog.Warn("session cookie ignored on unsafe request: CSRF middleware is not mounted on this route", "method", r.Method, "path", sanitizeLogValue(r.URL.Path))
+		})
+		return nil, nil
 	}
 
 	if sessionKey != "" && m.sessionRepo != nil && m.userRepo != nil {
@@ -121,6 +135,19 @@ func (m *AuthenticationMiddleware) authenticateRequest(ctx context.Context, r *h
 	}
 
 	return nil, nil
+}
+
+func sanitizeLogValue(s string) string {
+	return strings.NewReplacer("\r", "", "\n", "").Replace(s)
+}
+
+func isUnsafeMethod(method string) bool {
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodTrace:
+		return false
+	default:
+		return true
+	}
 }
 
 // RequirePermission middleware requires a specific permission

@@ -2,6 +2,7 @@ package orm
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -25,6 +26,35 @@ func TestNewManager(t *testing.T) {
 			assert.NotNil(t, manager)
 		}
 	})
+}
+
+type invalidManagerModel struct{}
+
+func TestMustNewManagerReturnsManagerForValidModel(t *testing.T) {
+	manager := MustNewManager[testModel]("test_table")
+
+	require.NotNil(t, manager)
+	assert.Equal(t, "test_table", manager.tableName)
+}
+
+func TestMustNewManagerPanicsWithModelTypeAndSchemaError(t *testing.T) {
+	_, schemaErr := NewManager[invalidManagerModel]("")
+	require.Error(t, schemaErr)
+
+	panicValue := capturePanic(func() {
+		MustNewManager[invalidManagerModel]("")
+	})
+	require.NotEmpty(t, panicValue)
+	require.Contains(t, panicValue, "invalidManagerModel")
+	require.Contains(t, panicValue, schemaErr.Error())
+}
+
+func capturePanic(fn func()) (panicValue string) {
+	defer func() {
+		panicValue = fmt.Sprint(recover())
+	}()
+	fn()
+	return ""
 }
 
 func TestNewManagerWithDB(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -194,7 +195,7 @@ func (ub *UpdateBuilder[T]) Increment(fieldName string, amount interface{}) *Upd
 	// This bypasses type checking issues with CombinedExpression
 	// Format: "field" + $1
 	fieldSQL := EscapeIdentifier(fieldInfo.DBColumn)
-	placeholder := fmt.Sprintf("$%d", 1) // Will be replaced by SQL builder
+	placeholder := "$1" // Will be replaced by SQL builder
 
 	// Store as a special expression that represents field + value
 	// We'll handle this in the SQL generation
@@ -213,19 +214,76 @@ type RawExpression struct {
 	Args []interface{}
 }
 
+func parsePlaceholderIndex(sql string, start, maxArgs int) (int, int, error) {
+	j := start
+	for j < len(sql) && sql[j] >= '0' && sql[j] <= '9' {
+		j++
+	}
+	idx, err := strconv.Atoi(sql[start:j])
+	if err != nil || idx < 1 || idx > maxArgs {
+		return 0, j, fmt.Errorf("invalid placeholder $%s: out of range for %d args", sql[start:j], maxArgs)
+	}
+	return idx, j, nil
+}
+
+func handleRawInString(sql string, i int, b *strings.Builder) (int, bool) {
+	ch := sql[i]
+	b.WriteByte(ch)
+	if ch == '\'' {
+		if i+1 < len(sql) && sql[i+1] == '\'' {
+			b.WriteByte('\'')
+			return i + 2, true
+		}
+		return i + 1, false
+	}
+	return i + 1, true
+}
+
+func (r *RawExpression) handlePlaceholder(builder *SQLBuilder, i int, b *strings.Builder, args *[]interface{}) (int, error) {
+	idx, nextI, err := parsePlaceholderIndex(r.SQL, i+1, len(r.Args))
+	if err != nil {
+		return 0, err
+	}
+	arg := r.Args[idx-1]
+	b.WriteString(builder.AddArg(arg))
+	*args = append(*args, arg)
+	return nextI, nil
+}
+
 // ToSQL converts raw expression to SQL
 func (r *RawExpression) ToSQL(builder *SQLBuilder) (string, []interface{}, error) {
-	// Replace placeholders with actual parameter placeholders
-	sql := r.SQL
-	args := []interface{}{}
-
-	for i, arg := range r.Args {
-		placeholder := builder.AddArg(arg)
-		sql = strings.Replace(sql, fmt.Sprintf("$%d", i+1), placeholder, 1)
-		args = append(args, arg)
+	if builder == nil {
+		return "", nil, fmt.Errorf("builder is nil")
 	}
+	var b strings.Builder
+	b.Grow(len(r.SQL))
+	var args []interface{}
+	inString := false
+	n := len(r.SQL)
 
-	return sql, args, nil
+	for i := 0; i < n; {
+		if inString {
+			i, inString = handleRawInString(r.SQL, i, &b)
+			continue
+		}
+		if r.SQL[i] == '\'' {
+			inString = true
+			b.WriteByte('\'')
+			i++
+			continue
+		}
+		if r.SQL[i] == '$' && i+1 < n && r.SQL[i+1] >= '0' && r.SQL[i+1] <= '9' {
+			nextI, err := r.handlePlaceholder(builder, i, &b, &args)
+			if err != nil {
+				return "", nil, err
+			}
+			i = nextI
+			continue
+		}
+		b.WriteByte(r.SQL[i])
+		i++
+	}
+	return b.String(), args, nil
 }
 
 // Resolve validates the raw expression (always succeeds for now)
@@ -246,7 +304,7 @@ func (ub *UpdateBuilder[T]) Decrement(fieldName string, amount interface{}) *Upd
 
 	// Create a raw SQL expression for field - value
 	fieldSQL := EscapeIdentifier(fieldInfo.DBColumn)
-	placeholder := fmt.Sprintf("$%d", 1)
+	placeholder := "$1"
 
 	rawExpr := &RawExpression{
 		SQL:  fmt.Sprintf("%s - %s", fieldSQL, placeholder),

@@ -2,13 +2,12 @@ package orm
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"reflect"
 	"strings"
 
 	"github.com/forgego/forge/db"
-	"github.com/forgego/forge/errors"
+	"github.com/forgego/forge/db/dialect"
 	"github.com/forgego/forge/schema"
 	"github.com/forgego/forge/utils"
 )
@@ -107,10 +106,21 @@ func ValidateInstance(instance interface{}) error {
 	return nil
 }
 
-// BuildInsertSQL builds an INSERT SQL statement from a model instance
-func BuildInsertSQL(instance interface{}, tableName string, pkColumn string) (sql string, values []interface{}, columns []string, err error) {
+// BuildInsertSQL builds an INSERT SQL statement from a model instance using default primary key column "id"
+// and PostgreSQL placeholders.
+func BuildInsertSQL(instance interface{}, tableName string) (sql string, values []interface{}, columns []string, err error) {
+	return BuildInsertSQLForPK(instance, tableName, "id")
+}
+
+// BuildInsertSQLForPK builds an INSERT SQL statement from a model instance with a custom primary key column
+// and optional placeholder function.
+func BuildInsertSQLForPK(instance interface{}, tableName string, pkColumn string, placeholder ...func(int) string) (sql string, values []interface{}, columns []string, err error) {
 	if pkColumn == "" {
 		pkColumn = "id"
+	}
+	ph := defaultPlaceholder
+	if len(placeholder) > 0 && placeholder[0] != nil {
+		ph = placeholder[0]
 	}
 
 	instanceValue := reflect.ValueOf(instance)
@@ -154,7 +164,7 @@ func BuildInsertSQL(instance interface{}, tableName string, pkColumn string) (sq
 				columnName = schemaField.Name
 			}
 			insertColumns = append(insertColumns, columnName)
-			insertPlaceholders = append(insertPlaceholders, fmt.Sprintf("$%d", columnIndex))
+			insertPlaceholders = append(insertPlaceholders, ph(columnIndex))
 			insertValues = append(insertValues, fieldValue)
 			columnIndex++
 		}
@@ -184,7 +194,7 @@ func BuildInsertSQL(instance interface{}, tableName string, pkColumn string) (sq
 				continue
 			}
 			insertColumns = append(insertColumns, col)
-			insertPlaceholders = append(insertPlaceholders, fmt.Sprintf("$%d", columnIndex))
+			insertPlaceholders = append(insertPlaceholders, ph(columnIndex))
 			insertValues = append(insertValues, val.Interface())
 			columnIndex++
 		}
@@ -318,7 +328,12 @@ func isZeroValue(v reflect.Value) bool {
 }
 
 // BuildUpdateSQL builds an UPDATE SQL statement from a model instance
-func BuildUpdateSQL(instance interface{}, tableName, idField string) (string, []interface{}, error) {
+func BuildUpdateSQL(instance interface{}, tableName, idField string, placeholder ...func(int) string) (string, []interface{}, error) {
+	ph := defaultPlaceholder
+	if len(placeholder) > 0 && placeholder[0] != nil {
+		ph = placeholder[0]
+	}
+
 	instanceValue := reflect.ValueOf(instance)
 	if instanceValue.Kind() == reflect.Ptr {
 		instanceValue = instanceValue.Elem()
@@ -372,7 +387,7 @@ func BuildUpdateSQL(instance interface{}, tableName, idField string) (string, []
 		}
 
 		// Include field in UPDATE
-		setParts = append(setParts, fmt.Sprintf("%s = $%d", EscapeIdentifier(columnName), paramIndex))
+		setParts = append(setParts, fmt.Sprintf("%s = %s", EscapeIdentifier(columnName), ph(paramIndex)))
 		values = append(values, fieldValue)
 		paramIndex++
 	}
@@ -388,31 +403,34 @@ func BuildUpdateSQL(instance interface{}, tableName, idField string) (string, []
 	// Add ID to the end for WHERE clause
 	values = append(values, idValue)
 	sql := fmt.Sprintf(
-		"UPDATE %s SET %s WHERE %s = $%d",
+		"UPDATE %s SET %s WHERE %s = %s",
 		EscapeIdentifier(tableName),
 		strings.Join(setParts, ", "),
 		EscapeIdentifier(idField),
-		paramIndex,
+		ph(paramIndex),
 	)
 
 	return sql, values, nil
 }
 
 // BuildDeleteSQL builds a DELETE SQL statement
-func BuildDeleteSQL(tableName, idField string, idValue interface{}) (string, []interface{}) {
-	sql := fmt.Sprintf("DELETE FROM %s WHERE %s = $1", EscapeIdentifier(tableName), EscapeIdentifier(idField))
+func BuildDeleteSQL(tableName, idField string, idValue interface{}, placeholder ...func(int) string) (string, []interface{}) {
+	ph := defaultPlaceholder
+	if len(placeholder) > 0 && placeholder[0] != nil {
+		ph = placeholder[0]
+	}
+	sql := fmt.Sprintf("DELETE FROM %s WHERE %s = %s", EscapeIdentifier(tableName), EscapeIdentifier(idField), ph(1))
 	return sql, []interface{}{idValue}
 }
 
-// ExecuteInsert executes an INSERT statement and returns the generated ID
-func ExecuteInsert(ctx context.Context, database *db.DB, sql string, args []interface{}) (int64, error) {
-	sqldb, err := getSQLDB(database)
-	if err != nil {
-		return 0, err
+// ExecuteInsertTx executes an INSERT statement using the provided DBTX and dialect, returning the generated ID.
+func ExecuteInsertTx(ctx context.Context, dbtx DBTX, d dialect.Dialect, sql string, args []interface{}) (int64, error) {
+	if dbtx == nil {
+		return 0, fmt.Errorf("database execution handle is nil")
 	}
 
 	var id int64
-	err = sqldb.QueryRowContext(ctx, database.RebindPlaceholders(sql), args...).Scan(&id)
+	err := dbtx.QueryRowContext(ctx, sql, args...).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("insert failed: %w", err)
 	}
@@ -420,18 +438,37 @@ func ExecuteInsert(ctx context.Context, database *db.DB, sql string, args []inte
 	return id, nil
 }
 
-// BuildBulkInsertSQL builds a bulk INSERT SQL statement for multiple instances
-func BuildBulkInsertSQL(instances []interface{}, tableName string, pkColumn string) (sql string, values []interface{}, columns []string, err error) {
+// ExecuteInsert executes an INSERT statement and returns the generated ID.
+func ExecuteInsert(ctx context.Context, database *db.DB, sql string, args []interface{}) (int64, error) {
+	if database == nil || database.DB == nil {
+		return 0, fmt.Errorf("database connection not set")
+	}
+	return ExecuteInsertTx(ctx, database.DB, database.Dialect(), database.RebindPlaceholders(sql), args)
+}
+
+// BuildBulkInsertSQL builds a bulk INSERT SQL statement for multiple instances using default primary key column "id"
+// and PostgreSQL placeholders.
+func BuildBulkInsertSQL(instances []interface{}, tableName string) (sql string, values []interface{}, columns []string, err error) {
+	return BuildBulkInsertSQLForPK(instances, tableName, "id")
+}
+
+// BuildBulkInsertSQLForPK builds a bulk INSERT SQL statement for multiple instances with a custom primary key column
+// and optional placeholder function.
+func BuildBulkInsertSQLForPK(instances []interface{}, tableName string, pkColumn string, placeholder ...func(int) string) (sql string, values []interface{}, columns []string, err error) {
 	if len(instances) == 0 {
 		return "", nil, nil, fmt.Errorf("no instances to insert")
 	}
 	if pkColumn == "" {
 		pkColumn = "id"
 	}
+	ph := defaultPlaceholder
+	if len(placeholder) > 0 && placeholder[0] != nil {
+		ph = placeholder[0]
+	}
 
 	// Use first instance to determine columns
 	firstInstance := instances[0]
-	_, _, columns, err = BuildInsertSQL(firstInstance, tableName, pkColumn)
+	_, _, columns, err = BuildInsertSQLForPK(firstInstance, tableName, pkColumn, ph)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("failed to build insert SQL for first instance: %w", err)
 	}
@@ -447,7 +484,7 @@ func BuildBulkInsertSQL(instances []interface{}, tableName string, pkColumn stri
 
 	for _, instance := range instances {
 		// Get values for this instance
-		_, instanceValues, instanceColumns, err := BuildInsertSQL(instance, tableName, pkColumn)
+		_, instanceValues, instanceColumns, err := BuildInsertSQLForPK(instance, tableName, pkColumn, ph)
 		if err != nil {
 			return "", nil, nil, fmt.Errorf("failed to build insert SQL for instance: %w", err)
 		}
@@ -461,7 +498,7 @@ func BuildBulkInsertSQL(instances []interface{}, tableName string, pkColumn stri
 		// Build placeholders for this row
 		var placeholders []string
 		for range instanceValues {
-			placeholders = append(placeholders, fmt.Sprintf("$%d", paramIndex))
+			placeholders = append(placeholders, ph(paramIndex))
 			paramIndex++
 		}
 		valueClauses = append(valueClauses, "("+strings.Join(placeholders, ", ")+")")
@@ -485,14 +522,13 @@ func BuildBulkInsertSQL(instances []interface{}, tableName string, pkColumn stri
 	return sql, allValues, columns, nil
 }
 
-// ExecuteBulkInsert executes a bulk INSERT statement and returns all generated IDs
-func ExecuteBulkInsert(ctx context.Context, database *db.DB, sql string, args []interface{}) ([]int64, error) {
-	sqldb, err := getSQLDB(database)
-	if err != nil {
-		return nil, err
+// ExecuteBulkInsertTx executes a bulk INSERT statement using the provided DBTX and dialect, returning all generated IDs.
+func ExecuteBulkInsertTx(ctx context.Context, dbtx DBTX, d dialect.Dialect, sql string, args []interface{}) ([]int64, error) {
+	if dbtx == nil {
+		return nil, fmt.Errorf("database execution handle is nil")
 	}
 
-	rows, err := sqldb.QueryContext(ctx, database.RebindPlaceholders(sql), args...)
+	rows, err := dbtx.QueryContext(ctx, sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("bulk insert failed: %w", err)
 	}
@@ -514,14 +550,21 @@ func ExecuteBulkInsert(ctx context.Context, database *db.DB, sql string, args []
 	return ids, nil
 }
 
-// ExecuteUpdate executes an UPDATE statement and returns rows affected
-func ExecuteUpdate(ctx context.Context, database *db.DB, sql string, args []interface{}) (int64, error) {
-	sqldb, err := getSQLDB(database)
-	if err != nil {
-		return 0, err
+// ExecuteBulkInsert executes a bulk INSERT statement and returns all generated IDs.
+func ExecuteBulkInsert(ctx context.Context, database *db.DB, sql string, args []interface{}) ([]int64, error) {
+	if database == nil || database.DB == nil {
+		return nil, fmt.Errorf("database connection not set")
+	}
+	return ExecuteBulkInsertTx(ctx, database.DB, database.Dialect(), database.RebindPlaceholders(sql), args)
+}
+
+// ExecuteUpdateTx executes an UPDATE statement using the provided DBTX and dialect, returning rows affected.
+func ExecuteUpdateTx(ctx context.Context, dbtx DBTX, d dialect.Dialect, sql string, args []interface{}) (int64, error) {
+	if dbtx == nil {
+		return 0, fmt.Errorf("database execution handle is nil")
 	}
 
-	result, err := sqldb.ExecContext(ctx, database.RebindPlaceholders(sql), args...)
+	result, err := dbtx.ExecContext(ctx, sql, args...)
 	if err != nil {
 		return 0, fmt.Errorf("update failed: %w", err)
 	}
@@ -534,14 +577,21 @@ func ExecuteUpdate(ctx context.Context, database *db.DB, sql string, args []inte
 	return rowsAffected, nil
 }
 
-// ExecuteDelete executes a DELETE statement and returns rows affected
-func ExecuteDelete(ctx context.Context, database *db.DB, sql string, args []interface{}) (int64, error) {
-	sqldb, err := getSQLDB(database)
-	if err != nil {
-		return 0, err
+// ExecuteUpdate executes an UPDATE statement and returns rows affected.
+func ExecuteUpdate(ctx context.Context, database *db.DB, sql string, args []interface{}) (int64, error) {
+	if database == nil || database.DB == nil {
+		return 0, fmt.Errorf("database connection not set")
+	}
+	return ExecuteUpdateTx(ctx, database.DB, database.Dialect(), database.RebindPlaceholders(sql), args)
+}
+
+// ExecuteDeleteTx executes a DELETE statement using the provided DBTX and dialect, returning rows affected.
+func ExecuteDeleteTx(ctx context.Context, dbtx DBTX, d dialect.Dialect, sql string, args []interface{}) (int64, error) {
+	if dbtx == nil {
+		return 0, fmt.Errorf("database execution handle is nil")
 	}
 
-	result, err := sqldb.ExecContext(ctx, database.RebindPlaceholders(sql), args...)
+	result, err := dbtx.ExecContext(ctx, sql, args...)
 	if err != nil {
 		return 0, fmt.Errorf("delete failed: %w", err)
 	}
@@ -554,12 +604,12 @@ func ExecuteDelete(ctx context.Context, database *db.DB, sql string, args []inte
 	return rowsAffected, nil
 }
 
-// getSQLDB extracts *sql.DB from *db.DB
-func getSQLDB(database *db.DB) (*sql.DB, error) {
-	if database == nil {
-		return nil, errors.NewNotImplementedError("database connection not set")
+// ExecuteDelete executes a DELETE statement and returns rows affected.
+func ExecuteDelete(ctx context.Context, database *db.DB, sql string, args []interface{}) (int64, error) {
+	if database == nil || database.DB == nil {
+		return 0, fmt.Errorf("database connection not set")
 	}
-	return database.DB, nil
+	return ExecuteDeleteTx(ctx, database.DB, database.Dialect(), database.RebindPlaceholders(sql), args)
 }
 
 // GetIDValue extracts the ID value from an instance

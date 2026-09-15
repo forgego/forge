@@ -424,14 +424,14 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 		if strVal, ok := c.Value.(string); ok {
 			pattern := "%" + strVal + "%"
 			placeholder := builder.AddArg(pattern)
-			sql = fmt.Sprintf("LOWER(%s) LIKE LOWER(%s)", fieldSQL, placeholder)
+			sql = builder.CaseInsensitiveLike(fieldSQL, placeholder)
 		} else {
 			return "", nil, fmt.Errorf("IContains operator requires string value")
 		}
 	} else if c.Op == OpIExact {
 		if strVal, ok := c.Value.(string); ok {
 			placeholder := builder.AddArg(strVal)
-			sql = fmt.Sprintf("LOWER(%s) LIKE LOWER(%s)", fieldSQL, placeholder)
+			sql = builder.CaseInsensitiveLike(fieldSQL, placeholder)
 		} else {
 			return "", nil, fmt.Errorf("IExact operator requires string value")
 		}
@@ -439,7 +439,7 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 		if strVal, ok := c.Value.(string); ok {
 			pattern := strVal + "%"
 			placeholder := builder.AddArg(pattern)
-			sql = fmt.Sprintf("LOWER(%s) LIKE LOWER(%s)", fieldSQL, placeholder)
+			sql = builder.CaseInsensitiveLike(fieldSQL, placeholder)
 		} else {
 			return "", nil, fmt.Errorf("IStartsWith operator requires string value")
 		}
@@ -447,7 +447,7 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 		if strVal, ok := c.Value.(string); ok {
 			pattern := "%" + strVal
 			placeholder := builder.AddArg(pattern)
-			sql = fmt.Sprintf("LOWER(%s) LIKE LOWER(%s)", fieldSQL, placeholder)
+			sql = builder.CaseInsensitiveLike(fieldSQL, placeholder)
 		} else {
 			return "", nil, fmt.Errorf("IEndsWith operator requires string value")
 		}
@@ -524,7 +524,11 @@ func (c ComparisonExpression[T]) ToSQL(builder *SQLBuilder) (string, []interface
 		default:
 			// Standard operators (=, !=, >, >=, <, <=)
 			placeholder := builder.AddArg(c.Value)
-			sql = fmt.Sprintf("%s %s %s", fieldSQL, c.Op, placeholder)
+			if c.Op == "ILIKE" {
+				sql = builder.CaseInsensitiveLike(fieldSQL, placeholder)
+			} else {
+				sql = fmt.Sprintf("%s %s %s", fieldSQL, c.Op, placeholder)
+			}
 		}
 	}
 

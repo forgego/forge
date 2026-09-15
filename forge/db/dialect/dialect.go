@@ -83,6 +83,15 @@ type Dialect interface {
 	OnConflictDoUpdate(column string, updates []string) string
 }
 
+// CaseInsensitiveLiker is an optional interface for dialects that support
+// case-insensitive LIKE expressions natively.
+type CaseInsensitiveLiker interface {
+	// CaseInsensitiveLike returns a case-insensitive LIKE expression.
+	// PostgreSQL: column ILIKE placeholder
+	// SQLite: LOWER(column) LIKE LOWER(placeholder)
+	CaseInsensitiveLike(column, placeholder string) string
+}
+
 // BaseDialect provides common functionality that can be embedded in specific dialects.
 type BaseDialect struct {
 	name              string
@@ -162,6 +171,11 @@ func (d BaseDialect) SupportsReturning() bool {
 // LikeEscape returns the escape character for LIKE patterns.
 func (d BaseDialect) LikeEscape() string {
 	return "\\"
+}
+
+// CaseInsensitiveLike returns a case-insensitive LIKE expression.
+func (d BaseDialect) CaseInsensitiveLike(column, placeholder string) string {
+	return fmt.Sprintf("LOWER(%s) LIKE LOWER(%s)", column, placeholder)
 }
 
 // ConcatOperator returns the string concatenation operator.

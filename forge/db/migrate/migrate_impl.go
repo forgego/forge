@@ -4,19 +4,32 @@ package migrate
 
 import (
 	"github.com/forgego/forge/codegen"
+	"github.com/forgego/forge/config"
+	"github.com/forgego/forge/db/migrate/core"
 	"github.com/forgego/forge/db/migrate/generate"
 	"github.com/forgego/forge/db/migrate/sql"
 	"github.com/forgego/forge/db/migrate/state"
 )
 
 // Generate creates a new migration generator and generates migration files
-// from model definitions. This is the main entry point for generating migrations.
+// from model definitions using default driver configuration.
 //
 // Example:
 //
 //	err := migrate.Generate("add_user_table", "./models", "./migrations")
 func Generate(name, modelsDir, migrationsDir string) error {
-	gen, err := generate.NewMigrationGeneratorWithDefaults(modelsDir, migrationsDir)
+	driver := core.Driver(config.NewConfig().GetDriver())
+	return GenerateForDriver(name, modelsDir, migrationsDir, driver)
+}
+
+// GenerateForDriver creates a new migration generator for the given driver and generates migration files
+// from model definitions.
+//
+// Example:
+//
+//	err := migrate.GenerateForDriver("add_user_table", "./models", "./migrations", core.DriverPostgreSQL)
+func GenerateForDriver(name, modelsDir, migrationsDir string, driver core.Driver) error {
+	gen, err := generate.NewMigrationGeneratorForDriver(modelsDir, migrationsDir, driver)
 	if err != nil {
 		return err
 	}
@@ -116,7 +129,7 @@ func (g *SQLGenerator) GenerateDownSQL(changes []Change) (string, error) {
 }
 
 // NewGenerator creates a new migration generator with default dependencies.
-// This is a convenience function that wraps NewMigrationGeneratorWithDefaults.
+// This is a convenience function that wraps NewGeneratorForDriver.
 //
 // Example:
 //
@@ -126,7 +139,21 @@ func (g *SQLGenerator) GenerateDownSQL(changes []Change) (string, error) {
 //	}
 //	err = gen.GenerateMigrations("add_user_table")
 func NewGenerator(modelsDir, migrationsDir string) (*Generator, error) {
-	gen, err := generate.NewMigrationGeneratorWithDefaults(modelsDir, migrationsDir)
+	driver := core.Driver(config.NewConfig().GetDriver())
+	return NewGeneratorForDriver(modelsDir, migrationsDir, driver)
+}
+
+// NewGeneratorForDriver creates a new migration generator for the given driver.
+//
+// Example:
+//
+//	gen, err := migrate.NewGeneratorForDriver("./models", "./migrations", core.DriverPostgreSQL)
+//	if err != nil {
+//		return err
+//	}
+//	err = gen.GenerateMigrations("add_user_table")
+func NewGeneratorForDriver(modelsDir, migrationsDir string, driver core.Driver) (*Generator, error) {
+	gen, err := generate.NewMigrationGeneratorForDriver(modelsDir, migrationsDir, driver)
 	if err != nil {
 		return nil, err
 	}

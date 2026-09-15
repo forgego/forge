@@ -29,7 +29,7 @@ func (m *CustomerGroup) Validate() error {
 
 // CustomerGroupObjects provides type-safe operations for CustomerGroup
 // Uses generic orm.Manager[CustomerGroup] and orm.BaseQuerySet[CustomerGroup]
-var CustomerGroupObjects, _ = orm.NewManager[CustomerGroup]("customer_groups")
+var CustomerGroupObjects = orm.MustNewManager[CustomerGroup]("customer_groups")
 
 // CustomerGroupFields provides type-safe field access for CustomerGroup
 type CustomerGroupFields struct {
@@ -94,7 +94,7 @@ func (m *Customer) Validate() error {
 
 // CustomerObjects provides type-safe operations for Customer
 // Uses generic orm.Manager[Customer] and orm.BaseQuerySet[Customer]
-var CustomerObjects, _ = orm.NewManager[Customer]("customers")
+var CustomerObjects = orm.MustNewManager[Customer]("customers")
 
 // CustomerFields provides type-safe field access for Customer
 type CustomerFields struct {
@@ -191,7 +191,7 @@ func (m *Address) Validate() error {
 
 // AddressObjects provides type-safe operations for Address
 // Uses generic orm.Manager[Address] and orm.BaseQuerySet[Address]
-var AddressObjects, _ = orm.NewManager[Address]("addresses")
+var AddressObjects = orm.MustNewManager[Address]("addresses")
 
 // AddressFields provides type-safe field access for Address
 type AddressFields struct {
@@ -264,7 +264,7 @@ func (m *WishList) Validate() error {
 
 // WishListObjects provides type-safe operations for WishList
 // Uses generic orm.Manager[WishList] and orm.BaseQuerySet[WishList]
-var WishListObjects, _ = orm.NewManager[WishList]("wish_lists")
+var WishListObjects = orm.MustNewManager[WishList]("wish_lists")
 
 // WishListFields provides type-safe field access for WishList
 type WishListFields struct {
@@ -314,7 +314,7 @@ func (m *WishListItem) Validate() error {
 
 // WishListItemObjects provides type-safe operations for WishListItem
 // Uses generic orm.Manager[WishListItem] and orm.BaseQuerySet[WishListItem]
-var WishListItemObjects, _ = orm.NewManager[WishListItem]("wish_list_items")
+var WishListItemObjects = orm.MustNewManager[WishListItem]("wish_list_items")
 
 // WishListItemFields provides type-safe field access for WishListItem
 type WishListItemFields struct {

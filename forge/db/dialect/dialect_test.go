@@ -383,3 +383,21 @@ var (
 	_ Dialect = (*PostgreSQLDialect)(nil)
 	_ Dialect = (*SQLiteDialect)(nil)
 )
+
+func TestPostgreSQLDialect_CaseInsensitiveLike(t *testing.T) {
+	d := NewPostgreSQLDialect()
+	got := d.CaseInsensitiveLike("name", "$1")
+	expected := "name ILIKE $1"
+	if got != expected {
+		t.Errorf("got %s, want %s", got, expected)
+	}
+}
+
+func TestSQLiteDialect_CaseInsensitiveLike(t *testing.T) {
+	d := NewSQLiteDialect()
+	got := d.CaseInsensitiveLike("name", "?")
+	expected := "LOWER(name) LIKE LOWER(?)"
+	if got != expected {
+		t.Errorf("got %s, want %s", got, expected)
+	}
+}

@@ -12,7 +12,7 @@ func TestBuildInsertSQL_UsesSchemaFieldsAndSkipsOptionalZeroValues(t *testing.T)
 		Name: "Widget",
 	}
 
-	sql, values, columns, err := BuildInsertSQL(instance, "test_table", "id")
+	sql, values, columns, err := BuildInsertSQLForPK(instance, "test_table", "id")
 	require.NoError(t, err)
 
 	assert.Equal(t, `INSERT INTO "test_table" ("name") VALUES ($1) RETURNING "id"`, sql)
@@ -25,12 +25,28 @@ func TestBuildInsertSQL_RequiredFieldIncludedEvenWhenZeroValue(t *testing.T) {
 		Name: "",
 	}
 
-	sql, values, columns, err := BuildInsertSQL(instance, "test_table", "id")
+	sql, values, columns, err := BuildInsertSQLForPK(instance, "test_table", "id")
 	require.NoError(t, err)
 
 	assert.Equal(t, `INSERT INTO "test_table" ("name") VALUES ($1) RETURNING "id"`, sql)
 	assert.Equal(t, []interface{}{""}, values)
 	assert.Equal(t, []string{"name"}, columns)
+}
+
+func TestBuildInsertSQL_MatchesDefaultForPK(t *testing.T) {
+	instance := testModel{
+		Name: "Widget",
+	}
+
+	sql1, values1, columns1, err1 := BuildInsertSQL(instance, "test_table")
+	require.NoError(t, err1)
+
+	sql2, values2, columns2, err2 := BuildInsertSQLForPK(instance, "test_table", "id")
+	require.NoError(t, err2)
+
+	assert.Equal(t, sql2, sql1)
+	assert.Equal(t, values2, values1)
+	assert.Equal(t, columns2, columns1)
 }
 
 func TestBuildBulkInsertSQL_ConsistentColumns(t *testing.T) {
@@ -39,7 +55,7 @@ func TestBuildBulkInsertSQL_ConsistentColumns(t *testing.T) {
 		testModel{Name: "B"},
 	}
 
-	sql, values, columns, err := BuildBulkInsertSQL(instances, "test_table", "id")
+	sql, values, columns, err := BuildBulkInsertSQLForPK(instances, "test_table", "id")
 	require.NoError(t, err)
 
 	assert.Equal(t, `"name"`, EscapeIdentifier(columns[0]))
@@ -54,9 +70,26 @@ func TestBuildBulkInsertSQL_RejectsInconsistentColumns(t *testing.T) {
 		testModel{Name: "B", Email: "b@example.com"},
 	}
 
-	_, _, _, err := BuildBulkInsertSQL(instances, "test_table", "id")
+	_, _, _, err := BuildBulkInsertSQLForPK(instances, "test_table", "id")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "requires consistent columns")
+}
+
+func TestBuildBulkInsertSQL_MatchesDefaultForPK(t *testing.T) {
+	instances := []interface{}{
+		testModel{Name: "A"},
+		testModel{Name: "B"},
+	}
+
+	sql1, values1, columns1, err1 := BuildBulkInsertSQL(instances, "test_table")
+	require.NoError(t, err1)
+
+	sql2, values2, columns2, err2 := BuildBulkInsertSQLForPK(instances, "test_table", "id")
+	require.NoError(t, err2)
+
+	assert.Equal(t, sql2, sql1)
+	assert.Equal(t, values2, values1)
+	assert.Equal(t, columns2, columns1)
 }
 
 func TestBuildUpdateSQL_QuotesIdentifiers(t *testing.T) {

@@ -42,7 +42,7 @@ func (m *Warehouse) Validate() error {
 
 // WarehouseObjects provides type-safe operations for Warehouse
 // Uses generic orm.Manager[Warehouse] and orm.BaseQuerySet[Warehouse]
-var WarehouseObjects, _ = orm.NewManager[Warehouse]("warehouses")
+var WarehouseObjects = orm.MustNewManager[Warehouse]("warehouses")
 
 // WarehouseFields provides type-safe field access for Warehouse
 type WarehouseFields struct {
@@ -120,7 +120,7 @@ func (m *Stock) Validate() error {
 
 // StockObjects provides type-safe operations for Stock
 // Uses generic orm.Manager[Stock] and orm.BaseQuerySet[Stock]
-var StockObjects, _ = orm.NewManager[Stock]("stock")
+var StockObjects = orm.MustNewManager[Stock]("stock")
 
 // StockFields provides type-safe field access for Stock
 type StockFields struct {
@@ -191,7 +191,7 @@ func (m *StockMovement) Validate() error {
 
 // StockMovementObjects provides type-safe operations for StockMovement
 // Uses generic orm.Manager[StockMovement] and orm.BaseQuerySet[StockMovement]
-var StockMovementObjects, _ = orm.NewManager[StockMovement]("stock_movements")
+var StockMovementObjects = orm.MustNewManager[StockMovement]("stock_movements")
 
 // StockMovementFields provides type-safe field access for StockMovement
 type StockMovementFields struct {
@@ -272,7 +272,7 @@ func (m *StockAlert) Validate() error {
 
 // StockAlertObjects provides type-safe operations for StockAlert
 // Uses generic orm.Manager[StockAlert] and orm.BaseQuerySet[StockAlert]
-var StockAlertObjects, _ = orm.NewManager[StockAlert]("stock_alerts")
+var StockAlertObjects = orm.MustNewManager[StockAlert]("stock_alerts")
 
 // StockAlertFields provides type-safe field access for StockAlert
 type StockAlertFields struct {
@@ -348,7 +348,7 @@ func (m *StockTransfer) Validate() error {
 
 // StockTransferObjects provides type-safe operations for StockTransfer
 // Uses generic orm.Manager[StockTransfer] and orm.BaseQuerySet[StockTransfer]
-var StockTransferObjects, _ = orm.NewManager[StockTransfer]("stock_transfers")
+var StockTransferObjects = orm.MustNewManager[StockTransfer]("stock_transfers")
 
 // StockTransferFields provides type-safe field access for StockTransfer
 type StockTransferFields struct {

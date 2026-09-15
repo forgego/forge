@@ -41,7 +41,7 @@ func (m *Promotion) Validate() error {
 
 // PromotionObjects provides type-safe operations for Promotion
 // Uses generic orm.Manager[Promotion] and orm.BaseQuerySet[Promotion]
-var PromotionObjects, _ = orm.NewManager[Promotion]("promotions")
+var PromotionObjects = orm.MustNewManager[Promotion]("promotions")
 
 // PromotionFields provides type-safe field access for Promotion
 type PromotionFields struct {
@@ -113,7 +113,7 @@ func (m *PromotionRule) Validate() error {
 
 // PromotionRuleObjects provides type-safe operations for PromotionRule
 // Uses generic orm.Manager[PromotionRule] and orm.BaseQuerySet[PromotionRule]
-var PromotionRuleObjects, _ = orm.NewManager[PromotionRule]("promotion_rules")
+var PromotionRuleObjects = orm.MustNewManager[PromotionRule]("promotion_rules")
 
 // PromotionRuleFields provides type-safe field access for PromotionRule
 type PromotionRuleFields struct {
@@ -170,7 +170,7 @@ func (m *Banner) Validate() error {
 
 // BannerObjects provides type-safe operations for Banner
 // Uses generic orm.Manager[Banner] and orm.BaseQuerySet[Banner]
-var BannerObjects, _ = orm.NewManager[Banner]("banners")
+var BannerObjects = orm.MustNewManager[Banner]("banners")
 
 // BannerFields provides type-safe field access for Banner
 type BannerFields struct {
@@ -235,7 +235,7 @@ func (m *NewsletterSubscription) Validate() error {
 
 // NewsletterSubscriptionObjects provides type-safe operations for NewsletterSubscription
 // Uses generic orm.Manager[NewsletterSubscription] and orm.BaseQuerySet[NewsletterSubscription]
-var NewsletterSubscriptionObjects, _ = orm.NewManager[NewsletterSubscription]("newsletter_subscriptions")
+var NewsletterSubscriptionObjects = orm.MustNewManager[NewsletterSubscription]("newsletter_subscriptions")
 
 // NewsletterSubscriptionFields provides type-safe field access for NewsletterSubscription
 type NewsletterSubscriptionFields struct {
@@ -290,7 +290,7 @@ func (m *PromotionUsage) Validate() error {
 
 // PromotionUsageObjects provides type-safe operations for PromotionUsage
 // Uses generic orm.Manager[PromotionUsage] and orm.BaseQuerySet[PromotionUsage]
-var PromotionUsageObjects, _ = orm.NewManager[PromotionUsage]("promotion_usages")
+var PromotionUsageObjects = orm.MustNewManager[PromotionUsage]("promotion_usages")
 
 // PromotionUsageFields provides type-safe field access for PromotionUsage
 type PromotionUsageFields struct {
