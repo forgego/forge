@@ -1,11 +1,14 @@
 package exporters
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
 
+	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -63,11 +66,26 @@ func (e *FileExporter) GetLevel() zapcore.Level {
 
 // Close closes the file exporter
 func (e *FileExporter) Close() error {
-	// Sync the writer
-	if err := e.writer.Sync(); err != nil {
-		return err
+	syncErr := ignoreSyncError(e.writer.Sync())
+	var closeErr error
+	if e.closer != nil {
+		closeErr = e.closer()
 	}
-	return e.closer()
+	return errors.Join(syncErr, closeErr)
+}
+
+func ignoreSyncError(err error) error {
+	if err == nil {
+		return nil
+	}
+	var rest []error
+	for _, part := range multierr.Errors(err) {
+		if errors.Is(part, syscall.EINVAL) {
+			continue
+		}
+		rest = append(rest, part)
+	}
+	return multierr.Combine(rest...)
 }
 
 type rotatingFileWriter struct {

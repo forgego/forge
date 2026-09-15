@@ -1,6 +1,8 @@
 package hooks
 
 import (
+	"sync/atomic"
+
 	"go.uber.org/zap/zapcore"
 )
 
@@ -8,7 +10,7 @@ import (
 type SamplingHook struct {
 	initial    int
 	thereafter int
-	count      int
+	count      atomic.Int64
 }
 
 // NewSamplingHook creates a new sampling hook
@@ -16,13 +18,12 @@ func NewSamplingHook(initial, thereafter int) *SamplingHook {
 	return &SamplingHook{
 		initial:    initial,
 		thereafter: thereafter,
-		count:      0,
 	}
 }
 
 // Process processes a log entry for sampling
 func (h *SamplingHook) Process(entry zapcore.Entry, fields []zapcore.Field) (zapcore.Entry, []zapcore.Field, bool) {
-	h.count++
+	current := int(h.count.Add(1))
 
 	// Always log errors and above
 	if entry.Level >= zapcore.ErrorLevel {
@@ -30,12 +31,12 @@ func (h *SamplingHook) Process(entry zapcore.Entry, fields []zapcore.Field) (zap
 	}
 
 	// Sample based on count
-	if h.count <= h.initial {
+	if current <= h.initial {
 		return entry, fields, true
 	}
 
 	// Sample every Nth log after initial
-	if (h.count-h.initial)%h.thereafter == 0 {
+	if h.thereafter > 0 && (current-h.initial)%h.thereafter == 0 {
 		return entry, fields, true
 	}
 

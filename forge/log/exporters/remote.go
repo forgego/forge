@@ -70,7 +70,7 @@ func (w *remoteWriter) Write(p []byte) (int, error) {
 	// If buffer ends with newline, send it
 	if len(w.buffer) > 0 && w.buffer[len(w.buffer)-1] == '\n' {
 		if err := w.send(); err != nil {
-			// Log error but don't fail - remote logging should be non-blocking
+			w.buffer = w.buffer[:0]
 			return len(p), nil
 		}
 	}
