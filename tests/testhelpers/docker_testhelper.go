@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net"
+	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -29,6 +32,52 @@ type PostgresOpts struct {
 	Host      string // Database host (e.g., "127.0.0.1")
 	Port      string // Database port (e.g., "5432")
 	UseDirect bool   // If true, connect directly without creating container
+	RawQuery  string // URL query parameters from FORGE_TEST_DATABASE_URL (e.g. "sslmode=require&connect_timeout=5")
+}
+
+// DSN returns the PostgreSQL connection string for opts.
+// When FORGE_TEST_DATABASE_URL query parameters are present in opts.RawQuery, they are preserved.
+// Otherwise, it defaults to sslmode=disable.
+func (opts PostgresOpts) DSN() string {
+	applyPostgresPrecedence(&opts)
+	query := "sslmode=disable"
+	if opts.RawQuery != "" {
+		query = opts.RawQuery
+	}
+
+	u := &url.URL{
+		Scheme:   "postgres",
+		RawQuery: query,
+	}
+	if opts.User != "" {
+		if opts.Password != "" {
+			u.User = url.UserPassword(opts.User, opts.Password)
+		} else {
+			u.User = url.User(opts.User)
+		}
+	}
+	host := strings.Trim(opts.Host, "[]")
+	if opts.Port != "" {
+		u.Host = net.JoinHostPort(host, opts.Port)
+	} else if strings.Contains(host, ":") {
+		u.Host = "[" + host + "]"
+	} else {
+		u.Host = host
+	}
+	if opts.DBName != "" {
+		u.Path = "/" + url.PathEscape(opts.DBName)
+	}
+	return u.String()
+}
+
+// DeriveDSN returns the connection string derived from opts, preserving any query parameters.
+func DeriveDSN(opts PostgresOpts) string {
+	return opts.DSN()
+}
+
+// DirectPostgresDSN returns the PostgreSQL connection string for direct postgres connection, applying precedence rules.
+func DirectPostgresDSN(opts PostgresOpts) string {
+	return opts.DSN()
 }
 
 // DefaultPostgresOpts returns sensible defaults
@@ -71,6 +120,7 @@ func DefaultPostgresOptsWithTest(testName string) PostgresOpts {
 	}
 
 	opts.DBName = truncateDBName(opts.DBName)
+	applyDatabaseURLToOpts(&opts)
 	return opts
 }
 
@@ -118,6 +168,7 @@ func GetDockerEndpoint() string {
 // StartPostgresContainer starts an ephemeral Postgres container using Dockertest
 // Or connects directly to an existing database if UseDirect is true
 func StartPostgresContainer(ctx context.Context, opts PostgresOpts) (*sql.DB, string, func() error, error) {
+	applyPostgresPrecedence(&opts)
 	// If UseDirect is true, connect directly to existing database
 	if opts.UseDirect {
 		return startDirectPostgresConnection(ctx, opts)
@@ -232,9 +283,10 @@ func StartPostgresContainer(ctx context.Context, opts PostgresOpts) (*sql.DB, st
 		fmt.Printf("[DEBUG] Local Docker - using port: %s\n", port)
 	}
 
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		opts.User, opts.Password, host, port, opts.DBName)
-	fmt.Printf("[DEBUG] DSN: postgres://%s:***@%s:%s/%s?sslmode=disable\n", opts.User, host, port, opts.DBName)
+	opts.Host = host
+	opts.Port = port
+	dsn := opts.DSN()
+	fmt.Printf("[DEBUG] DSN: %s\n", redactDSN(dsn))
 
 	cleanup := func() error {
 		return pool.Purge(resource)
@@ -273,7 +325,7 @@ func StartPostgresContainer(ctx context.Context, opts PostgresOpts) (*sql.DB, st
 			fmt.Printf("[DEBUG] Container Ports: %+v\n", resource.Container.NetworkSettings)
 		}
 		cleanup()
-		return nil, "", nil, fmt.Errorf("could not connect to postgres after %d retries. Last error: %w. DSN: %s. Container may not be ready or port mapping incorrect", maxRetries, lastErr, dsn)
+		return nil, "", nil, fmt.Errorf("could not connect to postgres after %d retries. Last error: %w. DSN: %s. Container may not be ready or port mapping incorrect", maxRetries, lastErr, redactDSN(dsn))
 	}
 
 	return db, dsn, cleanup, nil
@@ -299,38 +351,16 @@ func StartSQLiteMemory(dsn string) (*sql.DB, error) {
 
 // startDirectPostgresConnection connects directly to an existing PostgreSQL database
 func startDirectPostgresConnection(ctx context.Context, opts PostgresOpts) (*sql.DB, string, func() error, error) {
+	applyPostgresPrecedence(&opts)
+
 	host := opts.Host
-	if host == "" {
-		host = "127.0.0.1"
-	}
 	port := opts.Port
-	if port == "" {
-		port = "5432"
-	}
-	user := opts.User
-	if user == "" {
-		user = "postgres"
-	}
-	password := opts.Password
-	if password == "" {
-		if envPass := os.Getenv("POSTGRES_PASSWORD"); envPass != "" {
-			password = envPass
-		} else {
-			password = "123"
-		}
-	}
 	dbName := opts.DBName
-	if dbName == "" {
-		dbName = "testdb"
-	}
-	dbName = strings.ToLower(dbName)
-	dbName = truncateDBName(dbName)
 
 	fmt.Printf("[DEBUG] Connecting directly to PostgreSQL at %s:%s\n", host, port)
 
 	// First, connect to default "postgres" database to create the test database if needed
-	defaultDSN := fmt.Sprintf("postgres://%s:%s@%s:%s/postgres?sslmode=disable",
-		user, password, host, port)
+	defaultDSN := defaultAdminDSN(opts)
 
 	defaultDB, err := sql.Open("postgres", defaultDSN)
 	if err != nil {
@@ -360,8 +390,7 @@ func startDirectPostgresConnection(ctx context.Context, opts PostgresOpts) (*sql
 	}
 
 	// Now connect to the test database
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		user, password, host, port, dbName)
+	dsn := opts.DSN()
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
@@ -385,7 +414,7 @@ func startDirectPostgresConnection(ctx context.Context, opts PostgresOpts) (*sql
 
 	if retries >= maxRetries {
 		db.Close()
-		return nil, "", nil, fmt.Errorf("could not connect to postgres after %d retries. Last error: %w. DSN: %s", maxRetries, err, dsn)
+		return nil, "", nil, fmt.Errorf("could not connect to postgres after %d retries. Last error: %w. DSN: %s", maxRetries, err, redactDSN(dsn))
 	}
 
 	cleanup := func() error {
@@ -395,8 +424,7 @@ func startDirectPostgresConnection(ctx context.Context, opts PostgresOpts) (*sql
 		}
 
 		// Connect to default DB to drop test DB
-		defaultDSN := fmt.Sprintf("postgres://%s:%s@%s:%s/postgres?sslmode=disable",
-			user, password, host, port)
+		defaultDSN := defaultAdminDSN(opts)
 		defaultDB, err := sql.Open("postgres", defaultDSN)
 		if err != nil {
 			return fmt.Errorf("failed to open default database connection for cleanup: %w", err)
@@ -437,4 +465,25 @@ func WaitForDBReady(ctx context.Context, db *sql.DB, timeout time.Duration) erro
 			}
 		}
 	}
+}
+
+var dsnPassword = regexp.MustCompile(`(?i)(password\s*=\s*)(?:'(?:[^'\\]|\\.)*'|(?:[^\s\\]|\\.)*)`)
+
+// redactDSN masks passwords before connection strings reach logs or errors.
+func redactDSN(dsn string) string {
+	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
+		u, err := url.Parse(dsn)
+		if err != nil {
+			return "[redacted invalid DSN]"
+		}
+		query := u.Query()
+		for key := range query {
+			if strings.EqualFold(key, "password") {
+				query.Set(key, "xxxxx")
+			}
+		}
+		u.RawQuery = query.Encode()
+		return u.Redacted()
+	}
+	return dsnPassword.ReplaceAllString(dsn, "${1}***")
 }

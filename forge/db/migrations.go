@@ -23,6 +23,7 @@ type MigrationRunner struct {
 	db             *DB
 	migrate        *migrate.Migrate
 	migrationsPath string
+	sourceIndex    migrationFileIndex
 }
 
 // NewMigrationRunner creates a new migration runner (package-level function)
@@ -56,6 +57,9 @@ func NewMigrationRunner(db *DB, migrationsPath string) (*MigrationRunner, error)
 		}
 		driverName = "sqlite3" // golang-migrate uses "sqlite3" as the driver name
 	} else if driverName == "postgres" || driverName == "postgresql" {
+		if db.Stats().MaxOpenConnections == 1 {
+			return nil, fmt.Errorf("PostgreSQL migrations need at least 2 connections")
+		}
 		driver, err = postgres.WithInstance(db.DB, &postgres.Config{})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create postgres driver: %w", err)
@@ -166,15 +170,25 @@ func NewMigrationRunner(db *DB, migrationsPath string) (*MigrationRunner, error)
 		}
 	}
 
+	sourceIndex, err := indexMigrationFiles(absPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to index migration files: %w", err)
+	}
+
 	return &MigrationRunner{
 		db:             db,
 		migrate:        m,
-		migrationsPath: migrationsPath,
+		migrationsPath: absPath,
+		sourceIndex:    sourceIndex,
 	}, nil
 }
 
 // Migrate applies all pending migrations
 func (mr *MigrationRunner) Migrate(ctx context.Context) error {
+	return mr.withMigrationChecksums(ctx, func(executor checksumExecutor) error { return mr.migrateWithChecksums(ctx, executor) })
+}
+
+func (mr *MigrationRunner) migrateWithChecksums(ctx context.Context, executor checksumExecutor) error {
 	// Check current version before migrating
 	currentVersion, dirty, err := mr.migrate.Version()
 	if err != nil && err != migrate.ErrNilVersion {
@@ -196,7 +210,7 @@ func (mr *MigrationRunner) Migrate(ctx context.Context) error {
 	}
 
 	// Apply migrations
-	if err := mr.migrate.Up(); err != nil {
+	if err := mr.applyChecksumSteps(ctx, executor, nil); err != nil {
 		if err == migrate.ErrNoChange {
 			// No pending migrations - this is fine
 			return nil
@@ -234,7 +248,7 @@ func (mr *MigrationRunner) validatePendingMigrations(ctx context.Context, curren
 		}
 
 		versionStr := parts[0]
-		version, err := strconv.ParseUint(versionStr, 10, 64)
+		version, err := strconv.ParseUint(versionStr, 10, strconv.IntSize-1)
 		if err != nil || version > math.MaxUint {
 			continue
 		}
@@ -285,7 +299,7 @@ func (mr *MigrationRunner) validatePendingMigrationChecksums(ctx context.Context
 		}
 
 		versionStr := parts[0]
-		version, err := strconv.ParseUint(versionStr, 10, 64)
+		version, err := strconv.ParseUint(versionStr, 10, strconv.IntSize-1)
 		if err != nil || version > math.MaxUint {
 			continue
 		}
@@ -325,6 +339,10 @@ func (mr *MigrationRunner) validatePendingMigrationChecksums(ctx context.Context
 
 // MigrateTo applies migrations up to a specific version
 func (mr *MigrationRunner) MigrateTo(ctx context.Context, version uint) error {
+	return mr.withMigrationChecksums(ctx, func(executor checksumExecutor) error { return mr.migrateToWithChecksums(ctx, executor, version) })
+}
+
+func (mr *MigrationRunner) migrateToWithChecksums(ctx context.Context, executor checksumExecutor, version uint) error {
 	// Check current version
 	currentVersion, dirty, err := mr.migrate.Version()
 	if err != nil && err != migrate.ErrNilVersion {
@@ -345,7 +363,7 @@ func (mr *MigrationRunner) MigrateTo(ctx context.Context, version uint) error {
 	}
 
 	// Apply migrations
-	if err := mr.migrate.Migrate(version); err != nil {
+	if err := mr.applyChecksumSteps(ctx, executor, &version); err != nil {
 		if err == migrate.ErrNoChange {
 			return nil
 		}
@@ -356,6 +374,10 @@ func (mr *MigrationRunner) MigrateTo(ctx context.Context, version uint) error {
 
 // Rollback rolls back the last migration
 func (mr *MigrationRunner) Rollback(ctx context.Context) error {
+	return mr.withMigrationChecksums(ctx, func(executor checksumExecutor) error { return mr.rollbackWithChecksums(ctx, executor) })
+}
+
+func (mr *MigrationRunner) rollbackWithChecksums(ctx context.Context, executor checksumExecutor) error {
 	// Check current version before rolling back
 	currentVersion, dirty, err := mr.migrate.Version()
 	if err != nil {
@@ -374,7 +396,7 @@ func (mr *MigrationRunner) Rollback(ctx context.Context) error {
 	}
 
 	// Rollback one step
-	if err := mr.migrate.Steps(-1); err != nil {
+	if err := mr.rollbackChecksumStep(ctx, executor); err != nil {
 		if err == migrate.ErrNoChange {
 			return fmt.Errorf("no migrations to rollback")
 		}
@@ -385,6 +407,10 @@ func (mr *MigrationRunner) Rollback(ctx context.Context) error {
 
 // RollbackSteps rolls back a specified number of migration steps
 func (mr *MigrationRunner) RollbackSteps(ctx context.Context, steps int) error {
+	return mr.withMigrationChecksums(ctx, func(executor checksumExecutor) error { return mr.rollbackStepsWithChecksums(ctx, executor, steps) })
+}
+
+func (mr *MigrationRunner) rollbackStepsWithChecksums(ctx context.Context, executor checksumExecutor, steps int) error {
 	if steps <= 0 {
 		return fmt.Errorf("steps must be greater than 0, got %d", steps)
 	}
@@ -407,17 +433,23 @@ func (mr *MigrationRunner) RollbackSteps(ctx context.Context, steps int) error {
 	}
 
 	// Rollback n steps
-	if err := mr.migrate.Steps(-steps); err != nil {
-		if err == migrate.ErrNoChange {
-			return fmt.Errorf("no migrations to rollback")
+	for i := 0; i < steps; i++ {
+		if err := mr.rollbackChecksumStep(ctx, executor); err != nil {
+			if err == migrate.ErrNoChange {
+				return fmt.Errorf("no migrations to rollback")
+			}
+			return fmt.Errorf("failed to rollback migration: %w", err)
 		}
-		return fmt.Errorf("failed to rollback migration: %w", err)
 	}
 	return nil
 }
 
 // RollbackTo rolls back to a specific version
 func (mr *MigrationRunner) RollbackTo(ctx context.Context, version uint) error {
+	return mr.withMigrationChecksums(ctx, func(executor checksumExecutor) error { return mr.rollbackToWithChecksums(ctx, executor, version) })
+}
+
+func (mr *MigrationRunner) rollbackToWithChecksums(ctx context.Context, executor checksumExecutor, version uint) error {
 	// Check current version
 	currentVersion, dirty, err := mr.migrate.Version()
 	if err != nil {
@@ -435,9 +467,37 @@ func (mr *MigrationRunner) RollbackTo(ctx context.Context, version uint) error {
 		return fmt.Errorf("target version %d is greater than or equal to current version %d. Use MigrateTo() to migrate forward", version, currentVersion)
 	}
 
+	// Validate target version against runner's source snapshot before stepping
+	index := mr.sourceIndex
+	if index == nil {
+		var err error
+		index, err = indexMigrationFiles(mr.migrationsPath)
+		if err != nil {
+			return err
+		}
+	}
+	if _, ok := index[version]; !ok {
+		return fmt.Errorf("cannot rollback to version %d: target version missing from migration source", version)
+	}
+	if _, _, err := index.checksums(version); err != nil {
+		return fmt.Errorf("cannot rollback to version %d: %w", version, err)
+	}
+
 	// Rollback to target version
-	if err := mr.migrate.Migrate(version); err != nil {
-		return fmt.Errorf("failed to rollback to version %d: %w", version, err)
+	for currentVersion > version {
+		if err := mr.rollbackChecksumStep(ctx, executor); err != nil {
+			return fmt.Errorf("failed to rollback to version %d: %w", version, err)
+		}
+		currentVersion, _, err = mr.migrate.Version()
+		if err != nil {
+			return err
+		}
+	}
+	// Guard against overshoot: the runner's golang-migrate source snapshot may not
+	// contain the target version (e.g., file added after runner construction), causing
+	// the loop to exit at a version < target. Require exact match.
+	if currentVersion != version {
+		return fmt.Errorf("rollback ended at version %d, expected target %d — target version missing from migration source", currentVersion, version)
 	}
 	return nil
 }
@@ -549,10 +609,13 @@ func (mr *MigrationRunner) Force(ctx context.Context, version uint) error {
 	if version > math.MaxInt {
 		return fmt.Errorf("migration version exceeds maximum supported value")
 	}
-	if err := mr.migrate.Force(int(version)); err != nil {
-		return fmt.Errorf("failed to force migration version: %w", err)
-	}
-	return nil
+	forced := int(version)
+	return mr.withMigrationChecksums(ctx, func(executor checksumExecutor) error {
+		if err := mr.migrate.Force(forced); err != nil {
+			return fmt.Errorf("failed to force migration version: %w", err)
+		}
+		return mr.reconcileMigrationChecksums(ctx, executor)
+	})
 }
 
 // Close closes the migration runner

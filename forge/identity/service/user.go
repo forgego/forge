@@ -3,7 +3,10 @@ package service
 import (
 	"context"
 	"fmt"
+	"net/mail"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/forgego/forge/identity/models"
 	"github.com/forgego/forge/identity/repository"
@@ -221,6 +224,11 @@ func (s *userService) ListUsers(ctx context.Context, filters *UserFilters) ([]*m
 
 // Register registers a new user (public endpoint)
 func (s *userService) Register(ctx context.Context, req *RegisterRequest) (*models.User, error) {
+	// Validate email before any database lookup
+	if err := validateEmail(req.Email); err != nil {
+		return nil, err
+	}
+
 	// Create user request
 	createReq := &CreateUserRequest{
 		Username: req.Username,
@@ -353,17 +361,12 @@ func validateCreateUserRequest(req *CreateUserRequest) error {
 		return ErrInvalidUsername
 	}
 
-	if req.Email == "" {
-		return ErrInvalidEmail
+	if err := validateEmail(req.Email); err != nil {
+		return err
 	}
 
 	if req.Password == "" {
 		return fmt.Errorf("password is required")
-	}
-
-	// Basic email validation (more thorough validation should be done in serializer)
-	if len(req.Email) > 254 {
-		return ErrInvalidEmail
 	}
 
 	// Basic username validation
@@ -372,4 +375,53 @@ func validateCreateUserRequest(req *CreateUserRequest) error {
 	}
 
 	return nil
+}
+
+// validateEmail validates an email address format and length
+func validateEmail(email string) error {
+	if !isValidEmail(email) {
+		return ErrInvalidEmail
+	}
+	return nil
+}
+
+// isValidEmail performs email validation using net/mail.ParseAddress
+// and strict domain/whitespace checks.
+func isValidEmail(email string) bool {
+	if len(email) < 3 || len(email) > 254 {
+		return false
+	}
+
+	for _, r := range email {
+		if unicode.IsSpace(r) {
+			return false
+		}
+	}
+
+	addr, err := mail.ParseAddress(email)
+	if err != nil || addr.Address != email {
+		return false
+	}
+
+	parts := strings.Split(email, "@")
+	if len(parts) != 2 {
+		return false
+	}
+
+	localPart, domain := parts[0], parts[1]
+	if localPart == "" {
+		return false
+	}
+
+	labels := strings.Split(domain, ".")
+	if len(labels) < 2 {
+		return false
+	}
+	for _, label := range labels {
+		if label == "" {
+			return false
+		}
+	}
+
+	return true
 }

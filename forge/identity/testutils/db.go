@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"sync/atomic"
 	"testing"
@@ -48,22 +49,17 @@ func createTestDatabase(ctx context.Context, defaultDB *sql.DB) (string, error) 
 
 // SetupTestDB creates a Postgres database for testing
 func SetupTestDB(t *testing.T) *db.DB {
-	// Postgres connection info
-	host := "127.0.0.1"
-	port := "5432"
-	user := "postgres"
-	password := "123"
-
-	// Connect to default DB to create test DB
-	defaultDSN := fmt.Sprintf("postgres://%s:%s@%s:%s/postgres?sslmode=disable",
-		user, password, host, port)
+	// Use the same connection options for administration and the per-test database.
+	defaultDSN := testDatabaseURL("postgres://postgres:123@127.0.0.1:5432/postgres?sslmode=disable")
 	defaultDB, err := sql.Open("postgres", defaultDSN)
 	if err != nil {
-		t.Skipf("PostgreSQL not available: %v. Skipping identity DB tests.", err)
+		skipOrFailNoDB(t, "PostgreSQL not available: %v. Skipping identity DB tests.", err)
+		return nil
 	}
 	defer defaultDB.Close()
 	if err := defaultDB.Ping(); err != nil {
-		t.Skipf("PostgreSQL not available: %v. Skipping identity DB tests.", err)
+		skipOrFailNoDB(t, "PostgreSQL not available: %v. Skipping identity DB tests.", err)
+		return nil
 	}
 
 	// Create a unique database (retrying if a name collision occurs under parallel test startup)
@@ -71,13 +67,14 @@ func SetupTestDB(t *testing.T) *db.DB {
 	require.NoError(t, err)
 
 	// Connect to test DB
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		user, password, host, port, dbName)
+	dsn, err := databaseDSN(defaultDSN, dbName)
+	require.NoError(t, err)
 	sqlDB, err := sql.Open("postgres", dsn)
 	require.NoError(t, err)
 	if err := sqlDB.Ping(); err != nil {
 		sqlDB.Close()
-		t.Skipf("PostgreSQL not available: %v. Skipping identity DB tests.", err)
+		skipOrFailNoDB(t, "PostgreSQL not available: %v. Skipping identity DB tests.", err)
+		return nil
 	}
 
 	testDB := &db.DB{DB: sqlDB, Driver: "postgres"}
@@ -177,4 +174,42 @@ func SetupTestDB(t *testing.T) *db.DB {
 	})
 
 	return testDB
+}
+
+func testDatabaseURL(defaultURL string) string {
+	if u := os.Getenv("FORGE_TEST_DATABASE_URL"); u != "" {
+		return u
+	}
+	return defaultURL
+}
+
+func requireDB() bool {
+	return os.Getenv("FORGE_REQUIRE_DB") == "1"
+}
+
+func dbUnavailableAction() string {
+	if requireDB() {
+		return "fatal"
+	}
+	return "skip"
+}
+
+func skipOrFailNoDB(t testing.TB, format string, args ...any) {
+	t.Helper()
+	msg := fmt.Sprintf(format, args...)
+	if requireDB() {
+		t.Fatalf("%s (FORGE_REQUIRE_DB=1 is set)", msg)
+	}
+	t.Skipf("%s (set FORGE_REQUIRE_DB=1 to turn into failure)", msg)
+}
+
+// databaseDSN changes only the database path, preserving URL credentials and query.
+func databaseDSN(baseURL, dbName string) (string, error) {
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return "", err
+	}
+	u.Path = "/" + dbName
+	u.RawPath = ""
+	return u.String(), nil
 }

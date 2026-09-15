@@ -1,4 +1,4 @@
-﻿# forge Design (comprehensive, code-aligned)
+# forge Design (comprehensive, code-aligned)
 
 ## Table of contents
 
@@ -21,6 +21,8 @@
 - [17. Performance and scaling](#17-performance-and-scaling)
 - [18. Testing strategy](#18-testing-strategy)
 - [19. Documentation policy](#19-documentation-policy)
+- [20. Recorded subsystem decisions](#20-recorded-subsystem-decisions)
+- [21. Capability status and supported configurations](#21-capability-status-and-supported-configurations)
 
 ## 1. Design goals
 
@@ -650,3 +652,13 @@ those sources were deleted. They document behavior the code implements.
 - The ecommerce example uses object-aware permissions: finalized
   payments/orders, primary warehouses, and used coupons are immutable.
   Mixed-outcome `207` tests verify the pattern.
+
+
+## 21. Capability status and supported configurations
+
+This table records which configurations are verified for release.
+
+| Capability | Status | Evidence |
+| --- | --- | --- |
+| SQLite migration apply | unverified | no automated apply test: the migration generator has no driver selection; tests/pkg_migrations skips it |
+
