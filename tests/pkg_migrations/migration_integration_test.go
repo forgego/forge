@@ -19,7 +19,7 @@ import (
 // NOTE: Currently skipped because migration generator uses config which defaults to postgres
 // TODO: Add support for specifying driver in migration generator
 func TestMigrationApplySQLite(t *testing.T) {
-	t.Skip("Skipping SQLite test - migration generator needs driver configuration support")
+	t.Skip("SQLite migration apply is unverified; see docs/DESIGN.md §21")
 }
 
 // TestMigrationApplyPostgres tests migrations against Postgres using the migration system

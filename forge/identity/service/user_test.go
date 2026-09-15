@@ -94,11 +94,7 @@ func TestUserService_Register(t *testing.T) {
 			Password: "password123",
 		}
 		_, err := service.Register(ctx, req)
-		// Note: Basic validation may pass, but serializer validation should catch this
-		// This test documents expected behavior
-		if err == nil {
-			t.Skip("Email validation may be handled at serializer level")
-		}
+		assert.ErrorIs(t, err, ErrInvalidEmail)
 	})
 
 	t.Run("fails with empty password", func(t *testing.T) {
@@ -605,4 +601,71 @@ func TestUserService_WithMockEmailSender(t *testing.T) {
 		assert.Equal(t, user.Email, mockSender.LastTo)
 		assert.NotEmpty(t, mockSender.LastToken)
 	})
+}
+
+func TestValidateEmail(t *testing.T) {
+	tests := []struct {
+		name    string
+		email   string
+		wantErr bool
+	}{
+		{
+			name:    "valid standard email",
+			email:   "user@example.com",
+			wantErr: false,
+		},
+		{
+			name:    "valid email with subaddress and subdomain",
+			email:   "first.last+tag@sub.example.org",
+			wantErr: false,
+		},
+		{
+			name:    "invalid empty email",
+			email:   "",
+			wantErr: true,
+		},
+		{
+			name:    "invalid missing at symbol",
+			email:   "notanemail",
+			wantErr: true,
+		},
+		{
+			name:    "invalid missing domain",
+			email:   "a@",
+			wantErr: true,
+		},
+		{
+			name:    "invalid missing local part",
+			email:   "@b.com",
+			wantErr: true,
+		},
+		{
+			name:    "invalid domain starting with dot",
+			email:   "a@.b",
+			wantErr: true,
+		},
+		{
+			name:    "invalid whitespace in email",
+			email:   "a b@c.d",
+			wantErr: true,
+		},
+		{
+			name:    "invalid consecutive dots in domain",
+			email:   "a@b..c",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateEmail(tt.email)
+			if tt.wantErr {
+				assert.ErrorIs(t, err, ErrInvalidEmail)
+				assert.False(t, isValidEmail(tt.email))
+			} else {
+				assert.NoError(t, err)
+				assert.True(t, isValidEmail(tt.email))
+			}
+		})
+	}
 }

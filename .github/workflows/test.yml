@@ -1,6 +1,12 @@
 name: Tests
 
 on:
+  workflow_dispatch:
+    inputs:
+      no_db:
+        description: Force a database connection failure to exercise the release gate
+        type: boolean
+        default: false
   push:
     branches: [main, master, v8]
     paths:
@@ -284,3 +290,65 @@ jobs:
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
         working-directory: forge
+
+  release-gate:
+    name: Release evidence gate
+    runs-on: ubuntu-latest
+    env:
+      FORGE_REQUIRE_DB: '1'
+      FORGE_TEST_DATABASE_URL: ${{ inputs.no_db && 'postgres://x@127.0.0.1:1/x' || 'postgres://forge_test:forge_test@localhost:5432/forge_test?sslmode=disable' }}
+      POSTGRES_USER: ${{ inputs.no_db && '' || 'forge_test' }}
+      POSTGRES_PASSWORD: ${{ inputs.no_db && '' || 'forge_test' }}
+      POSTGRES_HOST: ${{ inputs.no_db && '' || 'localhost' }}
+      POSTGRES_PORT: ${{ inputs.no_db && '' || '5432' }}
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: forge_test
+          POSTGRES_PASSWORD: forge_test
+          POSTGRES_DB: forge_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U forge_test -d forge_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.1'
+          cache-dependency-path: '**/go.sum'
+
+      - name: Build test reporter
+        id: reporter
+        working-directory: forge
+        run: go build -o "$RUNNER_TEMP/testreport" ./internal/tools/testreport
+
+      - name: Collect forge release evidence
+        working-directory: forge
+        run: |
+          set -o pipefail
+          # Run package binaries serially (-p 1) because all packages share FORGE_TEST_DATABASE_URL and CleanupDB truncates tables.
+          go test -count=1 -p 1 -json ./... | "$RUNNER_TEMP/testreport" --out "$RUNNER_TEMP/forge-report.txt" --require-no-skip '^github.com/.*/(identity|internal/testutils)'
+
+      - name: Collect integration release evidence
+        if: ${{ !cancelled() && steps.reporter.outcome == 'success' }}
+        working-directory: tests
+        run: |
+          set -o pipefail
+          # Run package binaries serially (-p 1) because all packages share FORGE_TEST_DATABASE_URL and CleanupDB truncates tables.
+          go test -count=1 -p 1 -json ./... | "$RUNNER_TEMP/testreport" --out "$RUNNER_TEMP/tests-report.txt" --require-no-skip '^github.com/forgego/forge/tests/(integration|pkg_migrations|e2e)' --allow-skip 'tests/pkg_migrations$ ^TestMigrationApplySQLite$'
+
+      - name: Upload release evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-test-reports
+          path: |
+            ${{ runner.temp }}/forge-report.txt
+            ${{ runner.temp }}/tests-report.txt

@@ -74,9 +74,7 @@ func (User) Relations() []schema.Relation {
 
 // TestCLIApplyMigration tests the apply migration CLI command
 func TestCLIApplyMigration(t *testing.T) {
-	if os.Getenv("DATABASE_URL") == "" && os.Getenv("RUN_POSTGRES_TESTS") == "" {
-		t.Skip("Postgres not available")
-	}
+	dbURL := testhelpers.RequirePostgresURL(t)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -117,6 +115,7 @@ func TestCLIApplyMigration(t *testing.T) {
 		"FORGE_DATABASE_PASSWORD": opts.Password,
 		"FORGE_DATABASE_NAME":     opts.DBName,
 		"FORGE_DATABASE_SSLMODE":  "disable",
+		"DATABASE_URL":            dbURL,
 	}
 	stdout, stderr, err := testhelpers.RunCLI(ctx, workdir, env, []string{"migrate", "up"}, 15*time.Second)
 
@@ -133,9 +132,7 @@ func TestCLIApplyMigration(t *testing.T) {
 
 // TestCLIStatus tests the migration status command
 func TestCLIStatus(t *testing.T) {
-	if os.Getenv("DATABASE_URL") == "" && os.Getenv("RUN_POSTGRES_TESTS") == "" {
-		t.Skip("Postgres not available")
-	}
+	dbURL := testhelpers.RequirePostgresURL(t)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -156,6 +153,7 @@ func TestCLIStatus(t *testing.T) {
 		"FORGE_DATABASE_PASSWORD": opts.Password,
 		"FORGE_DATABASE_NAME":     opts.DBName,
 		"FORGE_DATABASE_SSLMODE":  "disable",
+		"DATABASE_URL":            dbURL,
 	}
 	stdout, _, err := testhelpers.RunCLI(ctx, workdir, env, []string{"migrate", "status"}, 10*time.Second)
 
