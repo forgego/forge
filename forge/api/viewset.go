@@ -294,6 +294,7 @@ func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 
 	// Serialize results
 	serialized := SerializeMany(resultList)
+	serialized = filterOutputMany(vs.Serializer(), serialized)
 
 	// Send paginated response
 	// nolint:errcheck // HTTP response errors can't be handled meaningfully
@@ -315,6 +316,7 @@ func (vs *BaseViewSet) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	serializer := vs.Serializer()
+	stripReadOnlyInput(serializer, data)
 	serializer.SetData(data)
 
 	if err := serializer.Validate(); err != nil {
@@ -364,6 +366,7 @@ func (vs *BaseViewSet) Create(w http.ResponseWriter, r *http.Request) {
 
 	// Serialize and return created instance
 	serialized := SerializeModel(instance)
+	serialized = filterOutputMap(vs.Serializer(), serialized)
 	// nolint:errcheck // HTTP response errors can't be handled meaningfully
 	_ = forgehttp.SendJSON(w, http.StatusCreated, serialized)
 }
@@ -431,6 +434,7 @@ func (vs *BaseViewSet) Retrieve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	serialized := SerializeModel(instance)
+	serialized = filterOutputMap(vs.Serializer(), serialized)
 	// nolint:errcheck // HTTP response errors can't be handled meaningfully
 	_ = forgehttp.SendJSON(w, http.StatusOK, serialized)
 }
@@ -468,6 +472,7 @@ func (vs *BaseViewSet) update(w http.ResponseWriter, r *http.Request, action str
 	}
 
 	serializer := vs.Serializer()
+	stripReadOnlyInput(serializer, data)
 	serializer.SetData(data)
 
 	if err := serializer.Validate(); err != nil {
@@ -539,6 +544,7 @@ func (vs *BaseViewSet) update(w http.ResponseWriter, r *http.Request, action str
 	}
 
 	serialized := SerializeModel(instance)
+	serialized = filterOutputMap(vs.Serializer(), serialized)
 	forgehttp.SendJSON(w, http.StatusOK, serialized)
 }
 
