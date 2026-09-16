@@ -252,6 +252,10 @@ forge generate
 
 This compiles your schema into high-performance Go types with zero runtime reflection overhead in your query execution paths.
 
+### What generation can read
+
+Generation reads direct schema constructor calls in a returned slice, a `var` slice literal, an assignment, or an individual `append`. It cannot evaluate helper calls, values computed by functions, loops, conditional (`if` or `switch`) assembly, or appending computed slices. These constructs are reported as warnings; use `forge generate --strict` to turn any warning into an error.
+
 ---
 
 ## Next Steps
@@ -259,4 +263,3 @@ This compiles your schema into high-performance Go types with zero runtime refle
 - **[Type-Safe ORM & QuerySet](/docs/orm/)**: Learn how to query, filter with `orm.Q`, and aggregate data.
 - **[AST Migrations](/docs/migrations/)**: Automatically generate and apply schema migrations.
 - **[Admin Console](/docs/admin/overview/)**: Expose your models with zero frontend code.
-

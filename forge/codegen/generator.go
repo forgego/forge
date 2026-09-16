@@ -18,6 +18,11 @@ func (g *Generator) GetParser() *ASTParser {
 	return g.parser
 }
 
+// Diagnostics returns expressions the generator could not evaluate.
+func (g *Generator) Diagnostics() []Diagnostic {
+	return g.parser.Diagnostics()
+}
+
 // SetGenerateAPI enables or disables REST API generation
 func (g *Generator) SetGenerateAPI(enabled bool) *Generator {
 	g.generateAPI = enabled
