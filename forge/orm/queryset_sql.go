@@ -371,6 +371,147 @@ func (qs *BaseQuerySet[T]) buildCountSQL() (string, []interface{}, error) {
 	return qs.buildCountOrExistsSQL(false)
 }
 
+// buildAggregateSQL builds an ungrouped aggregate query using the same join and
+// WHERE construction as Count. aggregates must have been validated first.
+func (qs *BaseQuerySet[T]) buildAggregateSQL(aggregates []resolvedAggregate) (string, []interface{}, error) {
+	builder := qs.newSQLBuilder()
+	qs.buildJoinClause(builder)
+
+	scope := ""
+	if len(aggregates) > 0 {
+		scope = aggregates[0].relationPath
+	}
+
+	var aggJoins []string
+	aggSeen := make(map[string]bool)
+	builder.SetJoinResolver(qs.createJoinResolver(&aggJoins, aggSeen, nil))
+
+	selects := make([]string, 0, len(aggregates))
+	for _, aggregate := range aggregates {
+		column := aggregate.column
+		if aggregate.countStar {
+			column = "*"
+		} else if strings.Contains(aggregate.field, "__") {
+			var err error
+			column, err = builder.resolveColumn(aggregate.field)
+			if err != nil {
+				return "", nil, err
+			}
+		} else {
+			column = EscapeIdentifier(qs.table) + "." + column
+		}
+		selects = append(selects, fmt.Sprintf("%s(%s)", aggregate.function, column))
+	}
+
+	var whereJoins []string
+	whereSeen := make(map[string]bool)
+	var whereMulti bool
+	builder.SetJoinResolver(qs.createJoinResolver(&whereJoins, whereSeen, &whereMulti))
+
+	whereClause, _, err := qs.buildWhereClause(builder)
+	if err != nil {
+		return "", nil, err
+	}
+	parts := []string{fmt.Sprintf("SELECT %s FROM %s", strings.Join(selects, ", "), EscapeIdentifier(qs.table))}
+	if whereMulti {
+		if scope == "" {
+			if len(qs.joins) > 0 {
+				parts = append(parts, strings.Join(qs.joins, " "))
+			}
+			parts = append(parts, qs.aggregatePKSubquery(whereJoins, whereClause))
+		} else {
+			if len(qs.joins) > 0 {
+				parts = append(parts, strings.Join(qs.joins, " "))
+			}
+			if len(aggJoins) > 0 {
+				parts = append(parts, strings.Join(aggJoins, " "))
+			}
+			pkSub := qs.aggregatePKSubquery(whereJoins, whereClause)
+			builder.SetJoinResolver(qs.createJoinResolver(&aggJoins, aggSeen, nil))
+			scopePreds, err := qs.buildScopePredicates(builder, scope)
+			if err != nil {
+				return "", nil, err
+			}
+			if scopePreds != "" {
+				parts = append(parts, pkSub+" AND "+scopePreds)
+			} else {
+				parts = append(parts, pkSub)
+			}
+		}
+	} else {
+		outerJoins := mergeJoins(aggJoins, whereJoins)
+		parts = qs.appendWhereAndJoinParts(parts, outerJoins, whereClause)
+	}
+	return strings.Join(parts, " "), builder.Args(), nil
+}
+
+func (qs *BaseQuerySet[T]) conditionTouchesScope(expr Expression, scope string) bool {
+	if expr == nil || scope == "" {
+		return false
+	}
+	probeBuilder := qs.newSQLBuilder()
+	touchesScope := false
+	touchesOther := false
+	probeBuilder.SetJoinResolver(func(parts []string) (string, string, error) {
+		if len(parts) > 1 {
+			relPath := strings.Join(parts[:len(parts)-1], "__")
+			if relPath == scope || strings.HasPrefix(relPath, scope+"__") || strings.HasPrefix(scope, relPath+"__") {
+				touchesScope = true
+			} else {
+				touchesOther = true
+			}
+		}
+		return "alias", "col", nil
+	})
+	_, _, _ = expr.ToSQL(probeBuilder)
+	return touchesScope && !touchesOther
+}
+
+func (qs *BaseQuerySet[T]) buildScopePredicates(builder *SQLBuilder, scope string) (string, error) {
+	var parts []string
+	for _, cond := range qs.conditions {
+		if qs.conditionTouchesScope(cond, scope) {
+			sql, _, err := cond.ToSQL(builder)
+			if err != nil {
+				return "", err
+			}
+			parts = append(parts, sql)
+		}
+	}
+	for _, exclude := range qs.excludes {
+		if qs.conditionTouchesScope(exclude, scope) {
+			sql, _, err := exclude.ToSQL(builder)
+			if err != nil {
+				return "", err
+			}
+			parts = append(parts, fmt.Sprintf("NOT (%s)", sql))
+		}
+	}
+	if len(parts) == 0 {
+		return "", nil
+	}
+	return strings.Join(parts, " AND "), nil
+}
+
+// aggregatePKSubquery restricts an aggregate to distinct base rows when a
+// reverse or many-to-many filter would otherwise multiply joined rows.
+func (qs *BaseQuerySet[T]) aggregatePKSubquery(joins []string, where string) string {
+	pkCol := "id"
+	if qs.schema != nil && qs.schema.PrimaryKey != "" {
+		pkCol = qs.schema.PrimaryKey
+	}
+	table := EscapeIdentifier(qs.table)
+	pk := EscapeIdentifier(pkCol)
+	innerParts := []string{fmt.Sprintf("SELECT DISTINCT %s.%s FROM %s", table, pk, table)}
+	if len(joins) > 0 {
+		innerParts = append(innerParts, strings.Join(joins, " "))
+	}
+	if where != "" {
+		innerParts = append(innerParts, where)
+	}
+	return fmt.Sprintf("WHERE %s.%s IN (%s)", table, pk, strings.Join(innerParts, " "))
+}
+
 // BuildExistsSQL builds the SQL query and arguments for Exists
 func (qs *BaseQuerySet[T]) BuildExistsSQL() (string, []interface{}, error) {
 	return qs.buildCountOrExistsSQL(true)

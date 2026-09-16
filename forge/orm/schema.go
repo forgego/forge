@@ -343,6 +343,8 @@ func getGoType(ft schema.FieldType) reflect.Type {
 		return reflect.TypeOf(float64(0))
 	case schema.TypeDecimal:
 		return reflect.TypeOf((*interface{})(nil)).Elem() // Would be decimal.Decimal
+	case schema.TypeBytes:
+		return reflect.TypeOf([]byte(nil))
 	default:
 		return reflect.TypeOf((*interface{})(nil)).Elem()
 	}

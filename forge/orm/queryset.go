@@ -2,11 +2,22 @@ package orm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	forgeerrors "github.com/forgego/forge/errors"
 )
+
+var aggregateChainError = forgeerrors.NewNotImplementedError("QuerySet.Aggregate chained into a row query; use AggregateValues")
+
+func isAggregateChainError(err error) bool {
+	return errors.Is(err, aggregateChainError)
+}
+
+func canReplaceDeferredError(err error) bool {
+	return err == nil || isAggregateChainError(err)
+}
 
 // QuerySet is the type-safe QuerySet interface
 type QuerySet[T any] interface {
@@ -248,7 +259,7 @@ func (qs *BaseQuerySet[T]) Filter(expr Expression) QuerySet[T] {
 	// Validate expression -- store error instead of panicking
 	if err := expr.Resolve(qs.schema); err != nil {
 		clone := qs.clone()
-		if clone.err == nil {
+		if canReplaceDeferredError(clone.err) {
 			clone.err = fmt.Errorf("invalid filter expression: %w", err)
 		}
 		return clone
@@ -265,7 +276,7 @@ func (qs *BaseQuerySet[T]) Exclude(expr Expression) QuerySet[T] {
 	// Validate expression -- store error instead of panicking
 	if err := expr.Resolve(qs.schema); err != nil {
 		clone := qs.clone()
-		if clone.err == nil {
+		if canReplaceDeferredError(clone.err) {
 			clone.err = fmt.Errorf("invalid exclude expression: %w", err)
 		}
 		return clone
@@ -424,8 +435,8 @@ func (qs *BaseQuerySet[T]) PrefetchRelated(relations ...any) QuerySet[T] {
 func (qs *BaseQuerySet[T]) Aggregate(aggs ...Aggregate) QuerySet[T] {
 	clone := qs.clone()
 	clone.aggregates = append(clone.aggregates, aggs...)
-	if clone.err == nil {
-		clone.err = forgeerrors.NewNotImplementedError("QuerySet.Aggregate")
+	if canReplaceDeferredError(clone.err) {
+		clone.err = aggregateChainError
 	}
 	return clone
 }
@@ -471,7 +482,7 @@ func (qs *BaseQuerySet[T]) UpdateBuilder() (*UpdateBuilder[T], error) {
 // Union performs a UNION operation
 func (qs *BaseQuerySet[T]) Union(other QuerySet[T]) QuerySet[T] {
 	clone := qs.clone()
-	if clone.err == nil {
+	if canReplaceDeferredError(clone.err) {
 		clone.err = forgeerrors.NewNotImplementedError("QuerySet.Union")
 	}
 	return clone
@@ -480,7 +491,7 @@ func (qs *BaseQuerySet[T]) Union(other QuerySet[T]) QuerySet[T] {
 // Intersection performs an INTERSECT operation
 func (qs *BaseQuerySet[T]) Intersection(other QuerySet[T]) QuerySet[T] {
 	clone := qs.clone()
-	if clone.err == nil {
+	if canReplaceDeferredError(clone.err) {
 		clone.err = forgeerrors.NewNotImplementedError("QuerySet.Intersection")
 	}
 	return clone
@@ -489,7 +500,7 @@ func (qs *BaseQuerySet[T]) Intersection(other QuerySet[T]) QuerySet[T] {
 // Difference performs an EXCEPT operation
 func (qs *BaseQuerySet[T]) Difference(other QuerySet[T]) QuerySet[T] {
 	clone := qs.clone()
-	if clone.err == nil {
+	if canReplaceDeferredError(clone.err) {
 		clone.err = forgeerrors.NewNotImplementedError("QuerySet.Difference")
 	}
 	return clone
