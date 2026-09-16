@@ -643,6 +643,10 @@ those sources were deleted. They document behavior the code implements.
 - `Field.Resolve` validates full nested relation paths (rejects
   non-relation traversal and terminal relations).
 - Aggregate/annotation registries are thread-safe.
+- Ungrouped aggregates (`AggregateValues`) evaluate each aggregate in its own
+  relation scope (base model or relation path). Filter predicates on a relation
+  constrain aggregates over that relation. Aggregates across many-to-many
+  relations are not supported yet.
 - Hook order on write paths is
   `BeforeSave` → `BeforeCreate` → `AfterCreate` → `AfterSave`
   (and the `BeforeUpdate`/`BeforeDelete` analogues).
@@ -661,4 +665,8 @@ This table records which configurations are verified for release.
 | Capability | Status | Evidence |
 | --- | --- | --- |
 | SQLite migration apply | unverified | no automated apply test: the migration generator has no driver selection; tests/pkg_migrations skips it |
-
+| Count, Sum, Avg, Min, Max (ungrouped, via `orm.AggregateValues`) | supported on PostgreSQL and SQLite (evaluated per relation scope; predicates constrain relation aggregates; many-to-many aggregate paths not supported yet) | `forge/orm/aggregates_test.go` |
+| Grouped aggregates, STDDEV/VARIANCE, custom registered aggregates, many-to-many aggregate paths | not implemented | `forge/orm/aggregates_test.go` rejection test |
+| Union, Intersection, Difference | not implemented | `forge/orm/queryset_not_implemented_test.go` |
+| Integer primary keys | supported | `forge/orm/manager.go` |
+| UUID and string primary keys in `Manager.Get` | not supported (`Get` takes `int64`) | no test; `Manager.Get` signature |

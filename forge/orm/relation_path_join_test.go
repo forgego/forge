@@ -34,6 +34,7 @@ type TestCustomer struct {
 	schema.BaseSchema
 	ID        int64        `db:"id"`
 	Name      string       `db:"name"`
+	Credit    float64      `db:"credit"`
 	CompanyID int64        `db:"company_id"`
 	Company   *TestCompany `db:"company"`
 }
@@ -46,6 +47,7 @@ func (TestCustomer) Fields() []schema.Field {
 	return []schema.Field{
 		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
 		schema.StringField("name"),
+		schema.Float64Field("credit"),
 		schema.Int64Field("company_id"),
 	}
 }
@@ -97,6 +99,7 @@ func setupRelationTestDB(t *testing.T) *db.DB {
 		CREATE TABLE customers (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT NOT NULL,
+			credit REAL NOT NULL DEFAULT 0,
 			company_id INTEGER,
 			FOREIGN KEY(company_id) REFERENCES companies(id)
 		);

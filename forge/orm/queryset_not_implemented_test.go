@@ -65,7 +65,7 @@ func TestQuerySet_AggregateNotImplemented(t *testing.T) {
 		aggregate Aggregate
 	}{
 		{
-			name:      "Count aggregate returns NotImplementedError",
+			name:      "Count aggregate chained into All returns NotImplementedError",
 			aggregate: Count("id"),
 		},
 	}
