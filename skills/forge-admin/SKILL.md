@@ -30,4 +30,4 @@ Register models with the admin system to get a full CRUD web UI. This skill focu
 
 ## References
 - [Admin configuration options](references/admin.md)
-- [Admin tutorial](references/admin-tutorial.md)
+- [Admin reference](references/admin.md)

@@ -166,7 +166,7 @@ Used to build composite systems with injected dependencies.
 
 Used for fluent construction of schema fields/relations and query expressions.
 
-- Schema field chain methods: `forge/schema/field_methods.go`.
+- Schema field constructors and options: `forge/schema/fields_functional.go`.
 - Relations chain methods: `forge/schema/relation.go`.
 - Query expression builders: `forge/orm/expression.go`.
 
@@ -176,7 +176,7 @@ Used to centralize discovery and extension.
 
 - Admin registry: `forge/admin/core/registry.go`.
 - CLI registry: `forge/cli/core/registry.go`.
-- Schema registries: `forge/schema/registry.go`, `forge/schema/relation_registry.go`.
+- Schema registry: `forge/schema/registry.go`.
 
 ### 6.7 Template method pattern
 
@@ -342,7 +342,7 @@ These exist as API surfaces and are intended to prevent N+1.
 - `SelectRelated(...)` implies JOIN-based eager loading.
 - `PrefetchRelated(...)` implies separate query prefetch.
 
-Guardrail: `forge/orm/preload.go` defines errors when relations are accessed without being preloaded.
+No dedicated guardrail currently reports access to a relation that was not loaded with `SelectRelated` or `PrefetchRelated`.
 
 ### 9.5 Updates
 

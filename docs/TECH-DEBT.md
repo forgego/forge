@@ -1,7 +1,6 @@
 # Forge Tech Debt Register
 
-> Debts salvaged from `docs/archive/ROADMAP.md`, ops run notes
-> (`STATUS.md`, `todo-current.json`), and the skills backlog.
+> Known framework debts.
 > Each entry names the payoff for fixing it. This file is the backlog;
 > `docs/ROADMAP.md` tracks what is scheduled.
 

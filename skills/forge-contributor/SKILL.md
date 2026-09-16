@@ -29,7 +29,7 @@ description: Contributor workflow for working on the Forge framework itself (cor
 
 ## Documentation Updates
 - Update `docs-site/docs/contributing/development.md` if the contributor workflow changes.
-- Update `tests/README.md` and `tests/TESTING.md` if test strategy or coverage changes.
+- Update `tests/README.md` if test strategy or coverage changes.
 
 ## References
 - [CI checklist](references/ci-checklist.md)

@@ -727,6 +727,6 @@ site.IndexTitle = "Welcome to Blog Administration"
 
 ## Next Steps
 
-- [REST API Guide](../forge-api/references/rest-api.md) - Build APIs for your frontend
-- [Security Guide](../../SECURITY.md) - Secure your admin interface
+- [REST API Guide](../../forge-api/references/rest-api.md) - Build APIs for your frontend
+- [Security Guide](../../../SECURITY.md) - Secure your admin interface
 

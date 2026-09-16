@@ -30,4 +30,4 @@ Use Forge's REST API framework to build CRUD endpoints with ViewSets and seriali
 
 ## References
 - [REST API concepts](references/rest-api.md)
-- [First API walkthrough](references/first-api.md)
+- [REST API reference](references/rest-api.md)
