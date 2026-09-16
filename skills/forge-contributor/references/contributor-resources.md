@@ -13,4 +13,3 @@
 - `docs-site/package.json`
 - `docs-site/docs/contributing/development.md`
 - `tests/README.md`
-- `tests/TESTING.md`

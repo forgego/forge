@@ -59,6 +59,24 @@ Instructions supplement tests and human judgment; they do not replace them.
    features, missing requirements, and alternatives. Recommend merge, split,
    redesign, defer, or remove with reasons and explicit remaining uncertainty.
 
+## Acceptance review
+
+Implementation and acceptance are separate roles. The author of a capability,
+whether a person or a model, writes tests but does not accept the capability.
+Agreement between an implementation, its own tests, and its own documentation
+does not show that the user-facing contract is right.
+
+- The acceptance reviewer starts from the requirement and the resulting diff,
+  not from the author's summary.
+- The reviewer exercises the capability through public interfaces: HTTP
+  routes, CLI commands, generated code, or exported APIs.
+- For each capability, the reviewer records at least one attempted
+  counterexample, such as an undeclared field in a response, a leaked error
+  detail, an unauthorized write, or an interrupted migration, together with the
+  observed outcome.
+- A capability is complete only when that record exists, alongside the
+  requirement-to-test evidence from pass 6.
+
 ## Evidence templates
 
 For each flow, record:

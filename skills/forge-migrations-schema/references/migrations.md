@@ -460,7 +460,7 @@ func RunMigration(ctx context.Context, db *sql.DB) error {
 
 ## Next Steps
 
-- [Models guide](../forge-models/references/models.md) - Model definitions drive migrations
+- [Models guide](../../forge-models/references/models.md) - Model definitions drive migrations
 
 ## Appendix: Internals
 

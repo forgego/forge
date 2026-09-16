@@ -425,8 +425,8 @@ func main() {
 
 ## Next Steps
 
-- [Queries Guide](../forge-models/references/models.md) - Models backing your API
-- [Security Guide](../../SECURITY.md) - Secure your API
+- [Queries Guide](../../forge-models/references/models.md) - Models backing your API
+- [Security Guide](../../../SECURITY.md) - Secure your API
 
 ## Appendix: Manual Handlers Without ViewSets
 

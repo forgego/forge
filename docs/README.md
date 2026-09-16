@@ -30,5 +30,5 @@ and running behavior.
 
 Session-local drafts stay local and out of this PR:
 `.codex/`, `.claude/`, `CLAUDE.md`, `design/tasks/`,
-`design/admin-ui-tasks.md`, `design/backend-tasks.md`,
-`design/backend-handoff.md`.
+`design/admin-ui-tasks.md`, `design/backend-tasks.md`, <!-- doclinks:ignore -->
+`design/backend-handoff.md`. <!-- doclinks:ignore -->

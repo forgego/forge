@@ -60,4 +60,4 @@ Use this as the authoritative "everything must happen" list. Run the checks that
 
 ## Docs and Test Updates
 - Update `docs-site/docs/contributing/development.md` when workflow changes.
-- Update `tests/README.md` and `tests/TESTING.md` when test strategy changes.
+- Update `tests/README.md` when test strategy changes.

@@ -331,7 +331,7 @@ describe('UserCard', () => {
   database names, 60s context timeouts, shared `helpers.Assert*`.
 - **Table-driven tests** for multiple inputs/outputs with descriptive
   case structs.
-- **Test helpers**: pure assertions in `tests/helpers/`, infra setup
+- **Test helpers**: pure assertions in `tests/testhelpers/`, infra setup
   in `tests/infra/`, reused across packages.
 
 ### Running Tests
