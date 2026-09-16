@@ -12,7 +12,8 @@ import (
 
 // ASTParser parses Go AST to extract schema definitions
 type ASTParser struct {
-	fset *token.FileSet
+	fset        *token.FileSet
+	diagnostics []Diagnostic
 }
 
 // NewASTParser creates a new AST parser
@@ -24,6 +25,7 @@ func NewASTParser() *ASTParser {
 
 // ParseDirectory parses all Go files in a directory and extracts schema definitions
 func (p *ASTParser) ParseDirectory(dir string) ([]*ModelDefinition, error) {
+	p.diagnostics = nil
 	var definitions []*ModelDefinition
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -139,6 +141,7 @@ func (p *ASTParser) extractModelDefinition(packageName string, typeSpec *ast.Typ
 	// Find Fields() method
 	fieldsMethod := p.findMethod(file, modelName, "Fields")
 	if fieldsMethod != nil {
+		p.reportUnsupportedExpressions(modelName, "Fields", fieldsMethod)
 		fields, err := p.extractFields(fieldsMethod)
 		if err != nil {
 			return nil, fmt.Errorf("failed to extract fields: %w", err)
@@ -149,6 +152,7 @@ func (p *ASTParser) extractModelDefinition(packageName string, typeSpec *ast.Typ
 	// Find Relations() method
 	relationsMethod := p.findMethod(file, modelName, "Relations")
 	if relationsMethod != nil {
+		p.reportUnsupportedExpressions(modelName, "Relations", relationsMethod)
 		relations, err := p.extractRelations(relationsMethod)
 		if err != nil {
 			return nil, fmt.Errorf("failed to extract relations: %w", err)
@@ -159,6 +163,7 @@ func (p *ASTParser) extractModelDefinition(packageName string, typeSpec *ast.Typ
 	// Find Meta() method
 	metaMethod := p.findMethod(file, modelName, "Meta")
 	if metaMethod != nil {
+		p.reportUnsupportedExpressions(modelName, "Meta", metaMethod)
 		meta, err := p.extractMeta(metaMethod)
 		if err != nil {
 			return nil, fmt.Errorf("failed to extract meta: %w", err)
