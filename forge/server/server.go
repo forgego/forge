@@ -138,6 +138,9 @@ func (s *Server) RegisterRoutes(fn func(*Router)) {
 
 // Start starts the server
 func (s *Server) Start() error {
+	if err := s.validateProductionSecrets(); err != nil {
+		return err
+	}
 	if s.logger != nil {
 		s.logger.Info("Starting server",
 			zap.String("address", s.Addr),
@@ -158,6 +161,9 @@ func (s *Server) Start() error {
 
 // StartWithGracefulShutdown starts the server with graceful shutdown support
 func (s *Server) StartWithGracefulShutdown() error {
+	if err := s.validateProductionSecrets(); err != nil {
+		return err
+	}
 	// Start server in a goroutine
 	serverErr := make(chan error, 1)
 	go func() {
@@ -168,6 +174,48 @@ func (s *Server) StartWithGracefulShutdown() error {
 
 	// Wait for interrupt signal or server error
 	return <-serverErr
+}
+
+func (s *Server) validateProductionSecrets() error {
+	if s == nil || s.config == nil || s.settings == nil || !strings.EqualFold(strings.TrimSpace(s.settings.App.Env), "production") {
+		return nil
+	}
+	// Validate the effective Settings.Security values the server actually
+	// uses: empty or placeholder secrets must fail in production.
+	keys := []string{"security.secret_key", "security.csrf_secret_key", "security.session_secret"}
+	effective := map[string]string{
+		"security.secret_key":      s.settings.Security.SecretKey,
+		"security.csrf_secret_key": s.settings.Security.CSRFSecretKey,
+		"security.session_secret":  s.settings.Security.SessionSecret,
+	}
+	var missing []string
+	flagged := map[string]bool{}
+	for _, key := range keys {
+		if config.IsPlaceholderSecret(effective[key]) {
+			missing = append(missing, key)
+			flagged[key] = true
+		}
+	}
+	// Generated-secret provenance remains an additional signal: an
+	// effective value identical to the config's ephemeral generated value
+	// was never explicitly configured, even though it is not a
+	// placeholder.
+	generated := map[string]bool{}
+	for _, key := range s.config.GeneratedSecrets() {
+		generated[key] = true
+	}
+	for _, key := range keys {
+		if flagged[key] || !generated[key] {
+			continue
+		}
+		if effective[key] != "" && effective[key] == s.config.GetString(key, "") {
+			missing = append(missing, key)
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	return fmt.Errorf("production requires explicit %s", strings.Join(missing, ", "))
 }
 
 // Shutdown gracefully shuts down the server

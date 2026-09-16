@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"syscall"
@@ -222,6 +224,42 @@ func TestNewServer_NilInputs(t *testing.T) {
 	if srv != nil {
 		t.Errorf("Expected nil server, got %v", srv)
 	}
+}
+
+func TestServerStartRejectsGeneratedSecretsInProductionBeforeListening(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	port := listener.Addr().(*net.TCPAddr).Port
+	require.NoError(t, listener.Close())
+
+	cfg := config.NewConfig()
+	settings := &config.Settings{
+		App:    config.AppSettings{Env: "PrOdUcTiOn"},
+		Server: config.ServerSettings{Host: "127.0.0.1", Port: fmt.Sprint(port)},
+	}
+	srv, err := NewServer(cfg, settings, nil)
+	require.NoError(t, err)
+
+	started := time.Now()
+	err = srv.Start()
+	require.Error(t, err)
+	require.Less(t, time.Since(started), time.Second)
+	for _, key := range cfg.GeneratedSecrets() {
+		assert.Contains(t, err.Error(), key)
+		assert.NotContains(t, err.Error(), cfg.GetString(key, ""))
+	}
+
+	probe, listenErr := net.Listen("tcp", srv.Addr)
+	require.NoError(t, listenErr, "server opened its listener before rejecting generated secrets")
+	require.NoError(t, probe.Close())
+}
+
+func TestServerDevelopmentDoesNotRejectGeneratedSecrets(t *testing.T) {
+	cfg := config.NewConfig()
+	settings := &config.Settings{App: config.AppSettings{Env: "development"}}
+	srv, err := NewServer(cfg, settings, nil)
+	require.NoError(t, err)
+	require.NoError(t, srv.validateProductionSecrets())
 }
 
 func TestIsCSRFExemptPath(t *testing.T) {

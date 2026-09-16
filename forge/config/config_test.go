@@ -1,6 +1,7 @@
 package config
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -66,6 +67,24 @@ func TestNewConfig_OverridesPlaceholderSecrets(t *testing.T) {
 		if isPlaceholderSecret(v) {
 			t.Errorf("GetString(%q) remained placeholder secret %q", key, v)
 		}
+	}
+}
+
+func TestConfigGeneratedSecretsReportsOnlyGeneratedKeyNamesSorted(t *testing.T) {
+	t.Setenv("FORGE_SECURITY_SECRET_KEY", "this-is-an-explicit-strong-secret-key-value")
+	t.Setenv("FORGE_SECURITY_CSRF_SECRET_KEY", "change-me-in-production")
+	t.Setenv("FORGE_SECURITY_SESSION_SECRET", "")
+
+	cfg := NewConfig()
+	want := []string{"security.csrf_secret_key", "security.session_secret"}
+	if got := cfg.GeneratedSecrets(); !reflect.DeepEqual(got, want) {
+		t.Fatalf("GeneratedSecrets() = %v, want %v", got, want)
+	}
+
+	got := cfg.GeneratedSecrets()
+	got[0] = "mutated"
+	if next := cfg.GeneratedSecrets(); !reflect.DeepEqual(next, want) {
+		t.Fatalf("GeneratedSecrets returned mutable internal state: %v", next)
 	}
 }
 
