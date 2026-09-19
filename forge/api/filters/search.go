@@ -31,7 +31,7 @@ func (f *SearchFilter) FilterQueryset(r *http.Request, queryset interface{}) int
 		return queryset
 	}
 
-	searchQueries := f.buildSearchQueries(searchQuery)
+	searchQueries := f.buildSearchQueries(queryset, searchQuery)
 	if len(searchQueries) == 0 {
 		return queryset
 	}
@@ -39,11 +39,15 @@ func (f *SearchFilter) FilterQueryset(r *http.Request, queryset interface{}) int
 	return f.applySearchFilter(queryset, orm.Or(searchQueries...))
 }
 
-func (f *SearchFilter) buildSearchQueries(q string) []orm.Expression {
+func (f *SearchFilter) buildSearchQueries(queryset interface{}, q string) []orm.Expression {
 	queries := make([]orm.Expression, 0, len(f.SearchFields))
 	for _, field := range f.SearchFields {
 		field = strings.TrimSpace(field)
 		if field == "" {
+			continue
+		}
+		field, visible := visibleDatabaseField(queryset, field)
+		if !visible {
 			continue
 		}
 		queries = append(queries, orm.F(field).IContains(q))

@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/forgego/forge/schema"
 )
 
 // Serializer is the base interface for all serializers
@@ -84,6 +86,14 @@ func (s *BaseSerializer) GetInt(key string) int {
 	if val, ok := s.data[key].(float64); ok {
 		return int(val)
 	}
+	if val, ok := s.data[key].(json.Number); ok {
+		if parsed, err := val.Int64(); err == nil {
+			return int(parsed)
+		}
+		if parsed, err := val.Float64(); err == nil {
+			return int(parsed)
+		}
+	}
 	if val, ok := s.data[key].(int); ok {
 		return val
 	}
@@ -143,6 +153,12 @@ func NewModelSerializer(model interface{}) *ModelSerializer {
 
 // modelToMap converts a model struct to a map
 func modelToMap(model interface{}) map[string]interface{} {
+	return modelToMapWithTypes(model, schemaFieldTypes(model))
+}
+
+// modelToMapWithTypes converts a model struct to a map using schema field
+// types where their wire representation differs from Go's default encoding.
+func modelToMapWithTypes(model interface{}, fieldTypes map[string]schema.FieldType) map[string]interface{} {
 	result := make(map[string]interface{})
 	v := reflect.ValueOf(model)
 	if v.Kind() == reflect.Ptr {
@@ -169,7 +185,7 @@ func modelToMap(model interface{}) map[string]interface{} {
 				anonVal = anonVal.Elem()
 			}
 			if anonVal.Kind() == reflect.Struct {
-				embeddedMap := modelToMap(anonVal.Interface())
+				embeddedMap := modelToMapWithTypes(anonVal.Interface(), fieldTypes)
 				for k, v := range embeddedMap {
 					result[k] = v
 				}
@@ -204,7 +220,7 @@ func modelToMap(model interface{}) map[string]interface{} {
 		case reflect.Struct:
 			if value.Type() == reflect.TypeOf(time.Time{}) {
 				if timeVal, ok := value.Interface().(time.Time); ok {
-					result[key] = timeVal.Format(time.RFC3339)
+					result[key] = formatSchemaTime(timeVal, fieldTypes[key])
 				}
 			} else {
 				result[key] = modelToMap(value.Interface())
@@ -213,18 +229,78 @@ func modelToMap(model interface{}) map[string]interface{} {
 			if !value.IsNil() {
 				if value.Type().Elem() == reflect.TypeOf(time.Time{}) {
 					if timeVal, ok := value.Interface().(*time.Time); ok && timeVal != nil {
-						result[key] = timeVal.Format(time.RFC3339)
+						result[key] = formatSchemaTime(*timeVal, fieldTypes[key])
 					}
 				} else {
 					result[key] = modelToMap(value.Elem().Interface())
 				}
 			}
 		default:
-			result[key] = value.Interface()
+			if raw, ok := value.Interface().([]byte); ok && fieldTypes[key] == schema.TypeJSON {
+				if json.Valid(raw) {
+					result[key] = json.RawMessage(raw)
+				} else {
+					// Invalid stored bytes must not panic: keep the
+					// current base64 representation.
+					result[key] = value.Interface()
+				}
+			} else {
+				result[key] = value.Interface()
+			}
 		}
 	}
 
 	return result
+}
+
+func formatSchemaTime(value time.Time, fieldType schema.FieldType) string {
+	switch fieldType {
+	case schema.TypeTime:
+		return value.Format("15:04:05")
+	case schema.TypeDate:
+		return value.Format("2006-01-02")
+	default:
+		return value.Format(time.RFC3339)
+	}
+}
+
+// schemaFieldTypes maps response keys to schema types. Field resolution also
+// considers db tags so renamed concrete fields retain their schema semantics.
+func schemaFieldTypes(model interface{}) map[string]schema.FieldType {
+	var s schema.Schema
+	if v, ok := model.(schema.Schema); ok {
+		s = v
+	} else {
+		// Handle a non-pointer model whose pointer implements schema.Schema.
+		v := reflect.ValueOf(model)
+		if v.IsValid() && v.Kind() != reflect.Ptr {
+			ptr := reflect.New(v.Type())
+			ptr.Elem().Set(v)
+			if ps, ok := ptr.Interface().(schema.Schema); ok {
+				s = ps
+			}
+		}
+	}
+	if s == nil {
+		return nil
+	}
+
+	out := make(map[string]schema.FieldType)
+	for _, field := range s.Fields() {
+		if field.Type != schema.TypeJSON && field.Type != schema.TypeTime && field.Type != schema.TypeDate {
+			continue
+		}
+		if resolved, ok := schema.ResolveField(model, field); ok {
+			name := resolved.JSONName
+			if name == "" {
+				name = resolved.GoName
+			}
+			if name != "" && name != "-" {
+				out[name] = field.Type
+			}
+		}
+	}
+	return out
 }
 
 // SerializeModel serializes a model to a map

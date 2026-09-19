@@ -286,7 +286,9 @@ func NewWriter(cfg *HandlerConfig) func(http.ResponseWriter, *http.Request, erro
 	}
 }
 
+var defaultHandler = NewHandler(DefaultHandlerConfig())
+
 // WriteError writes an error as an RFC 7807 problem response.
 func WriteError(w http.ResponseWriter, r *http.Request, err error) {
-	NewHandler(DefaultHandlerConfig()).HandleError(w, r, err)
+	defaultHandler.HandleError(w, r, err)
 }

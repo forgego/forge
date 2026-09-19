@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -139,6 +140,15 @@ func TestBaseSerializer_SetData(t *testing.T) {
 	// Check data was set
 	assert.Equal(t, "Test", serializer.Get("name"))
 	assert.False(t, serializer.IsValid()) // Should reset validity
+}
+
+func TestBaseSerializer_GetIntSupportsJSONNumber(t *testing.T) {
+	serializer := NewBaseSerializer(map[string]interface{}{
+		"whole":   json.Number("42"),
+		"decimal": json.Number("42.9"),
+	})
+	assert.Equal(t, 42, serializer.GetInt("whole"))
+	assert.Equal(t, 42, serializer.GetInt("decimal"))
 }
 
 func TestBaseSerializer_Errors(t *testing.T) {

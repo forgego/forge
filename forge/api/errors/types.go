@@ -2,6 +2,7 @@ package errors
 
 import (
 	"fmt"
+	"sync"
 )
 
 // ErrorType represents the type of error
@@ -136,14 +137,21 @@ func (e *BaseError) WithMetaMap(meta map[string]interface{}) *BaseError {
 
 // SetTypeBaseURL sets the base URL for problem type URIs
 // This is a global setting that affects all errors
-var typeBaseURL = "https://api.example.com/problems"
+var (
+	typeBaseURLMu sync.RWMutex
+	typeBaseURL   = "https://api.example.com/problems"
+)
 
 // SetTypeBaseURL sets the base URL for problem type URIs
 func SetTypeBaseURL(url string) {
+	typeBaseURLMu.Lock()
+	defer typeBaseURLMu.Unlock()
 	typeBaseURL = url
 }
 
 // GetTypeBaseURL returns the current base URL for problem type URIs
 func GetTypeBaseURL() string {
+	typeBaseURLMu.RLock()
+	defer typeBaseURLMu.RUnlock()
 	return typeBaseURL
 }

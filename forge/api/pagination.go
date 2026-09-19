@@ -30,7 +30,8 @@ type PaginatedResponse struct {
 
 // ParsePaginationParams extracts pagination parameters from an HTTP request.
 // It returns page number, page size, and calculated offset.
-// Invalid values are replaced with defaults.
+// Invalid values are replaced with defaults. The page size is capped at the
+// configured MaxPageSize setting.
 func ParsePaginationParams(r *http.Request, defaultPageSize int) (page, pageSize, offset int) {
 	page = forgehttp.GetQueryInt(r, "page", 1)
 	pageSize = forgehttp.GetQueryInt(r, "page_size", defaultPageSize)
@@ -44,8 +45,12 @@ func ParsePaginationParams(r *http.Request, defaultPageSize int) (page, pageSize
 	if pageSize < 1 {
 		pageSize = defaultPageSize
 	}
-	if pageSize > 100 {
-		pageSize = 100 // Max page size
+	maxPageSize := 100
+	if s := GetSettings(); s != nil && s.MaxPageSize > 0 {
+		maxPageSize = s.MaxPageSize
+	}
+	if pageSize > maxPageSize {
+		pageSize = maxPageSize
 	}
 
 	offset = (page - 1) * pageSize

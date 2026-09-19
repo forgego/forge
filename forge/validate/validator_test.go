@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testStruct struct {
@@ -68,4 +69,17 @@ func TestValidateField_UniqueTag(t *testing.T) {
 
 	m := modelWithUnique{Email: "test@example.com"}
 	assert.NoError(t, v.ValidateStruct(&m))
+}
+
+func TestValidator_UsesJSONFieldNameInErrors(t *testing.T) {
+	type requestModel struct {
+		CustomerID int64 `json:"customer_id" validate:"required"`
+	}
+
+	err := NewValidator().ValidateStruct(&requestModel{})
+	require.Error(t, err)
+	var validationErrors *ValidationErrors
+	require.ErrorAs(t, err, &validationErrors)
+	require.Len(t, validationErrors.Errors, 1)
+	assert.Equal(t, "customer_id", validationErrors.Errors[0].Field)
 }

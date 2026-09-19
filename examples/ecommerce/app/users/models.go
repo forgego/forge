@@ -8,6 +8,7 @@ import (
 
 type User struct {
 	schema.BaseSchema
+	ID           int64      `json:"id" db:"id"`
 	Username     string     `json:"username"`
 	Email        string     `json:"email"`
 	PasswordHash string     `json:"-"`
@@ -52,6 +53,7 @@ func (User) Relations() []schema.Relation {
 
 type Group struct {
 	schema.BaseSchema
+	ID          int64     `json:"id" db:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	Permissions []string  `json:"permissions"`

@@ -34,6 +34,9 @@ type NotFoundError struct {
 }
 
 func (e *NotFoundError) Error() string {
+	if _, ok := e.ID.(notFoundMessage); ok {
+		return e.Resource
+	}
 	if e.Resource != "" && e.ID != nil {
 		return fmt.Sprintf("%s with id %v not found", e.Resource, e.ID)
 	}
@@ -49,8 +52,10 @@ func NewNotFoundError(resource string, id interface{}) *NotFoundError {
 
 // NewNotFoundErrorWithMessage creates a NotFoundError with a custom message
 func NewNotFoundErrorWithMessage(message string) *NotFoundError {
-	return &NotFoundError{Resource: message}
+	return &NotFoundError{ID: notFoundMessage{}, Resource: message}
 }
+
+type notFoundMessage struct{}
 
 // MultipleObjectsReturnedError indicates that a query expected one result but got multiple
 type MultipleObjectsReturnedError struct {

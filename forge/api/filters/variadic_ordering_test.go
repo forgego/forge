@@ -4,11 +4,36 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/forgego/forge/orm"
 	"github.com/stretchr/testify/assert"
 )
 
 type fakeVariadicOrderByQueryset struct {
 	recorded []string
+}
+
+type modelAwareOrderingQueryset struct {
+	fakeVariadicOrderByQueryset
+	modelSchema *orm.ModelSchema
+}
+
+func (q *modelAwareOrderingQueryset) GetModelSchema() *orm.ModelSchema { return q.modelSchema }
+
+func TestOrderingFilter_IgnoresNonSerializableFieldAliases(t *testing.T) {
+	modelSchema := &orm.ModelSchema{Fields: []orm.FieldInfo{{
+		Name:      "secret",
+		DBColumn:  "secret_hash",
+		Aliases:   []string{"secret", "secret_hash", "token", "Password"},
+		Serialize: false,
+	}}}
+	for _, alias := range modelSchema.Fields[0].Aliases {
+		t.Run(alias, func(t *testing.T) {
+			queryset := &modelAwareOrderingQueryset{modelSchema: modelSchema}
+			request := httptest.NewRequest("GET", "/test/?ordering="+alias, nil)
+			NewOrderingFilter([]string{alias}).FilterQueryset(request, queryset)
+			assert.Empty(t, queryset.recorded)
+		})
+	}
 }
 
 func (f *fakeVariadicOrderByQueryset) OrderBy(fields ...string) interface{} {

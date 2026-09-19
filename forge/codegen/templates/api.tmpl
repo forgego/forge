@@ -31,19 +31,22 @@ type {{.Name}}ViewSet struct {
 
 // New{{.Name}}ViewSet creates a new REST ViewSet for {{.Name}}
 func New{{.Name}}ViewSet() *{{.Name}}ViewSet {
-	return &{{.Name}}ViewSet{
+	vs := &{{.Name}}ViewSet{
 		BaseViewSet: api.NewBaseViewSet(
 			New{{.Name}}Serializer,
 			{{.Name}}Objects,
 			&{{.Name}}{},
 		),
 	}
+	vs.ExcludeResponseFields = api.NonSerializableFields(&{{.Name}}{})
+	vs.ReadOnlyRequestFields = api.NonEditableFields(&{{.Name}}{})
+	return vs
 }
 
 // Register{{.Name}}Routes registers the REST API endpoints for {{.Name}} on a router
 func Register{{.Name}}Routes(router *forgehttp.Router) {
 	apiRouter := api.NewRouter("/api/v1")
-	apiRouter.Register("{{.Name | ToSnake}}s", New{{.Name}}ViewSet())
+	apiRouter.Register("{{.Name | ToKebabPlural}}", New{{.Name}}ViewSet())
 	apiRouter.RegisterRoutes(router)
 }
 {{end}}
@@ -51,6 +54,6 @@ func Register{{.Name}}Routes(router *forgehttp.Router) {
 // RegisterAPIRoutes registers all model REST API endpoints in {{.Package}}
 func RegisterAPIRoutes(router *forgehttp.Router) {
 	apiRouter := api.NewRouter("/api/v1")
-{{range .Models}}	apiRouter.Register("{{.Name | ToSnake}}s", New{{.Name}}ViewSet())
+{{range .Models}}	apiRouter.Register("{{.Name | ToKebabPlural}}", New{{.Name}}ViewSet())
 {{end}}	apiRouter.RegisterRoutes(router)
 }

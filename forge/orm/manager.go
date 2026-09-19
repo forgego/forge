@@ -134,6 +134,25 @@ func (m *Manager[T]) GetFieldAccessor() (*FieldAccessor[T], error) {
 	return m.FieldAccessor()
 }
 
+// QuerySet returns a fresh, unconstrained queryset for the manager's model,
+// carrying over the manager's database connection. It allows view layers to
+// apply Offset/Limit through the queryset instead of loading all rows via the
+// manager's All/Count helpers.
+func (m *Manager[T]) QuerySet() QuerySet[T] {
+	qs, err := NewQuerySet[T](m.tableName)
+	if err != nil {
+		var raw any
+		if m.hasDB() {
+			raw = m.db.raw()
+		}
+		return &BaseQuerySet[T]{table: m.tableName, db: raw, err: err}
+	}
+	if m.hasDB() {
+		qs = qs.SetDB(m.db.raw())
+	}
+	return qs
+}
+
 // Filter returns a QuerySet for filtering
 func (m *Manager[T]) Filter(expr Expression) (QuerySet[T], error) {
 	qs, err := NewQuerySet[T](m.tableName)
@@ -216,6 +235,9 @@ func (m *Manager[T]) placeholderFunc() func(int) string {
 
 // Create creates a new model instance
 func (m *Manager[T]) Create(ctx context.Context, instance *T) error {
+	validationCompleted := modelValidationCompleted(ctx)
+	ctx = withoutModelValidationCompleted(ctx)
+
 	if !m.hasDB() {
 		return errors.NewConfigurationError("database connection not set", "db")
 	}
@@ -224,6 +246,9 @@ func (m *Manager[T]) Create(ctx context.Context, instance *T) error {
 			return errors.NewNotImplementedError("non-integer primary keys")
 		}
 	}
+	if !m.canSetID(instance) {
+		return fmt.Errorf("cannot set primary key %s on %T", m.primaryKeyColumn(), instance)
+	}
 
 	if err := m.runHooks(ctx, instance, "BeforeCreate"); err != nil {
 		return err
@@ -231,7 +256,7 @@ func (m *Manager[T]) Create(ctx context.Context, instance *T) error {
 	if err := m.runHooks(ctx, instance, "BeforeSave"); err != nil {
 		return err
 	}
-	if err := m.validate(instance); err != nil {
+	if err := m.validateForPersistence(instance, validationCompleted); err != nil {
 		return err
 	}
 
@@ -340,6 +365,9 @@ func (m *Manager[T]) BulkCreate(ctx context.Context, instances []*T) error {
 
 // Update updates an existing model instance
 func (m *Manager[T]) Update(ctx context.Context, instance *T) error {
+	validationCompleted := modelValidationCompleted(ctx)
+	ctx = withoutModelValidationCompleted(ctx)
+
 	if !m.hasDB() {
 		return errors.NewConfigurationError("database connection not set", "db")
 	}
@@ -358,7 +386,7 @@ func (m *Manager[T]) Update(ctx context.Context, instance *T) error {
 	if err := m.runHooks(ctx, instance, "BeforeSave"); err != nil {
 		return err
 	}
-	if err := m.validate(instance); err != nil {
+	if err := m.validateForPersistence(instance, validationCompleted); err != nil {
 		return err
 	}
 
@@ -504,7 +532,19 @@ func (m *Manager[T]) getID(instance *T) (int64, error) {
 		return modelWithID.GetID(), nil
 	}
 
-	idValue, err := GetIDValue(instance, "id")
+	var idValue interface{}
+	var err error
+	if modelSchema, ok := any(instance).(schema.Schema); ok {
+		for _, field := range modelSchema.Fields() {
+			if field.PrimaryKey {
+				idValue, err = getSchemaFieldValue(instance, field)
+				break
+			}
+		}
+	}
+	if idValue == nil && err == nil {
+		idValue, err = GetIDValue(instance, "id")
+	}
 	if err != nil {
 		return 0, fmt.Errorf("failed to get ID: %w", err)
 	}
@@ -526,6 +566,21 @@ func (m *Manager[T]) setID(instance *T, id int64) error {
 	}
 
 	pkCol := m.primaryKeyColumn()
+	instanceValue := reflect.ValueOf(instance)
+	if !instanceValue.IsValid() || instanceValue.IsNil() {
+		return fmt.Errorf("cannot set primary key %s on %T", pkCol, instance)
+	}
+	instanceValue = instanceValue.Elem()
+	for _, name := range m.primaryKeyFieldCandidates() {
+		if setIntField(instanceValue, name, id) {
+			return nil
+		}
+	}
+	return fmt.Errorf("cannot set primary key %s on %T", pkCol, instance)
+}
+
+func (m *Manager[T]) primaryKeyFieldCandidates() []string {
+	pkCol := m.primaryKeyColumn()
 	candidates := make([]string, 0, 4)
 	if m.schema != nil {
 		if f := m.schema.GetField(pkCol); f != nil {
@@ -537,14 +592,51 @@ func (m *Manager[T]) setID(instance *T, id int64) error {
 		}
 	}
 	candidates = append(candidates, "ID", "Id", "id")
+	return candidates
+}
 
-	instanceValue := reflect.ValueOf(instance).Elem()
-	for _, name := range candidates {
-		if setIntField(instanceValue, name, id) {
-			return nil
+func (m *Manager[T]) canSetID(instance *T) bool {
+	if _, ok := any(instance).(ModelWithID); ok {
+		return true
+	}
+	instanceValue := reflect.ValueOf(instance)
+	if !instanceValue.IsValid() || instanceValue.IsNil() {
+		return false
+	}
+	instanceValue = instanceValue.Elem()
+	for _, name := range m.primaryKeyFieldCandidates() {
+		if canSetIntField(instanceValue, name) {
+			return true
 		}
 	}
-	return fmt.Errorf("cannot set primary key %s on %T", pkCol, instance)
+	return false
+}
+
+func canSetIntField(val reflect.Value, targetName string) bool {
+	if val.Kind() == reflect.Ptr {
+		if val.IsNil() {
+			return false
+		}
+		val = val.Elem()
+	}
+	if val.Kind() != reflect.Struct {
+		return false
+	}
+	t := val.Type()
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		fieldValue := val.Field(i)
+		if field.Anonymous {
+			if canSetIntField(fieldValue, targetName) {
+				return true
+			}
+			continue
+		}
+		if field.Name == targetName && fieldValue.CanSet() && isIntKind(fieldValue.Kind()) {
+			return true
+		}
+	}
+	return false
 }
 
 func setIntField(val reflect.Value, targetName string, id int64) bool {
@@ -597,10 +689,26 @@ func (m *Manager[T]) validate(instance *T) error {
 		}
 	}
 
-	// 3. Run Validate() if the model implements it (e.g. from generated code)
+	return m.validateConstraints(instance)
+}
+
+func (m *Manager[T]) validateForPersistence(instance *T, validationCompleted bool) error {
+	if validationCompleted {
+		return m.validateConstraints(instance)
+	}
+	return m.validate(instance)
+}
+
+func (m *Manager[T]) validateConstraints(instance *T) error {
+	// Run Validate() if the model implements it (e.g. from generated code).
 	if validatable, ok := any(instance).(interface{ Validate() error }); ok {
 		if err := validatable.Validate(); err != nil {
 			return fmt.Errorf("model validation failed: %w", err)
+		}
+	}
+	if s, ok := any(instance).(schema.Schema); ok && schemaConstraintValidator != nil {
+		if err := schemaConstraintValidator(instance, s.Fields()); err != nil {
+			return fmt.Errorf("schema model validation failed: %w", err)
 		}
 	}
 

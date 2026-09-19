@@ -238,10 +238,11 @@ func (Order) Fields() []schema.Field {
 			schema.ChoicesFromPairsOpts(
 				"unfulfilled", "Unfulfilled",
 				"partial", "Partially Fulfilled",
+				"shipped", "Shipped",
 				"fulfilled", "Fulfilled",
 			),
 			schema.VerboseName("Fulfillment Status"),
-			schema.HelpText("Fulfillment: unfulfilled, partial, fulfilled")),
+			schema.HelpText("Fulfillment: unfulfilled, partial, shipped, fulfilled")),
 
 		// Addresses
 		schema.Int64Field("shipping_address_id", schema.Optional()),
