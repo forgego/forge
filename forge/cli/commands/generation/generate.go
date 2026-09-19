@@ -64,6 +64,11 @@ func (c *GenerateCommand) Execute(ctx *core.Context, args []string) error {
 		outputDir = modelsDir
 	}
 
+	generateAPI, err := ctx.Cmd.Flags().GetBool("api")
+	if err != nil {
+		return fmt.Errorf("failed to get api flag: %w", err)
+	}
+
 	// If scanning "app/" directory, look for submodules
 	if modelsDir == "app" || strings.HasSuffix(modelsDir, "/app") {
 		fmt.Printf("Scanning apps in %s...\n", modelsDir)
@@ -106,10 +111,22 @@ func (c *GenerateCommand) Execute(ctx *core.Context, args []string) error {
 					return err
 				}
 			}
+			if generateAPI {
+				for _, app := range pending {
+					parser := codegen.NewASTParser()
+					definitions, parseErr := parser.ParseDirectory(app.appPath)
+					if parseErr != nil {
+						return fmt.Errorf("generation failed for %s: failed to parse schemas: %w", app.name, parseErr)
+					}
+					if validateErr := codegen.ValidateAPIModels(definitions); validateErr != nil {
+						return fmt.Errorf("generation failed for %s: failed to generate API code: %w", app.name, validateErr)
+					}
+				}
+			}
 			var diagnostics []codegen.Diagnostic
 			for _, app := range pending {
 				fmt.Printf("  Generating for %s...\n", app.name)
-				gen := codegen.NewGenerator(app.appPath, app.targetOutput)
+				gen := codegen.NewGenerator(app.appPath, app.targetOutput).SetGenerateAPI(generateAPI)
 				if err := gen.Generate(); err != nil {
 					return fmt.Errorf("generation failed for %s: %w", app.name, err)
 				}
@@ -141,7 +158,7 @@ func (c *GenerateCommand) Execute(ctx *core.Context, args []string) error {
 			return err
 		}
 	}
-	gen := codegen.NewGenerator(modelsDir, outputDir)
+	gen := codegen.NewGenerator(modelsDir, outputDir).SetGenerateAPI(generateAPI)
 	if err := gen.Generate(); err != nil {
 		return fmt.Errorf("generation failed: %w", err)
 	}

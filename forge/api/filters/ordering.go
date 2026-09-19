@@ -33,8 +33,23 @@ func (f *OrderingFilter) FilterQueryset(r *http.Request, queryset interface{}) i
 	if len(ordering) == 0 {
 		return queryset
 	}
+	visibleOrdering := make([]string, 0, len(ordering))
+	for _, field := range ordering {
+		descending := strings.HasPrefix(field, "-")
+		resolved, visible := visibleDatabaseField(queryset, strings.TrimLeft(field, "-"))
+		if !visible {
+			continue
+		}
+		if descending {
+			resolved = "-" + resolved
+		}
+		visibleOrdering = append(visibleOrdering, resolved)
+	}
+	if len(visibleOrdering) == 0 {
+		return queryset
+	}
 
-	return f.applyOrdering(queryset, ordering)
+	return f.applyOrdering(queryset, visibleOrdering)
 }
 
 func (f *OrderingFilter) parseOrdering(param string) []string {

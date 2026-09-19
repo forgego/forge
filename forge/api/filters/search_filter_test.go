@@ -4,12 +4,37 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/forgego/forge/orm"
 	"github.com/stretchr/testify/assert"
 )
 
 type fakeSearchFilterQueryset struct {
 	calls int
 	arg   any
+}
+
+type modelAwareSearchQueryset struct {
+	fakeSearchFilterQueryset
+	modelSchema *orm.ModelSchema
+}
+
+func (q *modelAwareSearchQueryset) GetModelSchema() *orm.ModelSchema { return q.modelSchema }
+
+func TestSearchFilter_IgnoresNonSerializableFieldAliases(t *testing.T) {
+	modelSchema := &orm.ModelSchema{Fields: []orm.FieldInfo{{
+		Name:      "secret",
+		DBColumn:  "secret_hash",
+		Aliases:   []string{"secret", "secret_hash", "token", "Password"},
+		Serialize: false,
+	}}}
+	for _, alias := range modelSchema.Fields[0].Aliases {
+		t.Run(alias, func(t *testing.T) {
+			queryset := &modelAwareSearchQueryset{modelSchema: modelSchema}
+			request := httptest.NewRequest("GET", "/test/?search=candidate", nil)
+			NewSearchFilter([]string{alias}).FilterQueryset(request, queryset)
+			assert.Zero(t, queryset.calls)
+		})
+	}
 }
 
 func (f *fakeSearchFilterQueryset) Filter(expr any) interface{} {

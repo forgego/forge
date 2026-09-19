@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	stderrors "errors"
 	"io"
 	"net/http"
 	"strconv"
@@ -11,12 +12,32 @@ import (
 
 // GetJSON parses JSON from request body
 func GetJSON(r *http.Request, v interface{}) error {
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
+	return decodeJSON(r, v, false)
+}
+
+// GetJSONUseNumber parses JSON while preserving numbers as json.Number when
+// decoding into interface values.
+func GetJSONUseNumber(r *http.Request, v interface{}) error {
+	return decodeJSON(r, v, true)
+}
+
+func decodeJSON(r *http.Request, v interface{}, useNumber bool) error {
+	defer r.Body.Close()
+	decoder := json.NewDecoder(r.Body)
+	if useNumber {
+		decoder.UseNumber()
+	}
+	if err := decoder.Decode(v); err != nil {
 		return err
 	}
-	defer r.Body.Close()
-	return json.Unmarshal(body, v)
+	var trailing json.RawMessage
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		if err == nil {
+			return stderrors.New("request body must contain a single JSON value")
+		}
+		return err
+	}
+	return nil
 }
 
 // GetQueryInt gets an integer query parameter

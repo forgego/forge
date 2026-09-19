@@ -11,6 +11,7 @@ import (
 	"github.com/forgego/forge/api/authentication"
 	"github.com/forgego/forge/api/permissions"
 	"github.com/forgego/forge/api/throttling"
+	forgeerrors "github.com/forgego/forge/errors"
 	forgehttp "github.com/forgego/forge/server"
 	"github.com/stretchr/testify/assert"
 )
@@ -38,7 +39,7 @@ func (q *accessCheckQueryset) Get(_ context.Context, id int64) (*accessCheckMode
 			return item, nil
 		}
 	}
-	return nil, errors.New("not found")
+	return nil, forgeerrors.NewNotFoundErrorWithMessage("not found")
 }
 
 type accessCheckModel struct {

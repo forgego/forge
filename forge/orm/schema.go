@@ -38,10 +38,12 @@ func (ms *ModelSchema) GetModelName() string {
 type FieldInfo struct {
 	Name            string
 	DBColumn        string
+	Aliases         []string
 	Type            reflect.Type
 	Required        bool
 	PrimaryKey      bool
 	Unique          bool
+	Serialize       bool
 	ForeignKey      *RelationInfo
 	StructFieldName string
 }
@@ -95,7 +97,7 @@ func GetRegisteredTypeName(aliasOrTypeName string) (string, bool) {
 func (ms *ModelSchema) GetField(name string) *FieldInfo {
 	// First try exact match (case-sensitive)
 	for i := range ms.Fields {
-		if ms.Fields[i].Name == name || ms.Fields[i].DBColumn == name {
+		if ms.Fields[i].Name == name || ms.Fields[i].DBColumn == name || containsFieldAlias(ms.Fields[i].Aliases, name, false) {
 			return &ms.Fields[i]
 		}
 	}
@@ -104,12 +106,21 @@ func (ms *ModelSchema) GetField(name string) *FieldInfo {
 	// as sometimes the field might be queried by PascalCase but stored as camelCase or snake_case
 	lowerName := strings.ToLower(name)
 	for i := range ms.Fields {
-		if strings.ToLower(ms.Fields[i].Name) == lowerName || strings.ToLower(ms.Fields[i].DBColumn) == lowerName {
+		if strings.ToLower(ms.Fields[i].Name) == lowerName || strings.ToLower(ms.Fields[i].DBColumn) == lowerName || containsFieldAlias(ms.Fields[i].Aliases, name, true) {
 			return &ms.Fields[i]
 		}
 	}
 
 	return nil
+}
+
+func containsFieldAlias(aliases []string, name string, fold bool) bool {
+	for _, alias := range aliases {
+		if (!fold && alias == name) || (fold && strings.EqualFold(alias, name)) {
+			return true
+		}
+	}
+	return false
 }
 
 // GetRelation retrieves a relation by name (case-insensitive with target model fallback)
@@ -154,27 +165,6 @@ func BuildModelSchema(schemaInstance schema.Schema) (*ModelSchema, error) {
 		ms.TableName = meta.TableName
 	}
 
-	// Build map of DBColumn -> StructFieldName
-	structFieldMap := make(map[string]string)
-	if ms.ModelType.Kind() == reflect.Struct {
-		for i := 0; i < ms.ModelType.NumField(); i++ {
-			field := ms.ModelType.Field(i)
-			// Skip unexported
-			if field.PkgPath != "" {
-				continue
-			}
-
-			// Check db tag
-			dbTag := field.Tag.Get("db")
-			if dbTag != "" {
-				structFieldMap[dbTag] = field.Name
-			}
-
-			// Also map lower case name
-			structFieldMap[strings.ToLower(field.Name)] = field.Name
-		}
-	}
-
 	// Build fields from schema
 	fields := schemaInstance.Fields()
 	for _, field := range fields {
@@ -185,17 +175,18 @@ func BuildModelSchema(schemaInstance schema.Schema) (*ModelSchema, error) {
 			Required:   field.Required,
 			PrimaryKey: field.PrimaryKey,
 			Unique:     field.Unique,
+			Serialize:  field.Serialize,
 		}
 
 		if field.DBColumn == "" {
 			fieldInfo.DBColumn = field.Name
 		}
 
-		// Resolve StructFieldName
-		if name, ok := structFieldMap[fieldInfo.DBColumn]; ok {
-			fieldInfo.StructFieldName = name
-		} else if name, ok := structFieldMap[strings.ToLower(field.Name)]; ok {
-			fieldInfo.StructFieldName = name
+		if resolved, ok := schema.ResolveField(schemaInstance, field); ok {
+			fieldInfo.StructFieldName = resolved.GoName
+			fieldInfo.Aliases = resolved.Names()
+		} else {
+			fieldInfo.Aliases = schema.ResolvedField{SchemaName: field.Name, DBColumn: field.DBColumn}.Names()
 		}
 
 		if field.PrimaryKey {

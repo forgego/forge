@@ -9,7 +9,6 @@ import (
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/db/dialect"
 	"github.com/forgego/forge/schema"
-	"github.com/forgego/forge/utils"
 )
 
 // ExecuteHooks executes model hooks in the correct order
@@ -151,7 +150,7 @@ func BuildInsertSQLForPK(instance interface{}, tableName string, pkColumn string
 			if schemaField.PrimaryKey && schemaField.AutoIncrement {
 				continue
 			}
-			fieldValue, err := getFieldValueByName(instance, schemaField.Name)
+			fieldValue, err := getSchemaFieldValue(instance, schemaField)
 			if err != nil {
 				continue
 			}
@@ -214,98 +213,34 @@ func BuildInsertSQLForPK(instance interface{}, tableName string, pkColumn string
 	return insertSQL, insertValues, insertColumns, nil
 }
 
-// findFieldInValue recursively searches for a struct field matching fieldName
-func findFieldInValue(v reflect.Value, fieldName string) reflect.Value {
-	if v.Kind() == reflect.Ptr {
-		if v.IsNil() {
-			return reflect.Value{}
+func getSchemaFieldValue(instance interface{}, field schema.Field) (interface{}, error) {
+	resolved, ok := schema.ResolveField(instance, field)
+	if !ok {
+		return nil, fmt.Errorf("field %s not found", field.Name)
+	}
+	value := reflect.ValueOf(instance)
+	for value.Kind() == reflect.Ptr {
+		if value.IsNil() {
+			return nil, fmt.Errorf("field %s is not accessible", field.Name)
 		}
-		v = v.Elem()
+		value = value.Elem()
 	}
-	if v.Kind() != reflect.Struct {
-		return reflect.Value{}
-	}
-
-	// 1. Direct field name lookup
-	if f := v.FieldByName(fieldName); f.IsValid() {
-		return f
-	}
-
-	// 2. PascalCase lookup
-	pascal := utils.ToPascal(fieldName)
-	if f := v.FieldByName(pascal); f.IsValid() {
-		return f
-	}
-
-	// 3. PascalCase with ID suffix (e.g. customer_id -> CustomerID, id -> ID)
-	if strings.HasSuffix(pascal, "Id") {
-		idVariant := strings.TrimSuffix(pascal, "Id") + "ID"
-		if f := v.FieldByName(idVariant); f.IsValid() {
-			return f
-		}
-	}
-	if strings.EqualFold(fieldName, "id") {
-		if f := v.FieldByName("ID"); f.IsValid() {
-			return f
-		}
-		if f := v.FieldByName("Id"); f.IsValid() {
-			return f
-		}
-	}
-
-	// 4. Iterate fields (case-insensitive and struct tags: db, json) including anonymous embedded structs
-	t := v.Type()
-	for i := 0; i < t.NumField(); i++ {
-		sf := t.Field(i)
-		fieldVal := v.Field(i)
-
-		if sf.Anonymous {
-			if f := findFieldInValue(fieldVal, fieldName); f.IsValid() {
-				return f
+	for _, index := range resolved.StructField.Index {
+		if value.Kind() == reflect.Ptr {
+			if value.IsNil() {
+				return nil, fmt.Errorf("field %s is not accessible", field.Name)
 			}
-			continue
+			value = value.Elem()
 		}
-
-		if strings.EqualFold(sf.Name, fieldName) || strings.EqualFold(sf.Name, pascal) {
-			return fieldVal
+		if value.Kind() != reflect.Struct {
+			return nil, fmt.Errorf("field %s is not accessible", field.Name)
 		}
-
-		dbTag := strings.Split(sf.Tag.Get("db"), ",")[0]
-		if dbTag != "" && dbTag != "-" && strings.EqualFold(dbTag, fieldName) {
-			return fieldVal
-		}
-
-		jsonTag := strings.Split(sf.Tag.Get("json"), ",")[0]
-		if jsonTag != "" && jsonTag != "-" && strings.EqualFold(jsonTag, fieldName) {
-			return fieldVal
-		}
+		value = value.Field(index)
 	}
-
-	return reflect.Value{}
-}
-
-// getFieldValueByName gets a struct field value by name using reflection
-// This is used when we know the field name from schema metadata
-func getFieldValueByName(instance interface{}, fieldName string) (interface{}, error) {
-	instanceValue := reflect.ValueOf(instance)
-	if instanceValue.Kind() == reflect.Ptr {
-		instanceValue = instanceValue.Elem()
+	if !value.IsValid() || !value.CanInterface() {
+		return nil, fmt.Errorf("field %s is not accessible", field.Name)
 	}
-
-	if instanceValue.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("instance must be a struct")
-	}
-
-	fieldValue := findFieldInValue(instanceValue, fieldName)
-	if !fieldValue.IsValid() {
-		return nil, fmt.Errorf("field %s not found", fieldName)
-	}
-
-	if !fieldValue.CanInterface() {
-		return nil, fmt.Errorf("field %s is not accessible", fieldName)
-	}
-
-	return fieldValue.Interface(), nil
+	return value.Interface(), nil
 }
 
 func isZeroValue(v reflect.Value) bool {
@@ -367,7 +302,7 @@ func BuildUpdateSQL(instance interface{}, tableName, idField string, placeholder
 		// Check if this is the ID field
 		if strings.EqualFold(schemaField.Name, idField) || strings.EqualFold(columnName, idField) {
 			// Get ID value
-			val, err := getFieldValueByName(instance, schemaField.Name)
+			val, err := getSchemaFieldValue(instance, schemaField)
 			if err == nil {
 				idValue = val
 			}
@@ -380,7 +315,7 @@ func BuildUpdateSQL(instance interface{}, tableName, idField string, placeholder
 		}
 
 		// Get field value using helper function
-		fieldValue, err := getFieldValueByName(instance, schemaField.Name)
+		fieldValue, err := getSchemaFieldValue(instance, schemaField)
 		if err != nil {
 			// Field not found or not accessible - skip it
 			continue

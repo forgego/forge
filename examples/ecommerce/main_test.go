@@ -1996,7 +1996,7 @@ func TestBuildEcommerceRouter_APIPurchaseAndOrderDeliveryFlow(t *testing.T) {
 	if got, _ := deliveredOrder["fulfillment_status"].(string); got != "fulfilled" {
 		t.Fatalf("expected fulfillment status %q, got %q", "fulfilled", got)
 	}
-	if got, _ := deliveredOrder["delivered_at"].(string); !strings.HasPrefix(got, "2026-09-07") {
+	if got, _ := deliveredOrder["delivered_at"].(string); got != "14:30:00" {
 		t.Fatalf("expected delivered_at to be set on order, got %q", got)
 	}
 }

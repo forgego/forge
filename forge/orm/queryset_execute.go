@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+
+	forgeerrors "github.com/forgego/forge/errors"
 )
 
 // All executes the query and returns all results
@@ -61,7 +63,7 @@ func (qs *BaseQuerySet[T]) Get(ctx context.Context) (*T, error) {
 	}
 
 	if len(results) == 0 {
-		return nil, fmt.Errorf("%s matching query does not exist", qs.table)
+		return nil, forgeerrors.NewNotFoundErrorWithMessage(fmt.Sprintf("%s matching query does not exist", qs.table))
 	}
 
 	if len(results) > 1 {
@@ -91,7 +93,7 @@ func (qs *BaseQuerySet[T]) First(ctx context.Context) (*T, error) {
 	}
 
 	if len(results) == 0 {
-		return nil, fmt.Errorf("%s matching query does not exist", qs.table)
+		return nil, forgeerrors.NewNotFoundErrorWithMessage(fmt.Sprintf("%s matching query does not exist", qs.table))
 	}
 
 	return results[0], nil
@@ -106,7 +108,7 @@ func (qs *BaseQuerySet[T]) Last(ctx context.Context) (*T, error) {
 	}
 
 	if len(results) == 0 {
-		return nil, fmt.Errorf("%s matching query does not exist", qs.table)
+		return nil, forgeerrors.NewNotFoundErrorWithMessage(fmt.Sprintf("%s matching query does not exist", qs.table))
 	}
 
 	return results[0], nil

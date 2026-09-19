@@ -4,8 +4,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
 )
+
+func init() {
+	orm.RegisterSchemaConstraintValidator(func(instance interface{}, fields []schema.Field) error {
+		return ValidateModelWithSchema(NewValidator(), instance, fields)
+	})
+}
 
 // GenerateValidationTag generates a validation tag for a field
 func GenerateValidationTag(field schema.Field) string {

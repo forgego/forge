@@ -152,6 +152,14 @@ type BaseQuerySet[T any] struct {
 	err             error            // Deferred error from Filter/Exclude validation (checked at execution time)
 }
 
+// GetModelSchema exposes the queryset's immutable model metadata to API filters.
+func (qs *BaseQuerySet[T]) GetModelSchema() *ModelSchema {
+	if qs == nil {
+		return nil
+	}
+	return qs.schema
+}
+
 // NewQuerySet creates a new QuerySet
 func NewQuerySet[T any](tableName string) (QuerySet[T], error) {
 	schema, err := GetModelSchema[T]()
