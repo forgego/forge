@@ -1412,16 +1412,13 @@ func populateFromMap(instance interface{}, data map[string]interface{}, ignoredK
 			}
 
 			jsonTag := field.Tag.Get("json")
-			if jsonTag == "" || jsonTag == "-" {
-				continue
-			}
 			tagParts := strings.Split(jsonTag, ",")
 			key := tagParts[0]
-			if key == "" {
-				continue
-			}
 			dbTag := strings.Split(field.Tag.Get("db"), ",")[0]
 			fieldSchema := schemaFieldForStructField(schemaFields, field, key, dbTag)
+			if fieldSchema == nil && (key == "" || key == "-") {
+				continue
+			}
 			fieldNames := []string{key, field.Name, dbTag}
 			if fieldSchema != nil {
 				fieldNames = append(fieldNames, resolvedFieldNames(instance, *fieldSchema)...)
@@ -2269,6 +2266,9 @@ func setBytesField(field reflect.Value, value interface{}, strictByteArray bool)
 		field.SetBytes(b)
 		return nil
 	case map[string]interface{}:
+		if strictByteArray {
+			return fmt.Errorf("expected base64 string or byte array, got %T", value)
+		}
 		encoded, err := json.Marshal(v)
 		if err != nil {
 			return fmt.Errorf("invalid JSON object: %w", err)

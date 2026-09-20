@@ -3,6 +3,7 @@ package generator
 import (
 	"fmt"
 	"go/ast"
+	"go/build"
 	"go/parser"
 	"go/token"
 	"os"
@@ -29,13 +30,21 @@ func (p *ASTParser) ParseDirectory(dir string) ([]*ModelDefinition, error) {
 	var definitions []*ModelDefinition
 	type idMethods struct{ get, set bool }
 	methodsByModel := make(map[string]idMethods)
+	embeddedTypesByModel := make(map[string][]string)
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if info.IsDir() || !strings.HasSuffix(path, ".go") {
+		if info.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		matched, matchErr := build.Default.MatchFile(filepath.Dir(path), filepath.Base(path))
+		if matchErr != nil {
+			return fmt.Errorf("match build constraints for %s: %w", path, matchErr)
+		}
+		if !matched {
 			return nil
 		}
 
@@ -48,6 +57,31 @@ func (p *ASTParser) ParseDirectory(dir string) ([]*ModelDefinition, error) {
 			return parseErr
 		}
 		for _, decl := range node.Decls {
+			if types, ok := decl.(*ast.GenDecl); ok && types.Tok == token.TYPE {
+				for _, spec := range types.Specs {
+					typeSpec, ok := spec.(*ast.TypeSpec)
+					if !ok {
+						continue
+					}
+					structType, ok := typeSpec.Type.(*ast.StructType)
+					if !ok {
+						continue
+					}
+					key := node.Name.Name + "." + typeSpec.Name.Name
+					for _, field := range structType.Fields.List {
+						if len(field.Names) != 0 {
+							continue
+						}
+						embedded := field.Type
+						if pointer, ok := embedded.(*ast.StarExpr); ok {
+							embedded = pointer.X
+						}
+						if ident, ok := embedded.(*ast.Ident); ok {
+							embeddedTypesByModel[key] = append(embeddedTypesByModel[key], node.Name.Name+"."+ident.Name)
+						}
+					}
+				}
+			}
 			method, ok := decl.(*ast.FuncDecl)
 			if !ok || method.Recv == nil || len(method.Recv.List) != 1 {
 				continue
@@ -81,9 +115,26 @@ func (p *ASTParser) ParseDirectory(dir string) ([]*ModelDefinition, error) {
 	})
 
 	if err == nil {
+		var hasIDMethods func(string, map[string]bool) bool
+		hasIDMethods = func(key string, visiting map[string]bool) bool {
+			methods := methodsByModel[key]
+			if methods.get && methods.set {
+				return true
+			}
+			if visiting[key] {
+				return false
+			}
+			visiting[key] = true
+			defer delete(visiting, key)
+			for _, embedded := range embeddedTypesByModel[key] {
+				if hasIDMethods(embedded, visiting) {
+					return true
+				}
+			}
+			return false
+		}
 		for _, definition := range definitions {
-			methods := methodsByModel[definition.Package+"."+definition.Name]
-			definition.hasWritableIntegerID = definition.hasWritableIntegerID || (methods.get && methods.set)
+			definition.hasWritableIntegerID = definition.hasWritableIntegerID || hasIDMethods(definition.Package+"."+definition.Name, make(map[string]bool))
 		}
 	}
 	return definitions, err

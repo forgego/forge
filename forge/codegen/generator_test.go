@@ -161,6 +161,60 @@ func (p *Product) SetID(id int64) { p.key = id }
 	assert.FileExists(t, filepath.Join(tmpDir, "api_gen.go"))
 }
 
+func TestGeneratorGenerate_IgnoresIDMethodsOutsideActiveProductionFiles(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		filename string
+		source   string
+	}{
+		{name: "test file", filename: "model_id_test.go", source: `package testmodels
+func (p *Product) GetID() int64 { return p.key }
+func (p *Product) SetID(id int64) { p.key = id }
+`},
+		{name: "build excluded file", filename: "model_id_excluded.go", source: `//go:build ignore
+
+package testmodels
+func (p *Product) GetID() int64 { return p.key }
+func (p *Product) SetID(id int64) { p.key = id }
+`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			modelSrc := `package testmodels
+import "github.com/forgego/forge/schema"
+type Product struct { schema.BaseSchema; key int64 }
+func (Product) Fields() []schema.Field {
+	return []schema.Field{schema.Int64("id").Primary().AutoIncrement().Build()}
+}
+`
+			require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "models.go"), []byte(modelSrc), 0644))
+			require.NoError(t, os.WriteFile(filepath.Join(tmpDir, tt.filename), []byte(tt.source), 0644))
+
+			err := NewGenerator(tmpDir, tmpDir).SetGenerateAPI(true).Generate()
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "model Product")
+			assert.Contains(t, err.Error(), "no concrete int64 ID or Id field")
+		})
+	}
+}
+
+func TestGeneratorGenerate_AcceptsPromotedModelWithIDMethods(t *testing.T) {
+	tmpDir := t.TempDir()
+	modelSrc := `package testmodels
+import "github.com/forgego/forge/schema"
+type Identified struct { key int64 }
+func (i *Identified) GetID() int64 { return i.key }
+func (i *Identified) SetID(id int64) { i.key = id }
+type Product struct { schema.BaseSchema; Identified }
+func (Product) Fields() []schema.Field {
+	return []schema.Field{schema.Int64("id").Primary().AutoIncrement().Build()}
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "models.go"), []byte(modelSrc), 0644))
+	require.NoError(t, NewGenerator(tmpDir, tmpDir).SetGenerateAPI(true).Generate())
+	assert.FileExists(t, filepath.Join(tmpDir, "api_gen.go"))
+}
+
 func TestGeneratorGenerate_InvalidAPIModelPreservesGeneratedFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 	modelSrc := `package testmodels
