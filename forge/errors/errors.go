@@ -31,10 +31,11 @@ func NewNotImplementedError(feature string) *NotImplementedError {
 type NotFoundError struct {
 	ID       interface{}
 	Resource string
+	message  bool
 }
 
 func (e *NotFoundError) Error() string {
-	if _, ok := e.ID.(notFoundMessage); ok {
+	if e.message {
 		return e.Resource
 	}
 	if e.Resource != "" && e.ID != nil {
@@ -52,10 +53,8 @@ func NewNotFoundError(resource string, id interface{}) *NotFoundError {
 
 // NewNotFoundErrorWithMessage creates a NotFoundError with a custom message
 func NewNotFoundErrorWithMessage(message string) *NotFoundError {
-	return &NotFoundError{ID: notFoundMessage{}, Resource: message}
+	return &NotFoundError{Resource: message, message: true}
 }
-
-type notFoundMessage struct{}
 
 // MultipleObjectsReturnedError indicates that a query expected one result but got multiple
 type MultipleObjectsReturnedError struct {
