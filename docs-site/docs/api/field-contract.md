@@ -89,7 +89,7 @@ Read-only keys that clients echo back from an earlier response, such as `id` and
 
 ### PUT and PATCH
 
-`PUT` and `PATCH` both write only the keys present in the body. A `PUT` does not reset omitted fields. After the keys are applied, the whole object is validated, so a `PUT` or `PATCH` that leaves a required field empty fails with `400`.
+`PUT` is a full update. Its body must name every required, writable schema field that has no default, and a missing one fails with `400` naming the field. Optional fields left out of a `PUT` keep their stored values; `PUT` does not reset them. `PATCH` is a partial update and writes only the keys present. After the keys are applied, the whole object is validated, so a `PATCH` that leaves a required field empty also fails with `400`.
 
 ---
 
