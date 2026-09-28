@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/forgego/forge/codegen"
 	"github.com/forgego/forge/db/migrate/core"
@@ -386,7 +387,38 @@ func (d *Detector) sameColumnDDL(current, previous generator.FieldDefinition) bo
 	if err != nil {
 		return false
 	}
-	return strings.EqualFold(strings.Join(strings.Fields(currentDDL), " "), strings.Join(strings.Fields(previousDDL), " "))
+	return normalizeDDL(currentDDL) == normalizeDDL(previousDDL)
+}
+
+// normalizeDDL upper-cases DDL and collapses its whitespace outside quoted
+// literals and identifiers, which it keeps exactly, so a default that changes
+// only in case or spacing still compares unequal.
+func normalizeDDL(ddl string) string {
+	var b strings.Builder
+	var quote rune
+	pendingSpace := false
+	for _, r := range ddl {
+		if quote != 0 {
+			b.WriteRune(r)
+			if r == quote {
+				quote = 0
+			}
+			continue
+		}
+		if unicode.IsSpace(r) {
+			pendingSpace = b.Len() > 0
+			continue
+		}
+		if pendingSpace {
+			b.WriteByte(' ')
+			pendingSpace = false
+		}
+		if r == '\'' || r == '"' {
+			quote = r
+		}
+		b.WriteRune(unicode.ToUpper(r))
+	}
+	return b.String()
 }
 
 // canonicalColumn states the nullability AutoNowAdd implies explicitly, so the

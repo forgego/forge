@@ -29,6 +29,7 @@ func (Author) Fields() []schema.Field {
 		schema.Float64Field("score", schema.Default(1.5)),
 		schema.Float32Field("ratio"),
 		schema.Int32Field("visits", schema.Default(0)),
+		schema.StringField("status", schema.Default("Active")),
 		schema.DecimalField("balance", schema.MaxDigits(12), schema.DecimalPlaces(2)),
 		schema.DateField("born_on"),
 		schema.DateTimeField("seen_at"),
@@ -362,4 +363,13 @@ func TestModifiedColumnIsReadBack(t *testing.T) {
 		`ALTER TABLE authors ALTER COLUMN "ratio" DROP NOT NULL;`,
 		`ALTER TABLE authors ALTER COLUMN "ratio" DROP DEFAULT;`,
 		`ALTER TABLE authors ALTER COLUMN "visits" SET DEFAULT 0;`)
+}
+
+// TestChangedStringDefaultCaseIsDetected covers a default that differs only in
+// case: string literals must compare exactly.
+func TestChangedStringDefaultCaseIsDetected(t *testing.T) {
+	source := mustReplace(t, functionalModels, `schema.Default("Active")`, `schema.Default("active")`)
+	up, down := regenerateWith(t, core.DriverPostgreSQL, source, "lower_status")
+	assertContainsAll(t, "up", up, `ALTER TABLE authors ALTER COLUMN "status" SET DEFAULT 'active';`)
+	assertContainsAll(t, "down", down, `ALTER TABLE authors ALTER COLUMN "status" SET DEFAULT 'Active';`)
 }
