@@ -50,7 +50,7 @@ func resolveForgeCommand(args []string) (string, []string, error) {
 	}
 
 	forgeCmdOnce.Do(func() {
-		forgeDir := filepath.Join(repoRoot(), "forge")
+		forgeDir := repoRoot()
 		binName := "forge"
 		if runtime.GOOS == "windows" {
 			binName += ".exe"
@@ -62,7 +62,7 @@ func resolveForgeCommand(args []string) (string, []string, error) {
 		}
 		forgeCmdPath = filepath.Join(tmpDir, binName)
 
-		buildCmd := exec.Command("go", "build", "-o", forgeCmdPath, "./cli/cmd")
+		buildCmd := exec.Command("go", "build", "-o", forgeCmdPath, "./cmd/forge")
 		buildCmd.Dir = forgeDir
 		buildCmd.Env = os.Environ()
 		output, err := buildCmd.CombinedOutput()

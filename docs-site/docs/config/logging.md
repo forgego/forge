@@ -1,7 +1,7 @@
 ---
 sidebar_position: 6
 description: Logging configuration.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Logging Settings

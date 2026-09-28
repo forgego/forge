@@ -1,7 +1,7 @@
 ---
 sidebar_position: 5
 description: Security settings.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Security Settings

@@ -9,13 +9,13 @@ Forge is a type-safe, full-stack Go web framework with batteries included (ORM, 
 
 ## Tech Stack
 
-- **Primary Language**: Go (1.21+)
-- **Architecture**: Modular framework packages under `forge/` with reference application under `examples/ecommerce/`
+- **Primary Language**: Go (1.26+)
+- **Architecture**: Modular framework packages at the repository root with reference application under `examples/ecommerce/`
 - **Docs**: Docusaurus site under `docs-site/`
 
 ## Core Directory Layout
 
-- `forge/`: Framework modules
+- Repository root: framework packages (`orm/`, `schema/`, `admin/`, ...)
   - `admin/`: Auto-generated web admin interface and REST metadata API
   - `api/`: REST API framework (serializers, viewsets, filters, permissions, throttling, OpenAPI)
   - `config/`: Viper-based configuration and ephemeral secret generation
@@ -29,7 +29,7 @@ Forge is a type-safe, full-stack Go web framework with batteries included (ORM, 
 
 ## Testing & Verification
 
-- Framework tests: `go test ./...` inside `forge/`
+- Framework tests: `go test ./...` at the repository root
 - Reference app tests: `go test ./...` inside `examples/ecommerce/`
 - Always verify tests pass before committing.
 

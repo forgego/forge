@@ -80,7 +80,7 @@ func patchGeneratedProject(projectDir string) error {
 		return err
 	}
 
-	replaceLine := fmt.Sprintf("\nreplace github.com/forgego/forge => %s\n", filepath.Join(repoRoot, "forge"))
+	replaceLine := fmt.Sprintf("\nreplace github.com/forgego/forge => %s\n", repoRoot)
 	if strings.Contains(string(content), "replace github.com/forgego/forge =>") {
 		return nil
 	}

@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 description: Server overview and core capabilities.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Server Overview

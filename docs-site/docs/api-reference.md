@@ -1,7 +1,7 @@
 ---
 sidebar_position: 20
 description: Concise API reference pointers.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # API Reference

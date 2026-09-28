@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing to Forge! This document provides guidelines and instructions for contributing.
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
 - [Getting Started](#getting-started)
@@ -13,7 +13,7 @@ Thank you for your interest in contributing to Forge! This document provides gui
 - [Testing](#testing)
 - [Documentation](#documentation)
 
-## 📜 Code of Conduct
+## Code of Conduct
 
 ### Our Pledge
 
@@ -32,11 +32,11 @@ We are committed to providing a welcoming and inspiring community for all. Pleas
 - Publishing others' private information
 - Any conduct that could reasonably be considered inappropriate
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- **Go 1.25+** - [Install Go](https://go.dev/dl/)
+- **Go 1.26+** - [Install Go](https://go.dev/dl/)
 - **PostgreSQL 15+** - [Install PostgreSQL](https://www.postgresql.org/download/)
 - **Node.js 22+** - [Install Node](https://nodejs.org/) (for admin UI)
 - **Git** - [Install Git](https://git-scm.com/)
@@ -53,13 +53,11 @@ cd forge
 git remote add upstream https://github.com/forgego/forge.git
 ```
 
-## 🛠️ Development Setup
+## Development Setup
 
 ### Backend Setup
 
 ```bash
-cd forge
-
 # Download dependencies
 go mod download
 
@@ -73,7 +71,7 @@ go test ./...
 ### Frontend Setup (Admin UI)
 
 ```bash
-cd forge/admin/ui/web
+cd admin/ui/web
 
 # Install dependencies
 npm install
@@ -103,7 +101,7 @@ npm start
 npm run build
 ```
 
-## 🔨 Making Changes
+## Making Changes
 
 ### 1. Create a Branch
 
@@ -168,7 +166,7 @@ docs(readme): update installation instructions
 test(migration): add tests for column renaming
 ```
 
-## 🔍 Pull Request Process
+## Pull Request Process
 
 ### Before Submitting
 
@@ -213,7 +211,7 @@ test(migration): add tests for column renaming
 - Your contribution will be acknowledged
 - Branch can be deleted
 
-## 💻 Coding Standards
+## Coding Standards
 
 ### Go Code
 
@@ -291,7 +289,7 @@ const UserCard = ({ user }: any) => <div>{user.name}</div>;
   appropriate status codes; validation collects field-specific errors
   in a consistent format.
 
-## 🧪 Testing
+## Testing
 
 ### Writing Tests
 
@@ -303,10 +301,10 @@ func TestUserCreation(t *testing.T) {
     ctx := context.Background()
     db := setupTestDB(t)
     defer db.Close()
-    
+
     // Execute
     user, err := CreateUser(ctx, "test@example.com")
-    
+
     // Assert
     require.NoError(t, err)
     assert.Equal(t, "test@example.com", user.Email)
@@ -338,16 +336,13 @@ describe('UserCard', () => {
 
 ```bash
 # Run all Go tests
-cd forge
 go test ./...
 
 # Run integration tests (requires PostgreSQL)
-cd ../tests
-go test ./integration/...
+(cd tests && go test ./integration/...)
 
 # Run frontend tests
-cd ../forge/admin/ui/web
-npm test
+(cd admin/ui/web && npm test)
 
 # Run with coverage
 go test -coverprofile=coverage.out ./...
@@ -362,7 +357,7 @@ go tool cover -html=coverage.out
 - Tests should be fast and isolated
 - Use meaningful test names
 
-## 📚 Documentation
+## Documentation
 
 ### Code Documentation
 
@@ -392,17 +387,17 @@ func CreateUser(ctx context.Context, email string) (*User, error) {
 - Update API reference if needed
 - Include screenshots for UI changes
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
-forge/
-├── admin/          # Admin interface
-├── api/            # REST API framework
-├── cli/            # CLI tools
-├── db/             # Database layer
-├── orm/            # ORM system
-├── schema/         # Schema definition
-└── server/         # HTTP server
+admin/              # Admin interface
+api/                # REST API framework
+cli/                # CLI implementation
+cmd/forge/          # CLI entry point (go install target)
+db/                 # Database layer and migrations
+orm/                # ORM system
+schema/             # Schema definition
+server/             # HTTP server
 
 examples/
 └── ecommerce/      # E-commerce example
@@ -415,7 +410,7 @@ docs-site/
 └── docs/           # Documentation
 ```
 
-## 🧭 Framework Rules
+## Framework Rules
 
 These are load-bearing conventions. Do not break them without updating
 `docs/DESIGN.md` first.
@@ -431,7 +426,7 @@ These are load-bearing conventions. Do not break them without updating
   names, `t.Cleanup()` for teardown, 60s context timeouts, and the
   shared `helpers.Assert*` assertions.
 
-## 🐛 Reporting Bugs
+## Reporting Bugs
 
 ### Before Reporting
 
@@ -463,7 +458,7 @@ What you expected to happen.
 Any other relevant information.
 ```
 
-## 💡 Feature Requests
+## Feature Requests
 
 We welcome feature requests! Please:
 
@@ -472,26 +467,26 @@ We welcome feature requests! Please:
 3. Explain why it's needed
 4. Suggest implementation approach (optional)
 
-## 🔐 Security
+## Security
 
 **Do not report security vulnerabilities as GitHub issues.**
 
 See [SECURITY.md](SECURITY.md) for security reporting.
 
-## 📞 Getting Help
+## Getting Help
 
 - **Documentation**: https://forgego.github.io/forge/
 - **Discussions**: [GitHub Discussions](https://github.com/forgego/forge/discussions)
 - **Issues**: [GitHub Issues](https://github.com/forgego/forge/issues)
 
-## 🎖️ Recognition
+## Recognition
 
 Contributors are recognized in:
 - GitHub contributors page
 - Release notes
 - Documentation acknowledgments
 
-## 📄 License
+## License
 
 By contributing, you agree that your contributions will be licensed under the MIT License.
 
@@ -503,17 +498,17 @@ By contributing, you agree that your contributions will be licensed under the MI
 
 ```bash
 # Build
-cd forge && go build ./...
+go build ./...
 
 # Test
-cd forge && go test ./...
+go test ./...
 cd tests && go test ./integration/...
 
 # Lint
-cd forge && golangci-lint run
+golangci-lint run
 
 # Frontend
-cd forge/admin/ui/web && npm run dev
+cd admin/ui/web && npm run dev
 
 # Docs
 cd docs-site && npm start
@@ -530,8 +525,8 @@ cd docs-site && npm start
 
 <div align="center">
 
-**Thank you for contributing to Forge! 🙏**
+**Thank you for contributing to Forge.**
 
-[⭐ Star us on GitHub](https://github.com/forgego/forge) • [📖 Documentation](https://forgego.github.io/forge/)
+[Documentation](https://forgego.github.io/forge/) · [Issues](https://github.com/forgego/forge/issues)
 
 </div>

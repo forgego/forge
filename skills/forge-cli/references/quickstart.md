@@ -70,10 +70,10 @@ admin.Register(&admin.Config[models.Post]{})
 # Build from source (recommended)
 git clone https://github.com/forgego/forge.git
 cd forge
-go build -o forge ./cli/cmd
+go build -o forge ./cmd/forge
 
 # Or install via go install
-go install github.com/forgego/forge/cli/cmd@latest
+go install github.com/forgego/forge/cmd/forge@latest
 ```
 
 ### Step 2: Create Project
@@ -418,10 +418,10 @@ posts, err := PostObjects.
 ## Summary
 
 forge gives you:
-- ✅ **Type Safety** - Compile-time checking
-- ✅ **Code Generation** - No boilerplate
-- ✅ **Auto Admin** - Full CRUD interface
-- ✅ **Django Experience** - Familiar patterns
-- ✅ **Go Performance** - Fast and efficient
+- **Type Safety** - Compile-time checking
+- **Code Generation** - No boilerplate
+- **Auto Admin** - Full CRUD interface
+- **Django Experience** - Familiar patterns
+- **Go Performance** - Fast and efficient
 
 Ready to build? Start with the [Installation Guide](/docs/getting-started/installation) or explore the [Full Guides](/docs/guides/models).

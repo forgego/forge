@@ -1,7 +1,7 @@
 ---
 sidebar_position: 4
 description: Authentication classes and defaults.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Authentication

@@ -1,7 +1,7 @@
 ---
 sidebar_position: 7
 description: "Pagination schemes: PageNumber, LimitOffset, and high-performance CursorPagination."
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # API Pagination

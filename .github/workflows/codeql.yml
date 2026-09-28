@@ -12,7 +12,7 @@ on:
       - '**/go.mod'
       - '**/go.sum'
       - 'docs-site/**'
-      - 'forge/admin/ui/**'
+      - 'admin/ui/**'
       - '.github/workflows/codeql.yml'
   pull_request:
     branches: [main, master, v8]
@@ -25,7 +25,7 @@ on:
       - '**/go.mod'
       - '**/go.sum'
       - 'docs-site/**'
-      - 'forge/admin/ui/**'
+      - 'admin/ui/**'
       - '.github/workflows/codeql.yml'
   schedule:
     # Run at 3 AM UTC every Monday
@@ -64,7 +64,7 @@ jobs:
               - '**/*.ts'
               - '**/*.tsx'
               - 'docs-site/**'
-              - 'forge/admin/ui/**'
+              - 'admin/ui/**'
             workflows:
               - '.github/workflows/codeql.yml'
       - name: Force all checks on schedule or manual runs

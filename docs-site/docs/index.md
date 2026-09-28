@@ -3,7 +3,7 @@ title: Documentation
 slug: /
 sidebar_position: 0
 description: Forge framework documentation - Django-inspired productivity for Go.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Forge Documentation
@@ -72,14 +72,14 @@ Go deeper:
 
 Forge provides everything you need to build web applications:
 
-- ✅ **Type-Safe ORM** - Query with full compile-time safety
-- ✅ **Auto Admin** - Get a complete admin interface automatically
-- ✅ **REST APIs** - Serializers, auth, and pagination built-in
-- ✅ **Migrations** - Track and apply database changes
-- ✅ **Code Generation** - Generate type-safe queries and managers
-- ✅ **Security** - CSRF, CORS, rate limiting out of the box
-- ✅ **Authentication** - Multiple auth backends included
-- ✅ **CLI Tools** - Powerful command-line interface
+- **Type-Safe ORM** - Query with full compile-time safety
+- **Auto Admin** - Get a complete admin interface automatically
+- **REST APIs** - Serializers, auth, and pagination built-in
+- **Migrations** - Track and apply database changes
+- **Code Generation** - Generate type-safe queries and managers
+- **Security** - CSRF, CORS, rate limiting out of the box
+- **Authentication** - Multiple auth backends included
+- **CLI Tools** - Powerful command-line interface
 
 ## Quick Example
 
