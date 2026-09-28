@@ -39,6 +39,17 @@ func respondWriteError(w http.ResponseWriter, failureCode string, err error) {
 	respondError(w, http.StatusInternalServerError, failureCode, "The change could not be saved because of a server error", nil)
 }
 
+// deleteFailure describes a failed delete without echoing driver text. A
+// foreign-key violation means other rows still reference the record, which
+// the operator can resolve; anything else is logged as a server error.
+func deleteFailure(err error) (status int, code, message string) {
+	if v, ok := classifyConstraintViolation(err); ok && v.code == "invalid_reference" {
+		return http.StatusConflict, "in_use", "Other records still refer to this record, so it cannot be deleted."
+	}
+	log.Printf("admin: delete_failed: %v", err)
+	return http.StatusInternalServerError, "delete_failed", "The record could not be deleted because of a server error"
+}
+
 type constraintViolation struct {
 	status  int
 	code    string

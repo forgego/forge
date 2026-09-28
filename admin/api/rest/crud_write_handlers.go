@@ -157,7 +157,7 @@ func bulkFailure(w http.ResponseWriter, code, message string, errs []bulkItemErr
 		switch e.Code {
 		case "permission_denied":
 			continue
-		case "invalid_item", "invalid_id", "not_found":
+		case "invalid_item", "invalid_id", "not_found", "in_use":
 			allPermissionDenied = false
 			continue
 		default:
@@ -243,7 +243,8 @@ func (r *Router) handleDelete(admin core.AdminInterface) http.HandlerFunc {
 		// Call implementation
 		err = admin.DeleteObject(ctx, id)
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, "delete_failed", err.Error(), nil)
+			status, code, message := deleteFailure(err)
+			respondError(w, status, code, message, nil)
 			return
 		}
 
@@ -528,10 +529,11 @@ func (r *Router) handleBulkDelete(admin core.AdminInterface) http.HandlerFunc {
 			}
 
 			if err := admin.DeleteObject(ctx, id); err != nil {
+				_, code, message := deleteFailure(err)
 				errors = append(errors, bulkItemError{
 					Index:   i,
-					Code:    "delete_failed",
-					Message: err.Error(),
+					Code:    code,
+					Message: message,
 				})
 				continue
 			}

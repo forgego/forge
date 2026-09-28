@@ -101,6 +101,24 @@ func TestRespondWriteError_TypedValidationErrorIsBadRequest(t *testing.T) {
 	assert.Equal(t, []string{"unknown field"}, details["bogus"])
 }
 
+func TestDeleteFailure_ReferencedRecordIsConflictWithoutDriverText(t *testing.T) {
+	err := fmt.Errorf("delete failed: %w", &pq.Error{
+		Code:    "23503",
+		Message: `update or delete on table "categories" violates foreign key constraint "categories_parent_id_fkey" on table "categories"`,
+		Detail:  `Key (id)=(1) is still referenced from table "categories".`,
+	})
+
+	status, code, message := deleteFailure(err)
+	assert.Equal(t, http.StatusConflict, status)
+	assert.Equal(t, "in_use", code)
+	assert.NotContains(t, message, "categories_parent_id_fkey")
+
+	status, code, message = deleteFailure(errors.New("pq: connection reset"))
+	assert.Equal(t, http.StatusInternalServerError, status)
+	assert.Equal(t, "delete_failed", code)
+	assert.NotContains(t, message, "pq:")
+}
+
 func TestRespondWriteError_UnexpectedErrorDoesNotLeakDriverText(t *testing.T) {
 	rec := httptest.NewRecorder()
 	respondWriteError(rec, "update_failed", errors.New(`pq: relation "secret_table" does not exist`))
