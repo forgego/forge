@@ -65,38 +65,13 @@ func (b *baseBuilder) BuildColumnDefinition(field generator.FieldDefinition) (st
 	}
 
 	// Handle default values
-	// Check for AutoNowAdd or AutoNow options first (these imply the current
-	// time as default)
-	currentTime := "now()"
-	if b.isSQLite {
-		// SQLite accepts no function call as a column default without
-		// parentheses; CURRENT_TIMESTAMP is its current-time default.
-		currentTime = "CURRENT_TIMESTAMP"
-	}
 	if !isGenerated {
-		if dbDefault, ok := field.Options["db_default"].(string); ok && dbDefault != "" {
-			parts = append(parts, fmt.Sprintf("DEFAULT %s", dbDefault))
-		} else if autoNowAdd, ok := field.Options["auto_now_add"].(bool); ok && autoNowAdd {
-			parts = append(parts, "DEFAULT "+currentTime)
-			// Make created_at NOT NULL when AutoNowAdd is set
-			if !field.Required && !field.PrimaryKey {
-				// Check if NOT NULL is already in parts
-				hasNotNull := false
-				for _, part := range parts {
-					if part == "NOT NULL" {
-						hasNotNull = true
-						break
-					}
-				}
-				if !hasNotNull {
-					parts = append(parts, "NOT NULL")
-				}
-			}
-		} else if autoNow, ok := field.Options["auto_now"].(bool); ok && autoNow {
-			parts = append(parts, "DEFAULT "+currentTime)
-		} else if field.Default != nil {
-			defaultVal := formatDefaultValue(field.Default, field.GoType, field.Type, field.Options, b.isSQLite)
-			parts = append(parts, fmt.Sprintf("DEFAULT %s", defaultVal))
+		if defaultExpr := b.columnDefault(field); defaultExpr != "" {
+			parts = append(parts, "DEFAULT "+defaultExpr)
+		}
+		// Make created_at NOT NULL when AutoNowAdd is set
+		if impliesNotNull(field) && !field.Required {
+			parts = append(parts, "NOT NULL")
 		}
 	}
 
@@ -106,6 +81,51 @@ func (b *baseBuilder) BuildColumnDefinition(field generator.FieldDefinition) (st
 	}
 
 	return strings.Join(parts, " "), nil
+}
+
+// columnDefault returns the SQL expression of a column's DEFAULT clause, or ""
+// when it has none: a DB default expression verbatim, the current time for
+// AutoNowAdd and AutoNow, or the formatted Default value. A generated column
+// has no default.
+func (b *baseBuilder) columnDefault(field generator.FieldDefinition) string {
+	if generated, ok := field.Options["generated"].(bool); ok && generated {
+		if expr, ok := field.Options["generated_expr"].(string); ok && expr != "" {
+			return ""
+		}
+	}
+	// SQLite accepts no function call as a column default without
+	// parentheses; CURRENT_TIMESTAMP is its current-time default.
+	currentTime := "now()"
+	if b.isSQLite {
+		currentTime = "CURRENT_TIMESTAMP"
+	}
+	if dbDefault, ok := field.Options["db_default"].(string); ok && dbDefault != "" {
+		return dbDefault
+	}
+	if autoNowAdd, ok := field.Options["auto_now_add"].(bool); ok && autoNowAdd {
+		return currentTime
+	}
+	if autoNow, ok := field.Options["auto_now"].(bool); ok && autoNow {
+		return currentTime
+	}
+	if field.Default != nil {
+		return formatDefaultValue(field.Default, field.GoType, field.Type, field.Options, b.isSQLite)
+	}
+	return ""
+}
+
+// impliesNotNull reports whether a column that is not a primary key is NOT
+// NULL although not declared Required: an AutoNowAdd column without a DB
+// default, which is always set on insert.
+func impliesNotNull(field generator.FieldDefinition) bool {
+	if field.PrimaryKey {
+		return false
+	}
+	if dbDefault, ok := field.Options["db_default"].(string); ok && dbDefault != "" {
+		return false
+	}
+	autoNowAdd, ok := field.Options["auto_now_add"].(bool)
+	return ok && autoNowAdd
 }
 
 // BuildCreateTable generates CREATE TABLE statement

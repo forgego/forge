@@ -528,3 +528,29 @@ func TestCastAndOperatorDBDefaultsAreReadBack(t *testing.T) {
 	up, _ = regenerateWith(t, core.DriverSQLite, source, "add_db_defaults")
 	assertContainsAll(t, "up", up, `ALTER TABLE books ADD COLUMN "joined" TEXT NOT NULL DEFAULT ('x' || 'y');`)
 }
+
+// TestChangedDBDefaultIsModified covers PostgreSQL ALTER COLUMN for DB
+// defaults, which the builder ignored: a changed expression was dropped, and
+// a DB default added to an existing column wrote an empty migration.
+func TestChangedDBDefaultIsModified(t *testing.T) {
+	source := mustReplace(t, functionalModels, `schema.DBDefault("(1 + 2)")`, `schema.DBDefault("(2 + 3)")`)
+	source = mustReplace(t, source, `schema.StringField("isbn")`, `schema.StringField("isbn", schema.DBDefault("'none'::text"))`)
+	source = mustReplace(t, source, `schema.Int32Field("visits", schema.Default(0))`, `schema.Int32Field("visits", schema.DBDefault("(0 + 1)"))`)
+	source = mustReplace(t, source, `schema.DateField("born_on")`, `schema.DateField("born_on", schema.AutoNowAdd())`)
+	up, down := regenerateWith(t, core.DriverPostgreSQL, source, "change_db_defaults")
+	assertContainsAll(t, "up", up,
+		`ALTER TABLE authors ALTER COLUMN "rank" SET DEFAULT (2 + 3);`,
+		`ALTER TABLE books ALTER COLUMN "isbn" SET DEFAULT 'none'::text;`,
+		`ALTER TABLE authors ALTER COLUMN "visits" SET DEFAULT (0 + 1);`,
+		`ALTER TABLE authors ALTER COLUMN "born_on" SET NOT NULL;`,
+		`ALTER TABLE authors ALTER COLUMN "born_on" SET DEFAULT now();`)
+	assertContainsAll(t, "down", down,
+		`ALTER TABLE authors ALTER COLUMN "rank" SET DEFAULT (1 + 2);`,
+		`ALTER TABLE books ALTER COLUMN "isbn" DROP DEFAULT;`,
+		`ALTER TABLE authors ALTER COLUMN "visits" SET DEFAULT 0;`,
+		`ALTER TABLE authors ALTER COLUMN "born_on" DROP NOT NULL;`,
+		`ALTER TABLE authors ALTER COLUMN "born_on" DROP DEFAULT;`)
+	if strings.Contains(up, "DROP DEFAULT") {
+		t.Errorf("up drops a default:\n%s", up)
+	}
+}
