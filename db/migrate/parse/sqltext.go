@@ -111,3 +111,35 @@ func unquoteLiteral(s string) (string, bool) {
 	}
 	return strings.ReplaceAll(s[1:len(s)-1], "''", "'"), true
 }
+
+// stripComments replaces -- and /* */ comments outside quoted text with a
+// space, keeping the statement's structure.
+func stripComments(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		switch {
+		case isQuote(s[i]):
+			end := skipQuoted(s, i)
+			b.WriteString(s[i:end])
+			i = end
+		case strings.HasPrefix(s[i:], "--"):
+			end := strings.IndexByte(s[i:], '\n')
+			if end < 0 {
+				return b.String()
+			}
+			b.WriteByte(' ')
+			i += end
+		case strings.HasPrefix(s[i:], "/*"):
+			end := strings.Index(s[i+2:], "*/")
+			if end < 0 {
+				return b.String()
+			}
+			b.WriteByte(' ')
+			i += end + 4
+		default:
+			b.WriteByte(s[i])
+			i++
+		}
+	}
+	return b.String()
+}

@@ -28,9 +28,18 @@ func NewTableParser() *TableParser {
 // which is not a column.
 var tableConstraintRegex = regexp.MustCompile(`(?i)^(?:CONSTRAINT\s|FOREIGN\s+KEY|PRIMARY\s+KEY\s*\(|UNIQUE\s*\(|CHECK\s*\()`)
 
-// tableForeignKeyRegex matches a table-level foreign key, as SQLite migrations
-// declare them inside CREATE TABLE.
-var tableForeignKeyRegex = regexp.MustCompile(`(?i)^(?:CONSTRAINT\s+["']?\w+["']?\s+)?FOREIGN\s+KEY\s*\(\s*["']?(\w+)["']?\s*\)\s*REFERENCES\s+["']?(\w+)["']?\s*\(\s*["']?\w+["']?\s*\)(?:\s+ON\s+DELETE\s+(SET\s+NULL|SET\s+DEFAULT|NO\s+ACTION|\w+))?(?:\s+ON\s+UPDATE\s+(SET\s+NULL|SET\s+DEFAULT|NO\s+ACTION|\w+))?`)
+// tableForeignKeyRegex matches the start of a table-level foreign key, as
+// SQLite migrations declare them inside CREATE TABLE.
+var tableForeignKeyRegex = regexp.MustCompile(`(?i)^(?:CONSTRAINT\s+["']?\w+["']?\s+)?FOREIGN\s+KEY\b`)
+
+// foreignKeyRegex matches FOREIGN KEY (column) REFERENCES [schema.]table
+// (column) and captures the column, the target table without its schema, and
+// the text after the reference, which holds the referential actions.
+var foreignKeyRegex = regexp.MustCompile(`(?is)FOREIGN\s+KEY\s*\(\s*["']?(\w+)["']?\s*\)\s*REFERENCES\s+(?:["']?\w+["']?\s*\.\s*)?["']?(\w+)["']?\s*\(\s*["']?\w+["']?\s*\)([^;]*)`)
+
+// referentialActionRegex matches an ON DELETE or ON UPDATE clause, which may
+// come in either order.
+var referentialActionRegex = regexp.MustCompile(`(?i)\bON\s+(DELETE|UPDATE)\s+(SET\s+NULL|SET\s+DEFAULT|NO\s+ACTION|\w+)`)
 
 // tableCheckUniqueRegex matches a named CHECK or UNIQUE table constraint, as
 // SQLite migrations declare them inside CREATE TABLE.
@@ -46,6 +55,8 @@ func (p *TableParser) ParseCreateTable(sql string) (*core.CreateTable, error) {
 // table and the foreign keys it declares as table constraints, which is how
 // SQLite migrations add them.
 func (p *TableParser) ParseCreateTableWithForeignKeys(sql string) (*core.CreateTable, []*core.AddForeignKey, error) {
+	// Comments inside the column list must not split or end it.
+	sql = stripComments(sql)
 	matches := p.createTableRegex.FindStringSubmatchIndex(sql)
 	if len(matches) < 4 {
 		return nil, nil, fmt.Errorf("could not parse CREATE TABLE statement")
@@ -95,16 +106,26 @@ func (p *TableParser) ParseCreateTableWithForeignKeys(sql string) (*core.CreateT
 
 // parseTableForeignKey parses a table-level FOREIGN KEY constraint.
 func parseTableForeignKey(tableName, constraint string) *core.AddForeignKey {
-	matches := tableForeignKeyRegex.FindStringSubmatch(constraint)
+	if !tableForeignKeyRegex.MatchString(constraint) {
+		return nil
+	}
+	return parseForeignKey(tableName, constraint)
+}
+
+// parseForeignKey parses the first FOREIGN KEY .. REFERENCES clause in sql as
+// a foreign key of tableName.
+func parseForeignKey(tableName, sql string) *core.AddForeignKey {
+	matches := foreignKeyRegex.FindStringSubmatch(sql)
 	if matches == nil {
 		return nil
 	}
 	onDelete, onUpdate := "NO ACTION", "NO ACTION"
-	if matches[3] != "" {
-		onDelete = normalizeCascadeAction(matches[3])
-	}
-	if matches[4] != "" {
-		onUpdate = normalizeCascadeAction(matches[4])
+	for _, action := range referentialActionRegex.FindAllStringSubmatch(matches[3], -1) {
+		if strings.EqualFold(action[1], "DELETE") {
+			onDelete = normalizeCascadeAction(action[2])
+		} else {
+			onUpdate = normalizeCascadeAction(action[2])
+		}
 	}
 	return &core.AddForeignKey{
 		Table: tableName,

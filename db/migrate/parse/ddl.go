@@ -282,42 +282,18 @@ func (p *DDLParser) parseAddColumn(sql string) *core.AddColumn {
 
 // parseAddForeignKey parses ALTER TABLE ADD CONSTRAINT FOREIGN KEY statements
 func (p *DDLParser) parseAddForeignKey(sql string) *core.AddForeignKey {
-	// Pattern: ALTER TABLE table ADD CONSTRAINT name FOREIGN KEY (column) REFERENCES target (id) [ON DELETE action] [ON UPDATE action]
+	// Pattern: ALTER TABLE table ADD CONSTRAINT name FOREIGN KEY (column) REFERENCES [schema.]target (id) [ON DELETE action] [ON UPDATE action]
 	// Also handles DO $$ BEGIN ... ALTER TABLE ... END $$; blocks
-	re := regexp.MustCompile(`(?i)ALTER\s+TABLE\s+["']?(\w+)["']?\s+ADD\s+CONSTRAINT\s+["']?(\w+)["']?\s+FOREIGN\s+KEY\s+\(["']?(\w+)["']?\)\s+REFERENCES\s+["']?(\w+)["']?\s+\(["']?(\w+)["']?\)(?:\s+ON\s+DELETE\s+(SET\s+NULL|SET\s+DEFAULT|NO\s+ACTION|\w+))?(?:\s+ON\s+UPDATE\s+(SET\s+NULL|SET\s+DEFAULT|NO\s+ACTION|\w+))?`)
-	matches := re.FindStringSubmatch(sql)
-	if len(matches) < 5 {
+	matches := addForeignKeyRegex.FindStringSubmatchIndex(sql)
+	if matches == nil {
 		return nil
 	}
-
-	tableName := matches[1]
-	columnName := matches[3]
-	targetTable := matches[4]
-
-	onDelete := "NO ACTION"
-	if len(matches) > 6 && matches[6] != "" {
-		onDelete = normalizeCascadeAction(matches[6])
-	}
-
-	onUpdate := "NO ACTION"
-	if len(matches) > 7 && matches[7] != "" {
-		onUpdate = normalizeCascadeAction(matches[7])
-	}
-
-	relation := generator.RelationDefinition{
-		Name: columnName,
-		Options: map[string]interface{}{
-			"on_delete": denormalizeCascadeAction(onDelete),
-			"on_update": denormalizeCascadeAction(onUpdate),
-		},
-	}
-
-	return &core.AddForeignKey{
-		Table:       tableName,
-		Relation:    relation,
-		TargetTable: targetTable,
-	}
+	return parseForeignKey(sql[matches[2]:matches[3]], sql[matches[1]:])
 }
+
+// addForeignKeyRegex matches ALTER TABLE t ADD CONSTRAINT name, where a FOREIGN
+// KEY clause follows.
+var addForeignKeyRegex = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+["']?(\w+)["']?\s+ADD\s+CONSTRAINT\s+["']?\w+["']?\s+`)
 
 // parseDropConstraint parses ALTER TABLE DROP CONSTRAINT statements
 func (p *DDLParser) parseDropConstraint(sql string) core.Change {
