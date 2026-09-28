@@ -58,9 +58,10 @@ func main() {
 		}
 	})
 
-	// Start server
+	// Start server. On SIGINT or SIGTERM it stops accepting connections and
+	// waits up to server.graceful_timeout seconds for in-flight requests.
 	fmt.Printf("Starting server on %s:%s\n", settings.Server.Host, settings.Server.Port)
-	if err := srv.Start(); err != nil {
+	if err := srv.StartWithGracefulShutdown(); err != nil {
 		stdlog.Fatal(err)
 	}
 }

@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
 	"strings"
 	"syscall"
 	"time"
@@ -159,20 +161,36 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// StartWithGracefulShutdown starts the server with graceful shutdown support
+// StartWithGracefulShutdown starts the server and blocks until it fails or
+// the process receives SIGINT or SIGTERM. On a signal the server stops
+// accepting connections and waits up to server.graceful_timeout seconds for
+// in-flight requests to finish before returning.
 func (s *Server) StartWithGracefulShutdown() error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	return s.serveUntil(ctx)
+}
+
+// serveUntil runs the server until it fails or ctx is done, then shuts it
+// down gracefully.
+func (s *Server) serveUntil(ctx context.Context) error {
 	if err := s.validateProductionSecrets(); err != nil {
 		return err
 	}
-	// Start server in a goroutine
 	serverErr := make(chan error, 1)
 	go func() {
-		if err := s.Start(); err != nil {
-			serverErr <- err
-		}
+		serverErr <- s.Start()
 	}()
 
-	// Wait for interrupt signal or server error
+	select {
+	case err := <-serverErr:
+		return err
+	case <-ctx.Done():
+	}
+
+	if err := s.Shutdown(context.Background()); err != nil {
+		return fmt.Errorf("graceful shutdown: %w", err)
+	}
 	return <-serverErr
 }
 
