@@ -241,8 +241,8 @@ func TestChangedForeignKeyActionIsDetected(t *testing.T) {
 
 // regenerateWith generates the initial migration for functionalModels, then
 // one named name for source, and returns that migration's up and down SQL. A
-// further regeneration must write nothing, and on PostgreSQL the migrations
-// must apply up, down and up again when a test database is configured.
+// further regeneration must write nothing, and the migrations must apply up,
+// down and up again (see applyMigrations).
 func regenerateWith(t *testing.T, driver core.Driver, source, name string) (string, string) {
 	t.Helper()
 	return regenerateFrom(t, driver, functionalModels, source, name)
@@ -276,7 +276,7 @@ func regenerateFrom(t *testing.T, driver core.Driver, initial, source, name stri
 		extra, _ := os.ReadFile(filepath.Join(migrationsDir, got[len(got)-1]))
 		t.Fatalf("regenerating after %s wrote %v:\n%s", name, got, extra)
 	}
-	applyOnPostgres(t, driver, migrationsDir)
+	applyMigrations(t, driver, migrationsDir)
 	return string(up), string(down)
 }
 
@@ -450,6 +450,34 @@ func TestDefaultsWithSpacesAreReadBack(t *testing.T) {
 	assertContainsAll(t, "down", down, `ALTER TABLE authors ALTER COLUMN "motto" SET DEFAULT 'read, then write it''s';`)
 	if strings.Contains(up, `"rank"`) {
 		t.Errorf("up touches the unchanged expression default:\n%s", up)
+	}
+}
+
+// TestSQLiteFunctionalModelsApply covers auto timestamps on SQLite, which
+// rejects DEFAULT now(): the SQLite migration uses CURRENT_TIMESTAMP, applies
+// to a real database, and reads back without churn.
+func TestSQLiteFunctionalModelsApply(t *testing.T) {
+	modelsDir := t.TempDir()
+	migrationsDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(modelsDir, "models.go"), []byte(functionalModels), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	generateMigration(t, modelsDir, migrationsDir, core.DriverSQLite, "initial")
+	up, err := os.ReadFile(filepath.Join(migrationsDir, "000001_initial.up.sql"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertContainsAll(t, "up", string(up),
+		`"created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL`,
+		`"updated_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP`)
+	if strings.Contains(string(up), "now()") {
+		t.Errorf("SQLite migration uses now():\n%s", up)
+	}
+	applyMigrations(t, core.DriverSQLite, migrationsDir)
+	generateMigration(t, modelsDir, migrationsDir, core.DriverSQLite, "again")
+	if got := migrationFiles(t, migrationsDir); len(got) != 2 {
+		extra, _ := os.ReadFile(filepath.Join(migrationsDir, got[len(got)-1]))
+		t.Fatalf("regenerating unchanged models wrote %v:\n%s", got, extra)
 	}
 }
 
