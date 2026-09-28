@@ -46,11 +46,11 @@ We are committed to providing a welcoming and inspiring community for all. Pleas
 ```bash
 # Fork the repository on GitHub
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/foreit.git
-cd foreit
+git clone https://github.com/YOUR_USERNAME/forge.git
+cd forge
 
 # Add upstream remote
-git remote add upstream https://github.com/hamidrabedi/foreit.git
+git remote add upstream https://github.com/forgego/forge.git
 ```
 
 ## 🛠️ Development Setup
@@ -480,9 +480,9 @@ See [SECURITY.md](SECURITY.md) for security reporting.
 
 ## 📞 Getting Help
 
-- **Documentation**: https://hamidrabedi.github.io/foreit/
-- **Discussions**: [GitHub Discussions](https://github.com/hamidrabedi/foreit/discussions)
-- **Issues**: [GitHub Issues](https://github.com/hamidrabedi/foreit/issues)
+- **Documentation**: https://forgego.github.io/forge/
+- **Discussions**: [GitHub Discussions](https://github.com/forgego/forge/discussions)
+- **Issues**: [GitHub Issues](https://github.com/forgego/forge/issues)
 
 ## 🎖️ Recognition
 
@@ -532,6 +532,6 @@ cd docs-site && npm start
 
 **Thank you for contributing to Forge! 🙏**
 
-[⭐ Star us on GitHub](https://github.com/hamidrabedi/foreit) • [📖 Documentation](https://hamidrabedi.github.io/foreit/)
+[⭐ Star us on GitHub](https://github.com/forgego/forge) • [📖 Documentation](https://forgego.github.io/forge/)
 
 </div>

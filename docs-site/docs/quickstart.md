@@ -345,7 +345,7 @@ forge migrate
 ## Getting Help
 
 - [Documentation](/docs/) - Full documentation
-- [GitHub Issues](https://github.com/hamidrabedi/foreit/issues) - Report bugs
-- [Examples](https://github.com/hamidrabedi/foreit/tree/main/examples) - Sample projects
+- [GitHub Issues](https://github.com/forgego/forge/issues) - Report bugs
+- [Examples](https://github.com/forgego/forge/tree/master/examples) - Sample projects
 
 Ready to dive deeper? Continue with the [Models guide](/docs/models).
