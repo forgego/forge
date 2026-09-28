@@ -544,6 +544,19 @@ func TestChangedForeignKeyTargetIsRestoredOnDown(t *testing.T) {
 		`ADD CONSTRAINT fk_books_editor_id FOREIGN KEY ("editor_id") REFERENCES authors (id) ON DELETE SET NULL`)
 }
 
+// TestStringDefaultWithParenthesesIsQuoted covers Default values that look
+// like a function call, which were rendered unquoted and produced invalid
+// SQL. Only DBDefault is an expression.
+func TestStringDefaultWithParenthesesIsQuoted(t *testing.T) {
+	source := withBookColumns(t, `schema.StringField("note", schema.Default("x(1)"))`, `schema.StringField("aside", schema.Default("(see below)"))`)
+	for _, driver := range []core.Driver{core.DriverPostgreSQL, core.DriverSQLite} {
+		up, _ := regenerateWith(t, driver, source, "add_notes")
+		assertContainsAll(t, string(driver)+" up", up,
+			`ALTER TABLE books ADD COLUMN "note" TEXT DEFAULT 'x(1)';`,
+			`ALTER TABLE books ADD COLUMN "aside" TEXT DEFAULT '(see below)';`)
+	}
+}
+
 // TestSQLiteColumnChangeFails covers SQLite, which cannot alter a column
 // without rebuilding its table: makemigrations used to write only a comment,
 // so the change was proposed again on every run. It now fails and writes
