@@ -65,6 +65,9 @@ the change.
   `Manager.Update`, `Save` and `UpdateFields` (including admin edits), in the
   database and on the struct. Updates no longer write generated columns or
   clear a zero `AutoNowAdd` timestamp (#291).
+- The warnings about generated ephemeral secrets are printed when the server
+  starts, not by every CLI command (`forge generate`, `forge version`, ...)
+  that loads the config. `config.Config.SecretWarnings` returns them (#294).
 - `forge version` prints the version the binary was installed from, and
   `forge new` pins that version in the new project's `go.mod` instead of
   `v0.1.0` (#286).

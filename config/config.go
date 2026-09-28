@@ -17,6 +17,9 @@ import (
 type Config struct {
 	*viper.Viper
 	generatedSecrets []string
+	// placeholderSecrets names the generated keys that replaced an insecure
+	// placeholder rather than a missing value; it only shapes the warning.
+	placeholderSecrets map[string]bool
 }
 
 // NewConfig creates a new configuration instance
@@ -172,11 +175,32 @@ func (c *Config) ensureSecrets() {
 		}
 		c.Viper.Set(key, hex.EncodeToString(buf[:]))
 		if isPlaceholderSecret(val) && val != "" {
-			log.Printf("forge/config: WARNING: %s is set to an insecure placeholder; overriding with a generated ephemeral value (set it explicitly for production)", key)
-		} else {
-			log.Printf("forge/config: WARNING: %s is not configured; using a generated ephemeral value (set it explicitly for production)", key)
+			if c.placeholderSecrets == nil {
+				c.placeholderSecrets = map[string]bool{}
+			}
+			c.placeholderSecrets[key] = true
 		}
 	}
+}
+
+// SecretWarnings returns one warning per security setting that still holds a
+// generated ephemeral value. Loading the config does not print them, so CLI
+// commands that never serve requests stay quiet; the server logs them when it
+// starts.
+func (c *Config) SecretWarnings() []string {
+	keys := c.GeneratedSecrets()
+	if len(keys) == 0 {
+		return nil
+	}
+	warnings := make([]string, 0, len(keys))
+	for _, key := range keys {
+		if c.placeholderSecrets[key] {
+			warnings = append(warnings, key+" is set to an insecure placeholder; overriding with a generated ephemeral value (set it explicitly for production)")
+		} else {
+			warnings = append(warnings, key+" is not configured; using a generated ephemeral value (set it explicitly for production)")
+		}
+	}
+	return warnings
 }
 
 // GeneratedSecrets returns the names of security settings whose values were

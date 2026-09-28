@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	stdlog "log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -156,6 +157,7 @@ func (s *Server) Start() error {
 	if err := s.validateProductionSecrets(); err != nil {
 		return err
 	}
+	s.warnEphemeralSecrets()
 	if s.logger != nil {
 		s.logger.Info("Starting server",
 			zap.String("address", s.Addr),
@@ -211,6 +213,22 @@ func (s *Server) serveUntil(ctx context.Context, onDone func()) error {
 		return fmt.Errorf("graceful shutdown: %w", err)
 	}
 	return <-serverErr
+}
+
+// warnEphemeralSecrets reports each security setting that holds a generated
+// ephemeral value. It runs when the server starts rather than when the config
+// loads, so CLI commands such as forge generate do not print it.
+func (s *Server) warnEphemeralSecrets() {
+	if s == nil || s.config == nil {
+		return
+	}
+	for _, warning := range s.config.SecretWarnings() {
+		if s.logger != nil {
+			s.logger.Warn(warning)
+		} else {
+			stdlog.Printf("forge/server: WARNING: %s", warning)
+		}
+	}
 }
 
 // isProductionEnv reports whether app.env names production. Secure cookies
