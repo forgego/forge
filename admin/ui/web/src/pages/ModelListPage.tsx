@@ -11,6 +11,7 @@ import {
   useSaveSavedView,
 } from "../api/hooks/adminHooks";
 import { adminAPI } from "../api/client";
+import { parseApiError } from "../api/errors";
 import {
   Table,
   TableBody,
@@ -51,6 +52,12 @@ import { ListPagination } from "../components/list/ListPagination";
 import { ListTableHeader } from "../components/list/ListTableHeader";
 import { ListRowActions } from "../components/list/ListRowActions";
 import { SaveViewDialog } from "../components/list/SaveViewDialog";
+import { BulkResultPanel } from "../components/list/BulkResultPanel";
+import {
+  bulkFailures,
+  bulkErrorsFromRejection,
+  type BulkResult,
+} from "../components/list/bulk-result";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
@@ -77,6 +84,7 @@ export default function ModelListPage() {
   const [saveViewOpen, setSaveViewOpen] = useState(false);
   const [saveViewName, setSaveViewName] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [bulkResult, setBulkResult] = useState<BulkResult | null>(null);
 
   const modelName = model as string;
 
@@ -154,22 +162,45 @@ export default function ModelListPage() {
     });
 
   // Bulk action mutation
-  const { mutateAsync: runAction, isPending: actionLoading } = useMutation({
+  // `mutate` (not mutateAsync): failures are reported by onError, and the
+  // callers do not await, so a rejected promise would go unhandled.
+  const { mutate: runAction, isPending: actionLoading } = useMutation({
     mutationFn: ({ action, ids }: { action: string; ids: (string | number)[] }) =>
       adminAPI.executeAction(modelName, action, { ids }),
-    onSuccess: (data) => {
-      toast({
-        title: "Success",
-        description: data.message || "Action executed successfully",
-      });
-      setSelectedIds([]);
+    onSuccess: (data, { action, ids }) => {
+      const failures = bulkFailures(data?.errors, ids);
+      const label = actionLabel(action);
+      if (failures.length > 0) {
+        // Partial success: report each skipped record and keep only those
+        // selected so the operator can inspect or retry them.
+        setBulkResult({ label, succeeded: data.affected ?? 0, failures });
+        setSelectedIds(failures.map((f) => f.id).filter((id) => ids.includes(id)));
+        toast({
+          title: "Partially applied",
+          description: data.message,
+          variant: "destructive",
+        });
+      } else {
+        setBulkResult(null);
+        setSelectedIds([]);
+        toast({
+          title: "Success",
+          description: data.message || "Action executed successfully",
+        });
+      }
       setBulkAction(null);
       queryClient.invalidateQueries({ queryKey: adminKeys.model(modelName) });
     },
-    onError: (err: any) => {
+    onError: (err: any, { action, ids }) => {
+      const failures = bulkFailures(bulkErrorsFromRejection(err), ids);
+      setBulkResult(
+        failures.length > 0
+          ? { label: actionLabel(action), succeeded: 0, failures }
+          : null
+      );
       toast({
-        title: "Error",
-        description: err.message || "Failed to execute action",
+        title: "Action failed",
+        description: parseApiError(err, "Failed to execute action").message,
         variant: "destructive",
       });
       setBulkAction(null);
@@ -177,6 +208,9 @@ export default function ModelListPage() {
   });
 
   const resetPage = () => setPage(1);
+
+  const actionLabel = (name: string) =>
+    metadata?.actions?.find((a) => a.name === name)?.label || name;
 
   const relationByField = useMemo(() => {
     const map = new Map<string, any>();
@@ -230,7 +264,7 @@ export default function ModelListPage() {
     } catch (err: any) {
       toast({
         title: "Delete failed",
-        description: err.message || "The item could not be removed.",
+        description: parseApiError(err, "The item could not be removed.").message,
         variant: "destructive",
       });
     } finally {
@@ -239,12 +273,17 @@ export default function ModelListPage() {
   };
 
   const handleBulkDeleteConfirm = async () => {
+    const ids = selectedIds;
     try {
-      const result = await bulkDeleteMutation.mutateAsync(selectedIds);
-      const total = selectedIds.length;
+      const result = await bulkDeleteMutation.mutateAsync(ids);
+      const total = ids.length;
       const deleted = result?.deleted ?? total;
-      const failed = result?.errors?.length ?? 0;
+      const failures = bulkFailures(result?.errors, ids);
+      const failed = failures.length;
       setSelectedIds([]);
+      setBulkResult(
+        failed > 0 ? { label: "Delete", succeeded: deleted, failures } : null
+      );
       if (failed > 0) {
         toast({
           title: "Partial delete",
@@ -258,9 +297,13 @@ export default function ModelListPage() {
         });
       }
     } catch (err: any) {
+      const failures = bulkFailures(bulkErrorsFromRejection(err), ids);
+      setBulkResult(
+        failures.length > 0 ? { label: "Delete", succeeded: 0, failures } : null
+      );
       toast({
         title: "Bulk Delete Failed",
-        description: err.message || "Failed to delete records.",
+        description: parseApiError(err, "Failed to delete records.").message,
         variant: "destructive",
       });
     } finally {
@@ -565,6 +608,12 @@ export default function ModelListPage() {
               setBulkDeleteConfirmOpen={setBulkDeleteConfirmOpen}
               bulkDeletePending={bulkDeleteMutation.isPending}
             />
+            {bulkResult && (
+              <BulkResultPanel
+                result={bulkResult}
+                onDismiss={() => setBulkResult(null)}
+              />
+            )}
           </CardHeader>
           <CardContent
             className="p-0 overflow-x-auto [background:linear-gradient(to_right,hsl(var(--surface-2))_30%,transparent),linear-gradient(to_right,transparent,hsl(var(--surface-2))_70%)_right,radial-gradient(farthest-side_at_0_50%,rgba(0,0,0,0.12),transparent),radial-gradient(farthest-side_at_100%_50%,rgba(0,0,0,0.12),transparent)_right] [background-repeat:no-repeat] [background-size:40px_100%,40px_100%,14px_100%,14px_100%] [background-attachment:local,local,scroll,scroll]"
