@@ -243,10 +243,17 @@ func TestChangedForeignKeyActionIsDetected(t *testing.T) {
 // must apply up, down and up again when a test database is configured.
 func regenerateWith(t *testing.T, driver core.Driver, source, name string) (string, string) {
 	t.Helper()
+	return regenerateFrom(t, driver, functionalModels, source, name)
+}
+
+// regenerateFrom is regenerateWith for an initial migration generated from
+// initial instead of functionalModels.
+func regenerateFrom(t *testing.T, driver core.Driver, initial, source, name string) (string, string) {
+	t.Helper()
 	modelsDir := t.TempDir()
 	migrationsDir := t.TempDir()
 	file := filepath.Join(modelsDir, "models.go")
-	if err := os.WriteFile(file, []byte(functionalModels), 0o600); err != nil {
+	if err := os.WriteFile(file, []byte(initial), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	generateMigration(t, modelsDir, migrationsDir, driver, "initial")
@@ -382,6 +389,21 @@ func TestChangedConstraintIsDetected(t *testing.T) {
 	if strings.Index(up, "DROP CONSTRAINT IF EXISTS books_pages_positive") > strings.Index(up, "ADD CONSTRAINT books_pages_positive") {
 		t.Errorf("up must drop the old constraint before adding the new one:\n%s", up)
 	}
+}
+
+// TestPostgresArrayColumnIsReadBack covers PostgreSQL array types, whose []
+// suffix the parser dropped, so the column was modified on every run and the
+// down migration cast it to the element type.
+func TestPostgresArrayColumnIsReadBack(t *testing.T) {
+	withTags := mustReplace(t, functionalModels, "\t\tschema.StringField(\"isbn\"),\n",
+		"\t\tschema.StringField(\"isbn\"),\n\t\tschema.StringField(\"tags\", schema.DBType(\"TEXT[]\")),\n")
+	up, _ := regenerateWith(t, core.DriverPostgreSQL, withTags, "add_tags")
+	assertContainsAll(t, "up", up, `ALTER TABLE books ADD COLUMN "tags" TEXT[];`)
+
+	changed := mustReplace(t, withTags, `schema.DBType("TEXT[]")`, `schema.DBType("VARCHAR(40)[]")`)
+	up, down := regenerateFrom(t, core.DriverPostgreSQL, withTags, changed, "change_tags")
+	assertContainsAll(t, "up", up, `ALTER TABLE books ALTER COLUMN "tags" TYPE VARCHAR(40)[] USING ("tags"::VARCHAR(40)[]);`)
+	assertContainsAll(t, "down", down, `ALTER TABLE books ALTER COLUMN "tags" TYPE TEXT[] USING ("tags"::TEXT[]);`)
 }
 
 // TestSQLiteDeclaresNewTableConstraintsInCreateTable covers SQLite, which has

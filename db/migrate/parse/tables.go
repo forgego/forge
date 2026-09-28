@@ -314,14 +314,16 @@ func splitColumnDefinitions(defs string) []string {
 const SQLTypeOption = core.SQLTypeOption
 
 // columnTypeRegex matches a column type, including the multi-word types the
-// SQL builder emits (DOUBLE PRECISION, TIMESTAMP WITH TIME ZONE).
-var columnTypeRegex = regexp.MustCompile(`(?i)^\s+((?:DOUBLE\s+PRECISION|CHARACTER\s+VARYING|(?:TIMESTAMP|TIME)\s+WITH(?:OUT)?\s+TIME\s+ZONE|\w+)(?:\s*\([^)]+\))?)`)
+// SQL builder emits (DOUBLE PRECISION, TIMESTAMP WITH TIME ZONE) and
+// PostgreSQL array suffixes (TEXT[], INTEGER[3][]).
+var columnTypeRegex = regexp.MustCompile(`(?i)^\s+((?:DOUBLE\s+PRECISION|CHARACTER\s+VARYING|(?:TIMESTAMP|TIME)\s+WITH(?:OUT)?\s+TIME\s+ZONE|\w+)(?:\s*\([^)]+\))?(?:\s*\[\s*\d*\s*\])*)`)
 
 // NormalizeSQLType upper-cases a SQL type and collapses its whitespace so that
 // equivalent spellings compare equal.
 func NormalizeSQLType(sqlType string) string {
 	normalized := strings.Join(strings.Fields(strings.ToUpper(sqlType)), " ")
 	normalized = strings.ReplaceAll(normalized, " (", "(")
+	normalized = strings.ReplaceAll(normalized, " [", "[")
 	return strings.ReplaceAll(normalized, ", ", ",")
 }
 
