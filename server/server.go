@@ -255,10 +255,19 @@ func (s *Server) validateProductionSecrets() error {
 			missing = append(missing, key)
 		}
 	}
-	if len(missing) == 0 {
+	var problems []string
+	if len(missing) > 0 {
+		problems = append(problems, "production requires explicit "+strings.Join(missing, ", "))
+	}
+	// Debug mode selects the development logger and enables profiling
+	// routes, so it is rejected in production like a missing secret.
+	if s.settings.App.Debug {
+		problems = append(problems, "production requires app.debug=false")
+	}
+	if len(problems) == 0 {
 		return nil
 	}
-	return fmt.Errorf("production requires explicit %s", strings.Join(missing, ", "))
+	return errors.New(strings.Join(problems, "; "))
 }
 
 // Shutdown gracefully shuts down the server

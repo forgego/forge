@@ -43,7 +43,7 @@ func NewConfig() *Config {
 	// Set defaults
 	v.SetDefault("app.name", "forge")
 	v.SetDefault("app.env", "development")
-	v.SetDefault("app.debug", true)
+	v.SetDefault("app.debug", false)
 	v.SetDefault("app.version", "0.1.0")
 	v.SetDefault("server.host", "localhost")
 	v.SetDefault("server.port", "8000")

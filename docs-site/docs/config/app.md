@@ -9,4 +9,6 @@ image: /social-card.png
 - Name
 - Env
 - Version
-- Debug
+- Debug (`app.debug`, default `false`): selects the development logger and
+  allows the profiling routes. Rejected at startup when `app.env` is
+  `production`.

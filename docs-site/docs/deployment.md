@@ -75,7 +75,7 @@ manager; never ship the `.env` file that `forge new` generates for local use.
 | Variable | Production value | Why |
 | --- | --- | --- |
 | `FORGE_APP_ENV` | `production` | Turns on secret validation and `Secure` cookies. Case-insensitive. |
-| `FORGE_APP_DEBUG` | `false` | The default is `true`, which selects the debug logger. It is not rejected in production, so set it. |
+| `FORGE_APP_DEBUG` | `false` (the default) | `true` selects the debug logger and is rejected in production. `forge new` sets it to `true` only in the local `.env`. |
 | `FORGE_SERVER_HOST` | `0.0.0.0` or the proxy-facing address | The default `localhost` is unreachable from outside a container. |
 | `FORGE_SERVER_PORT` | your port | Default `8000`. |
 | `FORGE_SERVER_TRUSTED_PROXIES` | your proxy's address or CIDR | Forwarding headers are honored only from these peers, for rate limiting and the admin login lockout. Empty by default: the TCP peer address is used. |
@@ -92,8 +92,10 @@ manager; never ship the `.env` file that `forge new` generates for local use.
   listen unless all three secrets are set explicitly (not empty, not a
   placeholder such as `change-me`, not generated at startup) and the process
   exits with status 1.
+- Debug mode: with `app.env` set to production, `Server.Start` also refuses to
+  listen while `app.debug` is true.
 
-**What is not checked**: `app.debug`, `server.host`, `database.sslmode`, admin
+**What is not checked**: `server.host`, `database.sslmode`, admin
 credentials, and whether TLS is in front of the server. The server speaks
 plain HTTP only; terminate TLS at the proxy. `Secure` cookies are only useful
 if clients reach the proxy over HTTPS.

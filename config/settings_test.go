@@ -36,8 +36,9 @@ func TestLoadSettings_AppSettings(t *testing.T) {
 		})
 	}
 
-	if settings.App.Debug != true {
-		t.Errorf("App.Debug = %v, want true", settings.App.Debug)
+	// Regression for #290: debug is opt-in.
+	if settings.App.Debug != false {
+		t.Errorf("App.Debug = %v, want false", settings.App.Debug)
 	}
 }
 

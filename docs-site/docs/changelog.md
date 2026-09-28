@@ -36,6 +36,10 @@ the change.
   violate them; clean orphan rows first.
 - `/info` is no longer registered by default. Set `server.info_endpoint:
   true` to expose it (#290).
+- `app.debug` defaults to `false`, and `Server.Start` refuses to listen with
+  `app.debug` true when `app.env` is production. Projects from `forge new`
+  turn it on in the local `.env`; older projects that relied on the default
+  set `FORGE_APP_DEBUG=true` for development (#290).
 
 ### Fixed
 

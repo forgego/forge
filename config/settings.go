@@ -85,7 +85,7 @@ func LoadSettings(cfg *Config) *Settings {
 		App: AppSettings{
 			Name:    cfg.GetString("app.name", "forge"),
 			Env:     cfg.GetString("app.env", "development"),
-			Debug:   cfg.GetBool("app.debug", true),
+			Debug:   cfg.GetBool("app.debug", false),
 			Version: cfg.GetString("app.version", "0.1.0"),
 		},
 		Server: ServerSettings{

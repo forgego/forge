@@ -103,3 +103,17 @@ func TestCreateConfigFileKeepsSecretsOutOfCommittedConfig(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, string(gitignoreBytes), ".env")
 }
+
+// app.debug defaults to false (#290); forge new keeps it on for local
+// development through the uncommitted .env, never through config.yaml.
+func TestCreateConfigFileEnablesDebugOnlyInLocalEnv(t *testing.T) {
+	projectPath := filepath.Join(t.TempDir(), "project")
+	require.NoError(t, os.MkdirAll(filepath.Join(projectPath, "config"), 0755))
+	require.NoError(t, createConfigFile(projectPath, "sqlite"))
+
+	require.Equal(t, "true", readDotEnv(t, filepath.Join(projectPath, ".env"))["FORGE_APP_DEBUG"])
+
+	configBytes, err := os.ReadFile(filepath.Join(projectPath, "config", "config.yaml"))
+	require.NoError(t, err)
+	require.NotContains(t, string(configBytes), "debug")
+}
