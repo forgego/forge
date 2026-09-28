@@ -24,24 +24,47 @@ func NewTableParser() *TableParser {
 	}
 }
 
+// tableConstraintRegex matches a table-level constraint in CREATE TABLE,
+// which is not a column.
+var tableConstraintRegex = regexp.MustCompile(`(?i)^(?:CONSTRAINT\s|FOREIGN\s+KEY|PRIMARY\s+KEY\s*\(|UNIQUE\s*\(|CHECK\s*\()`)
+
+// tableForeignKeyRegex matches a table-level foreign key, as SQLite migrations
+// declare them inside CREATE TABLE.
+var tableForeignKeyRegex = regexp.MustCompile(`(?i)^(?:CONSTRAINT\s+["']?\w+["']?\s+)?FOREIGN\s+KEY\s*\(\s*["']?(\w+)["']?\s*\)\s*REFERENCES\s+["']?(\w+)["']?\s*\(\s*["']?\w+["']?\s*\)(?:\s+ON\s+DELETE\s+(SET\s+NULL|SET\s+DEFAULT|NO\s+ACTION|\w+))?(?:\s+ON\s+UPDATE\s+(SET\s+NULL|SET\s+DEFAULT|NO\s+ACTION|\w+))?`)
+
 // ParseCreateTable parses a CREATE TABLE statement and returns a CreateTable change
 func (p *TableParser) ParseCreateTable(sql string) (*core.CreateTable, error) {
+	createTable, _, err := p.ParseCreateTableWithForeignKeys(sql)
+	return createTable, err
+}
+
+// ParseCreateTableWithForeignKeys parses a CREATE TABLE statement into the
+// table and the foreign keys it declares as table constraints, which is how
+// SQLite migrations add them.
+func (p *TableParser) ParseCreateTableWithForeignKeys(sql string) (*core.CreateTable, []*core.AddForeignKey, error) {
 	matches := p.createTableRegex.FindStringSubmatchIndex(sql)
 	if len(matches) < 4 {
-		return nil, fmt.Errorf("could not parse CREATE TABLE statement")
+		return nil, nil, fmt.Errorf("could not parse CREATE TABLE statement")
 	}
 
 	tableName := sql[matches[2]:matches[3]]
 	columnsDef, err := extractColumnDefinitions(sql, matches[1])
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Parse columns
 	var fields []generator.FieldDefinition
+	var foreignKeys []*core.AddForeignKey
 	columnParts := splitColumnDefinitions(columnsDef)
 
 	for _, colDef := range columnParts {
+		if trimmed := strings.TrimSpace(colDef); tableConstraintRegex.MatchString(trimmed) {
+			if fk := parseTableForeignKey(tableName, trimmed); fk != nil {
+				foreignKeys = append(foreignKeys, fk)
+			}
+			continue
+		}
 		field, err := p.parseColumnDefinition(colDef)
 		if err != nil {
 			// Skip columns that can't be parsed
@@ -59,7 +82,33 @@ func (p *TableParser) ParseCreateTable(sql string) (*core.CreateTable, error) {
 		},
 	}
 
-	return &core.CreateTable{Table: def}, nil
+	return &core.CreateTable{Table: def}, foreignKeys, nil
+}
+
+// parseTableForeignKey parses a table-level FOREIGN KEY constraint.
+func parseTableForeignKey(tableName, constraint string) *core.AddForeignKey {
+	matches := tableForeignKeyRegex.FindStringSubmatch(constraint)
+	if matches == nil {
+		return nil
+	}
+	onDelete, onUpdate := "NO ACTION", "NO ACTION"
+	if matches[3] != "" {
+		onDelete = normalizeCascadeAction(matches[3])
+	}
+	if matches[4] != "" {
+		onUpdate = normalizeCascadeAction(matches[4])
+	}
+	return &core.AddForeignKey{
+		Table: tableName,
+		Relation: generator.RelationDefinition{
+			Name: matches[1],
+			Options: map[string]interface{}{
+				"on_delete": denormalizeCascadeAction(onDelete),
+				"on_update": denormalizeCascadeAction(onUpdate),
+			},
+		},
+		TargetTable: matches[2],
+	}
 }
 
 func extractColumnDefinitions(sql string, searchStart int) (string, error) {
@@ -99,8 +148,7 @@ func (p *TableParser) parseColumnDefinition(colDef string) (generator.FieldDefin
 	remaining := colDef[len(nameMatch[0]):]
 
 	// Extract SQL type
-	typeRegex := regexp.MustCompile(`^\s+(\w+(?:\([^)]+\))?)`)
-	typeMatch := typeRegex.FindStringSubmatch(remaining)
+	typeMatch := columnTypeRegex.FindStringSubmatch(remaining)
 	if len(typeMatch) < 2 {
 		return generator.FieldDefinition{}, fmt.Errorf("could not parse column type")
 	}
@@ -113,7 +161,7 @@ func (p *TableParser) parseColumnDefinition(colDef string) (generator.FieldDefin
 		Name:    columnName,
 		Type:    mapSQLTypeToFieldType(sqlType),
 		GoType:  mapSQLTypeToGoType(sqlType),
-		Options: make(map[string]interface{}),
+		Options: map[string]interface{}{SQLTypeOption: NormalizeSQLType(sqlType)},
 	}
 
 	// Extract options from sqlType like VARCHAR(255), NUMERIC(10, 2)
@@ -225,9 +273,25 @@ func splitColumnDefinitions(defs string) []string {
 	return columns
 }
 
+// SQLTypeOption is the field option under which the parser records a column's
+// SQL type as a migration file declared it (see core.SQLTypeOption).
+const SQLTypeOption = core.SQLTypeOption
+
+// columnTypeRegex matches a column type, including the multi-word types the
+// SQL builder emits (DOUBLE PRECISION, TIMESTAMP WITH TIME ZONE).
+var columnTypeRegex = regexp.MustCompile(`(?i)^\s+((?:DOUBLE\s+PRECISION|CHARACTER\s+VARYING|(?:TIMESTAMP|TIME)\s+WITH(?:OUT)?\s+TIME\s+ZONE|\w+)(?:\s*\([^)]+\))?)`)
+
+// NormalizeSQLType upper-cases a SQL type and collapses its whitespace so that
+// equivalent spellings compare equal.
+func NormalizeSQLType(sqlType string) string {
+	normalized := strings.Join(strings.Fields(strings.ToUpper(sqlType)), " ")
+	normalized = strings.ReplaceAll(normalized, " (", "(")
+	return strings.ReplaceAll(normalized, ", ", ",")
+}
+
 // mapSQLTypeToFieldType maps SQL types to field types
 func mapSQLTypeToFieldType(sqlType string) string {
-	sqlType = strings.ToUpper(sqlType)
+	sqlType = NormalizeSQLType(sqlType)
 
 	// Remove size/precision
 	if idx := strings.Index(sqlType, "("); idx > 0 {
@@ -239,7 +303,7 @@ func mapSQLTypeToFieldType(sqlType string) string {
 		return "Int64"
 	case "SMALLINT":
 		return "Int32"
-	case "TEXT", "VARCHAR", "CHAR":
+	case "TEXT", "VARCHAR", "CHAR", "CHARACTER VARYING":
 		return "String"
 	case "BOOLEAN", "BOOL":
 		return "Bool"
@@ -249,9 +313,9 @@ func mapSQLTypeToFieldType(sqlType string) string {
 		return "Decimal"
 	case "DATE":
 		return "Date"
-	case "TIMESTAMP", "TIMESTAMP WITH TIME ZONE":
+	case "TIMESTAMP", "TIMESTAMP WITH TIME ZONE", "TIMESTAMP WITHOUT TIME ZONE":
 		return "DateTime"
-	case "TIME":
+	case "TIME", "TIME WITH TIME ZONE", "TIME WITHOUT TIME ZONE":
 		return "Time"
 	case "UUID":
 		return "UUID"

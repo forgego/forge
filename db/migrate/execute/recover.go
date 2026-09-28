@@ -426,10 +426,12 @@ func (r *Recovery) GetRecoverySteps(version string, errorMsg string) []string {
 		steps = append(steps, "5. Verify table doesn't already exist or has different structure")
 	}
 
+	// Marking the version clean records it as applied. That is only right when
+	// its changes are in the database; a rolled-back file must be re-applied.
 	steps = append(steps,
-		"6. Fix the issue manually if needed",
-		fmt.Sprintf("7. Mark migration as clean: UPDATE schema_migrations SET dirty = false WHERE version = %s", version),
-		"8. Retry the migration",
+		"6. Fix the migration file, the database, or both",
+		"7. If the failed migration's changes were rolled back, force the previous version and run 'forge migrate up' again",
+		fmt.Sprintf("8. If you completed the migration's changes by hand, mark it applied: forge migrate recover --clean --version %s", version),
 	)
 
 	return steps

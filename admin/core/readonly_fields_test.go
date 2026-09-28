@@ -89,6 +89,31 @@ func TestBuildFieldsMetadata_AutoManagedAndReadOnlyFields(t *testing.T) {
 	assert.False(t, metaFieldMap["notes"].Required)
 }
 
+func TestBuildMetadata_ConfiguredReadOnlyFieldsAreReadOnly(t *testing.T) {
+	s := testSchema{
+		fields: []schema.Field{
+			{Name: "name", Type: schema.TypeString, Editable: true, Required: true},
+			{Name: "level", Type: schema.TypeInt32, Editable: true, Required: true},
+			{Name: "notes", Type: schema.TypeString, Editable: true},
+		},
+	}
+
+	meta, err := buildMetadata[struct{}](s, &Config[struct{}]{ReadOnlyFields: []string{"level", "missing"}}, "Item")
+	require.NoError(t, err)
+	require.Len(t, meta.Fields, 3)
+
+	byName := make(map[string]FieldMetadata, len(meta.Fields))
+	for _, f := range meta.Fields {
+		byName[f.Name] = f
+	}
+	// The write path drops ReadOnlyFields, so metadata must say so too.
+	assert.True(t, byName["level"].ReadOnly)
+	assert.False(t, byName["level"].Required)
+	assert.False(t, byName["name"].ReadOnly)
+	assert.True(t, byName["name"].Required)
+	assert.False(t, byName["notes"].ReadOnly)
+}
+
 func TestIsAutoManaged(t *testing.T) {
 	tests := []struct {
 		name     string

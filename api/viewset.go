@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"net/http"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -75,6 +76,14 @@ type BaseViewSet struct {
 	ExcludeResponseFields []string
 	// ReadOnlyRequestFields holds request keys ignored on create and update; nil accepts every field.
 	ReadOnlyRequestFields []string
+	// RejectUnknownRequestFields makes create and update fail with 400 when
+	// the request body has a key that is not a model field, a declared
+	// serializer field, or an ignored read-only key. False keeps the
+	// historical behavior of silently ignoring unknown keys.
+	RejectUnknownRequestFields bool
+	// ReadOnly exposes only list and retrieve. Create, update, partial update
+	// and destroy respond 405, and the Queryset needs only read operations.
+	ReadOnly bool
 	// Authentication uses the current defaults when nil; a non-nil empty slice disables authentication.
 	Authentication []authentication.Authentication
 	// Permissions uses the current defaults when nil; a non-nil empty slice disables permission checks.
@@ -124,13 +133,18 @@ func NewBaseViewSet(serializer func() Serializer, queryset, model interface{}) *
 
 // getManager gets the manager for operations
 func (vs *BaseViewSet) getManager() reflect.Value {
-	// If Queryset is set and looks like a manager (has Create method), use it
+	// If Queryset is set and looks like a manager (has Create method, or Get
+	// for a read-only viewset), use it
 	if vs.Queryset != nil {
 		qsValue := reflect.ValueOf(vs.Queryset)
 		qsType := qsValue.Type()
 
+		required := "Create"
+		if vs.ReadOnly {
+			required = "Get"
+		}
 		// Use cached method lookup instead of MethodByName
-		if _, ok := globalCache.GetMethod(qsType, "Create"); ok {
+		if _, ok := globalCache.GetMethod(qsType, required); ok {
 			return qsValue
 		}
 	}
@@ -180,16 +194,18 @@ func (vs *BaseViewSet) viewForRequest(r *http.Request) *BaseViewSet {
 		return vs
 	}
 	return &BaseViewSet{
-		Serializer:            vs.Serializer,
-		Queryset:              vs.Queryset,
-		Model:                 vs.Model,
-		ExcludeResponseFields: vs.ExcludeResponseFields,
-		ReadOnlyRequestFields: vs.ReadOnlyRequestFields,
-		Authentication:        vs.Authentication,
-		Permissions:           vs.Permissions,
-		Throttles:             vs.Throttles,
-		ErrorWriter:           vs.ErrorWriter,
-		action:                action,
+		Serializer:                 vs.Serializer,
+		Queryset:                   vs.Queryset,
+		Model:                      vs.Model,
+		ExcludeResponseFields:      vs.ExcludeResponseFields,
+		ReadOnlyRequestFields:      vs.ReadOnlyRequestFields,
+		RejectUnknownRequestFields: vs.RejectUnknownRequestFields,
+		ReadOnly:                   vs.ReadOnly,
+		Authentication:             vs.Authentication,
+		Permissions:                vs.Permissions,
+		Throttles:                  vs.Throttles,
+		ErrorWriter:                vs.ErrorWriter,
+		action:                     action,
 	}
 }
 
@@ -401,7 +417,7 @@ func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 // Create handles POST /resource/
 func (vs *BaseViewSet) Create(w http.ResponseWriter, r *http.Request) {
 	r = withAction(r, "create")
-	if !vs.checkRequest(w, r, "create") {
+	if !vs.checkRequest(w, r, "create") || !vs.allowWrite(w, r) {
 		return
 	}
 	ctx := r.Context()
@@ -412,9 +428,12 @@ func (vs *BaseViewSet) Create(w http.ResponseWriter, r *http.Request) {
 		_ = forgehttp.SendError(w, http.StatusBadRequest, "Invalid JSON")
 		return
 	}
-	applySchemaDefaults(vs.Model, data)
 
 	serializer := vs.Serializer()
+	if !vs.allowRequestFields(w, r, serializer, data) {
+		return
+	}
+	applySchemaDefaults(vs.Model, data)
 	stripReadOnlyInput(serializer, data)
 	serializer.SetData(data)
 
@@ -573,7 +592,7 @@ func (vs *BaseViewSet) Update(w http.ResponseWriter, r *http.Request) {
 
 func (vs *BaseViewSet) update(w http.ResponseWriter, r *http.Request, action string) {
 	r = withAction(r, action)
-	if !vs.checkRequest(w, r, action) {
+	if !vs.checkRequest(w, r, action) || !vs.allowWrite(w, r) {
 		return
 	}
 	ctx := r.Context()
@@ -600,6 +619,9 @@ func (vs *BaseViewSet) update(w http.ResponseWriter, r *http.Request, action str
 	}
 
 	serializer := vs.Serializer()
+	if !vs.allowRequestFields(w, r, serializer, data) {
+		return
+	}
 	stripReadOnlyInput(serializer, data)
 	serializer.SetData(data)
 
@@ -666,6 +688,15 @@ func (vs *BaseViewSet) update(w http.ResponseWriter, r *http.Request, action str
 		ignoredKeys = append(ignoredKeys, ro.ReadOnlyFields()...)
 	}
 	ignoredKeys = append(ignoredKeys, vs.ReadOnlyRequestFields...)
+
+	// PUT replaces the record, so it must carry every required writable
+	// field; otherwise the stored value would silently survive, as in PATCH.
+	if action == "update" {
+		if missing := missingRequiredFields(instance, data, ignoredKeys); len(missing) > 0 {
+			vs.handleException(w, r, exceptions.NewValidationError(missing))
+			return
+		}
+	}
 
 	// Populate from data, ignoring primary-key fields
 	if err := populateFromMap(instance, data, ignoredKeys...); err != nil {
@@ -739,7 +770,7 @@ func (vs *BaseViewSet) PartialUpdate(w http.ResponseWriter, r *http.Request) {
 // Destroy handles DELETE /resource/{id}/
 func (vs *BaseViewSet) Destroy(w http.ResponseWriter, r *http.Request) {
 	r = withAction(r, "destroy")
-	if !vs.checkRequest(w, r, "destroy") {
+	if !vs.checkRequest(w, r, "destroy") || !vs.allowWrite(w, r) {
 		return
 	}
 	ctx := r.Context()
@@ -902,8 +933,14 @@ func NewRouter(prefix string) *Router {
 	}
 }
 
-// Register registers a viewset with a resource name
+// Register registers a viewset with a resource name. It panics when the
+// viewset's configuration cannot serve requests (see
+// BaseViewSet.CheckConfiguration), like Action does for an invalid method:
+// both are programming errors that must stop startup, not per-request 500s.
 func (r *Router) Register(resource string, vs ViewSet) {
+	if err := checkViewSet(resource, vs); err != nil {
+		panic(err.Error())
+	}
 	r.routes[resource] = vs
 }
 
@@ -988,8 +1025,20 @@ func (r *Router) registerActions(router *forgehttp.Router) {
 	}
 }
 
-// RegisterRoutes registers all routes on a chi router
+// RegisterRoutes registers all routes on a chi router. It checks every
+// viewset again first, so configuration changed after Register still fails
+// at startup, and panics before mounting any route when one is invalid.
 func (r *Router) RegisterRoutes(router *forgehttp.Router) {
+	resources := make([]string, 0, len(r.routes))
+	for resource := range r.routes {
+		resources = append(resources, resource)
+	}
+	sort.Strings(resources)
+	for _, resource := range resources {
+		if err := checkViewSet(resource, r.routes[resource]); err != nil {
+			panic(err.Error())
+		}
+	}
 	for resource, vs := range r.routes {
 		r.registerResourceRoutes(router, resource, vs)
 	}
@@ -1160,14 +1209,17 @@ func parseFilterValue(raw string) interface{} {
 	if raw == "" {
 		return raw
 	}
-	if boolVal, err := strconv.ParseBool(raw); err == nil {
-		return boolVal
-	}
+	// Numbers before booleans: strconv.ParseBool accepts "1" and "0", and
+	// PostgreSQL rejects a boolean compared with an integer column such as a
+	// foreign key (?project_id=1). A number still matches a boolean column.
 	if intVal, err := strconv.ParseInt(raw, 10, 64); err == nil {
 		return intVal
 	}
 	if floatVal, err := strconv.ParseFloat(raw, 64); err == nil {
 		return floatVal
+	}
+	if boolVal, err := strconv.ParseBool(raw); err == nil {
+		return boolVal
 	}
 	return raw
 }
@@ -1485,6 +1537,44 @@ func schemaFieldsByRequestName(instance interface{}) map[string]*schema.Field {
 		}
 	}
 	return result
+}
+
+// missingRequiredFields returns a validation error, keyed by request name,
+// for each required, request-writable schema field without a default that
+// data does not name under any of its names. Fields in ignoredKeys are not
+// writable.
+func missingRequiredFields(instance interface{}, data map[string]interface{}, ignoredKeys []string) map[string][]string {
+	modelSchema, ok := instance.(schema.Schema)
+	if !ok {
+		return nil
+	}
+	present := make(map[string]bool, len(data)+len(ignoredKeys))
+	for key := range data {
+		present[strings.ToLower(key)] = true
+	}
+	ignored := make(map[string]bool, len(ignoredKeys))
+	for _, key := range ignoredKeys {
+		ignored[strings.ToLower(key)] = true
+	}
+	missing := map[string][]string{}
+fields:
+	for _, field := range modelSchema.Fields() {
+		// A field with a default is optional, as it is on create.
+		if !field.Required || !field.Editable || field.Default != nil || isRequestReadOnly(field) {
+			continue
+		}
+		for _, name := range resolvedFieldNames(instance, field) {
+			if present[strings.ToLower(name)] || ignored[strings.ToLower(name)] {
+				continue fields
+			}
+		}
+		requestName := field.Name
+		if resolved, ok := schema.ResolveField(instance, field); ok && resolved.JSONName != "" && resolved.JSONName != "-" {
+			requestName = resolved.JSONName
+		}
+		missing[requestName] = []string{"is required"}
+	}
+	return missing
 }
 
 func schemaFieldForStructField(fields map[string]*schema.Field, field reflect.StructField, jsonName, dbName string) *schema.Field {

@@ -6,7 +6,7 @@ image: /social-card.png
 
 # Features
 
-Forge provides a comprehensive toolkit for building web applications in Go. This page outlines all the major features organized by category.
+Forge provides a toolkit for building web applications in Go. This page outlines the major features by category. It describes what exists, not how well it is tested: the [support contract](/docs/status/) gives each capability a tier (supported, partially tested, experimental or not implemented) with its test evidence, and wins where the two differ.
 
 ## Core Framework
 
@@ -23,9 +23,8 @@ Forge provides a comprehensive toolkit for building web applications in Go. This
 ### Code Generation
 - Auto-generate type-safe managers for each model
 - Generate field expressions for compile-time query validation (`orm.Q`)
-- Create React 19 admin interfaces automatically
-- Build boilerplate for APIs, serializers, and handlers
-- CLI commands: `forge generate`, `forge new`, `forge routes`, `forge check`
+- Build REST serializers, viewsets and routes (`forge generate --api`)
+- CLI commands: `forge generate`, `forge new`, `forge add`, `forge check`
 
 ### Type-Safe ORM
 - QuerySet API for filtering, ordering, slicing, and aggregating data
@@ -37,13 +36,13 @@ Forge provides a comprehensive toolkit for building web applications in Go. This
 - Eager loading via `SelectRelated` (SQL JOINs) and `PrefetchRelated` (batched queries)
 
 ### Database Layer & Migrations
-- SQLite and PostgreSQL support with connection pooling
+- PostgreSQL (tested) and SQLite (experimental) with connection pooling
 - **AST-Driven Migrations**: Introspects Go AST code to detect model diffs automatically
 - Cryptographic SHA-256 checksums on all migration files to detect drift
-- Disaster recovery with `forge migrate recover --verify` and `forge migrate recover --force`
-- Reversible migrations with explicit `Up` and `Down` builders
-- Query optimization and lazy execution
-- Support for raw SQL queries and atomic ACID transactions (`orm.WithTransaction`)
+- Recovery with `forge migrate recover --verify`, `forge migrate recover --clean` and `forge migrate force <version>`
+- Reversible migrations as paired `.up.sql` and `.down.sql` files
+- Lazy QuerySets: nothing runs until you execute the query
+- Raw SQL through the `*sql.DB` embedded in `db.DB`, and transactions with savepoints (`db.WithTx`, `Manager.WithTx`)
 
 ## ORM & Queries
 
@@ -70,17 +69,14 @@ Forge provides a comprehensive toolkit for building web applications in Go. This
 - Reverse relation queries
 
 ### Aggregations
-- `Aggregate()` - Compute aggregate values
+- `AggregateValues()` - Compute Count, Sum, Avg, Min and Max over a QuerySet (ungrouped)
 - `Annotate()` - Add computed fields
-- Built-in aggregates: Count, Sum, Avg, Min, Max
-- Custom aggregate functions
-- Group by support
+- Not implemented yet: grouped aggregates (`GROUP BY`) and custom aggregate functions
 
 ### Bulk Operations
 - `BulkCreate()` - Insert multiple records
-- `BulkUpdate()` - Update multiple records
+- `BulkUpdate()` - Apply several updates (one `UPDATE` statement per entry)
 - `UpdateBuilder()` - Build complex updates
-- Batch operations for performance
 
 ## Advanced Filtering
 
@@ -99,12 +95,6 @@ Forge provides a comprehensive toolkit for building web applications in Go. This
 - Null/not null checks
 - In/not in for sets
 
-### Filter Widgets
-- Auto-suggest for text fields
-- SQL preview before execution
-- Filter validation and sanitization
-- Custom filter implementations
-
 ## Admin Interface
 
 ### Admin Registry
@@ -116,7 +106,6 @@ Forge provides a comprehensive toolkit for building web applications in Go. This
 ### List Views
 - Customizable column display
 - Sortable columns
-- Inline editing
 - Bulk actions (delete, export, custom)
 - Pagination controls
 
@@ -124,23 +113,22 @@ Forge provides a comprehensive toolkit for building web applications in Go. This
 - Auto-generated forms from models
 - Field widgets (text, select, date picker, etc.)
 - Form validation
-- Custom form layouts
-- Related object selection
+- Fieldsets
+- Related object selection and inline relations
 
 ### Admin Features
 - Full-text search across fields
 - Advanced filtering sidebar
 - Action menu for bulk operations
 - Export to CSV/JSON
-- Change history tracking
+- Change history tracking (kept in process memory; lost on restart)
 - Permission-based access control
 
 ### Customization
-- Override templates
-- Add custom views and pages
 - Register custom actions
-- Plugin system for extensions
-- Theme customization
+- Per-object permission hooks
+- Light and dark themes
+- Admin and API plugins are not implemented (`registry.RegisterPlugin` returns `NotImplemented`)
 
 ## REST API Framework
 
@@ -185,7 +173,7 @@ Forge provides a comprehensive toolkit for building web applications in Go. This
 - Burst protection
 
 ### API Features
-- Pagination: limit/offset, cursor, page number
+- Page-number pagination (`page`, `page_size`)
 - Ordering by fields
 - Search across fields
 - Filtering with query params
@@ -199,10 +187,8 @@ Forge provides a comprehensive toolkit for building web applications in Go. This
 - Accept header handling
 
 ### OpenAPI
-- Auto-generated OpenAPI/Swagger docs
-- Interactive API explorer
+- Auto-generated OpenAPI document
 - Schema definitions
-- Request/response examples
 
 ## Identity & Auth
 
@@ -234,9 +220,11 @@ Forge provides a comprehensive toolkit for building web applications in Go. This
 - Customizable router
 - Middleware stack
 - Static file serving
-- Graceful shutdown
+- Graceful shutdown on SIGINT/SIGTERM (`StartWithGracefulShutdown`)
 
 ### Middleware
+Request IDs, error handling, logging, sessions and CSRF are installed by `server.NewServer`; the rest are available to add with `Router.Use`.
+
 - Request ID tracking
 - Structured logging
 - Panic recovery
@@ -251,7 +239,7 @@ Forge provides a comprehensive toolkit for building web applications in Go. This
 - Health check endpoints
 - Readiness probes
 - Liveness probes
-- Metrics collection
+- Metrics endpoint (reports uptime only; no Prometheus integration)
 - Request logging
 - Performance profiling
 
@@ -260,7 +248,7 @@ Forge provides a comprehensive toolkit for building web applications in Go. This
 ### Logging
 - Structured logging with levels (debug, info, warn, error)
 - Multiple output formats (console, JSON)
-- Multiple destinations (console, file, remote)
+- Destinations: console and file (remote output is not implemented)
 - Sampling for high-volume logs
 - Stacktrace control
 - Request ID correlation
@@ -283,12 +271,11 @@ Forge provides a comprehensive toolkit for building web applications in Go. This
 
 ### Database Migrations
 - `forge makemigrations` - Generate migrations
-- `forge migrate` - Apply migrations
-- `forge migrate up` - Run specific migration
-- `forge migrate down` - Rollback migration
+- `forge migrate up` - Apply all pending migrations
 - `forge migrate status` - Check migration state
-- `forge migrate rollback` - Rollback last migration
-- `forge migrate squash` - Combine migrations
+- `forge migrate rollback` - Roll back the last applied migration
+- `forge migrate recover`, `forge migrate force` - Recover from a dirty or altered history
+- `forge migrate squash` - Not implemented yet
 
 ### User Management
 - `forge createsuperuser` - Create admin user
@@ -311,30 +298,20 @@ Forge provides a comprehensive toolkit for building web applications in Go. This
 ### Database Config
 - Connection settings (host, port, database, user, password)
 - Connection pooling (max connections, idle connections, lifetime)
-- SSL/TLS settings
-- Query logging
-- Timezone settings
+- SSL mode (`database.sslmode`)
 
 ### Server Config
 - Host and port binding
-- Debug mode
-- Secret key management
-- Allowed hosts
-- CORS settings
-- Static files configuration
+- Read and write timeouts, graceful shutdown timeout, request size limit
+- Health check path, metrics endpoint, static files
 
 ### Security Config
-- CSRF protection
-- Session settings
-- Cookie configuration
-- Security headers
-- Rate limiting
+- Secret key, session secret and CSRF secret (required in production)
+- CSRF-exempt paths
 
 ### Logging Config
-- Log levels per module
-- Output formats
-- Destinations
-- Rotation settings
+- Log level and output format
+- Console and file destinations, file rotation
 - Sampling rules
 
 ## What Makes Forge Different
@@ -360,23 +337,20 @@ Forge provides a comprehensive toolkit for building web applications in Go. This
 - Security built-in, not bolted on
 - One framework, one workflow
 
-### Production Ready
-- Battle-tested patterns
-- Security by default
-- Performance optimizations
-- Monitoring and metrics
-- Error handling and logging
+### Path to Production
+- Forge is pre-1.0; check the [support contract](/docs/status/) for what is tested
+- Production secrets are validated before the server listens
+- Health, readiness and liveness endpoints
+- Graceful shutdown and structured request logging
+- A single-instance [deployment guide](/docs/deployment/)
 
 ## Extensibility
 
 ### Plugin System
-- Register custom plugins
-- Hook into framework lifecycle
-- Extend core functionality
-- Share plugins across projects
+Not implemented: `registry.RegisterPlugin` rejects admin and API plugins with `NotImplemented`.
 
 ### Extension Points
-- Custom field types
+- Custom field types (experimental: generation and migrations do not understand them)
 - Custom validators
 - Custom middleware
 - Custom serializers

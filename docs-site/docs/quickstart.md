@@ -126,16 +126,17 @@ See [ORM & QuerySets](/docs/orm) for filters, relations and aggregates.
 
 ## Running the server
 
-:::warning Known issue
-The server entry point that `forge new` generates does not build yet: its
-`//go:embed static templates` line looks for those directories inside
-`cmd/server/`. A fix is in progress. Until then, the
-[ecommerce example](https://github.com/forgego/forge/tree/master/examples/ecommerce)
-is the best way to see a complete Forge app, with the admin and REST API wired
-up.
-:::
+```bash
+go run ./cmd/server
+```
 
-To run the example with Docker and PostgreSQL:
+The server listens on the host and port in `config/config.yaml`
+(`localhost:8000` by default) and mounts the admin at `/admin`. To serve an
+app's REST API, see [Generating a REST API](/docs/models#generating-a-rest-api).
+
+The [ecommerce example](https://github.com/forgego/forge/tree/master/examples/ecommerce)
+is a complete Forge app with the admin and REST API wired up. To run it with
+Docker and PostgreSQL:
 
 ```bash
 git clone https://github.com/forgego/forge.git

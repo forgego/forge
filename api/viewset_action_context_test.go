@@ -34,7 +34,7 @@ func TestBaseViewSet_DispatchStoresActionInCoreContext(t *testing.T) {
 	vs := NewBaseViewSet(
 		func() Serializer { return NewBaseSerializer(nil) },
 		&dummyQueryset{},
-		&map[string]interface{}{},
+		&dummyModel{},
 	)
 	vs.Permissions = []permissions.Permission{permission}
 	router := NewRouter("/api")

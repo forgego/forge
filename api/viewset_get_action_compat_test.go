@@ -32,7 +32,7 @@ func TestCustomPermission_ViewGetAction_SeesDispatchedAction(t *testing.T) {
 	vs := NewBaseViewSet(
 		func() Serializer { return NewBaseSerializer(nil) },
 		qs,
-		map[string]interface{}{},
+		&dummyModel{},
 	)
 
 	perm := &recordActionPermission{}

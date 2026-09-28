@@ -4,6 +4,8 @@ import { cn } from "../../lib/utils";
 import { adminAPI } from "../../api/client";
 
 interface SearchableSelectProps {
+  /** id of the trigger button, so a <label htmlFor> names the control. */
+  id?: string;
   model: string;
   value: any;
   onChange: (value: any) => void;
@@ -13,6 +15,7 @@ interface SearchableSelectProps {
 }
 
 export function SearchableSelect({
+  id,
   model,
   value,
   onChange,
@@ -77,7 +80,9 @@ export function SearchableSelect({
   return (
     <div className="relative w-full" ref={containerRef}>
       <button
+        id={id}
         type="button"
+        aria-expanded={open}
         onClick={() => {
           if (disabled) return;
           setOpen(!open);

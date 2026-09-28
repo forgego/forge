@@ -591,6 +591,12 @@ func (b *BoolExpression) ToSQL(builder *SQLBuilder) (string, []interface{}, erro
 	}
 
 	combinedSQL := strings.Join(parts, " "+string(b.operator)+" ")
+	// Parenthesize the group so it keeps its meaning when a caller joins it
+	// with other conditions: `(a) OR (b)` AND-ed with `c` must not become
+	// `(a) OR (b) AND c`.
+	if len(parts) > 1 {
+		combinedSQL = "(" + combinedSQL + ")"
+	}
 	return combinedSQL, allArgs, nil
 }
 
@@ -723,6 +729,10 @@ func (q *Q) ToSQL(builder *SQLBuilder) (string, []interface{}, error) {
 		for i := 1; i < len(parts); i++ {
 			combinedSQL = fmt.Sprintf("%s %s %s", combinedSQL, q.connector, parts[i])
 		}
+	}
+	// See BoolExpression.ToSQL: keep the group intact when AND-ed with others.
+	if len(parts) > 1 && !q.negated {
+		combinedSQL = "(" + combinedSQL + ")"
 	}
 
 	if q.negated {

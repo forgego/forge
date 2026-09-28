@@ -116,6 +116,7 @@ func (s *priceTestSerializer) Fields() []string {
 }
 
 type priceTestManager struct {
+	unusedListOperations
 	mu          sync.Mutex
 	items       map[int64]*priceTestItem
 	createCalls int

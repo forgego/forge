@@ -87,12 +87,16 @@ func (p *DDLParser) parseCreateTable(sql string) ([]core.Change, error) {
 		p.SetTableContext(matches[1])
 	}
 
-	createTable, err := p.tableParser.ParseCreateTable(sql)
+	createTable, foreignKeys, err := p.tableParser.ParseCreateTableWithForeignKeys(sql)
 	if err != nil {
 		// Fail softly: return as UnknownChange
 		return []core.Change{&core.UnknownChange{SQL: sql}}, nil
 	}
-	return []core.Change{createTable}, nil
+	changes := []core.Change{createTable}
+	for _, fk := range foreignKeys {
+		changes = append(changes, fk)
+	}
+	return changes, nil
 }
 
 // parseAlterTable parses ALTER TABLE statements
@@ -119,6 +123,14 @@ func (p *DDLParser) parseAlterTable(sql string) ([]core.Change, error) {
 	// ALTER TABLE ADD CONSTRAINT FOREIGN KEY
 	if strings.Contains(upper, "ADD CONSTRAINT") && strings.Contains(upper, "FOREIGN KEY") {
 		change := p.parseAddForeignKey(sql)
+		if change != nil {
+			changes = append(changes, change)
+		}
+	}
+
+	// ALTER TABLE ADD CONSTRAINT CHECK / UNIQUE
+	if strings.Contains(upper, "ADD CONSTRAINT") && !strings.Contains(upper, "FOREIGN KEY") {
+		change := p.parseAddConstraint(sql)
 		if change != nil {
 			changes = append(changes, change)
 		}
@@ -161,21 +173,48 @@ func (p *DDLParser) parseAlterTable(sql string) ([]core.Change, error) {
 	return changes, nil
 }
 
+// addConstraintRegex matches the CHECK and UNIQUE table constraints the SQL
+// builder emits: ALTER TABLE t ADD CONSTRAINT name CHECK (cond) | UNIQUE (cols).
+var addConstraintRegex = regexp.MustCompile(`(?is)ALTER\s+TABLE\s+["']?(\w+)["']?\s+ADD\s+CONSTRAINT\s+["']?(\w+)["']?\s+(CHECK|UNIQUE)\s*\((.*)\)\s*;?\s*$`)
+
+// parseAddConstraint parses ALTER TABLE ADD CONSTRAINT CHECK/UNIQUE statements
+func (p *DDLParser) parseAddConstraint(sql string) *core.AddConstraint {
+	matches := addConstraintRegex.FindStringSubmatch(strings.TrimSpace(sql))
+	if len(matches) < 5 {
+		return nil
+	}
+	constraint := generator.ConstraintDefinition{
+		Name: matches[2],
+		Type: strings.ToUpper(matches[3]),
+	}
+	body := strings.TrimSpace(matches[4])
+	if constraint.Type == "UNIQUE" {
+		constraint.Fields = extractIndexFieldsFromString(body)
+	} else {
+		constraint.Condition = body
+	}
+	return &core.AddConstraint{Table: matches[1], Constraint: constraint}
+}
+
 // parseAddColumn parses ALTER TABLE ADD COLUMN statements
 func (p *DDLParser) parseAddColumn(sql string) *core.AddColumn {
 	// Pattern: ALTER TABLE table_name ADD [COLUMN] column_name type [constraints]
-	re := regexp.MustCompile(`(?i)ALTER\s+TABLE\s+["']?(\w+)["']?\s+ADD\s+(?:COLUMN\s+)?["']?(\w+)["']?\s+(\w+(?:\([^)]+\))?)`)
-	matches := re.FindStringSubmatch(sql)
-	if len(matches) < 4 {
+	re := regexp.MustCompile(`(?i)ALTER\s+TABLE\s+["']?(\w+)["']?\s+ADD\s+(?:COLUMN\s+)?["']?(\w+)["']?`)
+	matches := re.FindStringSubmatchIndex(sql)
+	if matches == nil {
+		return nil
+	}
+	typeMatch := columnTypeRegex.FindStringSubmatch(sql[matches[1]:])
+	if len(typeMatch) < 2 {
 		return nil
 	}
 
-	tableName := matches[1]
-	columnName := matches[2]
-	typeStr := matches[3] // Keep type as opaque string
+	tableName := sql[matches[2]:matches[3]]
+	columnName := sql[matches[4]:matches[5]]
+	typeStr := typeMatch[1] // Keep type as opaque string
 
 	// Parse basic constraints from remaining SQL
-	remaining := sql[len(matches[0]):]
+	remaining := sql[matches[1]+len(typeMatch[0]):]
 	required := strings.Contains(strings.ToUpper(remaining), "NOT NULL")
 
 	field := generator.FieldDefinition{
@@ -183,7 +222,7 @@ func (p *DDLParser) parseAddColumn(sql string) *core.AddColumn {
 		Type:     mapSQLTypeToFieldType(typeStr),
 		GoType:   mapSQLTypeToGoType(typeStr),
 		Required: required,
-		Options:  make(map[string]interface{}),
+		Options:  map[string]interface{}{SQLTypeOption: NormalizeSQLType(typeStr)},
 	}
 
 	// Check for UNIQUE
@@ -207,7 +246,7 @@ func (p *DDLParser) parseAddColumn(sql string) *core.AddColumn {
 func (p *DDLParser) parseAddForeignKey(sql string) *core.AddForeignKey {
 	// Pattern: ALTER TABLE table ADD CONSTRAINT name FOREIGN KEY (column) REFERENCES target (id) [ON DELETE action] [ON UPDATE action]
 	// Also handles DO $$ BEGIN ... ALTER TABLE ... END $$; blocks
-	re := regexp.MustCompile(`(?i)ALTER\s+TABLE\s+["']?(\w+)["']?\s+ADD\s+CONSTRAINT\s+["']?(\w+)["']?\s+FOREIGN\s+KEY\s+\(["']?(\w+)["']?\)\s+REFERENCES\s+["']?(\w+)["']?\s+\(["']?(\w+)["']?\)(?:\s+ON\s+DELETE\s+(\w+))?(?:\s+ON\s+UPDATE\s+(\w+))?`)
+	re := regexp.MustCompile(`(?i)ALTER\s+TABLE\s+["']?(\w+)["']?\s+ADD\s+CONSTRAINT\s+["']?(\w+)["']?\s+FOREIGN\s+KEY\s+\(["']?(\w+)["']?\)\s+REFERENCES\s+["']?(\w+)["']?\s+\(["']?(\w+)["']?\)(?:\s+ON\s+DELETE\s+(SET\s+NULL|SET\s+DEFAULT|NO\s+ACTION|\w+))?(?:\s+ON\s+UPDATE\s+(SET\s+NULL|SET\s+DEFAULT|NO\s+ACTION|\w+))?`)
 	matches := re.FindStringSubmatch(sql)
 	if len(matches) < 5 {
 		return nil
@@ -397,9 +436,9 @@ func extractIndexFieldsFromString(fieldsStr string) []string {
 
 // normalizeCascadeAction normalizes cascade action strings to SQL format
 func normalizeCascadeAction(action string) string {
-	action = strings.ToUpper(strings.TrimSpace(action))
+	action = strings.Join(strings.Fields(strings.ToUpper(action)), " ")
 	switch action {
-	case "CASCADE", "RESTRICT", "SET NULL", "NO ACTION":
+	case "CASCADE", "RESTRICT", "SET NULL", "SET DEFAULT", "NO ACTION":
 		return action
 	case "PROTECT":
 		return "RESTRICT"
@@ -414,7 +453,7 @@ func denormalizeCascadeAction(action string) string {
 	switch action {
 	case "RESTRICT":
 		return "PROTECT"
-	case "CASCADE", "SET NULL", "NO ACTION":
+	case "CASCADE", "SET NULL", "SET DEFAULT", "NO ACTION":
 		return action
 	default:
 		return "NO ACTION"

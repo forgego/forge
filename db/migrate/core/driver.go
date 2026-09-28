@@ -1,5 +1,11 @@
 package core
 
+// SQLTypeOption is the field option under which migration-file parsing records
+// a column's SQL type exactly as it was declared. The SQL builder renders a field
+// carrying it with that type, so schema state reconstructed from migration files
+// renders back to the DDL it was parsed from and regeneration stays stable.
+const SQLTypeOption = "sql_type"
+
 // Driver represents a database driver name
 type Driver string
 

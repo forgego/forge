@@ -23,6 +23,7 @@ import { ConfirmationDialog } from "../components/ui/confirmation-dialog";
 import { FieldRenderer } from "../components/form/FieldRenderer";
 import { InlineRelations } from "../components/form/InlineRelations";
 import { HistorySection } from "../components/form/HistorySection";
+import { changedFields } from "../components/form/changed-fields";
 
 interface ModelFormPageProps {
   mode: "create" | "edit";
@@ -261,7 +262,14 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
           description: `${metadata?.verbose_name} created successfully`,
         });
       } else {
-        await updateMutation.mutateAsync({ id: objectId, data: formData });
+        const changes = changedFields(
+          objectData as Record<string, any> | undefined,
+          formData,
+          metadata?.fields ?? []
+        );
+        if (Object.keys(changes).length > 0) {
+          await updateMutation.mutateAsync({ id: objectId, data: changes });
+        }
         await persistInlineRelations(objectId);
         toast({
           title: "Success",
