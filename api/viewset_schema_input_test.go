@@ -83,7 +83,10 @@ func (writeOnlySchemaModel) Fields() []schema.Field {
 	}
 }
 
-type writeOnlySchemaManager struct{ stored *writeOnlySchemaModel }
+type writeOnlySchemaManager struct {
+	unusedListOperations
+	stored *writeOnlySchemaModel
+}
 
 func (m *writeOnlySchemaManager) Create(_ context.Context, model interface{}) error {
 	item := model.(*writeOnlySchemaModel)
