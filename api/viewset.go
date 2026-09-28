@@ -1416,8 +1416,14 @@ func populateFromMap(instance interface{}, data map[string]interface{}, ignoredK
 			key := tagParts[0]
 			dbTag := strings.Split(field.Tag.Get("db"), ",")[0]
 			fieldSchema := schemaFieldForStructField(schemaFields, field, key, dbTag)
-			if fieldSchema == nil && (key == "" || key == "-") {
-				continue
+			if key == "" || key == "-" {
+				// A field hidden from JSON is writable only when the schema
+				// declares it write-only (editable, never serialized), such as
+				// a password. Anything else hidden with json:"-" stays out of
+				// reach of request input.
+				if fieldSchema == nil || !fieldSchema.Editable || fieldSchema.Serialize {
+					continue
+				}
 			}
 			fieldNames := []string{key, field.Name, dbTag}
 			if fieldSchema != nil {
