@@ -139,7 +139,56 @@ again on every run.
   drop a foreign key or constraint of an existing table. That takes a table rebuild, which
   `makemigrations` does not generate: it fails with
   `modify column <table>.<column> is not supported on SQLite without rebuilding the table`
-  (or `add constraint`, `add foreign key`, and so on).
+  (or `add constraint`, `add foreign key`, and so on). Write the rebuild by hand, as
+  described below. This is also the way forward for an existing SQLite project whose models
+  declare `Meta.Constraints` or foreign keys that older Forge versions skipped without an
+  error.
+
+### Rebuilding a SQLite table by hand
+
+A hand-written rebuild follows the steps of the
+[SQLite documentation](https://www.sqlite.org/lang_altertable.html#otheralter): create the
+new table under a temporary name, copy the rows, drop the old table, rename the new one,
+and re-create the old table's indexes. `makemigrations` reads the rebuild back from the
+migration file, so write the new table exactly as the model now declares it, and the next
+run writes nothing.
+
+1. Create an empty migration: `forge makemigrations rebuild_books --empty`.
+2. In the up file, rebuild the table with its new definition. Start from the
+   `CREATE TABLE` in the migration that created the table, and add the new column
+   definition, foreign key, or constraint:
+
+   ```sql
+   CREATE TABLE books_new (
+       "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+       "author_id" INTEGER NOT NULL,
+       "pages" INTEGER DEFAULT 1,
+       "isbn" TEXT,
+       FOREIGN KEY (author_id) REFERENCES authors (id) ON DELETE CASCADE ON UPDATE NO ACTION,
+       CONSTRAINT books_pages_positive CHECK (pages > 0)
+   );
+   INSERT INTO books_new ("id", "author_id", "pages", "isbn")
+       SELECT "id", "author_id", "pages", "isbn" FROM books;
+   DROP TABLE books;
+   ALTER TABLE books_new RENAME TO books;
+   CREATE INDEX IF NOT EXISTS books_isbn_idx ON books ("isbn");
+   ```
+
+3. In the down file, rebuild the table the same way with its previous definition.
+4. Run `forge makemigrations check --auto`. It prints `No changes detected`.
+
+Check the data before you apply the rebuild: the copy fails if an existing row violates
+a new `NOT NULL`, `CHECK`, or `UNIQUE` constraint.
+
+:::warning Foreign keys during a rebuild
+`forge migrate` runs each SQLite migration in a transaction, and SQLite ignores
+`PRAGMA foreign_keys` inside a transaction. If your SQLite DSN turns foreign keys on (for
+example `?_foreign_keys=on`), dropping a table that other tables reference runs their
+`ON DELETE` actions, so `CASCADE` deletes and `SET NULL` clears the referencing rows. Apply
+a migration that rebuilds a referenced table with a DSN that leaves foreign keys off,
+then run `PRAGMA foreign_key_check;` to confirm that every reference still resolves.
+Rebuilding a table that no other table references, such as `books` above, is not affected.
+:::
 
 ---
 
