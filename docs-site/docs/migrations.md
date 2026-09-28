@@ -98,6 +98,12 @@ again on every run.
   `DBColumn` name is not generated. For uniqueness on an existing table, declare a
   `UNIQUE` constraint in `Meta.Constraints` instead of adding `Unique()` to the field.
   Otherwise, revert the model change.
+- **SQLite column, foreign key, and constraint changes.** SQLite's `ALTER TABLE` can add,
+  drop, and rename a column, and rename a table, but it cannot change a column or add or
+  drop a foreign key or constraint of an existing table. That takes a table rebuild, which
+  `makemigrations` does not generate: it fails with
+  `modify column <table>.<column> is not supported on SQLite without rebuilding the table`
+  (or `add constraint`, `add foreign key`, and so on).
 
 ---
 
@@ -179,8 +185,9 @@ Applying migrations to SQLite is experimental, and the release gate does not cov
 table's foreign keys and `Meta.Constraints` are declared inside its `CREATE TABLE` and read
 back from there, so regenerating unchanged models writes nothing. SQLite cannot add, drop
 or change a foreign key or constraint of an existing table without rebuilding it, and
-`makemigrations` does not write that rebuild: it stops with an error instead. A changed
-column is written only as a comment.
+`makemigrations` does not write that rebuild: it stops with an error instead. The same
+applies to a changed column, because SQLite has no `ALTER COLUMN`. See
+[Changes makemigrations cannot generate](#changes-makemigrations-cannot-generate).
 :::
 
 ---

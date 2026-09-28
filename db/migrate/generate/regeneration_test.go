@@ -529,6 +529,35 @@ func TestCastAndOperatorDBDefaultsAreReadBack(t *testing.T) {
 	assertContainsAll(t, "up", up, `ALTER TABLE books ADD COLUMN "joined" TEXT NOT NULL DEFAULT ('x' || 'y');`)
 }
 
+// TestSQLiteColumnChangeFails covers SQLite, which cannot alter a column
+// without rebuilding its table: makemigrations used to write only a comment,
+// so the change was proposed again on every run. It now fails and writes
+// nothing.
+func TestSQLiteColumnChangeFails(t *testing.T) {
+	modelsDir := t.TempDir()
+	migrationsDir := t.TempDir()
+	file := filepath.Join(modelsDir, "models.go")
+	if err := os.WriteFile(file, []byte(functionalModels), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	generateMigration(t, modelsDir, migrationsDir, core.DriverSQLite, "initial")
+	changed := mustReplace(t, functionalModels, `schema.Int32Field("visits", schema.Default(0))`, `schema.Int32Field("visits", schema.Default(5))`)
+	if err := os.WriteFile(file, []byte(changed), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	gen, err := generate.NewMigrationGeneratorForDriver(modelsDir, migrationsDir, core.DriverSQLite)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = gen.GenerateMigrations("change_visits")
+	if err == nil || !strings.Contains(err.Error(), "modify column authors.visits is not supported on SQLite") {
+		t.Fatalf("SQLite column change: got error %v", err)
+	}
+	if got := migrationFiles(t, migrationsDir); len(got) != 2 {
+		t.Fatalf("a failed generation wrote %v", got)
+	}
+}
+
 // TestChangedDBDefaultIsModified covers PostgreSQL ALTER COLUMN for DB
 // defaults, which the builder ignored: a changed expression was dropped, and
 // a DB default added to an existing column wrote an empty migration.
