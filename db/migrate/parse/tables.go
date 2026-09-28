@@ -151,6 +151,8 @@ func extractColumnDefinitions(sql string, searchStart int) (string, error) {
 	depth := 0
 	for i := openIdx; i < len(sql); i++ {
 		switch sql[i] {
+		case '\'', '"':
+			i = skipQuoted(sql, i) - 1
 		case '(':
 			depth++
 		case ')':
@@ -187,22 +189,25 @@ func (p *TableParser) parseColumnDefinition(colDef string) (generator.FieldDefin
 	remaining = remaining[len(typeMatch[0]):]
 
 	field := fieldForSQLType(columnName, sqlType)
+	// Keywords are matched outside quoted literals, so a default such as
+	// 'NOT NULL' does not set them.
+	masked := maskQuoted(remaining)
 
 	// Check for PRIMARY KEY
-	if strings.Contains(strings.ToUpper(remaining), "PRIMARY KEY") {
+	if strings.Contains(strings.ToUpper(masked), "PRIMARY KEY") {
 		field.PrimaryKey = true
 		field.Required = true
 	}
 
 	// Check for AUTOINCREMENT / AUTO_INCREMENT / GENERATED ALWAYS AS IDENTITY
-	if strings.Contains(strings.ToUpper(remaining), "AUTOINCREMENT") ||
-		strings.Contains(strings.ToUpper(remaining), "AUTO_INCREMENT") ||
-		strings.Contains(strings.ToUpper(remaining), "GENERATED ALWAYS AS IDENTITY") {
+	if strings.Contains(strings.ToUpper(masked), "AUTOINCREMENT") ||
+		strings.Contains(strings.ToUpper(masked), "AUTO_INCREMENT") ||
+		strings.Contains(strings.ToUpper(masked), "GENERATED ALWAYS AS IDENTITY") {
 		field.AutoIncrement = true
 	}
 
 	// Check for GENERATED ALWAYS AS (expr)
-	upperRemaining := strings.ToUpper(remaining)
+	upperRemaining := strings.ToUpper(masked)
 	if strings.Contains(upperRemaining, "GENERATED ALWAYS AS") && !strings.Contains(upperRemaining, "IDENTITY") {
 		field.Options["generated"] = true
 		startIdx := strings.Index(remaining, "(")
@@ -216,19 +221,18 @@ func (p *TableParser) parseColumnDefinition(colDef string) (generator.FieldDefin
 	}
 
 	// Check for NOT NULL
-	if strings.Contains(strings.ToUpper(remaining), "NOT NULL") {
+	if strings.Contains(strings.ToUpper(masked), "NOT NULL") {
 		field.Required = true
 	}
 
 	// Check for UNIQUE
-	if strings.Contains(strings.ToUpper(remaining), "UNIQUE") {
+	if strings.Contains(strings.ToUpper(masked), "UNIQUE") {
 		field.Options["unique"] = true
 	}
 
 	// Check for DEFAULT
-	defaultRegex := regexp.MustCompile(`(?i)DEFAULT\s+([^\s,]+)`)
-	if defaultMatch := defaultRegex.FindStringSubmatch(remaining); len(defaultMatch) > 1 {
-		field.Default = parseDefaultValue(defaultMatch[1])
+	if expr, ok := defaultExpression(remaining); ok {
+		field.Default = parseDefaultValue(expr)
 	}
 
 	return field, nil
@@ -274,34 +278,29 @@ func fieldForSQLType(name, sqlType string) generator.FieldDefinition {
 // splitColumnDefinitions splits column definitions from CREATE TABLE
 func splitColumnDefinitions(defs string) []string {
 	var columns []string
-	var current strings.Builder
+	start := 0
 	parenDepth := 0
 
-	for _, char := range defs {
-		switch char {
+	for i := 0; i < len(defs); i++ {
+		switch defs[i] {
+		case '\'', '"':
+			i = skipQuoted(defs, i) - 1
 		case '(':
 			parenDepth++
-			current.WriteRune(char)
 		case ')':
 			parenDepth--
-			current.WriteRune(char)
 		case ',':
 			if parenDepth == 0 {
-				col := strings.TrimSpace(current.String())
-				if col != "" {
+				if col := strings.TrimSpace(defs[start:i]); col != "" {
 					columns = append(columns, col)
 				}
-				current.Reset()
-			} else {
-				current.WriteRune(char)
+				start = i + 1
 			}
-		default:
-			current.WriteRune(char)
 		}
 	}
 
 	// Add last column
-	col := strings.TrimSpace(current.String())
+	col := strings.TrimSpace(defs[start:])
 	if col != "" {
 		columns = append(columns, col)
 	}
@@ -399,6 +398,10 @@ func mapSQLTypeToGoType(sqlType string) string {
 // parseDefaultValue parses a default value from SQL
 func parseDefaultValue(value string) interface{} {
 	value = strings.TrimSpace(value)
+	// A string literal is a string, whatever it spells.
+	if literal, ok := unquoteLiteral(value); ok {
+		return literal
+	}
 	value = strings.Trim(value, `"'`)
 
 	// Check for SQL functions

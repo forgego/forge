@@ -30,6 +30,8 @@ func (Author) Fields() []schema.Field {
 		schema.Float32Field("ratio"),
 		schema.Int32Field("visits", schema.Default(0)),
 		schema.StringField("status", schema.Default("Active")),
+		schema.StringField("motto", schema.Default("read, then write it's")),
+		schema.Int32Field("rank", schema.DBDefault("(1 + 2)")),
 		schema.DecimalField("balance", schema.MaxDigits(12), schema.DecimalPlaces(2)),
 		schema.DateField("born_on"),
 		schema.DateTimeField("seen_at"),
@@ -430,6 +432,24 @@ func TestSQLiteDeclaresNewTableConstraintsInCreateTable(t *testing.T) {
 	if got := migrationFiles(t, migrationsDir); len(got) != 2 {
 		extra, _ := os.ReadFile(filepath.Join(migrationsDir, got[len(got)-1]))
 		t.Fatalf("regenerating unchanged models wrote %v:\n%s", got, extra)
+	}
+}
+
+// TestDefaultsWithSpacesAreReadBack covers string defaults with spaces,
+// commas and escaped quotes, and parenthesized expressions, which the parser
+// truncated at the first space or comma, so every run re-set the default and
+// the down migration restored a truncated one.
+func TestDefaultsWithSpacesAreReadBack(t *testing.T) {
+	source := mustReplace(t, functionalModels, `schema.Default("read, then write it's")`, `schema.Default("read, then write")`)
+	source = mustReplace(t, source, "\t\tschema.StringField(\"isbn\"),\n",
+		"\t\tschema.StringField(\"isbn\"),\n\t\tschema.StringField(\"blurb\", schema.Default(\"a b, 'c'\")),\n")
+	up, down := regenerateWith(t, core.DriverPostgreSQL, source, "change_defaults")
+	assertContainsAll(t, "up", up,
+		`ALTER TABLE authors ALTER COLUMN "motto" SET DEFAULT 'read, then write';`,
+		`ALTER TABLE books ADD COLUMN "blurb" TEXT DEFAULT 'a b, ''c''';`)
+	assertContainsAll(t, "down", down, `ALTER TABLE authors ALTER COLUMN "motto" SET DEFAULT 'read, then write it''s';`)
+	if strings.Contains(up, `"rank"`) {
+		t.Errorf("up touches the unchanged expression default:\n%s", up)
 	}
 }
 
