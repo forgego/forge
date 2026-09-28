@@ -121,6 +121,19 @@ the change.
 - The API error handler logs PostgreSQL and SQLite driver errors by type,
   SQLSTATE or SQLite code and constraint name instead of their message,
   which can contain row values (#290).
+- `forge makemigrations` no longer re-proposes a change on every run for
+  cast and operator DB defaults (`DBDefault("'{}'::jsonb")`,
+  `DBDefault("'x' || 'y'")`), a changed or added `DBDefault` on PostgreSQL,
+  a table dropped and later created again, or a hand-written
+  `ALTER TABLE .. RENAME COLUMN` or `RENAME TO` (#296, #292).
+- `forge makemigrations` writes no migration when the changes render no SQL,
+  and fails instead of writing a comment for a SQLite column change or an
+  empty migration for a PostgreSQL column change it cannot express. The
+  migrations guide covers renames and hand-written SQLite table rebuilds
+  (#296).
+- Migrations: a `Default` string with parentheses, such as
+  `Default("x(1)")`, is quoted, and the down migration of a foreign key whose
+  target table changed restores the old target (#296).
 
 ### Added
 
