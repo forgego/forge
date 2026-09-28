@@ -498,6 +498,7 @@ Derived from archived REST/API docs and the implemented `api/*`.
 ### 13.2 Serializer design
 
 - Serializer fields provide validation, defaulting, and read/write constraints.
+- The request/response field contract (schema `Editable`/`Serialize`, `ReadOnlyRequestFields`, `ExcludeResponseFields`, unknown keys) is documented in `docs-site/docs/api/field-contract.md`. Unknown request keys are ignored by default; `RejectUnknownRequestFields` rejects them with 400, and generated viewsets enable it.
 - Specialized serializer fields exist for core types and formatting.
 
 ### 13.3 Content negotiation

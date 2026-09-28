@@ -40,6 +40,9 @@ func New{{.Name}}ViewSet() *{{.Name}}ViewSet {
 	}
 	vs.ExcludeResponseFields = api.NonSerializableFields(&{{.Name}}{})
 	vs.ReadOnlyRequestFields = api.NonEditableFields(&{{.Name}}{})
+	// Generated APIs reject request keys that name no field, so a client
+	// typo fails with 400 instead of being silently dropped.
+	vs.RejectUnknownRequestFields = true
 	return vs
 }
 

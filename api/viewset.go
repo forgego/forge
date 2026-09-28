@@ -76,6 +76,11 @@ type BaseViewSet struct {
 	ExcludeResponseFields []string
 	// ReadOnlyRequestFields holds request keys ignored on create and update; nil accepts every field.
 	ReadOnlyRequestFields []string
+	// RejectUnknownRequestFields makes create and update fail with 400 when
+	// the request body has a key that is not a model field, a declared
+	// serializer field, or an ignored read-only key. False keeps the
+	// historical behavior of silently ignoring unknown keys.
+	RejectUnknownRequestFields bool
 	// ReadOnly exposes only list and retrieve. Create, update, partial update
 	// and destroy respond 405, and the Queryset needs only read operations.
 	ReadOnly bool
@@ -189,17 +194,18 @@ func (vs *BaseViewSet) viewForRequest(r *http.Request) *BaseViewSet {
 		return vs
 	}
 	return &BaseViewSet{
-		Serializer:            vs.Serializer,
-		Queryset:              vs.Queryset,
-		Model:                 vs.Model,
-		ExcludeResponseFields: vs.ExcludeResponseFields,
-		ReadOnlyRequestFields: vs.ReadOnlyRequestFields,
-		ReadOnly:              vs.ReadOnly,
-		Authentication:        vs.Authentication,
-		Permissions:           vs.Permissions,
-		Throttles:             vs.Throttles,
-		ErrorWriter:           vs.ErrorWriter,
-		action:                action,
+		Serializer:                 vs.Serializer,
+		Queryset:                   vs.Queryset,
+		Model:                      vs.Model,
+		ExcludeResponseFields:      vs.ExcludeResponseFields,
+		ReadOnlyRequestFields:      vs.ReadOnlyRequestFields,
+		RejectUnknownRequestFields: vs.RejectUnknownRequestFields,
+		ReadOnly:                   vs.ReadOnly,
+		Authentication:             vs.Authentication,
+		Permissions:                vs.Permissions,
+		Throttles:                  vs.Throttles,
+		ErrorWriter:                vs.ErrorWriter,
+		action:                     action,
 	}
 }
 
@@ -422,9 +428,12 @@ func (vs *BaseViewSet) Create(w http.ResponseWriter, r *http.Request) {
 		_ = forgehttp.SendError(w, http.StatusBadRequest, "Invalid JSON")
 		return
 	}
-	applySchemaDefaults(vs.Model, data)
 
 	serializer := vs.Serializer()
+	if !vs.allowRequestFields(w, r, serializer, data) {
+		return
+	}
+	applySchemaDefaults(vs.Model, data)
 	stripReadOnlyInput(serializer, data)
 	serializer.SetData(data)
 
@@ -610,6 +619,9 @@ func (vs *BaseViewSet) update(w http.ResponseWriter, r *http.Request, action str
 	}
 
 	serializer := vs.Serializer()
+	if !vs.allowRequestFields(w, r, serializer, data) {
+		return
+	}
 	stripReadOnlyInput(serializer, data)
 	serializer.SetData(data)
 

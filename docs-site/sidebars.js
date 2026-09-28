@@ -30,6 +30,7 @@ const sidebars = {
         'api/serializers',
         'api/viewsets',
         'api/data-access',
+        'api/field-contract',
         'api/authentication',
         'api/permissions',
         'api/throttling',

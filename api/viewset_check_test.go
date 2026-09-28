@@ -138,6 +138,7 @@ func TestRouterRegister_AcceptsOrmManagerAndGeneratedViewSetShape(t *testing.T) 
 	generated := &generatedViewSet{BaseViewSet: newCheckViewSet(manager)}
 	generated.ExcludeResponseFields = NonSerializableFields(&checkedModel{})
 	generated.ReadOnlyRequestFields = NonEditableFields(&checkedModel{})
+	generated.RejectUnknownRequestFields = true
 	assert.Empty(t, registerPanic("check-models", generated))
 
 	config := &ViewSetConfig{Model: &checkedModel{}, Queryset: manager, Serializer: NewBaseSerializer(nil)}

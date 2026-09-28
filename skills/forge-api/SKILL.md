@@ -28,6 +28,7 @@ Use Forge's REST API framework to build CRUD endpoints with ViewSets and seriali
 - Router base path affects all endpoint URLs.
 - Re-run `forge generate` when model changes affect QuerySets or types.
 - `Router.Register` panics when a viewset's queryset lacks an operation it routes; set `ReadOnly` for list/retrieve-only resources (docs-site/docs/api/data-access.md).
+- Generated viewsets reject unknown request keys with 400; declare serializer-only inputs in `WriteOnlyFields()` (docs-site/docs/api/field-contract.md).
 
 ## References
 - [REST API concepts](references/rest-api.md)
