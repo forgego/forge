@@ -1412,16 +1412,19 @@ func populateFromMap(instance interface{}, data map[string]interface{}, ignoredK
 			}
 
 			jsonTag := field.Tag.Get("json")
-			if jsonTag == "" || jsonTag == "-" {
-				continue
-			}
 			tagParts := strings.Split(jsonTag, ",")
 			key := tagParts[0]
-			if key == "" {
-				continue
-			}
 			dbTag := strings.Split(field.Tag.Get("db"), ",")[0]
 			fieldSchema := schemaFieldForStructField(schemaFields, field, key, dbTag)
+			if key == "" || key == "-" {
+				// A field hidden from JSON is writable only when the schema
+				// declares it write-only (editable, never serialized), such as
+				// a password. Anything else hidden with json:"-" stays out of
+				// reach of request input.
+				if fieldSchema == nil || !fieldSchema.Editable || fieldSchema.Serialize {
+					continue
+				}
+			}
 			fieldNames := []string{key, field.Name, dbTag}
 			if fieldSchema != nil {
 				fieldNames = append(fieldNames, resolvedFieldNames(instance, *fieldSchema)...)
@@ -1437,7 +1440,13 @@ func populateFromMap(instance interface{}, data map[string]interface{}, ignoredK
 				continue
 			}
 			requestKey := key
-			value, valueExists := data[requestKey]
+			var value interface{}
+			valueExists := false
+			// "" and "-" are not request names; a hidden field is reached
+			// only through its schema aliases.
+			if key != "" && key != "-" {
+				value, valueExists = data[requestKey]
+			}
 			if !valueExists && fieldSchema != nil {
 				for _, alias := range resolvedFieldNames(instance, *fieldSchema) {
 					if candidate, exists := data[alias]; exists {
@@ -2269,6 +2278,9 @@ func setBytesField(field reflect.Value, value interface{}, strictByteArray bool)
 		field.SetBytes(b)
 		return nil
 	case map[string]interface{}:
+		if strictByteArray {
+			return fmt.Errorf("expected base64 string or byte array, got %T", value)
+		}
 		encoded, err := json.Marshal(v)
 		if err != nil {
 			return fmt.Errorf("invalid JSON object: %w", err)

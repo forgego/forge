@@ -68,6 +68,16 @@ func TestIsConfiguration(t *testing.T) {
 	}
 }
 
+func TestNewNotFoundErrorWithMessageKeepsIDNil(t *testing.T) {
+	err := NewNotFoundErrorWithMessage("x")
+	if err.ID != nil {
+		t.Fatalf("expected nil ID, got %#v", err.ID)
+	}
+	if err.Error() != "x" {
+		t.Fatalf("expected bare message %q, got %q", "x", err.Error())
+	}
+}
+
 func TestConfigurationError_ContainsExpectedStrings(t *testing.T) {
 	err := NewConfigurationError("database connection not set", "db")
 	errStr := err.Error()
