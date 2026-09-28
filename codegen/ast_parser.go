@@ -218,6 +218,8 @@ func (p *ASTParser) extractModelDefinition(packageName string, typeSpec *ast.Typ
 		def.Hooks = hooks
 	}
 
+	p.reportUndeclaredStructFields(def, typeSpec, structType, fieldsMethod)
+
 	return def, nil
 }
 

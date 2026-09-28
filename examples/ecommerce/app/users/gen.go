@@ -11,17 +11,18 @@ import (
 // UserGenerated struct definition
 type UserGenerated struct {
 	schema.BaseSchema
-	Id          int64     `json:"id" db:"id" validate:""`
-	Username    string    `json:"username" db:"username" validate:"required,max=150"`
-	Email       string    `json:"email" db:"email" validate:"required,max=254"`
-	FirstName   string    `json:"first_name" db:"first_name" validate:"max=150"`
-	LastName    string    `json:"last_name" db:"last_name" validate:"max=150"`
-	IsActive    bool      `json:"is_active" db:"is_active" validate:""`
-	IsStaff     bool      `json:"is_staff" db:"is_staff" validate:""`
-	IsSuperuser bool      `json:"is_superuser" db:"is_superuser" validate:""`
-	Avatar      string    `json:"avatar" db:"avatar" validate:"max=500"`
-	LastLogin   time.Time `json:"last_login" db:"last_login" validate:""`
-	DateJoined  time.Time `json:"date_joined" db:"date_joined" validate:""`
+	Id           int64     `json:"id" db:"id" validate:""`
+	Username     string    `json:"username" db:"username" validate:"required,max=150"`
+	Email        string    `json:"email" db:"email" validate:"required,max=254"`
+	PasswordHash string    `json:"password_hash" db:"password_hash" validate:"max=255"`
+	FirstName    string    `json:"first_name" db:"first_name" validate:"max=150"`
+	LastName     string    `json:"last_name" db:"last_name" validate:"max=150"`
+	IsActive     bool      `json:"is_active" db:"is_active" validate:""`
+	IsStaff      bool      `json:"is_staff" db:"is_staff" validate:""`
+	IsSuperuser  bool      `json:"is_superuser" db:"is_superuser" validate:""`
+	Avatar       string    `json:"avatar" db:"avatar" validate:"max=500"`
+	LastLogin    time.Time `json:"last_login" db:"last_login" validate:""`
+	DateJoined   time.Time `json:"date_joined" db:"date_joined" validate:""`
 }
 
 // Validate validates the User model
@@ -36,31 +37,33 @@ var UserObjects = orm.MustNewManager[User]("users_user")
 
 // UserFields provides type-safe field access for User
 type UserFields struct {
-	Id          orm.Field[int64]
-	Username    orm.Field[string]
-	Email       orm.Field[string]
-	FirstName   orm.Field[string]
-	LastName    orm.Field[string]
-	IsActive    orm.Field[bool]
-	IsStaff     orm.Field[bool]
-	IsSuperuser orm.Field[bool]
-	Avatar      orm.Field[string]
-	LastLogin   orm.Field[time.Time]
-	DateJoined  orm.Field[time.Time]
+	Id           orm.Field[int64]
+	Username     orm.Field[string]
+	Email        orm.Field[string]
+	PasswordHash orm.Field[string]
+	FirstName    orm.Field[string]
+	LastName     orm.Field[string]
+	IsActive     orm.Field[bool]
+	IsStaff      orm.Field[bool]
+	IsSuperuser  orm.Field[bool]
+	Avatar       orm.Field[string]
+	LastLogin    orm.Field[time.Time]
+	DateJoined   orm.Field[time.Time]
 }
 
 var UserFieldsInstance = UserFields{
-	Id:          orm.NewField[int64]("id", "users_user"),
-	Username:    orm.NewField[string]("username", "users_user"),
-	Email:       orm.NewField[string]("email", "users_user"),
-	FirstName:   orm.NewField[string]("first_name", "users_user"),
-	LastName:    orm.NewField[string]("last_name", "users_user"),
-	IsActive:    orm.NewField[bool]("is_active", "users_user"),
-	IsStaff:     orm.NewField[bool]("is_staff", "users_user"),
-	IsSuperuser: orm.NewField[bool]("is_superuser", "users_user"),
-	Avatar:      orm.NewField[string]("avatar", "users_user"),
-	LastLogin:   orm.NewField[time.Time]("last_login", "users_user"),
-	DateJoined:  orm.NewField[time.Time]("date_joined", "users_user"),
+	Id:           orm.NewField[int64]("id", "users_user"),
+	Username:     orm.NewField[string]("username", "users_user"),
+	Email:        orm.NewField[string]("email", "users_user"),
+	PasswordHash: orm.NewField[string]("password_hash", "users_user"),
+	FirstName:    orm.NewField[string]("first_name", "users_user"),
+	LastName:     orm.NewField[string]("last_name", "users_user"),
+	IsActive:     orm.NewField[bool]("is_active", "users_user"),
+	IsStaff:      orm.NewField[bool]("is_staff", "users_user"),
+	IsSuperuser:  orm.NewField[bool]("is_superuser", "users_user"),
+	Avatar:       orm.NewField[string]("avatar", "users_user"),
+	LastLogin:    orm.NewField[time.Time]("last_login", "users_user"),
+	DateJoined:   orm.NewField[time.Time]("date_joined", "users_user"),
 }
 
 // GroupGenerated struct definition
