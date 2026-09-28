@@ -107,7 +107,7 @@ The server registers these routes (`server.health_check_path` defaults to
 | `/health` | Runs every registered check. 200 if all pass, 503 otherwise. |
 | `/health/ready` | Same checks, reported as readiness. |
 | `/health/live` | Always 200 while the process is serving. |
-| `/info` | Public: app name, version, environment, debug flag, uptime. Block it at the proxy if you do not want that exposed. |
+| `/info` | Only when `server.info_endpoint` is true (default false). Public: app name, version, environment, debug flag, uptime. |
 
 **No check is registered by default**, so `/health` and `/health/ready` return
 200 even when the database is down. Register one in `main.go` after connecting:

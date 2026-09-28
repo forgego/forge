@@ -40,6 +40,7 @@ type ServerSettings struct {
 	GracefulTimeout int    // graceful shutdown timeout in seconds
 	MaxRequestSize  int64  // maximum request body size in bytes
 	EnableProfiling bool   // enable profiling (dev mode only)
+	InfoEndpoint    bool   // expose /info (name, version, env, debug, uptime); off by default
 }
 
 // DatabaseSettings contains database connection settings
@@ -98,6 +99,7 @@ func LoadSettings(cfg *Config) *Settings {
 			GracefulTimeout: cfg.GetInt("server.graceful_timeout", 30),
 			MaxRequestSize:  cfg.GetInt64("server.max_request_size", 10*1024*1024), // 10MB default
 			EnableProfiling: cfg.GetBool("server.enable_profiling", false),
+			InfoEndpoint:    cfg.GetBool("server.info_endpoint", false),
 		},
 		Database: DatabaseSettings{
 			Driver:          cfg.GetString("database.driver", "postgres"),

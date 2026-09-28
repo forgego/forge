@@ -14,3 +14,5 @@ image: /social-card.png
 - GracefulTimeout
 - MaxRequestSize
 - EnableProfiling
+- InfoEndpoint (`server.info_endpoint`, default `false`): registers `/info`,
+  which reports app name, version, environment, debug flag and uptime

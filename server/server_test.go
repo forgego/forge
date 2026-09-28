@@ -36,6 +36,7 @@ func TestNewServer_Initialization(t *testing.T) {
 			HealthCheckPath: "/health",
 			MetricsEnabled:  true,
 			MetricsPath:     "/metrics",
+			InfoEndpoint:    true,
 		},
 		Security: config.SecuritySettings{
 			SessionSecret: "test-session-secret-key-that-is-long-enough",
@@ -343,4 +344,31 @@ func TestIsCSRFExemptPath(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+// Regression for #290: /info is opt-in, so a server built from default
+// settings does not expose version, environment and debug flag publicly.
+func TestNewServer_InfoEndpointOptIn(t *testing.T) {
+	get := func(t *testing.T, settings *config.Settings) int {
+		t.Helper()
+		srv, err := NewServer(config.NewConfig(), settings, nil)
+		require.NoError(t, err)
+		w := httptest.NewRecorder()
+		srv.Handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/info", nil))
+		return w.Code
+	}
+
+	t.Run("default settings do not register /info", func(t *testing.T) {
+		cfg := config.NewConfig()
+		settings := config.LoadSettings(cfg)
+		assert.False(t, settings.Server.InfoEndpoint)
+		assert.Equal(t, http.StatusNotFound, get(t, settings))
+	})
+
+	t.Run("server.info_endpoint enables it", func(t *testing.T) {
+		cfg := config.NewConfig()
+		cfg.Set("server.info_endpoint", true)
+		settings := config.LoadSettings(cfg)
+		assert.Equal(t, http.StatusOK, get(t, settings))
+	})
 }

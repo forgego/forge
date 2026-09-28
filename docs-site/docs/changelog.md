@@ -34,6 +34,8 @@ the change.
   `schema.ForeignKeyField` and `Meta.Constraints`, which it silently skipped.
   In an existing project the next migration adds them and fails if rows
   violate them; clean orphan rows first.
+- `/info` is no longer registered by default. Set `server.info_endpoint:
+  true` to expose it (#290).
 
 ### Fixed
 

@@ -102,8 +102,11 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 		router.Get(settings.Server.MetricsPath, MetricsHandler())
 	}
 
-	// Register server info endpoint
-	router.Get("/info", ServerInfoHandler(settings))
+	// The info endpoint discloses version, environment and the debug flag,
+	// so it is opt-in (server.info_endpoint).
+	if settings.Server.InfoEndpoint {
+		router.Get("/info", ServerInfoHandler(settings))
+	}
 
 	// Serve static files if configured
 	if settings.Server.StaticFilesPath != "" {
