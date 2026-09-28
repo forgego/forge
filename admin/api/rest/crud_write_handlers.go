@@ -42,11 +42,7 @@ func (r *Router) handleCreate(admin core.AdminInterface) http.HandlerFunc {
 		// Call implementation
 		obj, err := admin.CreateObject(ctx, data)
 		if err != nil {
-			if isValidationError(err) {
-				respondError(w, http.StatusBadRequest, "validation_error", err.Error(), validationDetails(err))
-				return
-			}
-			respondError(w, http.StatusInternalServerError, "create_failed", err.Error(), nil)
+			respondWriteError(w, "create_failed", err)
 			return
 		}
 
@@ -93,11 +89,7 @@ func (r *Router) handleUpdate(admin core.AdminInterface) http.HandlerFunc {
 		// Call implementation
 		obj, err := admin.UpdateObject(ctx, id, data)
 		if err != nil {
-			if isValidationError(err) {
-				respondError(w, http.StatusBadRequest, "validation_error", err.Error(), validationDetails(err))
-				return
-			}
-			respondError(w, http.StatusInternalServerError, "update_failed", err.Error(), nil)
+			respondWriteError(w, "update_failed", err)
 			return
 		}
 
@@ -147,11 +139,7 @@ func (r *Router) handleReplace(admin core.AdminInterface) http.HandlerFunc {
 
 		obj, err := admin.UpdateObject(ctx, id, data)
 		if err != nil {
-			if isValidationError(err) {
-				respondError(w, http.StatusBadRequest, "validation_error", err.Error(), validationDetails(err))
-				return
-			}
-			respondError(w, http.StatusInternalServerError, "update_failed", err.Error(), nil)
+			respondWriteError(w, "update_failed", err)
 			return
 		}
 
