@@ -7,6 +7,19 @@ type LoggingSettings struct {
 	Outputs []LoggingOutputConfig
 }
 
+// loggingOutputs reads the logging.outputs list. A missing or malformed list
+// yields no outputs, which log.NewLoggerFromSettings treats as the console.
+func loggingOutputs(cfg *Config) []LoggingOutputConfig {
+	if cfg == nil || cfg.Viper == nil || !cfg.Viper.IsSet("logging.outputs") {
+		return nil
+	}
+	var outputs []LoggingOutputConfig
+	if err := cfg.Viper.UnmarshalKey("logging.outputs", &outputs); err != nil {
+		return nil
+	}
+	return outputs
+}
+
 // LoggingOutputConfig configures a logging output
 type LoggingOutputConfig struct {
 	Type    string

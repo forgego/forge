@@ -261,6 +261,11 @@ admin:
   enabled: true
   path: /admin
 
+logging:
+  # Read by log.NewLoggerFromSettings in main.go. Use format: json in production.
+  level: debug
+  format: console
+
 security:
   # Secrets are NOT stored here. They are generated into .env (local use
   # only, never committed) and read from the environment:

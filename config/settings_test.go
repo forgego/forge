@@ -221,6 +221,28 @@ func TestLoadSettings_LoggingSettings(t *testing.T) {
 	}
 }
 
+func TestLoadSettings_LoggingOutputs(t *testing.T) {
+	cfg := NewConfig()
+	cfg.Set("logging.outputs", []map[string]interface{}{
+		{"type": "console", "enabled": true},
+		{"type": "file", "enabled": true, "level": "warn", "path": "logs/app.log"},
+	})
+	settings := LoadSettings(cfg)
+
+	want := []LoggingOutputConfig{
+		{Type: "console", Enabled: true},
+		{Type: "file", Enabled: true, Level: "warn", Path: "logs/app.log"},
+	}
+	if len(settings.Logging.Outputs) != len(want) {
+		t.Fatalf("Logging.Outputs = %+v, want %+v", settings.Logging.Outputs, want)
+	}
+	for i := range want {
+		if settings.Logging.Outputs[i] != want[i] {
+			t.Errorf("Logging.Outputs[%d] = %+v, want %+v", i, settings.Logging.Outputs[i], want[i])
+		}
+	}
+}
+
 func TestLoadSettings_ErrorSettings(t *testing.T) {
 	cfg := NewConfig()
 	settings := LoadSettings(cfg)

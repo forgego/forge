@@ -68,6 +68,10 @@ the change.
 - The warnings about generated ephemeral secrets are printed when the server
   starts, not by every CLI command (`forge generate`, `forge version`, ...)
   that loads the config. `config.Config.SecretWarnings` returns them (#294).
+- The `forge new` scaffold builds its logger from the `logging.*` keys with
+  the new `log.NewLoggerFromSettings`, and its `config.yaml` has a `logging`
+  section (`level: debug`, `format: console`). `config.LoadSettings` now reads
+  `logging.outputs`. Before, `main.go` ignored every `logging.*` key (#294).
 - `forge version` prints the version the binary was installed from, and
   `forge new` pins that version in the new project's `go.mod` instead of
   `v0.1.0` (#286).

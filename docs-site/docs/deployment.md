@@ -175,8 +175,8 @@ client address, user agent and request ID.
 - **Not redacted**: URL paths are logged verbatim, so keep secrets out of
   paths. Other error text is logged as-is, and non-error panic values are
   logged as-is. Treat logs as containing personal data.
-- The `main.go` from `forge new` builds its logger with
-  `log.NewLogger(settings.App.Debug)` and ignores the `logging.*` keys; see
+- The `main.go` from `forge new` builds its logger from the `logging.*` keys
+  with `log.NewLoggerFromSettings(settings.Logging)`; see
   [logging](/docs/config/logging/).
 
 ## State kept in process memory

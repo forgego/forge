@@ -133,9 +133,9 @@ func LoadSettings(cfg *Config) *Settings {
 			SiteName:    cfg.GetString("admin.site_name", "forge"),
 		},
 		Logging: LoggingSettings{
-			Level:  cfg.GetString("logging.level", "info"),
-			Format: cfg.GetString("logging.format", "json"),
-			// Outputs will be loaded from config if needed
+			Level:   cfg.GetString("logging.level", "info"),
+			Format:  cfg.GetString("logging.format", "json"),
+			Outputs: loggingOutputs(cfg),
 		},
 		Errors: ErrorSettings{
 			ProblemDetails: ProblemDetailsSettings{
