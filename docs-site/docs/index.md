@@ -63,7 +63,9 @@ Go deeper:
 
 ## Resources
 
-- **[Features](/docs/features)** - Complete feature list
+- **[Support contract](/docs/status)** - What is supported, tested and excluded
+- **[Deployment](/docs/deployment)** - Run one production instance
+- **[Features](/docs/features)** - Feature list
 - **[Changelog](/docs/changelog)** - Version history
 - **[Security](/docs/security)** - Security policy
 - **[Community](/docs/community)** - Get help and contribute
@@ -73,11 +75,11 @@ Go deeper:
 Forge provides everything you need to build web applications:
 
 - **Type-Safe ORM** - Query with full compile-time safety
-- **Auto Admin** - Get a complete admin interface automatically
+- **Admin** - Register a model to manage it in the bundled admin
 - **REST APIs** - Serializers, auth, and pagination built-in
 - **Migrations** - Track and apply database changes
 - **Code Generation** - Generate type-safe queries and managers
-- **Security** - CSRF, CORS, rate limiting out of the box
+- **Security** - Sessions, CSRF and production secret checks by default; CORS and rate-limiting middleware to add
 - **Authentication** - Multiple auth backends included
 - **CLI Tools** - Powerful command-line interface
 
@@ -96,7 +98,7 @@ type Article struct {
 
 func (Article) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64Field("id", schema.Primary()),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
         schema.StringField("title", schema.MaxLength(200)),
         schema.TextField("content"),
         schema.TimeField("published_at", schema.AutoNow()),
@@ -107,11 +109,14 @@ func (Article) Fields() []schema.Field {
 Type-safe queries with autocomplete:
 
 ```go
-// Generated expressions for compile-time safety
-articles := models.ArticleManager.
-    Filter(models.ArticleExpr.Title.Contains("Go")).
-    OrderBy("-published_at").
-    Limit(10)
+// ArticleObjects and ArticleFieldsInstance are written by `forge generate`
+a := models.ArticleFieldsInstance
+
+qs, err := models.ArticleObjects.Filter(a.Title.Contains("Go"))
+if err != nil {
+    return err
+}
+articles, err := qs.OrderBy(a.PublishedAt.Desc()).Limit(10).All(ctx)
 ```
 
 ## Need Help?

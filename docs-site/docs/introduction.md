@@ -13,7 +13,7 @@ Forge is a Go framework that brings Django-style rapid development to the Go eco
 Forge provides the building blocks for web applications:
 
 - **Type-Safe ORM** - Query your database with full compile-time safety. No string-based queries or runtime surprises.
-- **Auto-Generated Admin** - Get a complete admin interface automatically from your models.
+- **Built-in Admin** - Register a model to manage it in the bundled React admin.
 - **REST API Framework** - Build APIs with serializers, authentication, and pagination built-in.
 - **Schema Migrations** - Track and apply database changes automatically, like Django or Rails.
 - **Code Generation** - Define schemas once, generate type-safe queries and managers automatically.
@@ -32,7 +32,7 @@ type Article struct {
 
 func (Article) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64Field("id", schema.Primary()),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
         schema.StringField("title", schema.MaxLength(200)),
         schema.TextField("content"),
         schema.TimeField("published_at", schema.AutoNow()),
@@ -45,11 +45,14 @@ func (Article) Fields() []schema.Field {
 Get IDE autocomplete, compile-time validation, and refactoring support for all your queries:
 
 ```go
-// Type-safe queries with generated expressions
-articles := models.ArticleManager.
-    Filter(models.ArticleExpr.Title.Contains("Go")).
-    OrderBy("-published_at").
-    Limit(10)
+// ArticleObjects and ArticleFieldsInstance are written by `forge generate`
+a := models.ArticleFieldsInstance
+
+qs, err := models.ArticleObjects.Filter(a.Title.Contains("Go"))
+if err != nil {
+    return err
+}
+articles, err := qs.OrderBy(a.PublishedAt.Desc()).Limit(10).All(ctx)
 ```
 
 ### Batteries Included
@@ -57,7 +60,7 @@ articles := models.ArticleManager.
 Everything you need is already there:
 - Authentication and authorization
 - Input validation
-- Security middleware (CSRF, CORS, rate limiting)
+- Security middleware (CSRF and sessions by default; CORS and rate limiting to add)
 - Logging and error handling
 - Health checks and metrics
 
@@ -87,7 +90,7 @@ type User struct {
 
 func (User) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64Field("id", schema.Primary()),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
         schema.StringField("email", schema.Unique(), schema.MaxLength(255)),
         schema.StringField("name", schema.MaxLength(150)),
         schema.TimeField("created_at", schema.AutoNowAdd()),
@@ -100,7 +103,7 @@ func (User) Fields() []schema.Field {
 Run `forge generate` and get:
 - Manager with CRUD methods
 - Type-safe field expressions for queries
-- Admin registration
+- With `--api`, REST serializers, viewsets and routes
 
 ### Migrations Handle Schema Changes
 
@@ -114,17 +117,13 @@ Forge detects changes and generates SQL migrations automatically.
 
 ### Build APIs Fast
 
-Create serializers and viewsets for instant REST APIs:
+`forge generate --api` writes a serializer, a viewset and route registration
+for each model. Mount them on the server's router:
 
 ```go
-type ArticleSerializer struct {
-    ID        int64  `json:"id"`
-    Title     string `json:"title"`
-    Content   string `json:"content"`
-}
-
-// Register with router
-router.RegisterViewSet("/api/articles", ArticleViewSet)
+srv.RegisterRoutes(func(router *server.Router) {
+    models.RegisterAPIRoutes(router) // serves /api/v1/articles/
+})
 ```
 
 ## Architecture
