@@ -20,7 +20,7 @@ The Forge team takes security bugs seriously. We appreciate your efforts to resp
 Instead, please report them via one of these methods:
 
 1. **GitHub Security Advisories** (Preferred)
-   - Go to the [Security tab](https://github.com/hamidrabedi/foreit/security)
+   - Go to the [Security tab](https://github.com/forgego/forge/security)
    - Click "Report a vulnerability"
    - Fill in the details
 

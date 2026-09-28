@@ -10,11 +10,11 @@ const config = {
   tagline: 'Django-inspired productivity for Go with type safety and performance.',
   favicon: 'favicon.svg',
 
-  url: 'https://hamidrabedi.github.io',
-  baseUrl: '/foreit/',
+  url: 'https://forgego.github.io',
+  baseUrl: '/forge/',
 
-  organizationName: 'hamidrabedi',
-  projectName: 'foreit',
+  organizationName: 'forgego',
+  projectName: 'forge',
 
   markdown: {
     hooks: {
@@ -37,7 +37,7 @@ const config = {
       ({
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
-          editUrl: 'https://github.com/hamidrabedi/foreit/tree/main/docs-site/',
+          editUrl: 'https://github.com/forgego/forge/tree/master/docs-site/',
           showLastUpdateAuthor: false,
           showLastUpdateTime: false,
         },
@@ -101,7 +101,7 @@ const config = {
             position: 'left',
           },
           {
-            href: 'https://github.com/hamidrabedi/foreit',
+            href: 'https://github.com/forgego/forge',
             label: 'GitHub',
             position: 'right',
           },
@@ -135,7 +135,7 @@ const config = {
               {label: 'Changelog', to: '/docs/changelog'},
               {label: 'Community', to: '/docs/community'},
               {label: 'Security', to: '/docs/security'},
-              {label: 'GitHub Repository', href: 'https://github.com/hamidrabedi/foreit'},
+              {label: 'GitHub Repository', href: 'https://github.com/forgego/forge'},
             ],
           },
         ],
