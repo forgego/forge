@@ -44,6 +44,7 @@ func (s *fieldFilterSerializer) WriteOnlyFields() []string {
 }
 
 type fieldFilterQueryset struct {
+	unusedDeleteOperation
 	items []*fieldFilterModel
 }
 

@@ -19,7 +19,7 @@ a REST API and an admin panel for it.
 [Documentation](https://forgego.github.io/forge/) ·
 [Quickstart](https://forgego.github.io/forge/docs/quickstart/) ·
 [Example app](examples/ecommerce/) ·
-[Capability status](https://forgego.github.io/forge/docs/status/)
+[Support contract](https://forgego.github.io/forge/docs/status/)
 
 </div>
 
@@ -43,16 +43,20 @@ code you can read and change.
 - **Migrations from your models.** `forge makemigrations --auto` compares your
   models with the migration history and writes the SQL.
 - **Built-in admin.** A React admin with search, filters, saved views, bulk
-  actions, change history and per-object permission hooks.
+  actions, change history and per-object permission hooks. Saved views and
+  change history are kept in process memory for now.
 - **REST API layer.** ViewSets, serializers, pagination, throttling and an
   OpenAPI document, modelled on Django REST Framework.
 - **Secure defaults.** Password hashing, sessions, CSRF protection, secure
-  cookies, CORS checks and rate limiting.
+  cookies in production and a rate-limited admin login. CORS and request
+  rate-limiting middleware are available to add.
 
 > [!NOTE]
-> Forge is pre-1.0 and its API may still change. PostgreSQL is the primary
-> tested database. The [capability status](https://forgego.github.io/forge/docs/status/)
-> page lists what is verified in CI and what is still partial.
+> Forge is pre-1.0 (v0.1.x) and its API may still change between minor
+> releases. PostgreSQL 15 is the tested database; SQLite is experimental. The
+> [support contract](https://forgego.github.io/forge/docs/status/) lists what
+> is verified in CI, what is partial, what is excluded, and the stability
+> policy.
 
 ## A quick look
 
@@ -135,7 +139,7 @@ Forge needs Go 1.26 or later.
 ## Start a project
 
 ```bash
-forge new myapp --database sqlite --template simple
+forge new myapp --database sqlite --template simple --docker=false
 cd myapp
 forge add app blog --example
 forge generate --models ./app/blog --output ./app/blog
@@ -143,8 +147,12 @@ forge makemigrations initial --auto --models ./app/blog
 forge migrate up
 ```
 
-The [quickstart](https://forgego.github.io/forge/docs/quickstart/) covers the
-next steps, and `forge --help` lists every command.
+SQLite keeps this example self-contained, but applying migrations to SQLite
+is experimental. Use `--database postgres` for anything you deploy, and see the
+[deployment guide](https://forgego.github.io/forge/docs/deployment/) before
+going to production. The
+[quickstart](https://forgego.github.io/forge/docs/quickstart/) covers the next
+steps, and `forge --help` lists every command.
 
 ## Documentation
 

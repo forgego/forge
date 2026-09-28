@@ -8,7 +8,8 @@ Scope: what stays public vs. what stays local. This file owns only the policy.
 
 - Root: `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `AGENTS.md`.
 - Docs site source (`docs-site/`), if present, is public.
-- `docs/`: `DESIGN.md`, `PRD.md`, `ROADMAP.md`, `TECH-DEBT.md`, `BUGS.md`.
+- `docs/`: `DESIGN.md`, `PRD.md`, `ROADMAP.md`, `TECH-DEBT.md`, `BUGS.md`, `REVIEWING.md`, `RELEASING.md`.
+- The support contract (support tiers, supported versions, stability policy) lives only in `docs-site/docs/status.md`; other documents link to it.
 - `docs/design/admin-ui-system.md`: durable design system source.
 - Reusable skills (`skills/`, `.agents/skills/` where curated): public.
 - Curated durable specs can remain public under `specs/` and need not move to `docs/`.

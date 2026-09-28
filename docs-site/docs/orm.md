@@ -213,23 +213,28 @@ deletedCount, err := ProductManager.
 
 ## Transactions
 
-Execute multiple mutations within an ACID transaction:
+Execute multiple writes within one transaction with `(*db.DB).WithTx`. Bind each
+generated manager to the transaction with `WithTx(tx)`. When the function returns
+an error or panics, every write in it is rolled back; otherwise the transaction
+commits:
 
 ```go
-err := orm.WithTransaction(ctx, db, func(txCtx context.Context) error {
-    order, err := OrderManager.Create(txCtx, newOrder)
-    if err != nil {
+err := database.WithTx(ctx, func(tx *db.Tx) error {
+    order := &Order{}
+    order.CustomerId = customerID
+    if err := OrderObjects.WithTx(tx).Create(ctx, order); err != nil {
         return err
     }
 
-    _, err = InventoryManager.
-        Filter(InventoryExpr.ProductID.Eq(order.ProductID)).
-        Update(txCtx, orm.UpdateMap{
-            "stock": orm.F("stock") - order.Quantity,
-        })
-    return err
+    line := &OrderLine{}
+    line.OrderId = order.Id
+    line.ProductId = productID
+    return OrderLineObjects.WithTx(tx).Create(ctx, line)
 })
 ```
+
+For partial rollback inside a transaction, use `tx.CreateSavepoint(name)` and
+`RollbackToSavepoint()`.
 
 ---
 

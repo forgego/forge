@@ -16,6 +16,7 @@ func buildMetadata[T any](s schema.Schema, config *Config[T], name string) (*Met
 	if err != nil {
 		return nil, err
 	}
+	markConfiguredReadOnly(fieldsMetadata, config.ReadOnlyFields)
 
 	// Build relations metadata
 	relationsMetadata := buildRelationsMetadata(s, config)
@@ -116,6 +117,26 @@ func buildFieldsMetadata(s schema.Schema) ([]FieldMetadata, error) {
 	}
 
 	return result, nil
+}
+
+// markConfiguredReadOnly flags the admin's ReadOnlyFields as read-only in the
+// metadata. The write path already drops these fields (see writableFields);
+// without this the UI renders them as editable and silently discards edits.
+// Read-only fields are never submitted by the form, so they are not required.
+func markConfiguredReadOnly(fields []FieldMetadata, readOnly []string) {
+	if len(readOnly) == 0 {
+		return
+	}
+	names := make(map[string]bool, len(readOnly))
+	for _, name := range readOnly {
+		names[name] = true
+	}
+	for i := range fields {
+		if names[fields[i].Name] {
+			fields[i].ReadOnly = true
+			fields[i].Required = false
+		}
+	}
 }
 
 // isAutoManaged reports whether the database/ORM owns this field's value.

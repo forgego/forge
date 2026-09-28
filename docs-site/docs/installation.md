@@ -22,7 +22,9 @@ If you need to install or upgrade Go, download it from [go.dev/dl](https://go.de
 
 ### Database
 
-Forge currently supports PostgreSQL 12 or higher. Install PostgreSQL:
+Forge is tested with PostgreSQL 15; other versions are untested and SQLite is
+experimental. The [support contract](/docs/status/) has the details. Install
+PostgreSQL:
 
 - **macOS**: `brew install postgresql`
 - **Ubuntu/Debian**: `sudo apt-get install postgresql postgresql-contrib`
@@ -63,11 +65,15 @@ Check that `forge` is available:
 forge version
 ```
 
-Expected output:
+It prints the module version the binary was installed from, for example:
 
 ```
-forge version 1.0.0
+Forge v0.1.2
 ```
+
+Binaries built from v0.1.1 or earlier print `v0.1.0` whatever their real
+version; upgrade to get the correct output and the correct version pinned in
+new projects.
 
 ### Add to PATH
 
@@ -324,26 +330,38 @@ kill $(lsof -ti:8000)
 
 ## Environment Setup
 
+Every configuration key can be set from the environment as `FORGE_` plus the
+key in upper case with dots replaced by underscores. `forge new` writes
+development secrets to a local `.env` file, which Forge loads without
+overriding variables that are already set.
+
 ### Development Environment
 
-Set these environment variables for development:
-
 ```bash
-export FORGE_ENV=development
-export FORGE_DEBUG=true
-export DATABASE_URL=postgresql://user:pass@localhost/dbname
+export FORGE_APP_ENV=development
+export FORGE_DATABASE_HOST=localhost
+export FORGE_DATABASE_NAME=myproject_db
+export FORGE_DATABASE_USER=myapp
+export FORGE_DATABASE_PASSWORD=secure_password
 ```
 
 ### Production Environment
 
-For production, use:
-
 ```bash
-export FORGE_ENV=production
-export FORGE_DEBUG=false
-export DATABASE_URL=postgresql://user:pass@prod-host/dbname
-export SECRET_KEY=your-secret-key-here
+export FORGE_APP_ENV=production
+export FORGE_APP_DEBUG=false
+export FORGE_DATABASE_HOST=prod-host
+export FORGE_DATABASE_PASSWORD=...          # from your secrets manager
+export FORGE_DATABASE_SSLMODE=require
+export FORGE_SECURITY_SECRET_KEY=...        # from your secrets manager
+export FORGE_SECURITY_SESSION_SECRET=...
+export FORGE_SECURITY_CSRF_SECRET_KEY=...
 ```
+
+There is no `DATABASE_URL` setting; set the individual `FORGE_DATABASE_*`
+variables. With `FORGE_APP_ENV=production` the server refuses to start unless
+all three security secrets are set explicitly. The
+[deployment guide](/docs/deployment/) covers the rest.
 
 ## Docker Setup (Optional)
 

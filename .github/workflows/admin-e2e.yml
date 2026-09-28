@@ -1,0 +1,192 @@
+name: Admin Browser E2E
+
+# Browser acceptance tests for the admin: the built ecommerce example, with
+# the production admin assets, runs against an isolated PostgreSQL database
+# and Playwright drives it through the core operator journeys
+# (tests/e2e/admin). "Admin browser E2E result" is the job to mark required:
+# it always reports, and fails when the journeys ran and failed.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: admin-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      admin: ${{ steps.filter.outputs.admin }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            admin:
+              - '**/*.go'
+              - '**/go.mod'
+              - '**/go.sum'
+              - 'admin/ui/**'
+              - 'examples/ecommerce/**'
+              - 'tests/e2e/admin/**'
+              - '.github/workflows/admin-e2e.yml'
+
+  admin-e2e:
+    name: Admin browser journeys (PostgreSQL)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.admin == 'true'
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: forge_e2e
+          POSTGRES_PASSWORD: forge_e2e
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U forge_e2e -d postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      # The ecommerce example reads FORGE_* over config/config.yaml; it
+      # creates the database on start-up and seeds the admin superuser from
+      # FORGE_ADMIN_USERNAME/FORGE_ADMIN_PASSWORD.
+      FORGE_DATABASE_DRIVER: postgres
+      FORGE_DATABASE_HOST: 127.0.0.1
+      FORGE_DATABASE_PORT: '5432'
+      FORGE_DATABASE_USER: forge_e2e
+      FORGE_DATABASE_PASSWORD: forge_e2e
+      FORGE_DATABASE_NAME: admin_e2e
+      FORGE_SERVER_HOST: 127.0.0.1
+      FORGE_SERVER_PORT: '8020'
+      # A non-default mount so every journey also exercises prefix handling.
+      FORGE_ADMIN_PATH: /ops/admin
+      FORGE_ADMIN_USERNAME: e2e-operator
+      FORGE_ADMIN_PASSWORD: e2e-${{ github.run_id }}-${{ github.run_attempt }}
+      ADMIN_E2E_BASE_URL: http://127.0.0.1:8020
+      ADMIN_E2E_PATH: /ops/admin
+      ADMIN_E2E_USERNAME: e2e-operator
+      ADMIN_E2E_PASSWORD: e2e-${{ github.run_id }}-${{ github.run_attempt }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.1'
+          cache-dependency-path: |
+            go.sum
+            examples/ecommerce/go.sum
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '26.8.1'
+          cache: 'npm'
+          cache-dependency-path: |
+            admin/ui/web/package-lock.json
+            tests/e2e/admin/package-lock.json
+
+      - name: Build admin frontend
+        working-directory: admin/ui/web
+        run: |
+          npm ci
+          npm run build
+          test -f ../dist/index.html
+
+      - name: Build ecommerce application
+        working-directory: examples/ecommerce
+        run: go build -o ecommerce .
+
+      - name: Install Playwright and Chromium
+        working-directory: tests/e2e/admin
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Start application on PostgreSQL
+        working-directory: examples/ecommerce
+        run: |
+          ./ecommerce > server.log 2>&1 &
+          echo $! > server.pid
+          for i in $(seq 1 60); do
+            if curl -fsS "$ADMIN_E2E_BASE_URL/health" > /dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS "$ADMIN_E2E_BASE_URL/health"
+          # Refuse to test the SQLite fallback: the app must be on PostgreSQL.
+          if grep -q "Falling back to SQLite" server.log; then
+            cat server.log
+            exit 1
+          fi
+          PGPASSWORD="$FORGE_DATABASE_PASSWORD" psql -w -h 127.0.0.1 -U "$FORGE_DATABASE_USER" -d "$FORGE_DATABASE_NAME" \
+            -c "SELECT count(*) AS categories FROM categories;"
+          # The admin shell and its assets are served under the custom prefix.
+          curl -fsS "$ADMIN_E2E_BASE_URL$ADMIN_E2E_PATH/categories" | grep -q "forge-admin-prefix\" content=\"$ADMIN_E2E_PATH\""
+
+      - name: Run admin browser journeys
+        working-directory: tests/e2e/admin
+        env:
+          CI: 'true'
+        run: npx playwright test
+
+      - name: Show application log
+        if: always()
+        working-directory: examples/ecommerce
+        run: tail -n 300 server.log || true
+
+      - name: Upload Playwright report, traces and screenshots
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: admin-e2e-playwright
+          path: |
+            tests/e2e/admin/playwright-report/
+            tests/e2e/admin/test-results/
+            examples/ecommerce/server.log
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Stop application
+        if: always()
+        working-directory: examples/ecommerce
+        run: |
+          if [ -f server.pid ]; then kill "$(cat server.pid)" || true; fi
+
+  result:
+    name: Admin browser E2E result
+    runs-on: ubuntu-latest
+    needs: [changes, admin-e2e]
+    if: always()
+    steps:
+      - name: Require the journeys to pass when they ran
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          E2E: ${{ needs.admin-e2e.result }}
+        run: |
+          echo "changes=$CHANGES admin-e2e=$E2E"
+          if [ "$CHANGES" != "success" ]; then exit 1; fi
+          case "$E2E" in
+            success|skipped) exit 0 ;;
+            *) exit 1 ;;
+          esac

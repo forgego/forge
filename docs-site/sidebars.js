@@ -10,7 +10,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Start Here',
-      items: ['index', 'introduction', 'quickstart', 'installation'],
+      items: ['index', 'introduction', 'quickstart', 'installation', 'status', 'deployment'],
     },
     {
       type: 'category',
@@ -29,6 +29,8 @@ const sidebars = {
         'api/overview',
         'api/serializers',
         'api/viewsets',
+        'api/data-access',
+        'api/field-contract',
         'api/authentication',
         'api/permissions',
         'api/throttling',
@@ -61,7 +63,6 @@ const sidebars = {
         'api-reference/fields',
         'api-reference/hooks',
         'api-reference/relations',
-        'status',
       ],
     },
     {

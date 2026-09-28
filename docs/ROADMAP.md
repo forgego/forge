@@ -58,6 +58,9 @@ commit, and pass/fail/skip counts):
 - [ ] Caching: query/instance cache, Redis + in-memory backends.
 - [ ] Query power: window functions, full-text search, raw SQL escape hatch.
 - [ ] Background tasks (queues/workers).
+- [ ] Shared, durable stores for admin tokens, sessions, change history and
+      throttling, so more than one instance can run (today's limits are in
+      the [deployment guide](../docs-site/docs/deployment.md#multiple-instances)).
 - [ ] Observability: Prometheus metrics, OpenTelemetry health/tracing.
 
 ### Later
@@ -96,7 +99,10 @@ commit, and pass/fail/skip counts):
       docs to point to `go install` and GitHub tagged releases.
 - [ ] Acceptance is judged by someone other than the implementer
       (see [REVIEWING.md](REVIEWING.md#acceptance-review)).
-- [ ] CI fails on unresolved relative links and referenced repository paths
-      in public documentation and contributor skills.
+- [x] CI fails on unresolved relative links and referenced repository paths
+      in public documentation and contributor skills
+      (`.github/workflows/docs-links.yml`, `internal/tools/doclinks`).
+- [x] Release process, upgrade-guide template and install smoke test
+      ([RELEASING.md](RELEASING.md), `.github/workflows/install-smoke.yml`).
 - [ ] Analyzer corpus fixtures/goldens/benchmarks; RAG/evaluator ranking
       fixtures; harness-compatibility evidence (Claude/Codex/OpenCode/Zed/dmux).

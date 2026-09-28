@@ -67,6 +67,7 @@ func newJSONRoundTripSerializer() Serializer {
 }
 
 type jsonRoundTripManager struct {
+	unusedListOperations
 	mu     sync.Mutex
 	items  map[int64]*jsonRoundTripModel
 	nextID int64

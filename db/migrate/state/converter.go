@@ -1,13 +1,27 @@
 package state
 
 import (
+	"sort"
+
 	generator "github.com/forgego/forge/codegen"
 )
+
+// sortedKeys returns a map's keys in order so converted definitions, and the
+// down migrations rendered from them, are deterministic.
+func sortedKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
 
 // ToModelDefinitions converts state back to ModelDefinitions (for comparison)
 func (s *SchemaState) ToModelDefinitions() []*generator.ModelDefinition {
 	var defs []*generator.ModelDefinition
-	for _, tableState := range s.Tables {
+	for _, tableName := range sortedKeys(s.Tables) {
+		tableState := s.Tables[tableName]
 		if tableState.Name == "schema_migrations" {
 			continue
 		}
@@ -23,7 +37,8 @@ func (s *SchemaState) ToModelDefinitions() []*generator.ModelDefinition {
 		}
 
 		// Convert columns to fields
-		for _, colState := range tableState.Columns {
+		for _, colName := range sortedKeys(tableState.Columns) {
+			colState := tableState.Columns[colName]
 			field := generator.FieldDefinition{
 				Name:          colState.Name,
 				Type:          colState.Type,
@@ -44,7 +59,8 @@ func (s *SchemaState) ToModelDefinitions() []*generator.ModelDefinition {
 		}
 
 		// Convert indexes
-		for _, idxState := range tableState.Indexes {
+		for _, idxName := range sortedKeys(tableState.Indexes) {
+			idxState := tableState.Indexes[idxName]
 			def.Meta.Indexes = append(def.Meta.Indexes, generator.IndexDefinition{
 				Name:   idxState.Name,
 				Fields: idxState.Fields,
@@ -52,8 +68,24 @@ func (s *SchemaState) ToModelDefinitions() []*generator.ModelDefinition {
 			})
 		}
 
+		// Convert foreign keys so regeneration does not re-add recorded ones.
+		// To holds the target table and the actions hold their SQL form.
+		for _, fkName := range sortedKeys(tableState.ForeignKeys) {
+			fkState := tableState.ForeignKeys[fkName]
+			def.Relations = append(def.Relations, generator.RelationDefinition{
+				Name: fkState.Column,
+				Type: "ForeignKey",
+				To:   fkState.TargetTable,
+				Options: map[string]interface{}{
+					"on_delete": fkState.OnDelete,
+					"on_update": fkState.OnUpdate,
+				},
+			})
+		}
+
 		// Convert constraints
-		for _, constrState := range tableState.Constraints {
+		for _, constrName := range sortedKeys(tableState.Constraints) {
+			constrState := tableState.Constraints[constrName]
 			def.Meta.Constraints = append(def.Meta.Constraints, generator.ConstraintDefinition{
 				Name:      constrState.Name,
 				Type:      constrState.Type,

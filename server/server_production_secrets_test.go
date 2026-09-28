@@ -1,6 +1,8 @@
 package server
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -113,5 +115,30 @@ func TestNonProductionIgnoresInsecureSettingsSecurity(t *testing.T) {
 		}, nil)
 		require.NoError(t, err)
 		require.NoError(t, srv.validateProductionSecrets(), "env %q should not be validated", env)
+	}
+}
+
+// TestProductionEnvSecureCookiesIgnoreCase checks that every spelling of
+// app.env that triggers production secret validation also marks cookies
+// Secure, so " Production " cannot pass validation with plain-HTTP cookies.
+func TestProductionEnvSecureCookiesIgnoreCase(t *testing.T) {
+	for _, env := range []string{"production", "Production", " PRODUCTION "} {
+		t.Run(env, func(t *testing.T) {
+			settings := &config.Settings{
+				App:      config.AppSettings{Env: env},
+				Server:   config.ServerSettings{Host: "127.0.0.1", Port: "0", HealthCheckPath: "/health"},
+				Security: secureTestSecurity(),
+			}
+			srv, err := NewServer(config.NewConfig(), settings, nil)
+			require.NoError(t, err)
+
+			rec := httptest.NewRecorder()
+			srv.Handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/health", nil))
+			cookies := rec.Result().Cookies()
+			require.NotEmpty(t, cookies, "expected the CSRF middleware to set a cookie")
+			for _, c := range cookies {
+				require.True(t, c.Secure, "cookie %s is not Secure for app.env %q", c.Name, env)
+			}
+		})
 	}
 }
