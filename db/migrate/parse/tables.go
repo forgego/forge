@@ -28,9 +28,22 @@ func NewTableParser() *TableParser {
 // which is not a column.
 var tableConstraintRegex = regexp.MustCompile(`(?i)^(?:CONSTRAINT\s|FOREIGN\s+KEY|PRIMARY\s+KEY\s*\(|UNIQUE\s*\(|CHECK\s*\()`)
 
-// tableForeignKeyRegex matches a table-level foreign key, as SQLite migrations
-// declare them inside CREATE TABLE.
-var tableForeignKeyRegex = regexp.MustCompile(`(?i)^(?:CONSTRAINT\s+["']?\w+["']?\s+)?FOREIGN\s+KEY\s*\(\s*["']?(\w+)["']?\s*\)\s*REFERENCES\s+["']?(\w+)["']?\s*\(\s*["']?\w+["']?\s*\)(?:\s+ON\s+DELETE\s+(SET\s+NULL|SET\s+DEFAULT|NO\s+ACTION|\w+))?(?:\s+ON\s+UPDATE\s+(SET\s+NULL|SET\s+DEFAULT|NO\s+ACTION|\w+))?`)
+// tableForeignKeyRegex matches the start of a table-level foreign key, as
+// SQLite migrations declare them inside CREATE TABLE.
+var tableForeignKeyRegex = regexp.MustCompile(`(?i)^(?:CONSTRAINT\s+["']?\w+["']?\s+)?FOREIGN\s+KEY\b`)
+
+// foreignKeyRegex matches FOREIGN KEY (column) REFERENCES [schema.]table
+// (column) and captures the column, the target table without its schema, and
+// the text after the reference, which holds the referential actions.
+var foreignKeyRegex = regexp.MustCompile(`(?is)FOREIGN\s+KEY\s*\(\s*["']?(\w+)["']?\s*\)\s*REFERENCES\s+(?:["']?\w+["']?\s*\.\s*)?["']?(\w+)["']?\s*\(\s*["']?\w+["']?\s*\)([^;]*)`)
+
+// referentialActionRegex matches an ON DELETE or ON UPDATE clause, which may
+// come in either order.
+var referentialActionRegex = regexp.MustCompile(`(?i)\bON\s+(DELETE|UPDATE)\s+(SET\s+NULL|SET\s+DEFAULT|NO\s+ACTION|\w+)`)
+
+// tableCheckUniqueRegex matches a named CHECK or UNIQUE table constraint, as
+// SQLite migrations declare them inside CREATE TABLE.
+var tableCheckUniqueRegex = regexp.MustCompile(`(?is)^CONSTRAINT\s+["']?(\w+)["']?\s+(CHECK|UNIQUE)\s*\((.*)\)$`)
 
 // ParseCreateTable parses a CREATE TABLE statement and returns a CreateTable change
 func (p *TableParser) ParseCreateTable(sql string) (*core.CreateTable, error) {
@@ -42,6 +55,8 @@ func (p *TableParser) ParseCreateTable(sql string) (*core.CreateTable, error) {
 // table and the foreign keys it declares as table constraints, which is how
 // SQLite migrations add them.
 func (p *TableParser) ParseCreateTableWithForeignKeys(sql string) (*core.CreateTable, []*core.AddForeignKey, error) {
+	// Comments inside the column list must not split or end it.
+	sql = stripComments(sql)
 	matches := p.createTableRegex.FindStringSubmatchIndex(sql)
 	if len(matches) < 4 {
 		return nil, nil, fmt.Errorf("could not parse CREATE TABLE statement")
@@ -56,12 +71,15 @@ func (p *TableParser) ParseCreateTableWithForeignKeys(sql string) (*core.CreateT
 	// Parse columns
 	var fields []generator.FieldDefinition
 	var foreignKeys []*core.AddForeignKey
+	var constraints []generator.ConstraintDefinition
 	columnParts := splitColumnDefinitions(columnsDef)
 
 	for _, colDef := range columnParts {
 		if trimmed := strings.TrimSpace(colDef); tableConstraintRegex.MatchString(trimmed) {
 			if fk := parseTableForeignKey(tableName, trimmed); fk != nil {
 				foreignKeys = append(foreignKeys, fk)
+			} else if constraint, ok := parseTableCheckUnique(trimmed); ok {
+				constraints = append(constraints, constraint)
 			}
 			continue
 		}
@@ -78,7 +96,8 @@ func (p *TableParser) ParseCreateTableWithForeignKeys(sql string) (*core.CreateT
 		Name:   toPascalCase(tableName),
 		Fields: fields,
 		Meta: generator.MetaDefinition{
-			TableName: tableName,
+			TableName:   tableName,
+			Constraints: constraints,
 		},
 	}
 
@@ -87,16 +106,26 @@ func (p *TableParser) ParseCreateTableWithForeignKeys(sql string) (*core.CreateT
 
 // parseTableForeignKey parses a table-level FOREIGN KEY constraint.
 func parseTableForeignKey(tableName, constraint string) *core.AddForeignKey {
-	matches := tableForeignKeyRegex.FindStringSubmatch(constraint)
+	if !tableForeignKeyRegex.MatchString(constraint) {
+		return nil
+	}
+	return parseForeignKey(tableName, constraint)
+}
+
+// parseForeignKey parses the first FOREIGN KEY .. REFERENCES clause in sql as
+// a foreign key of tableName.
+func parseForeignKey(tableName, sql string) *core.AddForeignKey {
+	matches := foreignKeyRegex.FindStringSubmatch(sql)
 	if matches == nil {
 		return nil
 	}
 	onDelete, onUpdate := "NO ACTION", "NO ACTION"
-	if matches[3] != "" {
-		onDelete = normalizeCascadeAction(matches[3])
-	}
-	if matches[4] != "" {
-		onUpdate = normalizeCascadeAction(matches[4])
+	for _, action := range referentialActionRegex.FindAllStringSubmatch(matches[3], -1) {
+		if strings.EqualFold(action[1], "DELETE") {
+			onDelete = normalizeCascadeAction(action[2])
+		} else {
+			onUpdate = normalizeCascadeAction(action[2])
+		}
 	}
 	return &core.AddForeignKey{
 		Table: tableName,
@@ -111,6 +140,28 @@ func parseTableForeignKey(tableName, constraint string) *core.AddForeignKey {
 	}
 }
 
+// parseTableCheckUnique parses a named CHECK or UNIQUE table constraint.
+func parseTableCheckUnique(constraint string) (generator.ConstraintDefinition, bool) {
+	matches := tableCheckUniqueRegex.FindStringSubmatch(constraint)
+	if matches == nil {
+		return generator.ConstraintDefinition{}, false
+	}
+	return constraintDefinition(matches[1], matches[2], matches[3]), true
+}
+
+// constraintDefinition builds a CHECK or UNIQUE constraint from its name, type
+// and the text inside its parentheses.
+func constraintDefinition(name, constraintType, body string) generator.ConstraintDefinition {
+	def := generator.ConstraintDefinition{Name: name, Type: strings.ToUpper(constraintType)}
+	body = strings.TrimSpace(body)
+	if def.Type == "UNIQUE" {
+		def.Fields = extractIndexFieldsFromString(body)
+	} else {
+		def.Condition = body
+	}
+	return def
+}
+
 func extractColumnDefinitions(sql string, searchStart int) (string, error) {
 	openIdx := strings.Index(sql[searchStart:], "(")
 	if openIdx == -1 {
@@ -121,6 +172,8 @@ func extractColumnDefinitions(sql string, searchStart int) (string, error) {
 	depth := 0
 	for i := openIdx; i < len(sql); i++ {
 		switch sql[i] {
+		case '\'', '"':
+			i = skipQuoted(sql, i) - 1
 		case '(':
 			depth++
 		case ')':
@@ -156,9 +209,61 @@ func (p *TableParser) parseColumnDefinition(colDef string) (generator.FieldDefin
 	sqlType := typeMatch[1]
 	remaining = remaining[len(typeMatch[0]):]
 
-	// Parse column attributes
+	field := fieldForSQLType(columnName, sqlType)
+	// Keywords are matched outside quoted literals, so a default such as
+	// 'NOT NULL' does not set them.
+	masked := maskQuoted(remaining)
+
+	// Check for PRIMARY KEY
+	if strings.Contains(strings.ToUpper(masked), "PRIMARY KEY") {
+		field.PrimaryKey = true
+		field.Required = true
+	}
+
+	// Check for AUTOINCREMENT / AUTO_INCREMENT / GENERATED ALWAYS AS IDENTITY
+	if strings.Contains(strings.ToUpper(masked), "AUTOINCREMENT") ||
+		strings.Contains(strings.ToUpper(masked), "AUTO_INCREMENT") ||
+		strings.Contains(strings.ToUpper(masked), "GENERATED ALWAYS AS IDENTITY") {
+		field.AutoIncrement = true
+	}
+
+	// Check for GENERATED ALWAYS AS (expr)
+	upperRemaining := strings.ToUpper(masked)
+	if strings.Contains(upperRemaining, "GENERATED ALWAYS AS") && !strings.Contains(upperRemaining, "IDENTITY") {
+		field.Options["generated"] = true
+		startIdx := strings.Index(remaining, "(")
+		endIdx := strings.LastIndex(remaining, ")")
+		if startIdx != -1 && endIdx != -1 && endIdx > startIdx {
+			field.Options["generated_expr"] = strings.TrimSpace(remaining[startIdx+1 : endIdx])
+		}
+		if strings.Contains(upperRemaining, "STORED") {
+			field.Options["generated_stored"] = true
+		}
+	}
+
+	// Check for NOT NULL
+	if strings.Contains(strings.ToUpper(masked), "NOT NULL") {
+		field.Required = true
+	}
+
+	// Check for UNIQUE
+	if strings.Contains(strings.ToUpper(masked), "UNIQUE") {
+		field.Options["unique"] = true
+	}
+
+	// Check for DEFAULT
+	if expr, ok := defaultExpression(remaining); ok {
+		field.Default = parseDefaultValue(expr)
+	}
+
+	return field, nil
+}
+
+// fieldForSQLType returns a field of the given SQL type, with the options its
+// size or precision implies, as for VARCHAR(255) or NUMERIC(10, 2).
+func fieldForSQLType(name, sqlType string) generator.FieldDefinition {
 	field := generator.FieldDefinition{
-		Name:    columnName,
+		Name:    name,
 		Type:    mapSQLTypeToFieldType(sqlType),
 		GoType:  mapSQLTypeToGoType(sqlType),
 		Options: map[string]interface{}{SQLTypeOption: NormalizeSQLType(sqlType)},
@@ -188,84 +293,35 @@ func (p *TableParser) parseColumnDefinition(colDef string) (generator.FieldDefin
 			}
 		}
 	}
-
-	// Check for PRIMARY KEY
-	if strings.Contains(strings.ToUpper(remaining), "PRIMARY KEY") {
-		field.PrimaryKey = true
-		field.Required = true
-	}
-
-	// Check for AUTOINCREMENT / AUTO_INCREMENT / GENERATED ALWAYS AS IDENTITY
-	if strings.Contains(strings.ToUpper(remaining), "AUTOINCREMENT") ||
-		strings.Contains(strings.ToUpper(remaining), "AUTO_INCREMENT") ||
-		strings.Contains(strings.ToUpper(remaining), "GENERATED ALWAYS AS IDENTITY") {
-		field.AutoIncrement = true
-	}
-
-	// Check for GENERATED ALWAYS AS (expr)
-	upperRemaining := strings.ToUpper(remaining)
-	if strings.Contains(upperRemaining, "GENERATED ALWAYS AS") && !strings.Contains(upperRemaining, "IDENTITY") {
-		field.Options["generated"] = true
-		startIdx := strings.Index(remaining, "(")
-		endIdx := strings.LastIndex(remaining, ")")
-		if startIdx != -1 && endIdx != -1 && endIdx > startIdx {
-			field.Options["generated_expr"] = strings.TrimSpace(remaining[startIdx+1 : endIdx])
-		}
-		if strings.Contains(upperRemaining, "STORED") {
-			field.Options["generated_stored"] = true
-		}
-	}
-
-	// Check for NOT NULL
-	if strings.Contains(strings.ToUpper(remaining), "NOT NULL") {
-		field.Required = true
-	}
-
-	// Check for UNIQUE
-	if strings.Contains(strings.ToUpper(remaining), "UNIQUE") {
-		field.Options["unique"] = true
-	}
-
-	// Check for DEFAULT
-	defaultRegex := regexp.MustCompile(`(?i)DEFAULT\s+([^\s,]+)`)
-	if defaultMatch := defaultRegex.FindStringSubmatch(remaining); len(defaultMatch) > 1 {
-		field.Default = parseDefaultValue(defaultMatch[1])
-	}
-
-	return field, nil
+	return field
 }
 
 // splitColumnDefinitions splits column definitions from CREATE TABLE
 func splitColumnDefinitions(defs string) []string {
 	var columns []string
-	var current strings.Builder
+	start := 0
 	parenDepth := 0
 
-	for _, char := range defs {
-		switch char {
+	for i := 0; i < len(defs); i++ {
+		switch defs[i] {
+		case '\'', '"':
+			i = skipQuoted(defs, i) - 1
 		case '(':
 			parenDepth++
-			current.WriteRune(char)
 		case ')':
 			parenDepth--
-			current.WriteRune(char)
 		case ',':
 			if parenDepth == 0 {
-				col := strings.TrimSpace(current.String())
-				if col != "" {
+				if col := strings.TrimSpace(defs[start:i]); col != "" {
 					columns = append(columns, col)
 				}
-				current.Reset()
-			} else {
-				current.WriteRune(char)
+				start = i + 1
 			}
-		default:
-			current.WriteRune(char)
 		}
 	}
 
 	// Add last column
-	col := strings.TrimSpace(current.String())
+	col := strings.TrimSpace(defs[start:])
 	if col != "" {
 		columns = append(columns, col)
 	}
@@ -278,14 +334,16 @@ func splitColumnDefinitions(defs string) []string {
 const SQLTypeOption = core.SQLTypeOption
 
 // columnTypeRegex matches a column type, including the multi-word types the
-// SQL builder emits (DOUBLE PRECISION, TIMESTAMP WITH TIME ZONE).
-var columnTypeRegex = regexp.MustCompile(`(?i)^\s+((?:DOUBLE\s+PRECISION|CHARACTER\s+VARYING|(?:TIMESTAMP|TIME)\s+WITH(?:OUT)?\s+TIME\s+ZONE|\w+)(?:\s*\([^)]+\))?)`)
+// SQL builder emits (DOUBLE PRECISION, TIMESTAMP WITH TIME ZONE) and
+// PostgreSQL array suffixes (TEXT[], INTEGER[3][]).
+var columnTypeRegex = regexp.MustCompile(`(?i)^\s+((?:DOUBLE\s+PRECISION|CHARACTER\s+VARYING|(?:TIMESTAMP|TIME)\s+WITH(?:OUT)?\s+TIME\s+ZONE|\w+)(?:\s*\([^)]+\))?(?:\s*\[\s*\d*\s*\])*)`)
 
 // NormalizeSQLType upper-cases a SQL type and collapses its whitespace so that
 // equivalent spellings compare equal.
 func NormalizeSQLType(sqlType string) string {
 	normalized := strings.Join(strings.Fields(strings.ToUpper(sqlType)), " ")
 	normalized = strings.ReplaceAll(normalized, " (", "(")
+	normalized = strings.ReplaceAll(normalized, " [", "[")
 	return strings.ReplaceAll(normalized, ", ", ",")
 }
 
@@ -361,6 +419,10 @@ func mapSQLTypeToGoType(sqlType string) string {
 // parseDefaultValue parses a default value from SQL
 func parseDefaultValue(value string) interface{} {
 	value = strings.TrimSpace(value)
+	// A string literal is a string, whatever it spells.
+	if literal, ok := unquoteLiteral(value); ok {
+		return literal
+	}
 	value = strings.Trim(value, `"'`)
 
 	// Check for SQL functions

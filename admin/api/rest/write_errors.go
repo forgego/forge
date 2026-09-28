@@ -22,22 +22,36 @@ import (
 // it is logged and answered with a generic 500 so driver text (SQL, table and
 // constraint names) does not leak to the browser.
 func respondWriteError(w http.ResponseWriter, failureCode string, err error) {
+	f := classifyWriteError(failureCode, err)
+	respondError(w, f.status, f.code, f.message, f.details)
+}
+
+// writeFailure is the client-safe description of a failed create or update.
+type writeFailure struct {
+	status  int
+	code    string
+	message string
+	details map[string]interface{}
+}
+
+// classifyWriteError describes a failed create or update for the single and
+// bulk write endpoints alike. Client-fixable failures keep a 4xx status and a
+// message safe to show; anything else is logged and reported as failureCode
+// with a generic message, never the driver text.
+func classifyWriteError(failureCode string, err error) writeFailure {
 	var verrs *validation.ValidationErrors
 	if errors.As(err, &verrs) {
-		respondError(w, http.StatusBadRequest, "validation_error", err.Error(), validationDetails(err))
-		return
+		return writeFailure{http.StatusBadRequest, "validation_error", err.Error(), validationDetails(err)}
 	}
 	if v, ok := classifyConstraintViolation(err); ok {
 		details := map[string]interface{}{v.field: []string{v.message}}
-		respondError(w, v.status, v.code, v.message, details)
-		return
+		return writeFailure{v.status, v.code, v.message, details}
 	}
-	if isValidationError(err) {
-		respondError(w, http.StatusBadRequest, "validation_error", err.Error(), validationDetails(err))
-		return
+	if !isDriverError(err) && isValidationError(err) {
+		return writeFailure{http.StatusBadRequest, "validation_error", err.Error(), nil}
 	}
 	log.Printf("admin: %s: %s", failureCode, strconv.Quote(err.Error()))
-	respondError(w, http.StatusInternalServerError, failureCode, "The change could not be saved because of a server error", nil)
+	return writeFailure{http.StatusInternalServerError, failureCode, "The change could not be saved because of a server error", nil}
 }
 
 // deleteFailure describes a failed delete without echoing driver text. A
@@ -81,6 +95,12 @@ func classifyConstraintViolation(err error) (constraintViolation, bool) {
 		case "23514":
 			return checkViolation(), true
 		}
+		// Class 22 is "data exception": a value the column type cannot hold
+		// (22001 too long, 22007 bad timestamp, 22P02 bad integer, ...).
+		// The driver message quotes the rejected input, so it is replaced.
+		if pgErr.Code.Class() == "22" {
+			return dataException(field), true
+		}
 		return constraintViolation{}, false
 	}
 
@@ -105,6 +125,18 @@ func classifyConstraintViolation(err error) (constraintViolation, bool) {
 		}
 	}
 	return constraintViolation{}, false
+}
+
+// isDriverError reports whether err comes from a supported database driver.
+// Driver messages quote SQL, identifiers and rejected input, so the keyword
+// fallback in isValidationError must never echo them.
+func isDriverError(err error) bool {
+	var pgErr *pq.Error
+	if errors.As(err, &pgErr) {
+		return true
+	}
+	var liteErr sqlite3.Error
+	return errors.As(err, &liteErr)
 }
 
 func singleField(field string) string {
@@ -149,4 +181,13 @@ func checkViolation() constraintViolation {
 		field:   "non_field_errors",
 		message: "A value is not allowed by a database constraint.",
 	}
+}
+
+func dataException(field string) constraintViolation {
+	f := singleField(field)
+	msg := "A value is not valid for its field."
+	if f != "non_field_errors" {
+		msg = fmt.Sprintf("%s has an invalid value.", f)
+	}
+	return constraintViolation{status: http.StatusBadRequest, code: "validation_error", field: f, message: msg}
 }

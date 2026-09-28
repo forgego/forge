@@ -20,8 +20,16 @@ the change.
 - Generated and `forge add api` viewsets reject unknown request keys with a
   400 (`RejectUnknownRequestFields`). Hand-written viewsets keep ignoring
   them unless they opt in (#245).
-- `PUT` is a full update: a body missing a required, writable field without
-  a default is a 400. `PATCH` is unchanged.
+- `PUT` is a full update: a body missing a required, request-writable field
+  without a Go-side `Default` is a 400. A field with only a `DBDefault` is
+  still required, and a required write-only field such as a password must be
+  sent again on every `PUT`. Read-only fields (including the serializer's
+  `ReadonlyFields()`) and fields a request cannot write are not required.
+  `PATCH` is unchanged.
+- A field tagged `json:",omitempty"` is accepted in requests under its Go
+  name, the name responses use, so a response can be sent back as a `PUT`
+  body. Such a field whose schema is neither serialized nor editable stays
+  unwritable.
 - `forge makemigrations` now emits the foreign keys declared with
   `schema.ForeignKeyField` and `Meta.Constraints`, which it silently skipped.
   In an existing project the next migration adds them and fails if rows
@@ -41,7 +49,8 @@ the change.
   to it.
 - `Server.StartWithGracefulShutdown` handles SIGINT and SIGTERM: it stops
   accepting connections and waits up to `server.graceful_timeout` for
-  in-flight requests. Projects created by `forge new` use it.
+  in-flight requests; a second signal during that wait ends the process at
+  once. Projects created by `forge new` use it.
 - `forge new --docker` builds with `golang:1.26-alpine`, and its compose
   file sets `FORGE_SERVER_HOST=0.0.0.0` so the published port reaches the
   server.
@@ -50,15 +59,31 @@ the change.
 - `forge makemigrations` on unchanged models writes nothing and prints
   `No changes detected`; it no longer re-types columns, re-adds foreign keys
   or drops `created_at` defaults, and it prints the files it actually wrote.
+- `forge makemigrations` on PostgreSQL no longer fails when a model drops a
+  relation or a `Meta` constraint; the down migration re-adds it. A
+  constraint whose CHECK condition or UNIQUE fields change is dropped and
+  re-added, and a string default that changes only in case is migrated.
+- `forge makemigrations` reads dropped and altered columns, array types such
+  as `TEXT[]`, and defaults containing spaces, commas or quotes back from
+  migration files, so it no longer repeats those changes on every run.
+- SQLite migrations declare a new table's constraints inside `CREATE TABLE`
+  and default auto timestamps to `CURRENT_TIMESTAMP`, so they apply. Adding
+  a constraint to, or changing a foreign key of, an existing SQLite table
+  is an error instead of invalid SQL.
 - `forge migrate recover` no longer advises marking a rolled-back failed
   migration clean.
 - `gen.go` for models with relations compiles.
 - `forge add api` emits a viewset that compiles and registers.
 - `IsOwnerOrReadOnly` finds owner fields on the embedded generated struct.
 - List filters parse `?field=1` as a number, not a boolean.
-- Admin: configured read-only fields are shown read-only; constraint and
-  validation failures return 4xx field errors instead of raw database text;
-  deleting a referenced record is a 409; edits send only changed fields;
+- Admin: configured read-only fields are shown read-only; constraint,
+  validation and invalid-value (PostgreSQL data exception) failures return
+  4xx errors without raw database text, in single and bulk create and update
+  alike, and other database errors are a generic 500;
+  deleting a referenced record is a 409, as is a bulk delete in which every
+  record is referenced. Bulk result items carry the classified code
+  (`validation_error`, `conflict`, `invalid_reference`) instead of
+  `create_failed` or `update_failed`. Edits send only changed fields;
   partially applied bulk actions list each skipped record; the foreign-key
   picker is labelled; fonts load under a custom mount prefix.
 - ORM: `Filter(Or(a, b)).Filter(c)` keeps the OR group intact.

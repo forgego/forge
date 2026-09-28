@@ -111,6 +111,11 @@ func (p *DDLParser) parseAlterTable(sql string) ([]core.Change, error) {
 		p.SetTableContext(matches[1])
 	}
 
+	// ALTER TABLE ALTER COLUMN
+	if change := parseAlterColumn(sql); change != nil {
+		return []core.Change{change}, nil
+	}
+
 	// ALTER TABLE ADD COLUMN
 	// Check for "ADD COLUMN" specifically to avoid matching "ADD CONSTRAINT"
 	if strings.Contains(upper, "ADD COLUMN") {
@@ -183,17 +188,50 @@ func (p *DDLParser) parseAddConstraint(sql string) *core.AddConstraint {
 	if len(matches) < 5 {
 		return nil
 	}
-	constraint := generator.ConstraintDefinition{
-		Name: matches[2],
-		Type: strings.ToUpper(matches[3]),
+	return &core.AddConstraint{Table: matches[1], Constraint: constraintDefinition(matches[2], matches[3], matches[4])}
+}
+
+// alterColumnRegex matches the ALTER TABLE .. ALTER COLUMN statements the
+// PostgreSQL builder emits for a modified column.
+var alterColumnRegex = regexp.MustCompile(`(?is)^ALTER\s+TABLE\s+["']?(\w+)["']?\s+ALTER\s+(?:COLUMN\s+)?["']?(\w+)["']?\s+(.*?)\s*;?\s*$`)
+
+var (
+	alterColumnTypeRegex       = regexp.MustCompile(`(?is)^(?:SET\s+DATA\s+)?TYPE(\s+.*)$`)
+	alterColumnSetDefaultRegex = regexp.MustCompile(`(?is)^SET\s+DEFAULT\s+(.*)$`)
+	alterColumnNotNullRegex    = regexp.MustCompile(`(?i)^(SET|DROP)\s+NOT\s+NULL$`)
+	alterColumnDropDefault     = regexp.MustCompile(`(?i)^DROP\s+DEFAULT$`)
+)
+
+// parseAlterColumn parses ALTER TABLE t ALTER COLUMN c TYPE .. | SET/DROP
+// NOT NULL | SET DEFAULT .. | DROP DEFAULT. It returns nil for any other
+// statement.
+func parseAlterColumn(sql string) *core.AlterColumn {
+	matches := alterColumnRegex.FindStringSubmatch(strings.TrimSpace(sql))
+	if matches == nil {
+		return nil
 	}
-	body := strings.TrimSpace(matches[4])
-	if constraint.Type == "UNIQUE" {
-		constraint.Fields = extractIndexFieldsFromString(body)
-	} else {
-		constraint.Condition = body
+	change := &core.AlterColumn{Table: matches[1], Column: matches[2]}
+	action := strings.TrimSpace(matches[3])
+	switch {
+	case alterColumnNotNullRegex.MatchString(action):
+		notNull := strings.EqualFold(alterColumnNotNullRegex.FindStringSubmatch(action)[1], "SET")
+		change.NotNull = &notNull
+	case alterColumnDropDefault.MatchString(action):
+		change.DropDefault = true
+	case alterColumnSetDefaultRegex.MatchString(action):
+		change.SetDefault = true
+		change.Default = parseDefaultValue(readExpression(alterColumnSetDefaultRegex.FindStringSubmatch(action)[1]))
+	case alterColumnTypeRegex.MatchString(action):
+		typeMatch := columnTypeRegex.FindStringSubmatch(alterColumnTypeRegex.FindStringSubmatch(action)[1])
+		if typeMatch == nil {
+			return nil
+		}
+		field := fieldForSQLType("", typeMatch[1])
+		change.NewType = &field
+	default:
+		return nil
 	}
-	return &core.AddConstraint{Table: matches[1], Constraint: constraint}
+	return change
 }
 
 // parseAddColumn parses ALTER TABLE ADD COLUMN statements
@@ -213,9 +251,11 @@ func (p *DDLParser) parseAddColumn(sql string) *core.AddColumn {
 	columnName := sql[matches[4]:matches[5]]
 	typeStr := typeMatch[1] // Keep type as opaque string
 
-	// Parse basic constraints from remaining SQL
+	// Parse basic constraints from remaining SQL, matching keywords outside
+	// quoted literals
 	remaining := sql[matches[1]+len(typeMatch[0]):]
-	required := strings.Contains(strings.ToUpper(remaining), "NOT NULL")
+	masked := maskQuoted(remaining)
+	required := strings.Contains(strings.ToUpper(masked), "NOT NULL")
 
 	field := generator.FieldDefinition{
 		Name:     columnName,
@@ -226,14 +266,12 @@ func (p *DDLParser) parseAddColumn(sql string) *core.AddColumn {
 	}
 
 	// Check for UNIQUE
-	if strings.Contains(strings.ToUpper(remaining), "UNIQUE") {
+	if strings.Contains(strings.ToUpper(masked), "UNIQUE") {
 		field.Options["unique"] = true
 	}
 
-	// Check for DEFAULT (simplified - just extract value)
-	defaultRe := regexp.MustCompile(`(?i)DEFAULT\s+([^\s,;]+)`)
-	if defaultMatch := defaultRe.FindStringSubmatch(remaining); len(defaultMatch) > 1 {
-		field.Default = parseDefaultValue(defaultMatch[1])
+	if expr, ok := defaultExpression(remaining); ok {
+		field.Default = parseDefaultValue(expr)
 	}
 
 	return &core.AddColumn{
@@ -244,42 +282,18 @@ func (p *DDLParser) parseAddColumn(sql string) *core.AddColumn {
 
 // parseAddForeignKey parses ALTER TABLE ADD CONSTRAINT FOREIGN KEY statements
 func (p *DDLParser) parseAddForeignKey(sql string) *core.AddForeignKey {
-	// Pattern: ALTER TABLE table ADD CONSTRAINT name FOREIGN KEY (column) REFERENCES target (id) [ON DELETE action] [ON UPDATE action]
+	// Pattern: ALTER TABLE table ADD CONSTRAINT name FOREIGN KEY (column) REFERENCES [schema.]target (id) [ON DELETE action] [ON UPDATE action]
 	// Also handles DO $$ BEGIN ... ALTER TABLE ... END $$; blocks
-	re := regexp.MustCompile(`(?i)ALTER\s+TABLE\s+["']?(\w+)["']?\s+ADD\s+CONSTRAINT\s+["']?(\w+)["']?\s+FOREIGN\s+KEY\s+\(["']?(\w+)["']?\)\s+REFERENCES\s+["']?(\w+)["']?\s+\(["']?(\w+)["']?\)(?:\s+ON\s+DELETE\s+(SET\s+NULL|SET\s+DEFAULT|NO\s+ACTION|\w+))?(?:\s+ON\s+UPDATE\s+(SET\s+NULL|SET\s+DEFAULT|NO\s+ACTION|\w+))?`)
-	matches := re.FindStringSubmatch(sql)
-	if len(matches) < 5 {
+	matches := addForeignKeyRegex.FindStringSubmatchIndex(sql)
+	if matches == nil {
 		return nil
 	}
-
-	tableName := matches[1]
-	columnName := matches[3]
-	targetTable := matches[4]
-
-	onDelete := "NO ACTION"
-	if len(matches) > 6 && matches[6] != "" {
-		onDelete = normalizeCascadeAction(matches[6])
-	}
-
-	onUpdate := "NO ACTION"
-	if len(matches) > 7 && matches[7] != "" {
-		onUpdate = normalizeCascadeAction(matches[7])
-	}
-
-	relation := generator.RelationDefinition{
-		Name: columnName,
-		Options: map[string]interface{}{
-			"on_delete": denormalizeCascadeAction(onDelete),
-			"on_update": denormalizeCascadeAction(onUpdate),
-		},
-	}
-
-	return &core.AddForeignKey{
-		Table:       tableName,
-		Relation:    relation,
-		TargetTable: targetTable,
-	}
+	return parseForeignKey(sql[matches[2]:matches[3]], sql[matches[1]:])
 }
+
+// addForeignKeyRegex matches ALTER TABLE t ADD CONSTRAINT name, where a FOREIGN
+// KEY clause follows.
+var addForeignKeyRegex = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+["']?(\w+)["']?\s+ADD\s+CONSTRAINT\s+["']?\w+["']?\s+`)
 
 // parseDropConstraint parses ALTER TABLE DROP CONSTRAINT statements
 func (p *DDLParser) parseDropConstraint(sql string) core.Change {

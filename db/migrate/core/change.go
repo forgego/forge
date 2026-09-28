@@ -17,6 +17,7 @@ const (
 	ChangeTypeDropColumn       ChangeType = "DropColumn"
 	ChangeTypeModifyColumn     ChangeType = "ModifyColumn"
 	ChangeTypeRenameColumn     ChangeType = "RenameColumn"
+	ChangeTypeAlterColumn      ChangeType = "AlterColumn"
 	ChangeTypeAddIndex         ChangeType = "AddIndex"
 	ChangeTypeDropIndex        ChangeType = "DropIndex"
 	ChangeTypeModifyIndex      ChangeType = "ModifyIndex"
@@ -105,6 +106,27 @@ func (c *ModifyColumn) Type() ChangeType  { return ChangeTypeModifyColumn }
 func (c *ModifyColumn) TableName() string { return c.Table }
 func (c *ModifyColumn) Reversible() bool  { return true }
 
+// AlterColumn is one ALTER TABLE .. ALTER COLUMN clause read back from a
+// migration file. Only the SQL parser produces it, to update a recorded column
+// in schema state; the detector emits ModifyColumn instead.
+type AlterColumn struct {
+	Table  string
+	Column string
+	// NewType, when set, carries the type, Go type and type options of a
+	// TYPE clause.
+	NewType *generator.FieldDefinition
+	// NotNull, when set, records SET NOT NULL (true) or DROP NOT NULL (false).
+	NotNull *bool
+	// SetDefault records SET DEFAULT Default; DropDefault records DROP DEFAULT.
+	SetDefault  bool
+	DropDefault bool
+	Default     interface{}
+}
+
+func (c *AlterColumn) Type() ChangeType  { return ChangeTypeAlterColumn }
+func (c *AlterColumn) TableName() string { return c.Table }
+func (c *AlterColumn) Reversible() bool  { return false }
+
 // RenameColumn represents renaming a column
 type RenameColumn struct {
 	Table   string
@@ -158,10 +180,13 @@ func (c *AddForeignKey) Type() ChangeType  { return ChangeTypeAddForeignKey }
 func (c *AddForeignKey) TableName() string { return c.Table }
 func (c *AddForeignKey) Reversible() bool  { return true }
 
-// DropForeignKey represents dropping a foreign key
+// DropForeignKey represents dropping a foreign key. Relation and TargetTable,
+// when set, record the dropped foreign key so the down migration can re-add it.
 type DropForeignKey struct {
-	Table  string
-	FKName string
+	Table       string
+	FKName      string
+	Relation    *generator.RelationDefinition
+	TargetTable string
 }
 
 func (c *DropForeignKey) Type() ChangeType  { return ChangeTypeDropForeignKey }
@@ -190,10 +215,12 @@ func (c *AddConstraint) Type() ChangeType  { return ChangeTypeAddConstraint }
 func (c *AddConstraint) TableName() string { return c.Table }
 func (c *AddConstraint) Reversible() bool  { return true }
 
-// DropConstraint represents dropping a constraint
+// DropConstraint represents dropping a constraint. Constraint, when set,
+// records the dropped definition so the down migration can re-add it.
 type DropConstraint struct {
 	Table          string
 	ConstraintName string
+	Constraint     *generator.ConstraintDefinition
 }
 
 func (c *DropConstraint) Type() ChangeType  { return ChangeTypeDropConstraint }

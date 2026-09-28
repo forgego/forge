@@ -453,9 +453,7 @@ func (vs *BaseViewSet) Create(w http.ResponseWriter, r *http.Request) {
 	// viewset-level ReadOnlyRequestFields) before populating the model.
 	var ignoredKeys []string
 	ignoredKeys = append(ignoredKeys, vs.ReadOnlyRequestFields...)
-	if ro, ok := serializer.(interface{ ReadOnlyFields() []string }); ok {
-		ignoredKeys = append(ignoredKeys, ro.ReadOnlyFields()...)
-	}
+	ignoredKeys = append(ignoredKeys, serializerReadOnly(serializer)...)
 
 	// Populate instance from data
 	if err := populateFromMap(instance, data, ignoredKeys...); err != nil {
@@ -684,9 +682,7 @@ func (vs *BaseViewSet) update(w http.ResponseWriter, r *http.Request, action str
 	if pkDBName != "" && pkDBName != pkGoName && pkDBName != pkJSONName {
 		ignoredKeys = append(ignoredKeys, pkDBName)
 	}
-	if ro, ok := serializer.(interface{ ReadOnlyFields() []string }); ok {
-		ignoredKeys = append(ignoredKeys, ro.ReadOnlyFields()...)
-	}
+	ignoredKeys = append(ignoredKeys, serializerReadOnly(serializer)...)
 	ignoredKeys = append(ignoredKeys, vs.ReadOnlyRequestFields...)
 
 	// PUT replaces the record, so it must carry every required writable
@@ -1415,8 +1411,11 @@ func validationErrorForPopulate(err error) error {
 }
 
 // populateFromMap populates a model instance from a map, optionally ignoring specified keys.
-// Keys are matched case-insensitively against the Go field name, the json tag
-// name and the db tag name. A value that cannot be converted to the field type
+// Data keys match exactly: a field's request key (its json name, or its Go
+// name under json:",omitempty") first, then its schema aliases. Ignored keys
+// match any of the field's names case-insensitively. A field hidden from JSON
+// is written only when the schema declares it write-only (see
+// requestField.writable). A value that cannot be converted to the field type
 // returns a *fieldError; nothing is silently dropped.
 func populateFromMap(instance interface{}, data map[string]interface{}, ignoredKeys ...string) error {
 	instanceValue := reflect.ValueOf(instance)
@@ -1463,55 +1462,16 @@ func populateFromMap(instance interface{}, data map[string]interface{}, ignoredK
 				continue
 			}
 
-			jsonTag := field.Tag.Get("json")
-			tagParts := strings.Split(jsonTag, ",")
-			key := tagParts[0]
-			dbTag := strings.Split(field.Tag.Get("db"), ",")[0]
-			fieldSchema := schemaFieldForStructField(schemaFields, field, key, dbTag)
-			if key == "" || key == "-" {
-				// A field hidden from JSON is writable only when the schema
-				// declares it write-only (editable, never serialized), such as
-				// a password. Anything else hidden with json:"-" stays out of
-				// reach of request input.
-				if fieldSchema == nil || !fieldSchema.Editable || fieldSchema.Serialize {
-					continue
-				}
-			}
-			fieldNames := []string{key, field.Name, dbTag}
-			if fieldSchema != nil {
-				fieldNames = append(fieldNames, resolvedFieldNames(instance, *fieldSchema)...)
-			}
-			isIgnored := false
-			for _, name := range fieldNames {
-				if ignored[strings.ToLower(name)] {
-					isIgnored = true
-					break
-				}
-			}
-			if isIgnored {
+			reqField := newRequestField(schemaFields, field)
+			if !reqField.writable() || reqField.ignoredBy(instance, ignored) {
 				continue
 			}
-			requestKey := key
-			var value interface{}
-			valueExists := false
-			// "" and "-" are not request names; a hidden field is reached
+			// A hidden field has no request key of its own and is reached
 			// only through its schema aliases.
-			if key != "" && key != "-" {
-				value, valueExists = data[requestKey]
-			}
-			if !valueExists && fieldSchema != nil {
-				for _, alias := range resolvedFieldNames(instance, *fieldSchema) {
-					if candidate, exists := data[alias]; exists {
-						requestKey = alias
-						value = candidate
-						valueExists = true
-						break
-					}
-				}
-			}
+			requestKey, value, valueExists := reqField.lookup(instance, data)
 			if valueExists {
 				if fieldValue.CanSet() {
-					if err := setFieldValue(fieldValue, value, fieldSchema); err != nil {
+					if err := setFieldValue(fieldValue, value, reqField.schema); err != nil {
 						return &fieldError{Field: requestKey, Message: err.Error()}
 					}
 				}
@@ -1540,40 +1500,35 @@ func schemaFieldsByRequestName(instance interface{}) map[string]*schema.Field {
 }
 
 // missingRequiredFields returns a validation error, keyed by request name,
-// for each required, request-writable schema field without a default that
-// data does not name under any of its names. Fields in ignoredKeys are not
-// writable.
+// for each required, editable schema field without a default that
+// populateFromMap would write but data does not supply. It uses the same
+// rules as populateFromMap: a field needs a struct field that request input
+// may write (see requestField.writable), a field named by ignoredKeys
+// (case-insensitively) is not writable, and data keys match exactly.
 func missingRequiredFields(instance interface{}, data map[string]interface{}, ignoredKeys []string) map[string][]string {
-	modelSchema, ok := instance.(schema.Schema)
-	if !ok {
-		return nil
-	}
-	present := make(map[string]bool, len(data)+len(ignoredKeys))
-	for key := range data {
-		present[strings.ToLower(key)] = true
-	}
 	ignored := make(map[string]bool, len(ignoredKeys))
 	for _, key := range ignoredKeys {
 		ignored[strings.ToLower(key)] = true
 	}
 	missing := map[string][]string{}
-fields:
-	for _, field := range modelSchema.Fields() {
+	walkRequestFields(instance, func(field requestField) {
+		f := field.schema
 		// A field with a default is optional, as it is on create.
-		if !field.Required || !field.Editable || field.Default != nil || isRequestReadOnly(field) {
-			continue
+		if f == nil || !f.Required || !f.Editable || f.Default != nil || isRequestReadOnly(*f) {
+			return
 		}
-		for _, name := range resolvedFieldNames(instance, field) {
-			if present[strings.ToLower(name)] || ignored[strings.ToLower(name)] {
-				continue fields
-			}
+		if !field.writable() || field.ignoredBy(instance, ignored) {
+			return
 		}
-		requestName := field.Name
-		if resolved, ok := schema.ResolveField(instance, field); ok && resolved.JSONName != "" && resolved.JSONName != "-" {
-			requestName = resolved.JSONName
+		if _, _, ok := field.lookup(instance, data); ok {
+			return
+		}
+		requestName := field.key
+		if requestName == "" {
+			requestName = f.Name
 		}
 		missing[requestName] = []string{"is required"}
-	}
+	})
 	return missing
 }
 

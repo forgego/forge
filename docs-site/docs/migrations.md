@@ -162,10 +162,12 @@ it set, they fail instead.
 
 :::warning SQLite is experimental
 Applying migrations to SQLite is experimental, and the release gate does not cover it.
-`TestMigrationApplySQLite` is the one test the gate allows to skip. Regeneration stability
-is verified only on PostgreSQL. SQLite foreign keys are declared inside `CREATE TABLE` and
-are not read back from migration files, so regenerating SQLite migrations for models with
-relations fails.
+`TestMigrationApplySQLite` is the one test the gate allows to skip. On SQLite, a new
+table's foreign keys and `Meta.Constraints` are declared inside its `CREATE TABLE` and read
+back from there, so regenerating unchanged models writes nothing. SQLite cannot add, drop
+or change a foreign key or constraint of an existing table without rebuilding it, and
+`makemigrations` does not write that rebuild: it stops with an error instead. A changed
+column is written only as a comment.
 :::
 
 ---
