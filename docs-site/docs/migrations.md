@@ -6,102 +6,178 @@ image: /social-card.png
 
 # Migrations & Disaster Recovery
 
-Forge includes a zero-configuration database migration engine inspired by Django and Rails. It uses Go's Abstract Syntax Tree (`go/ast`) parser to compare your declared models against existing migration states, automatically generating reversible, deterministic migration scripts.
+Forge generates SQL migrations from your models. It uses Go's Abstract Syntax Tree (`go/ast`) parser to read the declared models. It rebuilds the current schema from the migration files you already have, compares the two, and writes the difference as a numbered pair of SQL files.
 
 ---
 
 ## Core Commands
 
 ```bash
-# Auto-detect schema changes and generate a new timestamped migration
-forge makemigrations [name] --auto
+# Generate a migration from model changes (writes nothing if nothing changed)
+forge makemigrations <name> --auto
 
-# Apply pending migrations to the database
+# Preview, then apply pending migrations
+forge migrate up --dry-run
 forge migrate up
 
-# Inspect migration status across all apps
+# Show the applied version and pending migrations
 forge migrate status
 
-# Rollback the last applied migration
+# Roll back the last applied migration
 forge migrate rollback
 
-# Verify checksum integrity across all migration files
+# Compare applied migration files with their recorded checksums, and report dirty state
 forge migrate recover --verify
 
-# Force sync migration table state in case of disaster or manual DBA intervention
-forge migrate recover --force
+# Recover from a failed migration (see "Recovering from a failed migration")
+forge migrate force <version>
+forge migrate recover --clean --version <version>
 ```
 
 ---
 
 ## The Migration Workflow
 
-1. **Modify Your Model**: Update fields, indexes, or relations in `models/`.
-2. **Generate Migration**: Run `forge makemigrations add_field_name --auto`. Forge's AST analyzer compares current model definitions against previous migration state and produces a new file under `migrations/`.
-3. **Review Generated Code**: Migrations are pure Go code with explicit `Up` and `Down` functions.
-4. **Apply to Database**: Run `forge migrate`. Forge wraps execution in a database transaction, records applied timestamps and cryptographic SHA-256 checksums in the `forge_migrations` table.
+1. **Modify your models:** update fields, indexes, constraints, or relations in `models/`.
+2. **Generate a migration:** run `forge makemigrations add_status --auto`. Forge writes
+   `migrations/000002_add_status.up.sql` and `.down.sql`, or prints
+   `No changes detected` when the models match the existing migrations.
+3. **Review the SQL:** migrations are plain SQL that you commit. Read every generated file
+   before applying it (see [Safe schema changes](#safe-schema-changes)).
+4. **Apply:** run `forge migrate up`. Forge records the applied version in
+   `schema_migrations` (`version`, `dirty`) and the SHA-256 of each applied up and down file
+   in `forge_migration_checksums`.
 
 ---
 
-## Anatomy of a Migration File
+## Safe Schema Changes
 
-```go
-package migrations
+Generated migrations are proposals, and an operator should review each one before it
+reaches a database with data in it.
 
-import (
-    "context"
-    "github.com/forgego/forge/migration"
-)
+- **Renames are not detected.** Renaming a field or a table produces a `DROP` of the old
+  name and an `ADD` of the new one, which loses the data. Rename in steps instead:
+  1. Add the new field and generate a migration.
+  2. Copy the data in a hand-written migration, for example
+     `forge makemigrations copy_title --empty` with `UPDATE posts SET headline = title;`.
+  3. Deploy code that uses the new field.
+  4. Remove the old field and generate the migration that drops it.
+- **Destructive statements.** Treat `DROP TABLE`, `DROP COLUMN`, and type changes
+  (`ALTER COLUMN ... TYPE`) as data loss until proven otherwise. `forge migrate lint` flags
+  `DROP TABLE` and `TRUNCATE`, but not `DROP COLUMN`, so read the SQL yourself.
+- **Constraints check existing rows.** Adding a foreign key, a `CHECK`, a `UNIQUE`
+  constraint, or a `NOT NULL` column without a default fails if existing rows violate it.
+  Clean up the data first, in its own migration.
+- **Hand-written DDL becomes part of the recorded schema.** `makemigrations` reads every
+  migration file, so a column or constraint that you add by hand but do not declare in a
+  model shows up as a drop in the next generated migration.
+- **Never edit an applied migration.** Write a new one. Editing an applied file changes its
+  checksum, and `forge migrate up` then refuses to run (see below).
 
-func init() {
-    migration.Register(migration.Migration{
-        ID:   "20260908120000_add_product_price_with_tax",
-        App:  "catalog",
-        Dependencies: []string{
-            "20260907100000_initial_catalog",
-        },
-        Up: func(ctx context.Context, schema *migration.SchemaBuilder) error {
-            return schema.AlterTable("products", func(table *migration.TableBuilder) {
-                table.AddDecimal("price_with_tax", 10, 2).
-                    Generated("price * (1 + tax_rate)", true)
-                table.AddIndex("idx_products_price_with_tax", "price_with_tax")
-            })
-        },
-        Down: func(ctx context.Context, schema *migration.SchemaBuilder) error {
-            return schema.AlterTable("products", func(table *migration.TableBuilder) {
-                table.DropIndex("idx_products_price_with_tax")
-                table.DropColumn("price_with_tax")
-            })
-        },
-    })
-}
-```
+### Backups and restores
+
+- Take a backup immediately before applying migrations to a production database, for
+  example `pg_dump --format=custom --file=before-000007.dump "$DATABASE_URL"`.
+- Down migrations are not backups. Rolling back a `DROP COLUMN` recreates the column
+  empty, so the only way back to the data is a restore.
+- Restore into a new database (`createdb app_restore && pg_restore --dbname=app_restore
+  before-000007.dump`), then check it. `schema_migrations` and `forge_migration_checksums`
+  are restored with the data, so `forge migrate status` shows the version the backup was
+  taken at, and `forge migrate recover --verify` checks the files you have against it.
+  Run `forge migrate up` to apply the migrations that came after the backup.
 
 ---
 
-## Disaster Recovery & Checksum Verification
+## Recovering from a Failed Migration
 
-In high-velocity teams, merge conflicts or manual hotfixes by DBAs can cause schema drift or mismatched migration states. Forge provides robust recovery primitives:
+When a statement in a migration fails, `forge migrate up` stops with the database error and
+marks that version dirty. Every further `up` or `rollback` refuses to run until you resolve
+it.
 
-### 1. Checksum Drift Verification
+1. **Inspect:** `forge migrate recover` prints the dirty version and both ways out.
+2. **If the failed migration left no changes, re-apply it.** This is the usual case on
+   PostgreSQL, where each migration file runs as one transaction, so a failure rolls back
+   the statements that had already run. Confirm that the database does not contain the
+   migration's changes, fix the file, and re-apply it:
+
+   ```bash
+   forge migrate force <previous version>   # records the last good version, clean
+   forge migrate up                         # runs the fixed migration and records its checksum
+   ```
+
+   A file that contains its own `COMMIT` can leave partial changes. Undo them by hand
+   before you force the previous version.
+3. **If you completed the migration's changes by hand, mark it applied:**
+   `forge migrate recover --clean --version <version>`. Then run
+   `forge migrate baseline --adopt` to record its checksum.
+
+Do not mark a rolled-back version clean. That records the migration as applied when none
+of its changes are in the database.
+
+### Checksum mismatches
+
+`forge migrate recover --verify` compares each applied file with its recorded checksum and
+lists a changed one as `<version>  mismatched`. It also exits non-zero. While any file is
+mismatched or missing, `forge migrate up` refuses to run and names the version. Restore the
+file from version control, and write a new migration for the change you intended. For
+databases migrated before checksums were recorded, `forge migrate baseline --adopt` records
+the current files. It never overwrites a mismatch.
+
+---
+
+## What Is Verified
+
+The release gate runs `TestPostgresSchemaLifecycle` (in `tests/pkg_migrations`) against
+PostgreSQL through the same commands used above. The test covers these steps:
+
+- It generates and applies an initial schema, then seeds rows.
+- It adds a column with a default, a related table with a foreign key, and `CHECK` and
+  `UNIQUE` constraints. It checks the result in `information_schema` and confirms that the
+  seeded rows are unchanged.
+- It regenerates the unchanged models and confirms that nothing is written, and that
+  `schema_migrations` and `forge_migration_checksums` match the applied files.
+- It applies a migration that fails after its first statement ran, and confirms that the
+  version is dirty and the partial change was rolled back. It then recovers with
+  `force` + `up`.
+- It edits an applied migration and confirms that the mismatch is reported and blocks
+  `up`.
+
+To reproduce, run the following against a PostgreSQL role that can create databases (the
+test creates and drops a `lifecycle_<n>` database):
+
 ```bash
-forge migrate recover --verify
-```
-Computes the SHA-256 checksum of every migration file on disk and compares it against the recorded checksum stored in the `forge_migrations` table. If any applied migration file has been edited after application, Forge reports the exact drift and refuses to apply subsequent migrations without confirmation.
+cd tests
+FORGE_REQUIRE_DB=1 \
+FORGE_TEST_DATABASE_URL='postgres://forge_test:forge_test@localhost:5432/forge_test?sslmode=disable' \
+go test -count=1 -v -run 'TestPostgresSchemaLifecycle|TestChecksumBaseline' ./pkg_migrations/
 
-### 2. Force Reconciliation
-```bash
-forge migrate recover --force
+# Generation stability and the DSL contract (no database needed)
+cd ..
+go test -count=1 -run 'Regeneration|InitialMigration|ChangedForeignKey' ./db/migrate/generate/
+go test -count=1 -run 'DSL' ./codegen/
 ```
-Re-aligns the migration history table with current disk state, recording missing entries or updating hashes when an emergency schema patch was applied directly in production.
+
+Without `FORGE_REQUIRE_DB=1` the PostgreSQL tests skip when no database is reachable. With
+it set, they fail instead.
+
+:::warning SQLite is experimental
+Applying migrations to SQLite is experimental, and the release gate does not cover it.
+`TestMigrationApplySQLite` is the one test the gate allows to skip. Regeneration stability
+is verified only on PostgreSQL. SQLite foreign keys are declared inside `CREATE TABLE` and
+are not read back from migration files, so regenerating SQLite migrations for models with
+relations fails.
+:::
 
 ---
 
 ## Best Practices for Production
 
-- **Always run migrations in CI/CD**: Include `forge migrate status` and `forge migrate recover --verify` in your deployment pipeline before launching application pods.
-- **Atomic Execution**: On PostgreSQL and SQLite, DDL statements run inside transactions. If an index creation fails, the entire migration rolls back cleanly without leaving half-migrated state.
-- **Concurrent Index Creation**: On production PostgreSQL databases with large tables, use `schema.AddIndexConcurrently` to avoid table locking.
+- **Run the checks in CI/CD:** run `forge migrate status` and `forge migrate recover --verify`
+  in your deployment pipeline before application pods start.
+- **Review, back up, then apply:** generate and review migrations in development, commit
+  them, back up production, and only then run `forge migrate up`.
+- **One concern per migration:** keep data backfills in their own hand-written migrations,
+  separate from schema changes. That keeps failures small and recovery clear.
 
 ---
 
@@ -109,4 +185,3 @@ Re-aligns the migration history table with current disk state, recording missing
 
 - **[Models & Schema DSL](/docs/models/)**: Define fields and constraints that power migrations.
 - **[Quickstart Guide](/docs/quickstart/)**: Run your first migration in 60 seconds.
-
