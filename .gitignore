@@ -143,6 +143,8 @@ helper-projects/
 admin/ui/web/test-results/
 admin/ui/web/playwright-report/
 admin/ui/web/.vitest/
+tests/e2e/admin/test-results/
+tests/e2e/admin/playwright-report/
 
 # Python bytecode
 __pycache__/
