@@ -357,6 +357,7 @@ func (a *journeyApp) startServer(port string) func() {
 	cmd := exec.Command(filepath.Join(a.dir, "bin", "server"))
 	cmd.Dir = a.dir
 	cmd.Env = a.environ()
+	cmd.WaitDelay = 10 * time.Second
 	var logs bytes.Buffer
 	cmd.Stdout = &logs
 	cmd.Stderr = &logs

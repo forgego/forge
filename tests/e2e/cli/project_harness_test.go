@@ -224,8 +224,17 @@ func main() {
 
 func startServer(t *testing.T, ctx context.Context, projectDir string) (*exec.Cmd, *bytes.Buffer) {
 	t.Helper()
-	cmd := exec.CommandContext(ctx, "go", "run", "cmd/server/main.go")
+	// Build and run the binary instead of `go run`: signals sent to `go run`
+	// do not reach the server it starts, which then outlives the test and
+	// holds the output pipe open.
+	build := exec.CommandContext(ctx, "go", "build", "-o", filepath.Join("bin", "server"), "./cmd/server")
+	build.Dir = projectDir
+	out, err := build.CombinedOutput()
+	require.NoError(t, err, "go build ./cmd/server:\n%s", out)
+
+	cmd := exec.CommandContext(ctx, filepath.Join(projectDir, "bin", "server"))
 	cmd.Dir = projectDir
+	cmd.WaitDelay = 10 * time.Second
 	cmd.Env = append(os.Environ(),
 		"FORGE_ADMIN_USERNAME=admin",
 		"FORGE_ADMIN_PASSWORD=secret",
@@ -300,10 +309,15 @@ func shutdownServer(t *testing.T, cmd *exec.Cmd, logs *bytes.Buffer) {
 		done <- cmd.Wait()
 	}()
 
+	// Only the goroutine calls Wait: a second concurrent Wait blocks forever
+	// on the output-copying goroutines the first one already collected.
+	// http.Server.Shutdown can take about 5s to close a connection that is
+	// still new, so allow longer than that before killing.
 	select {
-	case <-time.After(5 * time.Second):
+	case <-time.After(15 * time.Second):
+		t.Logf("server did not exit within 15s of SIGINT; killing it")
 		_ = cmd.Process.Kill()
-		_ = cmd.Wait()
+		<-done
 	case err := <-done:
 		if err != nil && logs != nil {
 			t.Logf("server logs:\n%s", logs.String())
