@@ -195,12 +195,23 @@ func (c *DropForeignKey) Type() ChangeType  { return ChangeTypeDropForeignKey }
 func (c *DropForeignKey) TableName() string { return c.Table }
 func (c *DropForeignKey) Reversible() bool  { return true }
 
-// ModifyForeignKey represents modifying a foreign key
+// ModifyForeignKey represents modifying a foreign key. TargetTable is the
+// new foreign key's target and OldTargetTable the old one's, which the down
+// migration restores; an empty OldTargetTable means the target is unchanged.
 type ModifyForeignKey struct {
-	Table       string
-	OldFK       generator.RelationDefinition
-	NewFK       generator.RelationDefinition
-	TargetTable string
+	Table          string
+	OldFK          generator.RelationDefinition
+	NewFK          generator.RelationDefinition
+	TargetTable    string
+	OldTargetTable string
+}
+
+// PreviousTargetTable returns the old foreign key's target table.
+func (c *ModifyForeignKey) PreviousTargetTable() string {
+	if c.OldTargetTable != "" {
+		return c.OldTargetTable
+	}
+	return c.TargetTable
 }
 
 func (c *ModifyForeignKey) Type() ChangeType  { return ChangeTypeModifyForeignKey }

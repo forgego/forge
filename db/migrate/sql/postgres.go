@@ -191,10 +191,11 @@ func (b *PostgreSQLBuilder) buildChangeDownSQL(change core.Change) (string, erro
 	case *core.ModifyForeignKey:
 		// Reverse the modification
 		reversed := &core.ModifyForeignKey{
-			Table:       c.Table,
-			OldFK:       c.NewFK,
-			NewFK:       c.OldFK,
-			TargetTable: c.TargetTable,
+			Table:          c.Table,
+			OldFK:          c.NewFK,
+			NewFK:          c.OldFK,
+			TargetTable:    c.PreviousTargetTable(),
+			OldTargetTable: c.TargetTable,
 		}
 		return b.BuildModifyForeignKey(reversed)
 	case *core.AddConstraint:

@@ -529,6 +529,21 @@ func TestCastAndOperatorDBDefaultsAreReadBack(t *testing.T) {
 	assertContainsAll(t, "up", up, `ALTER TABLE books ADD COLUMN "joined" TEXT NOT NULL DEFAULT ('x' || 'y');`)
 }
 
+// TestChangedForeignKeyTargetIsRestoredOnDown covers a foreign key whose
+// target table changes: the down migration used to re-add the old foreign key
+// against the new target.
+func TestChangedForeignKeyTargetIsRestoredOnDown(t *testing.T) {
+	source := mustReplace(t, functionalModels, `schema.ForeignKeyField("editor_id", "Author", schema.OnDelete(schema.CascadeSET_NULL))`,
+		`schema.ForeignKeyField("editor_id", "Book", schema.OnDelete(schema.CascadeSET_NULL))`)
+	up, down := regenerateWith(t, core.DriverPostgreSQL, source, "retarget_editor")
+	assertContainsAll(t, "up", up,
+		`ALTER TABLE books DROP CONSTRAINT IF EXISTS fk_books_editor_id;`,
+		`ADD CONSTRAINT fk_books_editor_id FOREIGN KEY ("editor_id") REFERENCES books (id) ON DELETE SET NULL`)
+	assertContainsAll(t, "down", down,
+		`ALTER TABLE books DROP CONSTRAINT IF EXISTS fk_books_editor_id;`,
+		`ADD CONSTRAINT fk_books_editor_id FOREIGN KEY ("editor_id") REFERENCES authors (id) ON DELETE SET NULL`)
+}
+
 // TestSQLiteColumnChangeFails covers SQLite, which cannot alter a column
 // without rebuilding its table: makemigrations used to write only a comment,
 // so the change was proposed again on every run. It now fails and writes
