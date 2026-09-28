@@ -1,7 +1,6 @@
 package main
 
 import (
-	"embed"
 	"fmt"
 	stdlog "log"
 	"net/http"
@@ -14,9 +13,6 @@ import (
 )
 
 //go:generate forge generate
-
-//go:embed static templates
-var staticFiles embed.FS
 
 func main() {
 	// Load configuration
