@@ -416,7 +416,7 @@ export default function Home() {
                   <Link className={styles.btnPrimary} to="/docs/quickstart">
                     Start Quickstart Guide →
                   </Link>
-                  <Link className={styles.btnOutline} href="https://github.com/hamidrabedi/foreit" target="_blank">
+                  <Link className={styles.btnOutline} href="https://github.com/forgego/forge" target="_blank">
                     Star on GitHub
                   </Link>
                 </div>

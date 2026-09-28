@@ -53,7 +53,7 @@ Make sure `$GOPATH/bin` or `$HOME/go/bin` is in your PATH.
 ### Option 3: Release Binaries
 
 Pre-compiled release binaries are published with tagged releases on GitHub:
-`https://github.com/hamidrabedi/foreit/releases`
+`https://github.com/forgego/forge/releases`
 
 ### Verify Installation
 
@@ -162,4 +162,3 @@ Recommended tools for forge development:
 ## What's Next?
 
 Ready to create your first application? Head over to the [Quick Start Guide](/docs/getting-started/quickstart)!
-

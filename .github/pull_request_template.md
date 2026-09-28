@@ -33,6 +33,6 @@ Considered and rejected, with reason:
 
 Open questions for reviewers:
 
-Review [the system-review standard](https://github.com/hamidrabedi/foreit/blob/master/docs/REVIEWING.md). Identify inspected flows,
+Review [the system-review standard](https://github.com/forgego/forge/blob/master/docs/REVIEWING.md). Identify inspected flows,
 architectural trade-offs, and remaining coverage gaps; do not infer a complete audit
 from automatic review approval.

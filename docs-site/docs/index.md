@@ -117,7 +117,7 @@ articles := models.ArticleManager.
 ## Need Help?
 
 - **Documentation** - You're here! Browse the sidebar
-- **GitHub Issues** - [Report bugs or request features](https://github.com/hamidrabedi/foreit/issues)
-- **Examples** - [Sample projects](https://github.com/hamidrabedi/foreit/tree/main/examples)
+- **GitHub Issues** - [Report bugs or request features](https://github.com/forgego/forge/issues)
+- **Examples** - [Sample projects](https://github.com/forgego/forge/tree/master/examples)
 
 Ready to build? Start with the [Quick Start guide](/docs/quickstart).

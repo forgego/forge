@@ -4,13 +4,13 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?style=for-the-badge&logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![Tests](https://img.shields.io/github/actions/workflow/status/hamidrabedi/foreit/test.yml?branch=main&label=Tests&style=for-the-badge)](https://github.com/hamidrabedi/foreit/actions)
-[![Security](https://img.shields.io/github/actions/workflow/status/hamidrabedi/foreit/security.yml?branch=main&label=Security&style=for-the-badge)](https://github.com/hamidrabedi/foreit/security)
-[![Documentation](https://img.shields.io/badge/docs-online-success?style=for-the-badge)](https://hamidrabedi.github.io/foreit/)
+[![Tests](https://img.shields.io/github/actions/workflow/status/forgego/forge/test.yml?branch=master&label=Tests&style=for-the-badge)](https://github.com/forgego/forge/actions)
+[![Security](https://img.shields.io/github/actions/workflow/status/forgego/forge/security.yml?branch=master&label=Security&style=for-the-badge)](https://github.com/forgego/forge/security)
+[![Documentation](https://img.shields.io/badge/docs-online-success?style=for-the-badge)](https://forgego.github.io/forge/)
 
 **A Django-like Go framework with full type safety, code generation, and extensibility.**
 
-[Documentation](https://hamidrabedi.github.io/foreit/) • [Examples](examples/ecommerce/) • [API Reference](https://hamidrabedi.github.io/foreit/docs/api-reference/schema) • [Contributing](CONTRIBUTING.md)
+[Documentation](https://forgego.github.io/forge/) • [Examples](examples/ecommerce/) • [API Reference](https://forgego.github.io/forge/docs/api-reference/schema) • [Contributing](CONTRIBUTING.md)
 
 </div>
 
@@ -144,8 +144,8 @@ Run `forge --help` to see all commands and flags.
 - Product: [PRD](docs/PRD.md) • [Design](docs/DESIGN.md) • [Roadmap](docs/ROADMAP.md)
 - Maintenance: [Tech debt](docs/TECH-DEBT.md) • [Known issues](docs/BUGS.md)
 - Admin design: [admin-ui-system](docs/design/admin-ui-system.md)
-- Docs: https://hamidrabedi.github.io/foreit/
-- Issues: https://github.com/hamidrabedi/foreit/issues
+- Docs: https://forgego.github.io/forge/
+- Issues: https://github.com/forgego/forge/issues
 - Security policy: [SECURITY.md](SECURITY.md)
 
 ## License

@@ -379,5 +379,5 @@ Now that Forge is installed:
 ## Getting Help
 
 - [Documentation](/docs/) - Full documentation
-- [GitHub Issues](https://github.com/hamidrabedi/foreit/issues) - Report issues
-- [Examples](https://github.com/hamidrabedi/foreit/tree/main/examples) - Sample projects
+- [GitHub Issues](https://github.com/forgego/forge/issues) - Report issues
+- [Examples](https://github.com/forgego/forge/tree/master/examples) - Sample projects
