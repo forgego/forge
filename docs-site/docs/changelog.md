@@ -11,36 +11,68 @@ the change.
 
 ## Unreleased
 
+### Breaking
+
+- `api.Router.Register` and `RegisterRoutes` panic when a viewset's data
+  access is misconfigured, naming the resource and each missing operation.
+  Before, the route answered 500 per request. Set `ReadOnly` for list and
+  retrieve only, or complete the queryset (#248).
+- Generated and `forge add api` viewsets reject unknown request keys with a
+  400 (`RejectUnknownRequestFields`). Hand-written viewsets keep ignoring
+  them unless they opt in (#245).
+- `PUT` is a full update: a body missing a required, writable field without
+  a default is a 400. `PATCH` is unchanged.
+- `forge makemigrations` now emits the foreign keys declared with
+  `schema.ForeignKeyField` and `Meta.Constraints`, which it silently skipped.
+  In an existing project the next migration adds them and fails if rows
+  violate them; clean orphan rows first.
+
 ### Fixed
 
 - `forge version` prints the version the binary was installed from, and
   `forge new` pins that version in the new project's `go.mod` instead of
   `v0.1.0` (#286).
 - `forge generate` warns about struct fields that have no schema entry (#287).
+- Generated ID methods follow Go's promotion rules, and pointer-embedded ID
+  holders are rejected at generate time instead of panicking in `Create`
+  (#259).
 - Projects created by `forge new` compile again: the generated `main.go` no
   longer embeds `static` and `templates` directories that do not exist next
   to it.
-- `Server.StartWithGracefulShutdown` now handles SIGINT and SIGTERM: it stops
+- `Server.StartWithGracefulShutdown` handles SIGINT and SIGTERM: it stops
   accepting connections and waits up to `server.graceful_timeout` for
   in-flight requests. Projects created by `forge new` use it.
-- `forge new --docker` builds with `golang:1.26-alpine` (the 1.25 image could
-  not build a module that requires Go 1.26) and its compose file sets
-  `FORGE_SERVER_HOST=0.0.0.0` so the published port reaches the server.
+- `forge new --docker` builds with `golang:1.26-alpine`, and its compose
+  file sets `FORGE_SERVER_HOST=0.0.0.0` so the published port reaches the
+  server.
 - Session and CSRF cookies are marked `Secure` for any spelling of
-  `app.env: production`, matching the production secret check.
+  `app.env: production`.
+- `forge makemigrations` on unchanged models writes nothing and prints
+  `No changes detected`; it no longer re-types columns, re-adds foreign keys
+  or drops `created_at` defaults, and it prints the files it actually wrote.
+- `forge migrate recover` no longer advises marking a rolled-back failed
+  migration clean.
+- `gen.go` for models with relations compiles.
+- `forge add api` emits a viewset that compiles and registers.
+- `IsOwnerOrReadOnly` finds owner fields on the embedded generated struct.
+- List filters parse `?field=1` as a number, not a boolean.
+- Admin: configured read-only fields are shown read-only; constraint and
+  validation failures return 4xx field errors instead of raw database text;
+  deleting a referenced record is a 409; edits send only changed fields;
+  partially applied bulk actions list each skipped record; the foreign-key
+  picker is labelled; fonts load under a custom mount prefix.
+- ORM: `Filter(Or(a, b)).Filter(c)` keeps the OR group intact.
 
 ### Added
 
-- The [support contract](/docs/status/), the [deployment guide](/docs/deployment/)
-  and the release process (`docs/RELEASING.md` in the repository).
-- An install smoke test that installs the CLI from the public module proxy on
-  every tag and weekly.
-
-### Known issues
-
-- `forge makemigrations --auto` with no model changes writes an empty
-  migration pair, which `forge migrate up` rejects with `SQL is empty`.
-  Delete the empty files.
+- The [support contract](/docs/status/), the [deployment guide](/docs/deployment/),
+  the [API field contract](/docs/api/field-contract/),
+  [data-access requirements](/docs/api/data-access/) and the release
+  process (`docs/RELEASING.md` in the repository).
+- CI gates: a fresh `forge new` PostgreSQL application exercised over HTTP,
+  a PostgreSQL schema lifecycle test, schema DSL fixtures, admin browser
+  journeys against PostgreSQL, and an install smoke test from the public
+  module proxy on every tag and weekly.
 
 ## v0.1.1 (2026-09-28)
 

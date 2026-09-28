@@ -201,9 +201,9 @@ anyone rehearsing should expect until they are fixed:
 - `forge version` in v0.1.1 prints `v0.1.0`, and `forge new` pins `v0.1.0`.
 - Regenerating the example model produced no diff, the checksums verified,
   and the rows were preserved.
-- `forge makemigrations --auto` with no model changes writes an empty
-  migration pair, which `forge migrate up` then rejects with `SQL is empty`.
-  Delete the empty pair.
+- `forge makemigrations --auto` with no model changes wrote an empty
+  migration pair in v0.1.1, which `forge migrate up` then rejected with
+  `SQL is empty`. Fixed after v0.1.1; delete any empty pair.
 - Projects created before graceful shutdown was added keep calling
   `srv.Start()`; they exit on SIGTERM without draining requests until
   `main.go` is changed to `StartWithGracefulShutdown`.
