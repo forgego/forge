@@ -235,7 +235,7 @@ func generateModelCode(appName, modelName, tableName string, fields []FieldDefin
 	sb.WriteString(fmt.Sprintf("// Fields returns all field definitions for %s\n", modelName))
 	sb.WriteString(fmt.Sprintf("func (%s) Fields() []schema.Field {\n", modelName))
 	sb.WriteString("\treturn []schema.Field{\n")
-	sb.WriteString("\t\tschema.Int64(\"id\").Primary().AutoIncrement().Build(),\n")
+	sb.WriteString("\t\tschema.Int64Field(\"id\", schema.Primary(), schema.AutoIncrement()),\n")
 
 	for _, field := range fields {
 		fieldCode := generateFieldCode(field)
@@ -267,39 +267,41 @@ func generateModelCode(appName, modelName, tableName string, fields []FieldDefin
 	return sb.String()
 }
 
-// generateFieldCode generates code for a single field
+// generateFieldCode generates code for a single field using the functional
+// field constructors (schema.StringField and friends) that the schema package
+// exports.
 func generateFieldCode(field FieldDefinition) string {
-	var parts []string
+	var constructor string
+	var opts []string
 
 	switch field.Type {
 	case "String":
-		parts = append(parts, fmt.Sprintf("schema.String(\"%s\")", field.Name))
+		constructor = "StringField"
 		if field.MaxLength > 0 {
-			parts = append(parts, fmt.Sprintf("MaxLength(%d)", field.MaxLength))
+			opts = append(opts, fmt.Sprintf("schema.MaxLength(%d)", field.MaxLength))
 		}
 	case "Int64":
-		parts = append(parts, fmt.Sprintf("schema.Int64(\"%s\")", field.Name))
+		constructor = "Int64Field"
 	case "Bool":
-		parts = append(parts, fmt.Sprintf("schema.Bool(\"%s\")", field.Name))
+		constructor = "BoolField"
 	case "Time":
-		parts = append(parts, fmt.Sprintf("schema.Time(\"%s\")", field.Name))
+		constructor = "TimeField"
 	case "Float64":
-		parts = append(parts, fmt.Sprintf("schema.Float64(\"%s\")", field.Name))
+		constructor = "Float64Field"
 	}
 
 	if field.Required {
-		parts = append(parts, "Required()")
+		opts = append(opts, "schema.Required()")
 	}
 	if field.Unique {
-		parts = append(parts, "Unique()")
+		opts = append(opts, "schema.Unique()")
 	}
 	if field.Default != "" {
-		parts = append(parts, fmt.Sprintf("Default(%s)", field.Default))
+		opts = append(opts, fmt.Sprintf("schema.Default(%s)", field.Default))
 	}
 
-	parts = append(parts, "Build()")
-
-	return strings.Join(parts, ".")
+	args := append([]string{fmt.Sprintf("%q", field.Name)}, opts...)
+	return fmt.Sprintf("schema.%s(%s)", constructor, strings.Join(args, ", "))
 }
 
 // appendToModelsFile appends model code to models.go
