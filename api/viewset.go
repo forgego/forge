@@ -689,6 +689,15 @@ func (vs *BaseViewSet) update(w http.ResponseWriter, r *http.Request, action str
 	}
 	ignoredKeys = append(ignoredKeys, vs.ReadOnlyRequestFields...)
 
+	// PUT replaces the record, so it must carry every required writable
+	// field; otherwise the stored value would silently survive, as in PATCH.
+	if action == "update" {
+		if missing := missingRequiredFields(instance, data, ignoredKeys); len(missing) > 0 {
+			vs.handleException(w, r, exceptions.NewValidationError(missing))
+			return
+		}
+	}
+
 	// Populate from data, ignoring primary-key fields
 	if err := populateFromMap(instance, data, ignoredKeys...); err != nil {
 		vs.handleException(w, r, validationErrorForPopulate(err))
@@ -1528,6 +1537,44 @@ func schemaFieldsByRequestName(instance interface{}) map[string]*schema.Field {
 		}
 	}
 	return result
+}
+
+// missingRequiredFields returns a validation error, keyed by request name,
+// for each required, request-writable schema field without a default that
+// data does not name under any of its names. Fields in ignoredKeys are not
+// writable.
+func missingRequiredFields(instance interface{}, data map[string]interface{}, ignoredKeys []string) map[string][]string {
+	modelSchema, ok := instance.(schema.Schema)
+	if !ok {
+		return nil
+	}
+	present := make(map[string]bool, len(data)+len(ignoredKeys))
+	for key := range data {
+		present[strings.ToLower(key)] = true
+	}
+	ignored := make(map[string]bool, len(ignoredKeys))
+	for _, key := range ignoredKeys {
+		ignored[strings.ToLower(key)] = true
+	}
+	missing := map[string][]string{}
+fields:
+	for _, field := range modelSchema.Fields() {
+		// A field with a default is optional, as it is on create.
+		if !field.Required || !field.Editable || field.Default != nil || isRequestReadOnly(field) {
+			continue
+		}
+		for _, name := range resolvedFieldNames(instance, field) {
+			if present[strings.ToLower(name)] || ignored[strings.ToLower(name)] {
+				continue fields
+			}
+		}
+		requestName := field.Name
+		if resolved, ok := schema.ResolveField(instance, field); ok && resolved.JSONName != "" && resolved.JSONName != "-" {
+			requestName = resolved.JSONName
+		}
+		missing[requestName] = []string{"is required"}
+	}
+	return missing
 }
 
 func schemaFieldForStructField(fields map[string]*schema.Field, field reflect.StructField, jsonName, dbName string) *schema.Field {

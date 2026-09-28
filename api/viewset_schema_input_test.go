@@ -332,6 +332,34 @@ func TestBaseViewSet_Create_ValidatesRequiredSchemaFieldWithoutTags(t *testing.T
 	assert.False(t, mgr.createCalled)
 }
 
+// TestBaseViewSet_Update_RequiresRequiredFieldsOnPut pins PUT as a full
+// update: a required field missing from the body is a 400, where it used to
+// keep its stored value as PATCH does.
+func TestBaseViewSet_Update_RequiresRequiredFieldsOnPut(t *testing.T) {
+	vs := NewBaseViewSet(newSchemaInputSerializer, &storedRequiredSchemaManager{}, &requiredSchemaModel{})
+	router := NewRouter("/api")
+	router.Register("required-items", vs)
+	handler := forgehttp.NewRouter()
+	router.RegisterRoutes(handler)
+
+	rec := performSchemaInputRequest(t, handler, http.MethodPut, "/api/required-items/1", `{"id":1}`)
+	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), `"display_name"`)
+
+	rec = performSchemaInputRequest(t, handler, http.MethodPut, "/api/required-items/1", `{"display_name":"full"}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	rec = performSchemaInputRequest(t, handler, http.MethodPatch, "/api/required-items/1", `{"id":1}`)
+	require.Equal(t, http.StatusOK, rec.Code, "PATCH stays partial: %s", rec.Body.String())
+}
+
+// storedRequiredSchemaManager serves one valid stored requiredSchemaModel.
+type storedRequiredSchemaManager struct{ requiredSchemaManager }
+
+func (*storedRequiredSchemaManager) Get(context.Context, int64) (interface{}, error) {
+	return &requiredSchemaModel{ID: 1, Name: "stored"}, nil
+}
+
 func TestBaseViewSet_Create_RejectsInvalidByteArrays(t *testing.T) {
 	for _, body := range []string{
 		`{"payload":[300]}`,
