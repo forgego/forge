@@ -74,7 +74,7 @@ return fields
 }
 
 func TestMetaComputedValueProducesDiagnostic(t *testing.T) {
-	source := "package models\nimport \"github.com/forgego/forge/schema\"\n\ntype Product struct { schema.BaseSchema }\n\nfunc (Product) Meta() schema.Meta {\n\treturn schema.Meta{TableName: tableName()}\n}\n\nfunc tableName() string { return \"products\" }\n"
+	source := "package models\nimport \"github.com/forgego/forge/schema\"\n\ntype Product struct { schema.BaseSchema }\n\nfunc (Product) Fields() []schema.Field { return nil }\n\nfunc (Product) Meta() schema.Meta {\n\treturn schema.Meta{TableName: tableName()}\n}\n\nfunc tableName() string { return \"products\" }\n"
 	filename := filepath.Join(t.TempDir(), "models.go")
 	if err := os.WriteFile(filename, []byte(source), 0o600); err != nil {
 		t.Fatal(err)

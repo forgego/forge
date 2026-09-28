@@ -36,6 +36,8 @@ func (User) Fields() []schema.Field {
 		schema.StringField("username", schema.Required(), schema.MaxLength(150),
 			schema.HelpText("Unique username")),
 		schema.StringField("email", schema.Required(), schema.MaxLength(254)),
+		schema.StringField("password_hash", schema.MaxLength(255), schema.Optional(),
+			schema.WriteOnly(), schema.Editable(false)),
 		schema.StringField("first_name", schema.MaxLength(150), schema.Optional()),
 		schema.StringField("last_name", schema.MaxLength(150), schema.Optional()),
 		schema.BoolField("is_active", schema.Default(true)),
