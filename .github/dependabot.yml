@@ -1,8 +1,8 @@
 version: 2
 updates:
-  # Go dependencies - forge
+  # Go dependencies - root module
   - package-ecosystem: "gomod"
-    directory: "/forge"
+    directory: "/"
     cooldown:
       default-days: 7
     schedule:
@@ -61,7 +61,7 @@ updates:
 
   # NPM dependencies - admin UI
   - package-ecosystem: "npm"
-    directory: "/forge/admin/ui/web"
+    directory: "/admin/ui/web"
     cooldown:
       default-days: 7
     schedule:

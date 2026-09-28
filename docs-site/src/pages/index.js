@@ -258,7 +258,7 @@ export default function Home() {
             <div className={styles.heroCommandWrapper}>
               <div className={styles.heroCommand}>
                 <span className={styles.commandPrompt}>$</span>
-                <code>go install github.com/forgego/forge/cli/cmd@latest</code>
+                <code>go install github.com/forgego/forge/cmd/forge@latest</code>
               </div>
             </div>
           </div>

@@ -58,8 +58,6 @@ git remote add upstream https://github.com/forgego/forge.git
 ### Backend Setup
 
 ```bash
-cd forge
-
 # Download dependencies
 go mod download
 
@@ -73,7 +71,7 @@ go test ./...
 ### Frontend Setup (Admin UI)
 
 ```bash
-cd forge/admin/ui/web
+cd admin/ui/web
 
 # Install dependencies
 npm install
@@ -338,16 +336,13 @@ describe('UserCard', () => {
 
 ```bash
 # Run all Go tests
-cd forge
 go test ./...
 
 # Run integration tests (requires PostgreSQL)
-cd ../tests
-go test ./integration/...
+(cd tests && go test ./integration/...)
 
 # Run frontend tests
-cd ../forge/admin/ui/web
-npm test
+(cd admin/ui/web && npm test)
 
 # Run with coverage
 go test -coverprofile=coverage.out ./...
@@ -395,14 +390,14 @@ func CreateUser(ctx context.Context, email string) (*User, error) {
 ## 🏗️ Project Structure
 
 ```
-forge/
-├── admin/          # Admin interface
-├── api/            # REST API framework
-├── cli/            # CLI tools
-├── db/             # Database layer
-├── orm/            # ORM system
-├── schema/         # Schema definition
-└── server/         # HTTP server
+admin/              # Admin interface
+api/                # REST API framework
+cli/                # CLI implementation
+cmd/forge/          # CLI entry point (go install target)
+db/                 # Database layer and migrations
+orm/                # ORM system
+schema/             # Schema definition
+server/             # HTTP server
 
 examples/
 └── ecommerce/      # E-commerce example
@@ -503,17 +498,17 @@ By contributing, you agree that your contributions will be licensed under the MI
 
 ```bash
 # Build
-cd forge && go build ./...
+go build ./...
 
 # Test
-cd forge && go test ./...
+go test ./...
 cd tests && go test ./integration/...
 
 # Lint
-cd forge && golangci-lint run
+golangci-lint run
 
 # Frontend
-cd forge/admin/ui/web && npm run dev
+cd admin/ui/web && npm run dev
 
 # Docs
 cd docs-site && npm start

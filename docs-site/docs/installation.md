@@ -50,7 +50,7 @@ The Forge CLI provides commands for project creation, code generation, migration
 Install the `forge` command globally:
 
 ```bash
-go install github.com/forgego/forge/cli/cmd@latest
+go install github.com/forgego/forge/cmd/forge@latest
 ```
 
 This installs the binary to `$GOPATH/bin` or `$GOBIN`.
@@ -212,7 +212,7 @@ Visit http://localhost:8000/admin/ to see the admin interface.
 To upgrade to the latest version:
 
 ```bash
-go install github.com/forgego/forge/cli/cmd@latest
+go install github.com/forgego/forge/cmd/forge@latest
 ```
 
 ### Upgrade Library

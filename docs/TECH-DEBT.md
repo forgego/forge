@@ -29,9 +29,9 @@
 ## Tooling / repo hygiene
 
 - [ ] TODO scanner reports ~500 hits but only 1 is first-party
-      (`forge/log/encoder.go:258`, trivial comment); the rest is
+      (`log/encoder.go:258`, trivial comment); the rest is
       lockfiles, `docs-site/build`, `helper-projects`, `.kilocode` noise.
-      Scope the scanner to `forge/`, `examples/`, `tests/`.
+      Scope the scanner to the root module packages, `examples/`, `tests/`.
 - [ ] TODO-history churn is self-referential (counts ops run logs as
       new/resolved TODOs). Exclude `ops/` from the scan.
 - [ ] Runner env gotchas: default Go build cache may be access-denied

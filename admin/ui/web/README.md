@@ -1,15 +1,16 @@
 # Forge Admin UI
 
-React + TypeScript + Vite admin interface for Forge models. Served
-embedded by the Go backend (`forge/admin/ui`) with a `web/dist`
-fallback for development.
+React + TypeScript + Vite admin interface for Forge models. The build
+writes to `admin/ui/dist`, which the Go package `admin/ui` embeds when
+the binary is built with `-tags embed`. Without that tag, Go serves a
+placeholder page from `admin/ui/stub`.
 
 ## Develop
 
 ```bash
 npm install
 npm run dev      # Vite dev server
-npm run build    # tsc + vite build into dist/
+npm run build    # tsc + vite build into ../dist/
 npm test         # vitest (run once: vitest run)
 npm run lint     # eslint, must be error-free
 ```

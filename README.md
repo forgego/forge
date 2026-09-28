@@ -30,7 +30,7 @@
 Install the `forge` command without cloning the repo:
 
 ```bash
-go install github.com/forgego/forge/cli/cmd@latest
+go install github.com/forgego/forge/cmd/forge@latest
 ```
 
 Make sure `$GOBIN` (or `$GOPATH/bin`) is on your `PATH`, then verify:

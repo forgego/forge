@@ -19,7 +19,7 @@ Get a working Forge application running in 5 minutes. This guide will walk you t
 Install the `forge` command globally:
 
 ```bash
-go install github.com/forgego/forge/cli/cmd@latest
+go install github.com/forgego/forge/cmd/forge@latest
 ```
 
 Verify installation:

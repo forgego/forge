@@ -2,6 +2,17 @@ module github.com/forgego/forge
 
 go 1.26.0
 
+retract (
+	v1.0.0 // Tagged before the Go module lived at this path; it contains no Go packages.
+	v1.0.1 // Contains only the retraction of v1.0.0.
+)
+
+// Keep JavaScript dependency trees out of ./... package patterns.
+ignore (
+	./admin/ui/web/node_modules
+	./docs-site
+)
+
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/alexedwards/scs/v2 v2.9.0

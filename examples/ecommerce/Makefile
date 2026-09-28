@@ -2,7 +2,7 @@
 
 .PHONY: help install generate migrate migrate-down migrate-status run test clean docker-up docker-down seed admin-ui run-go build-embed ui-test demo
 
-ADMIN_UI_DIR := ../../forge/admin/ui/web
+ADMIN_UI_DIR := ../../admin/ui/web
 
 # Default target
 help:
@@ -20,7 +20,7 @@ help:
 	@echo "  make docker-down   - Stop Docker containers"
 	@echo "  make seed          - Seed database with sample data"
 	@echo "  make all           - Full setup (install, generate, migrate, run)"
-	@echo "  make admin-ui      - Build the admin UI bundle (forge/admin/ui/dist)"
+	@echo "  make admin-ui      - Build the admin UI bundle (admin/ui/dist)"
 	@echo "  make run-go        - Run the server with plain go run (serves built admin UI)"
 	@echo "  make build-embed   - Production binary with the admin UI embedded"
 	@echo "  make ui-test       - Run the Playwright admin suite"
@@ -128,10 +128,10 @@ build:
 	@echo "✅ Build complete: ./ecommerce"
 
 # Admin UI commands
-admin-ui:        ## Build the admin UI bundle (forge/admin/ui/dist)
+admin-ui:        ## Build the admin UI bundle (admin/ui/dist)
 	cd $(ADMIN_UI_DIR) && npm ci && npm run build
 
-run-go:          ## Run the server with plain `go run` (serves the built admin UI from ../../forge/admin/ui/dist)
+run-go:          ## Run the server with plain `go run` (serves the built admin UI from ../../admin/ui/dist)
 	go run .
 
 build-embed: admin-ui   ## Production binary with the admin UI embedded

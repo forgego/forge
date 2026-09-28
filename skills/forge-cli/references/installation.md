@@ -33,7 +33,7 @@ Clone the repository and build:
 ```bash
 git clone https://github.com/forgego/forge.git
 cd forge
-go build -o forge ./cli/cmd
+go build -o forge ./cmd/forge
 ```
 
 Add `forge` to your PATH:
@@ -45,7 +45,7 @@ export PATH="$PATH:/path/to/forge"
 ### Option 2: Install via go install
 
 ```bash
-go install github.com/forgego/forge/cli/cmd@latest
+go install github.com/forgego/forge/cmd/forge@latest
 ```
 
 Make sure `$GOPATH/bin` or `$HOME/go/bin` is in your PATH.

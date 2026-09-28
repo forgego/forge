@@ -2,7 +2,7 @@
 
 Portable repo map (relative paths only):
 
-- `forge/` — runtime: `admin/`, `api/`, `cli/`, `codegen/`, `db/migrate/`, `filter/`, `identity/`, `orm/`, `schema/`, `server/`
+- repository root — Go module `github.com/forgego/forge`: `admin/`, `api/`, `cli/`, `cmd/forge/`, `codegen/`, `db/migrate/`, `filter/`, `identity/`, `orm/`, `schema/`, `server/`
 - `tests/` — cross-module integration; `examples/` — usage patterns
 - `docs/` — `DESIGN.md`, `PRD.md`, `ROADMAP.md`, `TECH-DEBT.md`, `BUGS.md`, `REVIEWING.md`
 - `skills/` — reusable contributor guidance (see below)

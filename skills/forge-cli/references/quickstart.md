@@ -70,10 +70,10 @@ admin.Register(&admin.Config[models.Post]{})
 # Build from source (recommended)
 git clone https://github.com/forgego/forge.git
 cd forge
-go build -o forge ./cli/cmd
+go build -o forge ./cmd/forge
 
 # Or install via go install
-go install github.com/forgego/forge/cli/cmd@latest
+go install github.com/forgego/forge/cmd/forge@latest
 ```
 
 ### Step 2: Create Project

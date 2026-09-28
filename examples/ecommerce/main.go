@@ -178,8 +178,8 @@ func buildEcommerceRouter(ctx context.Context, cfg *config.Config, database *db.
 	}
 	if adminStaticDir == "" {
 		candidates := []string{
-			"../../forge/admin/ui/dist",
-			"../forge/admin/ui/dist",
+			"../../admin/ui/dist",
+			"../admin/ui/dist",
 			"./dist",
 			"static/admin",
 		}

@@ -2158,7 +2158,7 @@ func TestBuildEcommerceRouter_FullFrameworkWithSeedData(t *testing.T) {
 	cfg.Set("database.driver", "sqlite3")
 	cfg.Set("database.sqlite_path", dbPath)
 	cfg.Set("admin.path", "/admin")
-	cfg.Set("admin.static_dir", "../../forge/admin/ui/dist")
+	cfg.Set("admin.static_dir", "../../admin/ui/dist")
 	cfg.Set("api.path", "/api/v1")
 	cfg.Set("api.enabled", true)
 

@@ -464,7 +464,7 @@ func RunMigration(ctx context.Context, db *sql.DB) error {
 
 ## Appendix: Internals
 
-Package map under `forge/db/migrate/`:
+Package map under `db/migrate/`:
 
 - `generate/` — model diffing and migration file generation
 - `state/` — schema-state tracking

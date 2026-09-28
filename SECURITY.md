@@ -112,7 +112,7 @@ Content-Security-Policy: default-src 'self'
 
 ### Filter Security
 
-- The filter AST (`forge/filter`) is a default-deny whitelist: only
+- The filter AST (`filter`) is a default-deny whitelist: only
   explicitly allowed fields and lookups can be queried.
 - Cost scoring plus a JOIN-explosion guard bound filter complexity.
 
