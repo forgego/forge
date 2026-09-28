@@ -1,6 +1,7 @@
 package generate_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -554,6 +555,39 @@ func TestStringDefaultWithParenthesesIsQuoted(t *testing.T) {
 		assertContainsAll(t, string(driver)+" up", up,
 			`ALTER TABLE books ADD COLUMN "note" TEXT DEFAULT 'x(1)';`,
 			`ALTER TABLE books ADD COLUMN "aside" TEXT DEFAULT '(see below)';`)
+	}
+}
+
+// TestDroppedAndRecreatedTableIsReadBack covers a table that one migration
+// drops and a later one creates again. The state loader applied every CREATE
+// TABLE before any other change, so the drop came last and the table was
+// created again on every run.
+func TestDroppedAndRecreatedTableIsReadBack(t *testing.T) {
+	book := functionalModels[strings.Index(functionalModels, "type Book struct"):]
+	authorsOnly := functionalModels[:strings.Index(functionalModels, "type Book struct")]
+	recreated := authorsOnly + mustReplace(t, book, "\t\tschema.StringField(\"isbn\"),\n",
+		"\t\tschema.StringField(\"isbn\"),\n\t\tschema.StringField(\"title\"),\n")
+	for _, driver := range []core.Driver{core.DriverPostgreSQL, core.DriverSQLite} {
+		t.Run(string(driver), func(t *testing.T) {
+			modelsDir := t.TempDir()
+			migrationsDir := t.TempDir()
+			file := filepath.Join(modelsDir, "models.go")
+			for i, source := range []string{functionalModels, authorsOnly, recreated} {
+				if err := os.WriteFile(file, []byte(source), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				generateMigration(t, modelsDir, migrationsDir, driver, fmt.Sprintf("step%d", i+1))
+				if got := migrationFiles(t, migrationsDir); len(got) != 2*(i+1) {
+					t.Fatalf("step %d wrote %v", i+1, got)
+				}
+			}
+			generateMigration(t, modelsDir, migrationsDir, driver, "again")
+			if got := migrationFiles(t, migrationsDir); len(got) != 6 {
+				extra, _ := os.ReadFile(filepath.Join(migrationsDir, got[len(got)-1]))
+				t.Fatalf("regenerating after re-creating books wrote %v:\n%s", got, extra)
+			}
+			applyMigrations(t, driver, migrationsDir)
+		})
 	}
 }
 

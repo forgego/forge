@@ -160,64 +160,34 @@ func (l *FileStateLoader) Load() (*SchemaState, error) {
 			})
 		}
 
-		// Three-pass retry mechanism
-		// Pass 1: Process all CREATE TABLE statements
-		for _, fc := range allFileChanges {
-			for _, change := range fc.changes {
-				if _, ok := change.(*core.CreateTable); ok {
-					if err := applyChangeToState(state, change); err != nil {
-						return nil, l.formatError(fc.file, change, err, "CREATE TABLE")
-					}
-				}
-			}
-		}
-
-		// Pass 2: Process constraints, indexes, foreign keys
+		// Apply the changes in file order, and in statement order within a
+		// file, as the database runs them, so a table that is dropped and
+		// later created again, or renamed, ends up as the last file left it.
+		// A change whose table does not exist yet is retried once at the end,
+		// for migrations written out of order.
 		var retryChanges []core.Change
 		for _, fc := range allFileChanges {
 			for _, change := range fc.changes {
-				if _, ok := change.(*core.CreateTable); ok {
-					continue // Already processed
-				}
 				if _, ok := change.(*core.UnknownChange); ok {
-					continue // Skip unknown
+					continue
 				}
-
-				// Check if this is a constraint/index/FK change
-				changeType := change.Type()
-				if changeType == core.ChangeTypeAddIndex ||
-					changeType == core.ChangeTypeAddForeignKey ||
-					changeType == core.ChangeTypeAddConstraint ||
-					changeType == core.ChangeTypeAddColumn {
-					if err := applyChangeToState(state, change); err != nil {
-						if strings.Contains(err.Error(), "does not exist") {
-							// Table might not exist yet, retry in pass 3
-							retryChanges = append(retryChanges, change)
-							if l.verbose {
-								l.parseErrors = append(l.parseErrors, &ParseErrorInfo{
-									File:    fc.file,
-									Message: fmt.Sprintf("deferred change (table not found): %s", change.Type()),
-									Error:   err,
-								})
-							}
-						} else {
-							return nil, l.formatError(fc.file, change, err, "constraint/index")
-						}
+				if err := applyChangeToState(state, change); err != nil {
+					if _, isCreate := change.(*core.CreateTable); isCreate || !strings.Contains(err.Error(), "does not exist") {
+						return nil, l.formatError(fc.file, change, err, changeContext(change))
 					}
-				} else {
-					// Other changes
-					if err := applyChangeToState(state, change); err != nil {
-						if strings.Contains(err.Error(), "does not exist") {
-							retryChanges = append(retryChanges, change)
-						} else {
-							return nil, l.formatError(fc.file, change, err, "change")
-						}
+					retryChanges = append(retryChanges, change)
+					if l.verbose {
+						l.parseErrors = append(l.parseErrors, &ParseErrorInfo{
+							File:    fc.file,
+							Message: fmt.Sprintf("deferred change (table not found): %s", change.Type()),
+							Error:   err,
+						})
 					}
 				}
 			}
 		}
 
-		// Pass 3: Retry changes that failed due to missing tables
+		// Retry changes that failed due to missing tables
 		for _, change := range retryChanges {
 			if err := applyChangeToState(state, change); err != nil {
 				if l.verbose {
@@ -234,6 +204,18 @@ func (l *FileStateLoader) Load() (*SchemaState, error) {
 	}
 
 	return l.state, nil
+}
+
+// changeContext names the kind of change in a state loading error.
+func changeContext(change core.Change) string {
+	switch change.Type() {
+	case core.ChangeTypeCreateTable:
+		return "CREATE TABLE"
+	case core.ChangeTypeAddIndex, core.ChangeTypeAddForeignKey, core.ChangeTypeAddConstraint, core.ChangeTypeAddColumn:
+		return "constraint/index"
+	default:
+		return "change"
+	}
 }
 
 // formatError formats an error with context
