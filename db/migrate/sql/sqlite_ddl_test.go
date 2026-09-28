@@ -207,6 +207,18 @@ func TestSQLiteBuilder_UnsupportedOperations_Error(t *testing.T) {
 			errSnippet: "drop foreign key is not supported on SQLite without rebuilding the table",
 		},
 		{
+			name:       "ModifyForeignKey up",
+			isDown:     false,
+			change:     &core.ModifyForeignKey{Table: "products", OldFK: rel, NewFK: rel, TargetTable: "categories"},
+			errSnippet: "modify foreign key is not supported on SQLite without rebuilding the table",
+		},
+		{
+			name:       "ModifyForeignKey down",
+			isDown:     true,
+			change:     &core.ModifyForeignKey{Table: "products", OldFK: rel, NewFK: rel, TargetTable: "categories"},
+			errSnippet: "modify foreign key is not supported on SQLite without rebuilding the table",
+		},
+		{
 			name:       "DropConstraint up",
 			isDown:     false,
 			change:     &core.DropConstraint{Table: "products", ConstraintName: "chk_positive"},

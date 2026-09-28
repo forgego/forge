@@ -382,9 +382,10 @@ func (b *SQLiteBuilder) BuildAddForeignKey(c *core.AddForeignKey) (string, error
 	return "", unsupportedSQLiteError("add foreign key")
 }
 
-// BuildModifyForeignKey delegates to baseBuilder
+// BuildModifyForeignKey returns an error because SQLite cannot drop or add a
+// foreign key of an existing table through ALTER TABLE.
 func (b *SQLiteBuilder) BuildModifyForeignKey(c *core.ModifyForeignKey) (string, error) {
-	return b.baseBuilder.BuildModifyForeignKey(c)
+	return "", unsupportedSQLiteError("modify foreign key")
 }
 
 // BuildAddConstraint delegates to baseBuilder
