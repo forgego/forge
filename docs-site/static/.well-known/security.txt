@@ -1,4 +1,4 @@
-Contact: https://github.com/hamidrabedi/foreit/security/advisories/new
+Contact: https://github.com/forgego/forge/security/advisories/new
 Expires: 2025-12-31T23:59:59.000Z
 Preferred-Languages: en
-Canonical: https://hamidrabedi.github.io/foreit/.well-known/security.txt
+Canonical: https://forgego.github.io/forge/.well-known/security.txt
