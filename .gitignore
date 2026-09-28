@@ -143,3 +143,7 @@ helper-projects/
 admin/ui/web/test-results/
 admin/ui/web/playwright-report/
 admin/ui/web/.vitest/
+
+# Python bytecode
+__pycache__/
+*.pyc
