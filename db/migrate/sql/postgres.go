@@ -179,6 +179,9 @@ func (b *PostgreSQLBuilder) buildChangeDownSQL(change core.Change) (string, erro
 		fkName := fmt.Sprintf("fk_%s_%s", c.Table, c.Relation.Name)
 		return fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT IF EXISTS %s;", c.Table, fkName), nil
 	case *core.DropForeignKey:
+		if c.Relation != nil && c.TargetTable != "" {
+			return b.BuildAddForeignKey(&core.AddForeignKey{Table: c.Table, Relation: *c.Relation, TargetTable: c.TargetTable})
+		}
 		// Cannot generate down SQL for DropForeignKey without original FK definition
 		return "", core.NewMigrationError(
 			core.ErrInvalidChange,
@@ -197,6 +200,9 @@ func (b *PostgreSQLBuilder) buildChangeDownSQL(change core.Change) (string, erro
 	case *core.AddConstraint:
 		return fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT IF EXISTS %s;", c.Table, c.Constraint.Name), nil
 	case *core.DropConstraint:
+		if c.Constraint != nil {
+			return b.BuildAddConstraint(&core.AddConstraint{Table: c.Table, Constraint: *c.Constraint})
+		}
 		// Cannot generate down SQL for DropConstraint without original constraint definition
 		return "", core.NewMigrationError(
 			core.ErrInvalidChange,

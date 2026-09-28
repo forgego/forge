@@ -173,6 +173,9 @@ jobs:
             fi
             sleep 0.2
           done
+          # /admin/ only checks that the admin is mounted and routed: the
+          # server is built without -tags embed, so it serves a stub page,
+          # not the React admin UI.
           for path in /health/live /health/ready /health /admin/; do
             code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:8000${path}")
             echo "${path} -> ${code}"

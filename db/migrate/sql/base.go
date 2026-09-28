@@ -65,12 +65,19 @@ func (b *baseBuilder) BuildColumnDefinition(field generator.FieldDefinition) (st
 	}
 
 	// Handle default values
-	// Check for AutoNowAdd or AutoNow options first (these imply DEFAULT now())
+	// Check for AutoNowAdd or AutoNow options first (these imply the current
+	// time as default)
+	currentTime := "now()"
+	if b.isSQLite {
+		// SQLite accepts no function call as a column default without
+		// parentheses; CURRENT_TIMESTAMP is its current-time default.
+		currentTime = "CURRENT_TIMESTAMP"
+	}
 	if !isGenerated {
 		if dbDefault, ok := field.Options["db_default"].(string); ok && dbDefault != "" {
 			parts = append(parts, fmt.Sprintf("DEFAULT %s", dbDefault))
 		} else if autoNowAdd, ok := field.Options["auto_now_add"].(bool); ok && autoNowAdd {
-			parts = append(parts, "DEFAULT now()")
+			parts = append(parts, "DEFAULT "+currentTime)
 			// Make created_at NOT NULL when AutoNowAdd is set
 			if !field.Required && !field.PrimaryKey {
 				// Check if NOT NULL is already in parts
@@ -86,7 +93,7 @@ func (b *baseBuilder) BuildColumnDefinition(field generator.FieldDefinition) (st
 				}
 			}
 		} else if autoNow, ok := field.Options["auto_now"].(bool); ok && autoNow {
-			parts = append(parts, "DEFAULT now()")
+			parts = append(parts, "DEFAULT "+currentTime)
 		} else if field.Default != nil {
 			defaultVal := formatDefaultValue(field.Default, field.GoType, field.Type, field.Options, b.isSQLite)
 			parts = append(parts, fmt.Sprintf("DEFAULT %s", defaultVal))
@@ -242,14 +249,25 @@ func (b *baseBuilder) BuildModifyForeignKey(c *core.ModifyForeignKey) (string, e
 
 // BuildAddConstraint generates ALTER TABLE ADD CONSTRAINT statement
 func (b *baseBuilder) BuildAddConstraint(c *core.AddConstraint) (string, error) {
+	constraintSQL, err := constraintBody(c.Constraint)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("ALTER TABLE %s ADD CONSTRAINT %s %s;",
+		c.Table, c.Constraint.Name, constraintSQL), nil
+}
+
+// constraintBody renders a table constraint without its name, as
+// CHECK (condition) or UNIQUE ("field", ...).
+func constraintBody(constraint generator.ConstraintDefinition) (string, error) {
 	var constraintSQL string
-	switch strings.ToUpper(c.Constraint.Type) {
+	switch strings.ToUpper(constraint.Type) {
 	case "CHECK":
-		if c.Constraint.Condition != "" {
-			constraintSQL = fmt.Sprintf("CHECK (%s)", c.Constraint.Condition)
-		} else if len(c.Constraint.Fields) > 0 {
-			escapedFields := make([]string, len(c.Constraint.Fields))
-			for i, field := range c.Constraint.Fields {
+		if constraint.Condition != "" {
+			constraintSQL = fmt.Sprintf("CHECK (%s)", constraint.Condition)
+		} else if len(constraint.Fields) > 0 {
+			escapedFields := make([]string, len(constraint.Fields))
+			for i, field := range constraint.Fields {
 				escapedFields[i] = fmt.Sprintf(`"%s"`, field)
 			}
 			constraintSQL = fmt.Sprintf("CHECK (%s)", strings.Join(escapedFields, ", "))
@@ -261,9 +279,9 @@ func (b *baseBuilder) BuildAddConstraint(c *core.AddConstraint) (string, error) 
 			)
 		}
 	case "UNIQUE":
-		if len(c.Constraint.Fields) > 0 {
-			escapedFields := make([]string, len(c.Constraint.Fields))
-			for i, field := range c.Constraint.Fields {
+		if len(constraint.Fields) > 0 {
+			escapedFields := make([]string, len(constraint.Fields))
+			for i, field := range constraint.Fields {
 				escapedFields[i] = fmt.Sprintf(`"%s"`, field)
 			}
 			constraintSQL = fmt.Sprintf("UNIQUE (%s)", strings.Join(escapedFields, ", "))
@@ -275,17 +293,15 @@ func (b *baseBuilder) BuildAddConstraint(c *core.AddConstraint) (string, error) 
 			)
 		}
 	default:
-		if c.Constraint.Condition != "" {
-			constraintSQL = c.Constraint.Condition
+		if constraint.Condition != "" {
+			constraintSQL = constraint.Condition
 		} else {
 			return "", core.NewMigrationError(
 				core.ErrInvalidChange,
-				fmt.Sprintf("constraint type %s requires condition", c.Constraint.Type),
+				fmt.Sprintf("constraint type %s requires condition", constraint.Type),
 				nil,
 			)
 		}
 	}
-
-	return fmt.Sprintf("ALTER TABLE %s ADD CONSTRAINT %s %s;",
-		c.Table, c.Constraint.Name, constraintSQL), nil
+	return constraintSQL, nil
 }
