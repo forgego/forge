@@ -16,3 +16,7 @@ image: /social-card.png
 - EnableProfiling
 - InfoEndpoint (`server.info_endpoint`, default `false`): registers `/info`,
   which reports app name, version, environment, debug flag and uptime
+- TrustedProxies (`server.trusted_proxies`, default empty): proxy IPs or CIDRs
+  whose `X-Forwarded-For` / `X-Real-IP` headers are honored when resolving the
+  client IP for rate limiting and the admin login lockout. From any other peer
+  the TCP peer address is used and forwarding headers are ignored

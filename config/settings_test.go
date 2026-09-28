@@ -402,3 +402,23 @@ func TestAdminSettings_Struct(t *testing.T) {
 		t.Error("Enabled should be true")
 	}
 }
+
+func TestLoadSettings_TrustedProxiesFromEnv(t *testing.T) {
+	t.Setenv("FORGE_SERVER_TRUSTED_PROXIES", "10.0.0.0/8, 127.0.0.1")
+	settings := LoadSettings(NewConfig())
+	want := []string{"10.0.0.0/8", "127.0.0.1"}
+	if len(settings.Server.TrustedProxies) != len(want) {
+		t.Fatalf("TrustedProxies = %q, want %q", settings.Server.TrustedProxies, want)
+	}
+	for i := range want {
+		if settings.Server.TrustedProxies[i] != want[i] {
+			t.Fatalf("TrustedProxies = %q, want %q", settings.Server.TrustedProxies, want)
+		}
+	}
+}
+
+func TestLoadSettings_TrustedProxiesDefaultEmpty(t *testing.T) {
+	if got := LoadSettings(NewConfig()).Server.TrustedProxies; len(got) != 0 {
+		t.Fatalf("TrustedProxies default = %q, want empty", got)
+	}
+}

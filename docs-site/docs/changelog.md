@@ -91,6 +91,10 @@ the change.
 - ORM: `Filter(Or(a, b)).Filter(c)` keeps the OR group intact.
 - `/health` and `/health/ready` report a failing check as `unhealthy` or
   `not ready` without its error text; the cause is logged instead (#290).
+- The admin login lockout keys on the client IP resolved through the new
+  `server.trusted_proxies` setting, so clients behind a trusted reverse proxy
+  no longer share one lockout; forwarding headers from other peers are
+  ignored (#290).
 
 ### Added
 

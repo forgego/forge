@@ -14,6 +14,7 @@ import (
 
 	"github.com/forgego/forge/config"
 	"github.com/forgego/forge/log"
+	"github.com/forgego/forge/netutil"
 	"github.com/gorilla/csrf"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
@@ -35,6 +36,15 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 	}
 	if settings == nil {
 		return nil, fmt.Errorf("server settings are nil")
+	}
+
+	// Client IP resolution (rate limiting, admin login lockout) honors
+	// forwarding headers only from these peers. An empty setting leaves any
+	// list set programmatically through netutil.SetTrustedProxies in place.
+	if len(settings.Server.TrustedProxies) > 0 {
+		if err := netutil.SetTrustedProxies(settings.Server.TrustedProxies); err != nil {
+			return nil, fmt.Errorf("invalid server.trusted_proxies: %w", err)
+		}
 	}
 
 	// Create router

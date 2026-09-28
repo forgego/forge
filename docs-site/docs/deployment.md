@@ -78,6 +78,7 @@ manager; never ship the `.env` file that `forge new` generates for local use.
 | `FORGE_APP_DEBUG` | `false` | The default is `true`, which selects the debug logger. It is not rejected in production, so set it. |
 | `FORGE_SERVER_HOST` | `0.0.0.0` or the proxy-facing address | The default `localhost` is unreachable from outside a container. |
 | `FORGE_SERVER_PORT` | your port | Default `8000`. |
+| `FORGE_SERVER_TRUSTED_PROXIES` | your proxy's address or CIDR | Forwarding headers are honored only from these peers, for rate limiting and the admin login lockout. Empty by default: the TCP peer address is used. |
 | `FORGE_DATABASE_HOST`, `_PORT`, `_NAME`, `_USER`, `_PASSWORD`, `_SSLMODE` | your database | |
 | `FORGE_SECURITY_SECRET_KEY`, `FORGE_SECURITY_SESSION_SECRET`, `FORGE_SECURITY_CSRF_SECRET_KEY` | three independent random values, for example `openssl rand -hex 32` | Required in production. Rotating the session or CSRF secret invalidates existing session and CSRF cookies. |
 | `FORGE_ADMIN_USERNAME`, `FORGE_ADMIN_PASSWORD` | only if you use environment-based admin login | Without them, and without a login authenticator, admin login answers `503 admin_login_disabled`. |
@@ -181,7 +182,7 @@ A restart loses the following, and each instance has its own copy:
 | --- | --- | --- |
 | Server sessions (`forge_session` cookie) | In-memory `scs` store | All sessions end. |
 | Admin bearer tokens (24 h lifetime) | In-memory token store | Every admin user is signed out. |
-| Admin login attempt limiter | In memory, keyed by the TCP peer address | Counters reset. Behind a proxy every client shares the proxy's address, so failed logins from one client can lock out everyone. |
+| Admin login attempt limiter | In memory, keyed by client IP and by username | Counters reset. Behind a proxy, list it in `server.trusted_proxies` (`FORGE_SERVER_TRUSTED_PROXIES`); otherwise every client shares the proxy's address and failed logins from one client can lock out everyone. |
 | Admin saved views | In memory | Lost. |
 | Admin change history | In memory, last 1000 entries per registered model | Lost. See below. |
 | API throttling counters | Default store is in memory | Reset; limits are per instance. |

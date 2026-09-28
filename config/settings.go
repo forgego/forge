@@ -41,6 +41,10 @@ type ServerSettings struct {
 	MaxRequestSize  int64  // maximum request body size in bytes
 	EnableProfiling bool   // enable profiling (dev mode only)
 	InfoEndpoint    bool   // expose /info (name, version, env, debug, uptime); off by default
+	// TrustedProxies lists proxy IPs or CIDRs whose X-Forwarded-For /
+	// X-Real-IP headers are honored when resolving the client IP. Empty
+	// trusts no proxy.
+	TrustedProxies []string
 }
 
 // DatabaseSettings contains database connection settings
@@ -100,6 +104,7 @@ func LoadSettings(cfg *Config) *Settings {
 			MaxRequestSize:  cfg.GetInt64("server.max_request_size", 10*1024*1024), // 10MB default
 			EnableProfiling: cfg.GetBool("server.enable_profiling", false),
 			InfoEndpoint:    cfg.GetBool("server.info_endpoint", false),
+			TrustedProxies:  splitList(cfg.GetStringSlice("server.trusted_proxies", nil)),
 		},
 		Database: DatabaseSettings{
 			Driver:          cfg.GetString("database.driver", "postgres"),
@@ -162,6 +167,20 @@ func LoadSettings(cfg *Config) *Settings {
 			},
 		},
 	}
+}
+
+// splitList flattens comma-separated entries so a list can come from an
+// environment variable ("10.0.0.0/8,127.0.0.1") as well as a YAML sequence.
+func splitList(values []string) []string {
+	var out []string
+	for _, v := range values {
+		for _, part := range strings.Split(v, ",") {
+			if part = strings.TrimSpace(part); part != "" {
+				out = append(out, part)
+			}
+		}
+	}
+	return out
 }
 
 func normalizePathPrefix(input string) string {
