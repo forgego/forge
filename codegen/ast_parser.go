@@ -28,9 +28,12 @@ func NewASTParser() *ASTParser {
 func (p *ASTParser) ParseDirectory(dir string) ([]*ModelDefinition, error) {
 	p.diagnostics = nil
 	var definitions []*ModelDefinition
-	type idMethods struct{ get, set bool }
-	methodsByModel := make(map[string]idMethods)
-	embeddedTypesByModel := make(map[string][]string)
+	// declaredIDMethods records, per type, whether each declared GetID/SetID
+	// has the signature orm.ModelWithID requires.
+	declaredIDMethods := make(map[string]map[string]bool)
+	embeddedTypesByModel := make(map[string][]embeddedType)
+	buildContext := build.Default
+	buildContext.BuildTags = buildTagsFromGOFLAGS(os.Getenv("GOFLAGS"))
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -40,7 +43,7 @@ func (p *ASTParser) ParseDirectory(dir string) ([]*ModelDefinition, error) {
 		if info.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		matched, matchErr := build.Default.MatchFile(filepath.Dir(path), filepath.Base(path))
+		matched, matchErr := buildContext.MatchFile(filepath.Dir(path), filepath.Base(path))
 		if matchErr != nil {
 			return fmt.Errorf("match build constraints for %s: %w", path, matchErr)
 		}
@@ -72,11 +75,14 @@ func (p *ASTParser) ParseDirectory(dir string) ([]*ModelDefinition, error) {
 						if len(field.Names) != 0 {
 							continue
 						}
-						// Only value embeddings promote usable ID methods: a
-						// pointer embedding is nil in a new model, so the
-						// promoted SetID would panic after Create inserts it.
-						if ident, ok := field.Type.(*ast.Ident); ok {
-							embeddedTypesByModel[key] = append(embeddedTypesByModel[key], node.Name.Name+"."+ident.Name)
+						embedded := field.Type
+						pointer := false
+						if star, ok := embedded.(*ast.StarExpr); ok {
+							embedded = star.X
+							pointer = true
+						}
+						if ident, ok := embedded.(*ast.Ident); ok {
+							embeddedTypesByModel[key] = append(embeddedTypesByModel[key], embeddedType{key: node.Name.Name + "." + ident.Name, pointer: pointer})
 						}
 					}
 				}
@@ -94,14 +100,19 @@ func (p *ASTParser) ParseDirectory(dir string) ([]*ModelDefinition, error) {
 				continue
 			}
 			key := node.Name.Name + "." + receiverName.Name
-			found := methodsByModel[key]
+			var valid bool
 			switch method.Name.Name {
 			case "GetID":
-				found.get = fieldListHasTypes(method.Type.Params, nil) && fieldListHasTypes(method.Type.Results, []string{"int64"})
+				valid = fieldListHasTypes(method.Type.Params, nil) && fieldListHasTypes(method.Type.Results, []string{"int64"})
 			case "SetID":
-				found.set = fieldListHasTypes(method.Type.Params, []string{"int64"}) && fieldListHasTypes(method.Type.Results, nil)
+				valid = fieldListHasTypes(method.Type.Params, []string{"int64"}) && fieldListHasTypes(method.Type.Results, nil)
+			default:
+				continue
 			}
-			methodsByModel[key] = found
+			if declaredIDMethods[key] == nil {
+				declaredIDMethods[key] = make(map[string]bool)
+			}
+			declaredIDMethods[key][method.Name.Name] = valid
 		}
 
 		defs, err := p.ParseFile(path)
@@ -114,29 +125,87 @@ func (p *ASTParser) ParseDirectory(dir string) ([]*ModelDefinition, error) {
 	})
 
 	if err == nil {
-		var hasIDMethods func(string, map[string]bool) bool
-		hasIDMethods = func(key string, visiting map[string]bool) bool {
-			methods := methodsByModel[key]
-			if methods.get && methods.set {
-				return true
-			}
-			if visiting[key] {
-				return false
-			}
-			visiting[key] = true
-			defer delete(visiting, key)
-			for _, embedded := range embeddedTypesByModel[key] {
-				if hasIDMethods(embedded, visiting) {
-					return true
-				}
-			}
-			return false
+		hasIDMethod := func(key, name string) bool {
+			_, usable, found := resolveIDMethod(key, name, declaredIDMethods, embeddedTypesByModel, make(map[string]bool))
+			return found && usable
 		}
 		for _, definition := range definitions {
-			definition.hasWritableIntegerID = definition.hasWritableIntegerID || hasIDMethods(definition.Package+"."+definition.Name, make(map[string]bool))
+			key := definition.Package + "." + definition.Name
+			definition.hasWritableIntegerID = definition.hasWritableIntegerID || (hasIDMethod(key, "GetID") && hasIDMethod(key, "SetID"))
 		}
 	}
 	return definitions, err
+}
+
+// embeddedType is an anonymous struct field that can promote methods.
+type embeddedType struct {
+	key     string
+	pointer bool
+}
+
+// resolveIDMethod follows Go's method promotion rules for name on the type
+// key: a declared method shadows promoted ones, the shallowest promotion
+// wins, and two at the same depth are ambiguous. found reports whether the
+// type has a method with that name at all; usable reports whether it has the
+// required signature, is unambiguous, and is not promoted through an
+// embedded pointer, which is nil on a freshly allocated model and would
+// panic when Create calls SetID after the insert.
+func resolveIDMethod(key, name string, declared map[string]map[string]bool, embedded map[string][]embeddedType, visiting map[string]bool) (depth int, usable, found bool) {
+	if valid, ok := declared[key][name]; ok {
+		return 0, valid, true
+	}
+	if visiting[key] {
+		return 0, false, false
+	}
+	visiting[key] = true
+	defer delete(visiting, key)
+
+	best, matches := -1, 0
+	for _, e := range embedded[key] {
+		d, ok, f := resolveIDMethod(e.key, name, declared, embedded, visiting)
+		if !f {
+			continue
+		}
+		d++
+		ok = ok && !e.pointer
+		switch {
+		case best == -1 || d < best:
+			best, matches, usable = d, 1, ok
+		case d == best:
+			matches++
+		}
+	}
+	if best == -1 {
+		return 0, false, false
+	}
+	return best, usable && matches == 1, true
+}
+
+// buildTagsFromGOFLAGS returns the build tags set with -tags in goflags, so
+// model files are selected with the same constraints the go command uses.
+func buildTagsFromGOFLAGS(goflags string) []string {
+	var tags []string
+	fields := strings.Fields(goflags)
+	for i := 0; i < len(fields); i++ {
+		flag := strings.TrimPrefix(strings.TrimPrefix(fields[i], "-"), "-")
+		var value string
+		switch {
+		case strings.HasPrefix(flag, "tags="):
+			value = strings.TrimPrefix(flag, "tags=")
+		case flag == "tags" && i+1 < len(fields):
+			i++
+			value = fields[i]
+		default:
+			continue
+		}
+		tags = tags[:0]
+		for _, tag := range strings.Split(value, ",") {
+			if tag = strings.TrimSpace(tag); tag != "" {
+				tags = append(tags, tag)
+			}
+		}
+	}
+	return tags
 }
 
 // ParseFile parses a single Go file and extracts schema definitions

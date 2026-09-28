@@ -1440,7 +1440,13 @@ func populateFromMap(instance interface{}, data map[string]interface{}, ignoredK
 				continue
 			}
 			requestKey := key
-			value, valueExists := data[requestKey]
+			var value interface{}
+			valueExists := false
+			// "" and "-" are not request names; a hidden field is reached
+			// only through its schema aliases.
+			if key != "" && key != "-" {
+				value, valueExists = data[requestKey]
+			}
 			if !valueExists && fieldSchema != nil {
 				for _, alias := range resolvedFieldNames(instance, *fieldSchema) {
 					if candidate, exists := data[alias]; exists {
