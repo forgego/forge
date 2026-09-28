@@ -107,31 +107,31 @@ func (c *ViewSetConfig) CheckConfiguration() error {
 
 func checkSerializerFactory(factory func() Serializer) (err error) {
 	if factory == nil {
-		return errors.New("Serializer factory is nil")
+		return errors.New("serializer factory is nil")
 	}
 	defer func() {
 		if recover() != nil {
-			err = errors.New("Serializer factory panicked")
+			err = errors.New("serializer factory panicked")
 		}
 	}()
 	serializer := factory()
 	if serializer == nil || isNilReflectValue(reflect.ValueOf(serializer)) {
-		return errors.New("Serializer factory returned nil")
+		return errors.New("serializer factory returned nil")
 	}
 	return nil
 }
 
 func checkModel(model interface{}) (reflect.Type, error) {
 	if model == nil {
-		return nil, errors.New("Model is nil")
+		return nil, errors.New("model is nil")
 	}
 	value := reflect.ValueOf(model)
 	modelType := value.Type()
 	if modelType.Kind() != reflect.Ptr || modelType.Elem().Kind() != reflect.Struct {
-		return nil, fmt.Errorf("Model must be a pointer to a struct, got %s", modelType)
+		return nil, fmt.Errorf("model must be a pointer to a struct, got %s", modelType)
 	}
 	if value.IsNil() {
-		return nil, fmt.Errorf("Model is a nil %s", modelType)
+		return nil, fmt.Errorf("model is a nil %s", modelType)
 	}
 	return modelType, nil
 }

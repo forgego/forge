@@ -128,3 +128,10 @@ func TestRespondWriteError_UnexpectedErrorDoesNotLeakDriverText(t *testing.T) {
 	assert.Equal(t, "update_failed", code)
 	assert.False(t, strings.Contains(msg, "secret_table"))
 }
+
+func TestSanitizeLogTextStripsLineBreaks(t *testing.T) {
+	got := sanitizeLogText("duplicate value \"a\nadmin: forged\r\"")
+	if strings.ContainsAny(got, "\r\n") {
+		t.Fatalf("sanitizeLogText kept a line break: %q", got)
+	}
+}

@@ -157,13 +157,13 @@ func TestRouterRegister_RejectsMisconfiguredViewSets(t *testing.T) {
 	}{
 		{"nil viewset", nil, []string{"viewset is nil"}},
 		{"typed nil BaseViewSet", (*BaseViewSet)(nil), []string{"viewset is a nil *api.BaseViewSet"}},
-		{"nil serializer factory", NewBaseViewSet(nil, newCheckManager(t), &checkedModel{}), []string{"Serializer factory is nil"}},
-		{"serializer factory returns nil", NewBaseViewSet(func() Serializer { return nil }, newCheckManager(t), &checkedModel{}), []string{"Serializer factory returned nil"}},
-		{"serializer factory returns typed nil", NewBaseViewSet(func() Serializer { return (*BaseSerializer)(nil) }, newCheckManager(t), &checkedModel{}), []string{"Serializer factory returned nil"}},
-		{"serializer factory panics", NewBaseViewSet(func() Serializer { panic(checkSecretDSN) }, newCheckManager(t), &checkedModel{}), []string{"Serializer factory panicked"}},
-		{"nil model", NewBaseViewSet(newCheckSerializer, newCheckManager(t), nil), []string{"Model is nil"}},
-		{"typed nil model", NewBaseViewSet(newCheckSerializer, newCheckManager(t), nilModel), []string{"Model is a nil *api.checkedModel"}},
-		{"non-pointer model", NewBaseViewSet(newCheckSerializer, newCheckManager(t), checkedModel{}), []string{"Model must be a pointer to a struct, got api.checkedModel"}},
+		{"nil serializer factory", NewBaseViewSet(nil, newCheckManager(t), &checkedModel{}), []string{"serializer factory is nil"}},
+		{"serializer factory returns nil", NewBaseViewSet(func() Serializer { return nil }, newCheckManager(t), &checkedModel{}), []string{"serializer factory returned nil"}},
+		{"serializer factory returns typed nil", NewBaseViewSet(func() Serializer { return (*BaseSerializer)(nil) }, newCheckManager(t), &checkedModel{}), []string{"serializer factory returned nil"}},
+		{"serializer factory panics", NewBaseViewSet(func() Serializer { panic(checkSecretDSN) }, newCheckManager(t), &checkedModel{}), []string{"serializer factory panicked"}},
+		{"nil model", NewBaseViewSet(newCheckSerializer, newCheckManager(t), nil), []string{"model is nil"}},
+		{"typed nil model", NewBaseViewSet(newCheckSerializer, newCheckManager(t), nilModel), []string{"model is a nil *api.checkedModel"}},
+		{"non-pointer model", NewBaseViewSet(newCheckSerializer, newCheckManager(t), checkedModel{}), []string{"model must be a pointer to a struct, got api.checkedModel"}},
 		{"nil queryset", newCheckViewSet(nil), []string{"Queryset is nil"}},
 		{"typed nil manager", newCheckViewSet(nilManager), []string{"Queryset is a nil *orm.Manager[github.com/forgego/forge/api.checkedModel]"}},
 		{"read-only queryset on writable viewset", newCheckViewSet(readable), []string{
@@ -197,8 +197,8 @@ func TestRouterRegister_RejectsMisconfiguredViewSets(t *testing.T) {
 
 func TestRouterRegister_ReportsEveryProblemAtOnce(t *testing.T) {
 	message := registerPanic("widgets", NewBaseViewSet(nil, nil, nil))
-	assert.Contains(t, message, "Serializer factory is nil")
-	assert.Contains(t, message, "Model is nil")
+	assert.Contains(t, message, "serializer factory is nil")
+	assert.Contains(t, message, "model is nil")
 	assert.Contains(t, message, "Queryset is nil")
 }
 
