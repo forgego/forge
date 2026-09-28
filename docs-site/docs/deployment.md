@@ -139,8 +139,13 @@ fixed message as above rather than the driver error.
 Projects created by `forge new` start the server with
 `Server.StartWithGracefulShutdown`. On SIGINT or SIGTERM the server stops
 accepting connections, waits up to `server.graceful_timeout` seconds (default
-30) for in-flight requests, closes the database and exits 0. Requests still
-running after the timeout are cut off. Set your supervisor's stop timeout
+30) for in-flight requests, closes the database and exits 0. If requests are
+still running when the timeout expires, they are cut off and the process
+exits 1: `StartWithGracefulShutdown` returns `graceful shutdown: context
+deadline exceeded` and the generated `main.go` passes it to `log.Fatal`,
+which exits without running deferred calls such as closing the database. A
+second SIGINT or SIGTERM during the wait ends the process at once with the
+default signal behavior. Set your supervisor's stop timeout
 above `graceful_timeout` (for example `docker stop -t 40`, or
 `terminationGracePeriodSeconds` if you run it on a cluster yourself).
 

@@ -48,7 +48,8 @@ the change.
   to it.
 - `Server.StartWithGracefulShutdown` handles SIGINT and SIGTERM: it stops
   accepting connections and waits up to `server.graceful_timeout` for
-  in-flight requests. Projects created by `forge new` use it.
+  in-flight requests; a second signal during that wait ends the process at
+  once. Projects created by `forge new` use it.
 - `forge new --docker` builds with `golang:1.26-alpine`, and its compose
   file sets `FORGE_SERVER_HOST=0.0.0.0` so the published port reaches the
   server.
@@ -63,9 +64,12 @@ the change.
 - `forge add api` emits a viewset that compiles and registers.
 - `IsOwnerOrReadOnly` finds owner fields on the embedded generated struct.
 - List filters parse `?field=1` as a number, not a boolean.
-- Admin: configured read-only fields are shown read-only; constraint and
-  validation failures return 4xx field errors instead of raw database text;
-  deleting a referenced record is a 409; edits send only changed fields;
+- Admin: configured read-only fields are shown read-only; constraint,
+  validation and invalid-value (PostgreSQL data exception) failures return
+  4xx errors without raw database text, in single and bulk create and update
+  alike, and other database errors are a generic 500;
+  deleting a referenced record is a 409, as is a bulk delete in which every
+  record is referenced; edits send only changed fields;
   partially applied bulk actions list each skipped record; the foreign-key
   picker is labelled; fonts load under a custom mount prefix.
 - ORM: `Filter(Or(a, b)).Filter(c)` keeps the OR group intact.
