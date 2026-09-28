@@ -102,6 +102,9 @@ the change.
 - `db.NewDBFromConfig` quotes the PostgreSQL connection values, so a
   password with spaces, quotes or backslashes connects, and an empty
   password no longer swallows the database name (#290).
+- The API error handler logs PostgreSQL and SQLite driver errors by type,
+  SQLSTATE or SQLite code and constraint name instead of their message,
+  which can contain row values (#290).
 
 ### Added
 

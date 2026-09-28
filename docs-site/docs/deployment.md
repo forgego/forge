@@ -168,11 +168,13 @@ client address, user agent and request ID.
   `password`, `secret`, `signature`, `session`, `session_key`.
 - Request and response headers, cookies and bodies are not logged.
 - Configuration warnings name missing secrets but never print values.
+- The API error handler logs a PostgreSQL or SQLite driver error, returned
+  or panicked, by its Go type, SQLSTATE (or SQLite result code) and the
+  constraint, table and column it names; the driver message and detail,
+  which can contain row values, are left out.
 - **Not redacted**: URL paths are logged verbatim, so keep secrets out of
-  paths. Error logs include the internal error text, which for a database
-  error can contain row values (for example the duplicate value in a
-  unique-constraint violation). Panic values are logged as-is. Treat logs as
-  containing personal data.
+  paths. Other error text is logged as-is, and non-error panic values are
+  logged as-is. Treat logs as containing personal data.
 - The `main.go` from `forge new` builds its logger with
   `log.NewLogger(settings.App.Debug)` and ignores the `logging.*` keys; see
   [logging](/docs/config/logging/).

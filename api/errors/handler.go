@@ -200,10 +200,9 @@ func (h *Handler) logError(err error, problem *Problem, r *http.Request) {
 	// Add error message (sanitized)
 	fields = append(fields, zap.String("error_message", sanitizeLogString(problem.Detail)))
 
-	// Log original error if it's not already sanitized
-	if err != nil {
-		fields = append(fields, zap.String("error", sanitizeLogString(err.Error())))
-	}
+	// Log the original error; driver errors are reduced to their codes
+	// and object names so row values stay out of the log.
+	fields = append(fields, errorLogFields(err)...)
 
 	// Log at appropriate level
 	if problem.Status >= 500 {
@@ -223,8 +222,17 @@ func (h *Handler) logPanic(rec interface{}, problem *Problem, r *http.Request) {
 
 	stack := debug.Stack()
 
+	var panicField zap.Field
+	if err, ok := rec.(error); ok {
+		// A panic carrying an error is described like a returned error,
+		// so a driver error's values are not logged either way.
+		panicField = zap.Dict("panic", errorLogFields(err)...)
+	} else {
+		panicField = zap.Any("panic", rec)
+	}
+
 	fields := []zap.Field{
-		zap.Any("panic", rec),
+		panicField,
 		zap.String("stack", sanitizeLogString(string(stack))),
 		zap.String("error_code", sanitizeLogString(problem.Code)),
 		zap.String("error_type", sanitizeLogString(string(problem.Type))),
