@@ -69,6 +69,54 @@ type requiredSchemaManager struct {
 	createCalled bool
 }
 
+type writeOnlySchemaModel struct {
+	schema.BaseSchema
+	ID       int64  `json:"id" db:"id"`
+	Password string `json:"-" db:"password_hash"`
+}
+
+func (writeOnlySchemaModel) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		{Name: "password", DBColumn: "password_hash", Type: schema.TypeString, Required: true, Editable: true, Serialize: false},
+	}
+}
+
+type writeOnlySchemaManager struct{ stored *writeOnlySchemaModel }
+
+func (m *writeOnlySchemaManager) Create(_ context.Context, model interface{}) error {
+	item := model.(*writeOnlySchemaModel)
+	item.ID = 1
+	copy := *item
+	m.stored = &copy
+	return nil
+}
+
+func (m *writeOnlySchemaManager) Get(context.Context, int64) (interface{}, error) {
+	copy := *m.stored
+	return &copy, nil
+}
+
+func (*writeOnlySchemaManager) Update(context.Context, interface{}) error { return nil }
+func (*writeOnlySchemaManager) Delete(context.Context, interface{}) error { return nil }
+
+func TestBaseViewSet_CreateAcceptsJSONIgnoredWriteOnlySchemaField(t *testing.T) {
+	mgr := &writeOnlySchemaManager{}
+	vs := NewBaseViewSet(newSchemaInputSerializer, mgr, &writeOnlySchemaModel{})
+	vs.ExcludeResponseFields = NonSerializableFields(&writeOnlySchemaModel{})
+	router := NewRouter("/api")
+	router.Register("users", vs)
+	handler := forgehttp.NewRouter()
+	router.RegisterRoutes(handler)
+
+	rec := performSchemaInputRequest(t, handler, http.MethodPost, "/api/users/", `{"password":"secret"}`)
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	require.NotNil(t, mgr.stored)
+	assert.Equal(t, "secret", mgr.stored.Password)
+	assert.NotContains(t, rec.Body.String(), "password")
+	assert.NotContains(t, rec.Body.String(), "secret")
+}
+
 func TestPopulateFromMap_ResolvesSchemaAndDatabaseAliases(t *testing.T) {
 	for _, alias := range []string{"name", "display_name_col", "display_name", "Name"} {
 		t.Run(alias, func(t *testing.T) {
@@ -214,6 +262,13 @@ func TestPopulateFromMap_UsesSchemaTypeForJSONAndBytes(t *testing.T) {
 	model := &schemaInputModel{}
 	require.NoError(t, populateFromMap(model, map[string]interface{}{"payload": "aGVsbG8="}))
 	assert.Equal(t, []byte("hello"), model.Payload)
+}
+
+func TestBaseViewSet_CreateRejectsJSONObjectForBytesSchemaField(t *testing.T) {
+	mgr := &schemaInputManager{}
+	rec := performSchemaInputRequest(t, newSchemaInputHandler(mgr), http.MethodPost, "/api/items/", `{"payload":{"x":1}}`)
+	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+	assert.Nil(t, mgr.last)
 }
 
 func TestPopulateFromMap_JSONSchemaSupportsConcreteGoTypes(t *testing.T) {
@@ -363,4 +418,56 @@ func TestBaseViewSet_Create_AppliesSchemaDefaultsBeforeValidation(t *testing.T) 
 		require.NotNil(t, mgr.last)
 		assert.Equal(t, "published", mgr.last.Status)
 	})
+}
+
+type hiddenPrivilegeModel struct {
+	schema.BaseSchema
+	ID          int64  `json:"id" db:"id"`
+	IsSuperuser bool   `json:"-" db:"is_superuser"`
+	Secret      string `json:"-" db:"secret"`
+}
+
+func (hiddenPrivilegeModel) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		// Serialized by default: hidden only by the json tag, so not write-only.
+		schema.BoolField("is_superuser"),
+		// Write-only but not editable.
+		{Name: "secret", DBColumn: "secret", Type: schema.TypeString, Editable: false, Serialize: false},
+	}
+}
+
+func TestPopulateFromMap_HiddenFieldsWritableOnlyWhenSchemaWriteOnly(t *testing.T) {
+	model := &hiddenPrivilegeModel{}
+	err := populateFromMap(model, map[string]interface{}{
+		"is_superuser": true,
+		"IsSuperuser":  true,
+		"secret":       "x",
+	})
+	require.NoError(t, err)
+	assert.False(t, model.IsSuperuser, "a json:\"-\" field that the schema serializes must not be writable")
+	assert.Empty(t, model.Secret, "a json:\"-\" field that is not editable must not be writable")
+}
+
+type writeOnlyPasswordModel struct {
+	schema.BaseSchema
+	ID       int64  `json:"id" db:"id"`
+	Password string `json:"-" db:"password"`
+}
+
+func (writeOnlyPasswordModel) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		{Name: "password", DBColumn: "password", Type: schema.TypeString, Editable: true, Serialize: false},
+	}
+}
+
+func TestPopulateFromMap_SentinelJSONKeyDoesNotReachHiddenField(t *testing.T) {
+	model := &writeOnlyPasswordModel{}
+	require.NoError(t, populateFromMap(model, map[string]interface{}{"-": "replacement"}))
+	assert.Empty(t, model.Password, `a "-" request key must not write a json:"-" field`)
+
+	model = &writeOnlyPasswordModel{}
+	require.NoError(t, populateFromMap(model, map[string]interface{}{"password": "expected", "-": "replacement"}))
+	assert.Equal(t, "expected", model.Password)
 }

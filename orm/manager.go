@@ -123,6 +123,14 @@ func (m *Manager[T]) hasDB() bool {
 	return m != nil && m.db != nil && m.db.isSet()
 }
 
+// GetModelSchema exposes the manager's immutable model metadata to API filters.
+func (m *Manager[T]) GetModelSchema() *ModelSchema {
+	if m == nil {
+		return nil
+	}
+	return m.schema
+}
+
 // FieldAccessor returns a field accessor for type-safe field operations.
 func (m *Manager[T]) FieldAccessor() (*FieldAccessor[T], error) {
 	return NewFieldAccessor[T]()
