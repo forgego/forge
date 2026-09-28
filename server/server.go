@@ -62,7 +62,7 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 
 	// Secure cookies only in production so plain-HTTP local
 	// development keeps working.
-	secureCookies := settings.App.Env == "production"
+	secureCookies := isProductionEnv(settings)
 
 	// Add session middleware if configured
 	if settings.Security.SessionSecret != "" {
@@ -194,8 +194,14 @@ func (s *Server) serveUntil(ctx context.Context) error {
 	return <-serverErr
 }
 
+// isProductionEnv reports whether app.env names production. Secure cookies
+// and production secret validation must agree on this, so both use it.
+func isProductionEnv(settings *config.Settings) bool {
+	return settings != nil && strings.EqualFold(strings.TrimSpace(settings.App.Env), "production")
+}
+
 func (s *Server) validateProductionSecrets() error {
-	if s == nil || s.config == nil || s.settings == nil || !strings.EqualFold(strings.TrimSpace(s.settings.App.Env), "production") {
+	if s == nil || s.config == nil || s.settings == nil || !isProductionEnv(s.settings) {
 		return nil
 	}
 	// Validate the effective Settings.Security values the server actually
