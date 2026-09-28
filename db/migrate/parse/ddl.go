@@ -116,6 +116,11 @@ func (p *DDLParser) parseAlterTable(sql string) ([]core.Change, error) {
 		return []core.Change{change}, nil
 	}
 
+	// ALTER TABLE RENAME [COLUMN] a TO b | RENAME TO new_name
+	if change := parseRename(sql); change != nil {
+		return []core.Change{change}, nil
+	}
+
 	// ALTER TABLE ADD COLUMN
 	// Check for "ADD COLUMN" specifically to avoid matching "ADD CONSTRAINT"
 	if strings.Contains(upper, "ADD COLUMN") {
@@ -232,6 +237,30 @@ func parseAlterColumn(sql string) *core.AlterColumn {
 		return nil
 	}
 	return change
+}
+
+var (
+	// renameTableRegex matches ALTER TABLE t RENAME TO new_name.
+	renameTableRegex = regexp.MustCompile(`(?is)^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?["']?(\w+)["']?\s+RENAME\s+TO\s+["']?(\w+)["']?\s*;?\s*$`)
+	// renameColumnRegex matches ALTER TABLE t RENAME [COLUMN] a TO b. A
+	// RENAME CONSTRAINT does not match, because CONSTRAINT is not followed
+	// by TO.
+	renameColumnRegex = regexp.MustCompile(`(?is)^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?["']?(\w+)["']?\s+RENAME\s+(?:COLUMN\s+)?["']?(\w+)["']?\s+TO\s+["']?(\w+)["']?\s*;?\s*$`)
+)
+
+// parseRename parses a hand-written ALTER TABLE .. RENAME TO or RENAME
+// [COLUMN] .. TO, which makemigrations does not generate, so the renamed
+// table or column is read back into schema state. It returns nil for any
+// other statement.
+func parseRename(sql string) core.Change {
+	sql = strings.TrimSpace(sql)
+	if matches := renameTableRegex.FindStringSubmatch(sql); matches != nil {
+		return &core.RenameTable{OldName: matches[1], NewName: matches[2]}
+	}
+	if matches := renameColumnRegex.FindStringSubmatch(sql); matches != nil && !strings.EqualFold(matches[2], "CONSTRAINT") {
+		return &core.RenameColumn{Table: matches[1], OldName: matches[2], NewName: matches[3]}
+	}
+	return nil
 }
 
 // parseAddColumn parses ALTER TABLE ADD COLUMN statements

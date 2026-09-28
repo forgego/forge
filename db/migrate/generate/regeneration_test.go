@@ -591,6 +591,66 @@ func TestDroppedAndRecreatedTableIsReadBack(t *testing.T) {
 	}
 }
 
+// TestHandWrittenRenamesAreReadBack covers renames, which makemigrations does
+// not detect: a hand-written ALTER TABLE .. RENAME COLUMN or RENAME TO must be
+// read back, with the indexes, constraints and foreign keys that refer to the
+// renamed column or table, so the next run writes nothing.
+func TestHandWrittenRenamesAreReadBack(t *testing.T) {
+	renamed := mustReplace(t, functionalModels, `schema.Meta{TableName: "authors"}`, `schema.Meta{TableName: "writers"}`)
+	renamed = mustReplace(t, renamed, `schema.StringField("isbn")`, `schema.StringField("code")`)
+	renamed = mustReplace(t, renamed, `Indexes:   []schema.Index{{Name: "books_isbn_idx", Fields: []string{"isbn"}}}`,
+		`Indexes:   []schema.Index{{Name: "books_isbn_idx", Fields: []string{"code"}}}`)
+	renamed = mustReplace(t, renamed, `{Name: "books_isbn_key", Type: "UNIQUE", Fields: []string{"isbn"}}`,
+		`{Name: "books_isbn_key", Type: "UNIQUE", Fields: []string{"code"}}`)
+	renamed = mustReplace(t, renamed, `schema.Int32Field("pages", schema.Default(1))`, `schema.Int32Field("page_count", schema.Default(1))`)
+	renamed = mustReplace(t, renamed, `Condition: "pages > 0"`, `Condition: "page_count > 0"`)
+	up := "ALTER TABLE books RENAME COLUMN isbn TO code;\nALTER TABLE books RENAME pages TO page_count;\nALTER TABLE authors RENAME TO writers;\n"
+	down := "ALTER TABLE writers RENAME TO authors;\nALTER TABLE books RENAME COLUMN page_count TO pages;\nALTER TABLE books RENAME COLUMN code TO isbn;\n"
+	for _, driver := range []core.Driver{core.DriverPostgreSQL, core.DriverSQLite} {
+		t.Run(string(driver), func(t *testing.T) {
+			modelsDir := t.TempDir()
+			migrationsDir := t.TempDir()
+			file := filepath.Join(modelsDir, "models.go")
+			if err := os.WriteFile(file, []byte(functionalModels), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			generateMigration(t, modelsDir, migrationsDir, driver, "initial")
+			for name, content := range map[string]string{"000002_renames.up.sql": up, "000002_renames.down.sql": down} {
+				if err := os.WriteFile(filepath.Join(migrationsDir, name), []byte(content), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.WriteFile(file, []byte(renamed), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			generateMigration(t, modelsDir, migrationsDir, driver, "again")
+			if got := migrationFiles(t, migrationsDir); len(got) != 4 {
+				extra, _ := os.ReadFile(filepath.Join(migrationsDir, got[len(got)-1]))
+				t.Fatalf("regenerating after hand-written renames wrote %v:\n%s", got, extra)
+			}
+			applyMigrations(t, driver, migrationsDir)
+
+			// A later change to the renamed table is generated against its
+			// new name.
+			changed := mustReplace(t, renamed, "\t\tschema.StringField(\"code\"),\n", "\t\tschema.StringField(\"code\"),\n\t\tschema.StringField(\"title\"),\n")
+			changed = mustReplace(t, changed, `schema.Float32Field("ratio"),`, `schema.Float32Field("ratio"), schema.StringField("bio"),`)
+			if err := os.WriteFile(file, []byte(changed), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			generateMigration(t, modelsDir, migrationsDir, driver, "add_columns")
+			added, err := os.ReadFile(filepath.Join(migrationsDir, "000003_add_columns.up.sql"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertContainsAll(t, "up", string(added), `ALTER TABLE books ADD COLUMN "title" TEXT;`, `ALTER TABLE writers ADD COLUMN "bio" TEXT;`)
+			if statements := strings.Count(string(added), ";"); statements != 2 {
+				t.Errorf("up has %d statements, want 2:\n%s", statements, added)
+			}
+			applyMigrations(t, driver, migrationsDir)
+		})
+	}
+}
+
 // TestSQLiteColumnChangeFails covers SQLite, which cannot alter a column
 // without rebuilding its table: makemigrations used to write only a comment,
 // so the change was proposed again on every run. It now fails and writes

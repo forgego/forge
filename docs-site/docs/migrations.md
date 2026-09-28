@@ -55,13 +55,9 @@ forge migrate recover --clean --version <version>
 Generated migrations are proposals, and an operator should review each one before it
 reaches a database with data in it.
 
-- **Renames are not detected.** Renaming a field or a table produces a `DROP` of the old
-  name and an `ADD` of the new one, which loses the data. Rename in steps instead:
-  1. Add the new field and generate a migration.
-  2. Copy the data in a hand-written migration, for example
-     `forge makemigrations copy_title --empty` with `UPDATE posts SET headline = title;`.
-  3. Deploy code that uses the new field.
-  4. Remove the old field and generate the migration that drops it.
+- **Renames are not detected.** Renaming a field or a table in a model produces a `DROP`
+  of the old name and an `ADD` of the new one, which loses the data. Write the rename by
+  hand instead (see [Renaming a column or table](#renaming-a-column-or-table)).
 - **Destructive statements.** Treat `DROP TABLE`, `DROP COLUMN`, and type changes
   (`ALTER COLUMN ... TYPE`) as data loss until proven otherwise. `forge migrate lint` flags
   `DROP TABLE` and `TRUNCATE`, but not `DROP COLUMN`, so read the SQL yourself.
@@ -85,6 +81,46 @@ reaches a database with data in it.
   are restored with the data, so `forge migrate status` shows the version the backup was
   taken at, and `forge migrate recover --verify` checks the files you have against it.
   Run `forge migrate up` to apply the migrations that came after the backup.
+
+### Renaming a column or table
+
+`makemigrations` reads a hand-written `ALTER TABLE .. RENAME COLUMN` and
+`ALTER TABLE .. RENAME TO` back from the migration files. The indexes, constraints, and
+foreign keys that refer to the renamed column or table follow it, as they do in the
+database. Rename in one migration, and change the model to match before you generate
+again:
+
+1. Create an empty migration: `forge makemigrations rename_isbn --empty`.
+2. Write the rename in the up file and its reverse in the down file:
+
+   ```sql
+   -- 000004_rename_isbn.up.sql
+   ALTER TABLE books RENAME COLUMN isbn TO code;
+   ALTER TABLE authors RENAME TO writers;
+   ```
+
+   ```sql
+   -- 000004_rename_isbn.down.sql
+   ALTER TABLE writers RENAME TO authors;
+   ALTER TABLE books RENAME COLUMN code TO isbn;
+   ```
+
+3. Update the model: the field name, `Meta.TableName`, and the fields and conditions of any
+   `Meta.Indexes` and `Meta.Constraints` that name the column. Index and constraint names
+   do not change.
+4. Run `forge makemigrations check --auto`. It prints `No changes detected`.
+
+On PostgreSQL, a foreign key constraint keeps its name when its table or column is
+renamed, but Forge names it `fk_<table>_<column>` from the current names, and drops it by
+that name later. When the renamed table or column has its own foreign key, rename the
+constraint in the same migration, for example
+`ALTER TABLE books RENAME CONSTRAINT fk_books_author_id TO fk_books_writer_id;`. SQLite
+(3.25 or later) runs the same `RENAME` statements; its foreign keys have no name.
+
+For a rolling deploy, where old and new code run side by side, rename in steps instead:
+add the new field, copy the data in a hand-written migration (for example
+`UPDATE posts SET headline = title;`), deploy code that uses the new field, then remove
+the old field.
 
 ### Changes makemigrations cannot generate
 
