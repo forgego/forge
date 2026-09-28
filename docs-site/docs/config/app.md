@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 description: Application settings.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # App Settings

@@ -723,7 +723,7 @@ site.IndexTitle = "Welcome to Blog Administration"
   that the related manager is provided, and that inline fields exist
   in the related model.
 - **Protect admin routes** with auth middleware in `main` (see
-  `forge/identity/middleware`).
+  `identity/middleware`).
 
 ## Next Steps
 

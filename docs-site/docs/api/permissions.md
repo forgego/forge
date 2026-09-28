@@ -1,7 +1,7 @@
 ---
 sidebar_position: 5
 description: Permission classes for API access control.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Permissions

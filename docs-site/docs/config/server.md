@@ -1,7 +1,7 @@
 ---
 sidebar_position: 3
 description: Server settings.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Server Settings

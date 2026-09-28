@@ -1,7 +1,7 @@
 ---
 sidebar_position: 11
 description: High-performance type-safe querying, QuerySets, Q-expressions, relations, and aggregations.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Type-Safe ORM & QuerySets

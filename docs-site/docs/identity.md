@@ -1,7 +1,7 @@
 ---
 sidebar_position: 23
 description: Built-in identity system for users, sessions, and permissions.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Identity

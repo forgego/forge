@@ -1,7 +1,7 @@
 ---
 sidebar_position: 4
 description: Database settings.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Database Settings

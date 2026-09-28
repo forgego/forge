@@ -1,7 +1,7 @@
 ---
 sidebar_position: 9
 description: Content negotiation, parsers, and renderers.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Renderers & Parsers

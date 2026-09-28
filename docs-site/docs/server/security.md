@@ -1,7 +1,7 @@
 ---
 sidebar_position: 3
 description: Production security defaults, Gorilla CSRF with exempt paths, secure cookies, bcrypt, and CORS.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Platform Security & Hardening

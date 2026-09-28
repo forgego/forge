@@ -112,7 +112,7 @@ func main() {
 	}
 
 	if hasSeedFlag() {
-		log.Println("🌱 --seed flag detected, generating sample data...")
+		log.Println("--seed given; generating sample data...")
 		if err := seeder.Seed(ctx, database); err != nil {
 			log.Printf("Warning: seed error: %v", err)
 		}
@@ -178,8 +178,8 @@ func buildEcommerceRouter(ctx context.Context, cfg *config.Config, database *db.
 	}
 	if adminStaticDir == "" {
 		candidates := []string{
-			"../../forge/admin/ui/dist",
-			"../forge/admin/ui/dist",
+			"../../admin/ui/dist",
+			"../admin/ui/dist",
 			"./dist",
 			"static/admin",
 		}
@@ -377,7 +377,7 @@ const storefrontHTML = `<!DOCTYPE html>
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Forge Framework — Reference Ecommerce Showcase</title>
+	<title>Forge ecommerce example</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -893,7 +893,7 @@ const storefrontHTML = `<!DOCTYPE html>
 	<header>
 		<div class="container nav-content">
 			<div class="brand">
-				<span>⚡ Forge</span>
+				<span>Forge</span>
 				<span class="brand-badge">Ecommerce</span>
 			</div>
 			<nav class="nav-links">
@@ -910,11 +910,11 @@ const storefrontHTML = `<!DOCTYPE html>
 		<section class="hero">
 			<div class="hero-badge">
 				<div class="dot"></div>
-				<span>Forge Reference Application & Framework Showcase</span>
+				<span>Forge example application</span>
 			</div>
-			<h1>Full-Stack Go Framework<br>Engineered for High Velocity</h1>
+			<h1>An ecommerce app<br>built with Forge</h1>
 			<p>
-				Showcasing Schema DSL with lifecycle hooks, type-safe ORM QuerySets, an embedded React 19 Admin SPA, and production-grade REST ModelViewSets with Gorilla CSRF.
+				Models defined with the schema DSL, typed ORM queries, the built-in admin and REST ViewSets, all running against one database.
 			</p>
 			<div class="hero-actions">
 				<a href="{{ADMIN_PATH}}/" class="btn btn-primary">Open Admin Console &rarr;</a>
@@ -941,42 +941,34 @@ const storefrontHTML = `<!DOCTYPE html>
 				<div class="metric-val" id="metricRevenue">--</div>
 				<div class="metric-lbl">Total Sales Revenue</div>
 			</div>
-			<div class="metric-item">
-				<div class="metric-val" style="color: var(--accent-green);">&lt; 15ms</div>
-				<div class="metric-lbl">P95 ViewSet Latency</div>
-			</div>
 		</section>
 
 		<!-- Framework Pillars -->
-		<div class="section-title">🏗️ Built on Forge Core Architecture</div>
-		<div class="section-desc">Four unified layers providing complete full-stack web development without redundant glue code.</div>
+		<div class="section-title">What this example uses</div>
+		<div class="section-desc">Four parts of Forge, wired together in this app.</div>
 		<section class="pillars-grid">
 			<div class="pillar-card">
-				<div class="pillar-icon">📐</div>
 				<h3>Schema DSL & Hooks</h3>
 				<p>Declarative schema definitions in Go with BeforeCreate and BeforeSave hooks, foreign keys, cascade rules, and generated columns.</p>
 			</div>
 			<div class="pillar-card">
-				<div class="pillar-icon">⚡</div>
 				<h3>Type-Safe ORM</h3>
 				<p>Generic QuerySet[T] with compile-time field lookups, complex orm.Q boolean tree expressions, and aggregate computations.</p>
 			</div>
 			<div class="pillar-card">
-				<div class="pillar-icon">🎛️</div>
 				<h3>Modern Admin Console</h3>
 				<p>React 19 single-page application with TanStack router, faceted filters, saved views, custom bulk actions, and KPI widgets.</p>
 			</div>
 			<div class="pillar-card">
-				<div class="pillar-icon">🛡️</div>
-				<h3>Hardened REST API</h3>
-				<p>Automatic ModelViewSets with pagination, sliding-window throttling, Gorilla CSRF defense, and SHA-256 session management.</p>
+				<h3>REST API</h3>
+				<p>ViewSets with pagination and throttling, behind CSRF protection and signed session cookies.</p>
 			</div>
 		</section>
 
 		<!-- Live Catalog Section -->
 		<section class="catalog-section" id="catalog">
-			<div class="section-title">🛍️ Live Interactive Storefront</div>
-			<div class="section-desc">All products queried in real-time from Forge ORM with faceted filtering and instant checkout hooks.</div>
+			<div class="section-title">Storefront</div>
+			<div class="section-desc">Products loaded from the database through the Forge ORM.</div>
 
 			<div class="catalog-controls">
 				<div class="search-box">
@@ -994,17 +986,17 @@ const storefrontHTML = `<!DOCTYPE html>
 
 		<!-- Live API Console -->
 		<section class="api-console-section" id="api-console">
-			<div class="section-title">🧪 Live Interactive API Console</div>
-			<div class="section-desc">Execute real HTTP requests against the running Forge server and inspect responses in real-time.</div>
+			<div class="section-title">API console</div>
+			<div class="section-desc">Send requests to this server and inspect the responses.</div>
 
 			<div class="api-quick-buttons">
-				<button class="api-btn" onclick="runPreset('GET', '{{API_PATH}}/catalog/stats')">📊 Catalog Stats</button>
-				<button class="api-btn" onclick="runPreset('GET', '{{API_PATH}}/catalog/search?q=pro')">🔍 Faceted Search (?q=pro)</button>
-				<button class="api-btn" onclick="runPreset('GET', '{{API_PATH}}/orders/summary')">📦 Orders Summary</button>
-				<button class="api-btn" onclick="runPreset('GET', '{{API_PATH}}/products/')">💻 Products ViewSet</button>
-				<button class="api-btn" onclick="runPreset('GET', '{{API_PATH}}/categories/')">📁 Categories ViewSet</button>
-				<button class="api-btn" onclick="runPreset('GET', '/health')">🩺 Health Check</button>
-				<button class="api-btn" onclick="runPreset('GET', '/api/openapi.json')">📜 OpenAPI 3.0 Spec</button>
+				<button class="api-btn" onclick="runPreset('GET', '{{API_PATH}}/catalog/stats')">Catalog stats</button>
+				<button class="api-btn" onclick="runPreset('GET', '{{API_PATH}}/catalog/search?q=pro')">Search (?q=pro)</button>
+				<button class="api-btn" onclick="runPreset('GET', '{{API_PATH}}/orders/summary')">Orders summary</button>
+				<button class="api-btn" onclick="runPreset('GET', '{{API_PATH}}/products/')">Products ViewSet</button>
+				<button class="api-btn" onclick="runPreset('GET', '{{API_PATH}}/categories/')">Categories ViewSet</button>
+				<button class="api-btn" onclick="runPreset('GET', '/health')">Health check</button>
+				<button class="api-btn" onclick="runPreset('GET', '/api/openapi.json')">OpenAPI spec</button>
 			</div>
 
 			<div class="api-bar">
@@ -1018,7 +1010,7 @@ const storefrontHTML = `<!DOCTYPE html>
 					<span>Response Payload</span>
 					<div>
 						<span id="apiStatus" class="status-badge status-200">200 OK</span>
-						<span id="apiLatency" style="margin-left: 12px; color: var(--text-muted);">12ms</span>
+						<span id="apiLatency" style="margin-left: 12px; color: var(--text-muted);"></span>
 					</div>
 				</div>
 				<pre class="api-response-body" id="apiOutput">Click 'Execute Query' or any quick preset button above...</pre>
@@ -1027,13 +1019,12 @@ const storefrontHTML = `<!DOCTYPE html>
 	</main>
 
 	<div id="toast">
-		<span>✅</span>
 		<span id="toastMsg">Order placed successfully!</span>
 	</div>
 
 	<footer>
 		<div class="container">
-			<p>Forge Framework — Enterprise Go Full-Stack Framework. Licensed under Apache 2.0.</p>
+			<p>Built with Forge, the batteries-included web framework for Go. MIT License.</p>
 			<p style="margin-top: 8px;">Explore the full documentation on our <a href="{{ADMIN_PATH}}/">Admin Console</a> or read the guides on the docs site.</p>
 		</div>
 	</footer>
@@ -1106,10 +1097,6 @@ const storefrontHTML = `<!DOCTYPE html>
 			}
 		}
 
-		const iconMap = {
-			1: '💻', 2: '🎧', 3: '📱', 4: '🧥', 5: '👗', 6: '👟', 7: '🏠', 8: '☕'
-		};
-
 		function renderProducts(products) {
 			var container = document.getElementById('productGrid');
 			if (!products || products.length === 0) {
@@ -1119,7 +1106,7 @@ const storefrontHTML = `<!DOCTYPE html>
 			var html = '';
 			for (var i = 0; i < products.length; i++) {
 				var p = products[i];
-				var icon = iconMap[p.category_id] || '📦';
+				var icon = escapeHtml((p.name || '?').charAt(0).toUpperCase());
 				var stockText = p.stock_quantity > 0 ? 'In Stock (' + p.stock_quantity + ')' : 'Out of Stock';
 				var desc = p.description || 'Premium engineered product.';
 				var priceStr = Number(p.price).toFixed(2);
@@ -1135,7 +1122,7 @@ const storefrontHTML = `<!DOCTYPE html>
 					'</div>' +
 					'<div class="product-footer">' +
 						'<div class="product-price">$' + priceStr + '</div>' +
-						'<button class="btn-buy" onclick="quickCheckout(' + p.id + ', \'' + escapeHtml(p.name) + '\', \'' + p.sku + '\', ' + p.price + ')">⚡ Instant Buy</button>' +
+						'<button class="btn-buy" onclick="quickCheckout(' + p.id + ', \'' + escapeHtml(p.name) + '\', \'' + p.sku + '\', ' + p.price + ')">Buy now</button>' +
 					'</div>' +
 				'</div>';
 			}

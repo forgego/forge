@@ -61,14 +61,12 @@ func SetupDashboard() {
 					components.Text("5. Matter Smart Sensor Hub - $89.00 (420 sold)"),
 				),
 
-			// Real-time Platform Health & Inventory Alerts
-			components.Card("System Health & Inventory Watch").
+			// Sample inventory notes (static demo content, not live data)
+			components.Card("Inventory Notes").
 				WithColSpan(2).
 				WithChildren(
-					components.Text("✅ All Warehouses Online (San Francisco, New Jersey, Frankfurt)"),
-					components.Text("⚠️ Low Stock Alert: Apex Pro Running Shoes (4 units remaining)"),
-					components.Text("ℹ️ Security Active: SHA-256 Cookie Sessions & Bcrypt Double-Hash"),
-					components.Text("⚡ API Response Time: P95 < 25ms across all ViewSets"),
+					components.Text("Warehouses: San Francisco, New Jersey, Frankfurt"),
+					components.Text("Low stock: Apex Pro Running Shoes (4 units remaining)"),
 				),
 		),
 	})

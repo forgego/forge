@@ -1,7 +1,7 @@
 ---
 sidebar_position: 21
 description: Implementation status of forge modules.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Status

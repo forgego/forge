@@ -1,7 +1,7 @@
 ---
 sidebar_position: 40
 description: Complete feature overview for Forge framework.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Features

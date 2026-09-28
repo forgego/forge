@@ -4,7 +4,7 @@ Documentation website for the forge framework, built with Docusaurus and optimiz
 
 ## Quick Start
 
-### Using pnpm (Recommended - Fastest) ⚡
+### Using pnpm (Recommended - Fastest)
 
 ```bash
 # Install dependencies (fastest! - uses npx, no global install needed)
@@ -62,7 +62,7 @@ This site is optimized for **fastest possible builds and installs**:
 ### Performance Benchmarks
 
 **Installation**:
-- pnpm: ~15-30s (first), ~3-5s (cached) ⚡
+- pnpm: ~15-30s (first), ~3-5s (cached)
 - yarn: ~30-60s (first), ~5-10s (cached)
 - npm: ~60-120s (first), ~10-20s (cached)
 
