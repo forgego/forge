@@ -490,3 +490,41 @@ func TestChangedStringDefaultCaseIsDetected(t *testing.T) {
 	assertContainsAll(t, "up", up, `ALTER TABLE authors ALTER COLUMN "status" SET DEFAULT 'active';`)
 	assertContainsAll(t, "down", down, `ALTER TABLE authors ALTER COLUMN "status" SET DEFAULT 'Active';`)
 }
+
+// withBookColumns adds column declarations after the isbn column of
+// functionalModels.
+func withBookColumns(t *testing.T, columns ...string) string {
+	t.Helper()
+	isbn := "\t\tschema.StringField(\"isbn\"),\n"
+	added := isbn
+	for _, column := range columns {
+		added += "\t\t" + column + ",\n"
+	}
+	return mustReplace(t, functionalModels, isbn, added)
+}
+
+// TestCastAndOperatorDBDefaultsAreReadBack covers DB defaults with a cast or
+// an operator, which the parser cut at the first space and unquoted, so every
+// run dropped the default and the down migration restored an invalid one.
+func TestCastAndOperatorDBDefaultsAreReadBack(t *testing.T) {
+	source := withBookColumns(t,
+		`schema.StringField("meta", schema.DBType("JSONB"), schema.DBDefault("'{}'::jsonb"), schema.Required())`,
+		`schema.StringField("joined", schema.DBDefault("'x' || 'y'"))`,
+		`schema.StringField("label", schema.DBDefault("'Mixed Case'::text"), schema.Unique())`)
+	columns := []string{
+		`ALTER TABLE books ADD COLUMN "meta" JSONB NOT NULL DEFAULT '{}'::jsonb;`,
+		`ALTER TABLE books ADD COLUMN "joined" TEXT DEFAULT 'x' || 'y';`,
+		`ALTER TABLE books ADD COLUMN "label" TEXT DEFAULT 'Mixed Case'::text UNIQUE;`,
+	}
+	up, _ := regenerateWith(t, core.DriverPostgreSQL, source, "add_db_defaults")
+	assertContainsAll(t, "up", up, columns...)
+
+	// Dropping the columns restores their defaults whole on down.
+	_, down := regenerateFrom(t, core.DriverPostgreSQL, source, functionalModels, "drop_db_defaults")
+	assertContainsAll(t, "down", down, columns...)
+
+	// SQLite requires an expression default to be parenthesized.
+	source = withBookColumns(t, `schema.StringField("joined", schema.DBDefault("('x' || 'y')"), schema.Required())`)
+	up, _ = regenerateWith(t, core.DriverSQLite, source, "add_db_defaults")
+	assertContainsAll(t, "up", up, `ALTER TABLE books ADD COLUMN "joined" TEXT NOT NULL DEFAULT ('x' || 'y');`)
+}

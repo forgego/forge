@@ -220,6 +220,10 @@ func (s *InMemoryState) applyModifyColumn(c *core.ModifyColumn) error {
 // TYPE clause replaces.
 var typeOptionKeys = []string{core.SQLTypeOption, "db_type", "max_length", "max_digits", "decimal_places"}
 
+// defaultOptionKeys are the column options that render its default, which a
+// SET DEFAULT or DROP DEFAULT clause replaces.
+var defaultOptionKeys = []string{"db_default", "auto_now", "auto_now_add"}
+
 func (s *InMemoryState) applyAlterColumn(c *core.AlterColumn) error {
 	table, exists := s.state.Tables[c.Table]
 	if !exists {
@@ -243,15 +247,23 @@ func (s *InMemoryState) applyAlterColumn(c *core.AlterColumn) error {
 			options[key] = value
 		}
 	}
-	col.Options = options
-	if c.NotNull != nil {
-		col.Required = *c.NotNull
+	if c.SetDefault || c.DropDefault {
+		// A default replaces whatever set the previous one, literal,
+		// expression or auto timestamp.
+		for _, key := range defaultOptionKeys {
+			delete(options, key)
+		}
+		col.Default = nil
 	}
 	if c.SetDefault {
 		col.Default = c.Default
+		if c.DBDefault != "" {
+			options["db_default"] = c.DBDefault
+		}
 	}
-	if c.DropDefault {
-		col.Default = nil
+	col.Options = options
+	if c.NotNull != nil {
+		col.Required = *c.NotNull
 	}
 	return nil
 }

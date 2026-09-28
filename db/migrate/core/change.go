@@ -117,10 +117,12 @@ type AlterColumn struct {
 	NewType *generator.FieldDefinition
 	// NotNull, when set, records SET NOT NULL (true) or DROP NOT NULL (false).
 	NotNull *bool
-	// SetDefault records SET DEFAULT Default; DropDefault records DROP DEFAULT.
+	// SetDefault records SET DEFAULT with a literal Default or, for any
+	// other expression, the raw DBDefault; DropDefault records DROP DEFAULT.
 	SetDefault  bool
 	DropDefault bool
 	Default     interface{}
+	DBDefault   string
 }
 
 func (c *AlterColumn) Type() ChangeType  { return ChangeTypeAlterColumn }

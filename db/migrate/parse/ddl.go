@@ -220,7 +220,7 @@ func parseAlterColumn(sql string) *core.AlterColumn {
 		change.DropDefault = true
 	case alterColumnSetDefaultRegex.MatchString(action):
 		change.SetDefault = true
-		change.Default = parseDefaultValue(readExpression(alterColumnSetDefaultRegex.FindStringSubmatch(action)[1]))
+		change.Default, change.DBDefault = parseDefault(readExpression(alterColumnSetDefaultRegex.FindStringSubmatch(action)[1]))
 	case alterColumnTypeRegex.MatchString(action):
 		typeMatch := columnTypeRegex.FindStringSubmatch(alterColumnTypeRegex.FindStringSubmatch(action)[1])
 		if typeMatch == nil {
@@ -252,9 +252,9 @@ func (p *DDLParser) parseAddColumn(sql string) *core.AddColumn {
 	typeStr := typeMatch[1] // Keep type as opaque string
 
 	// Parse basic constraints from remaining SQL, matching keywords outside
-	// quoted literals
+	// quoted literals and the default expression
 	remaining := sql[matches[1]+len(typeMatch[0]):]
-	masked := maskQuoted(remaining)
+	masked, defaultExpr, hasDefault := maskedClauses(remaining)
 	required := strings.Contains(strings.ToUpper(masked), "NOT NULL")
 
 	field := generator.FieldDefinition{
@@ -270,8 +270,8 @@ func (p *DDLParser) parseAddColumn(sql string) *core.AddColumn {
 		field.Options["unique"] = true
 	}
 
-	if expr, ok := defaultExpression(remaining); ok {
-		field.Default = parseDefaultValue(expr)
+	if hasDefault {
+		setDefault(&field, defaultExpr)
 	}
 
 	return &core.AddColumn{

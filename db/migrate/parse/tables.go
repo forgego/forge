@@ -210,9 +210,9 @@ func (p *TableParser) parseColumnDefinition(colDef string) (generator.FieldDefin
 	remaining = remaining[len(typeMatch[0]):]
 
 	field := fieldForSQLType(columnName, sqlType)
-	// Keywords are matched outside quoted literals, so a default such as
-	// 'NOT NULL' does not set them.
-	masked := maskQuoted(remaining)
+	// Keywords are matched outside quoted literals and the default
+	// expression, so a default such as 'NOT NULL' does not set them.
+	masked, defaultExpr, hasDefault := maskedClauses(remaining)
 
 	// Check for PRIMARY KEY
 	if strings.Contains(strings.ToUpper(masked), "PRIMARY KEY") {
@@ -251,9 +251,8 @@ func (p *TableParser) parseColumnDefinition(colDef string) (generator.FieldDefin
 		field.Options["unique"] = true
 	}
 
-	// Check for DEFAULT
-	if expr, ok := defaultExpression(remaining); ok {
-		field.Default = parseDefaultValue(expr)
+	if hasDefault {
+		setDefault(&field, defaultExpr)
 	}
 
 	return field, nil
@@ -416,38 +415,49 @@ func mapSQLTypeToGoType(sqlType string) string {
 	}
 }
 
-// parseDefaultValue parses a default value from SQL
-func parseDefaultValue(value string) interface{} {
-	value = strings.TrimSpace(value)
+// DBDefaultOption is the field option that holds a column default as a raw SQL
+// expression, which the builder renders unquoted, as for schema.DBDefault.
+const DBDefaultOption = "db_default"
+
+// setDefault records a column default read from SQL on field: a string,
+// number or boolean literal as its Default, and any other expression, such as
+// now(), (1 + 2) or '{}'::jsonb, verbatim as its raw DB default.
+func setDefault(field *generator.FieldDefinition, expr string) {
+	value, raw := parseDefault(expr)
+	field.Default = value
+	if raw != "" {
+		if field.Options == nil {
+			field.Options = map[string]interface{}{}
+		}
+		field.Options[DBDefaultOption] = raw
+	}
+}
+
+// parseDefault parses a column default expression. A string, number or
+// boolean literal returns its value; any other expression returns nil and the
+// expression itself, to be rendered unquoted.
+func parseDefault(expr string) (interface{}, string) {
+	expr = strings.TrimSpace(expr)
 	// A string literal is a string, whatever it spells.
-	if literal, ok := unquoteLiteral(value); ok {
-		return literal
+	if literal, ok := unquoteLiteral(expr); ok {
+		return literal, ""
 	}
-	value = strings.Trim(value, `"'`)
-
-	// Check for SQL functions
-	if strings.Contains(value, "(") {
-		return value // Return as-is for functions like now()
+	if intVal, err := strconv.ParseInt(expr, 10, 64); err == nil {
+		return intVal, ""
 	}
-
-	// Try to parse as number
-	if intVal, err := strconv.ParseInt(value, 10, 64); err == nil {
-		return intVal
+	if floatVal, err := strconv.ParseFloat(expr, 64); err == nil && !strings.ContainsAny(expr, "xXpPiInN_") {
+		return floatVal, ""
 	}
-	if floatVal, err := strconv.ParseFloat(value, 64); err == nil {
-		return floatVal
+	if strings.EqualFold(expr, "true") {
+		return true, ""
 	}
-
-	// Check for boolean
-	if strings.EqualFold(value, "true") {
-		return true
+	if strings.EqualFold(expr, "false") {
+		return false, ""
 	}
-	if strings.EqualFold(value, "false") {
-		return false
+	if expr == "" {
+		return nil, ""
 	}
-
-	// Return as string
-	return value
+	return nil, expr
 }
 
 // toPascalCase converts snake_case to PascalCase
