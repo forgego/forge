@@ -181,3 +181,22 @@ func TestRecoverCommand_Execute_DirtyDB_CleanAndVerify(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, dirty)
 }
+
+// TestPrintDirtyRecoveryCommands pins the recovery advice for a dirty version.
+// Marking a rolled-back version clean would record it as applied without its
+// changes, so the force-to-previous path must be offered first.
+func TestPrintDirtyRecoveryCommands(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"000001_a.up.sql", "000003_b.up.sql", "000007_c.up.sql", "000007_c.down.sql"} {
+		require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte("SELECT 1;"), 0o600))
+	}
+	var out bytes.Buffer
+	printDirtyRecoveryCommands(&out, dir, 7)
+	assert.Contains(t, out.String(), "forge migrate force 3\n   forge migrate up")
+	assert.Contains(t, out.String(), "forge migrate recover --clean --version 7")
+
+	out.Reset()
+	printDirtyRecoveryCommands(&out, dir, 1)
+	assert.Contains(t, out.String(), "DELETE FROM schema_migrations;")
+	assert.NotContains(t, out.String(), "forge migrate force")
+}
