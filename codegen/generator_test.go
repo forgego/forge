@@ -233,6 +233,83 @@ func (Product) Fields() []schema.Field {
 	assert.Contains(t, err.Error(), "no concrete int64 ID or Id field")
 }
 
+func TestGeneratorGenerate_RejectsUnusablePromotedIDMethods(t *testing.T) {
+	identified := `type Identified struct { key int64 }
+func (i *Identified) GetID() int64 { return i.key }
+func (i *Identified) SetID(id int64) { i.key = id }
+`
+	for _, tt := range []struct {
+		name   string
+		source string
+	}{
+		{name: "shadowed by own GetID", source: identified + `type Product struct { schema.BaseSchema; Identified }
+func (p *Product) GetID() string { return "" }
+`},
+		{name: "ambiguous promotion", source: identified + `type Other struct { key int64 }
+func (o *Other) GetID() int64 { return o.key }
+func (o *Other) SetID(id int64) { o.key = id }
+type Product struct { schema.BaseSchema; Identified; Other }
+`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			modelSrc := "package testmodels\nimport \"github.com/forgego/forge/schema\"\n" + tt.source + `func (Product) Fields() []schema.Field {
+	return []schema.Field{schema.Int64("id").Primary().AutoIncrement().Build()}
+}
+`
+			require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "models.go"), []byte(modelSrc), 0644))
+
+			err := NewGenerator(tmpDir, tmpDir).SetGenerateAPI(true).Generate()
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "model Product")
+			assert.NoFileExists(t, filepath.Join(tmpDir, "api_gen.go"))
+		})
+	}
+}
+
+func TestGeneratorGenerate_AcceptsShallowerPromotedIDMethods(t *testing.T) {
+	tmpDir := t.TempDir()
+	modelSrc := `package testmodels
+import "github.com/forgego/forge/schema"
+type Deep struct { key int64 }
+func (d *Deep) GetID() string { return "" }
+type Wrapper struct { Deep }
+type Identified struct { key int64 }
+func (i *Identified) GetID() int64 { return i.key }
+func (i *Identified) SetID(id int64) { i.key = id }
+type Product struct { schema.BaseSchema; Identified; Wrapper }
+func (Product) Fields() []schema.Field {
+	return []schema.Field{schema.Int64("id").Primary().AutoIncrement().Build()}
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "models.go"), []byte(modelSrc), 0644))
+	require.NoError(t, NewGenerator(tmpDir, tmpDir).SetGenerateAPI(true).Generate())
+	assert.FileExists(t, filepath.Join(tmpDir, "api_gen.go"))
+}
+
+func TestGeneratorGenerate_HonorsBuildTagsFromGOFLAGS(t *testing.T) {
+	tmpDir := t.TempDir()
+	modelSrc := `package testmodels
+import "github.com/forgego/forge/schema"
+type Product struct { schema.BaseSchema; key int64 }
+func (Product) Fields() []schema.Field {
+	return []schema.Field{schema.Int64("id").Primary().AutoIncrement().Build()}
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "models.go"), []byte(modelSrc), 0644))
+	methodSrc := `//go:build enterprise
+
+package testmodels
+func (p *Product) GetID() int64 { return p.key }
+func (p *Product) SetID(id int64) { p.key = id }
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "model_id_enterprise.go"), []byte(methodSrc), 0644))
+
+	t.Setenv("GOFLAGS", "-mod=mod -tags=enterprise")
+	require.NoError(t, NewGenerator(tmpDir, tmpDir).SetGenerateAPI(true).Generate())
+	assert.FileExists(t, filepath.Join(tmpDir, "api_gen.go"))
+}
+
 func TestGeneratorGenerate_InvalidAPIModelPreservesGeneratedFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 	modelSrc := `package testmodels

@@ -448,3 +448,26 @@ func TestPopulateFromMap_HiddenFieldsWritableOnlyWhenSchemaWriteOnly(t *testing.
 	assert.False(t, model.IsSuperuser, "a json:\"-\" field that the schema serializes must not be writable")
 	assert.Empty(t, model.Secret, "a json:\"-\" field that is not editable must not be writable")
 }
+
+type writeOnlyPasswordModel struct {
+	schema.BaseSchema
+	ID       int64  `json:"id" db:"id"`
+	Password string `json:"-" db:"password"`
+}
+
+func (writeOnlyPasswordModel) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		{Name: "password", DBColumn: "password", Type: schema.TypeString, Editable: true, Serialize: false},
+	}
+}
+
+func TestPopulateFromMap_SentinelJSONKeyDoesNotReachHiddenField(t *testing.T) {
+	model := &writeOnlyPasswordModel{}
+	require.NoError(t, populateFromMap(model, map[string]interface{}{"-": "replacement"}))
+	assert.Empty(t, model.Password, `a "-" request key must not write a json:"-" field`)
+
+	model = &writeOnlyPasswordModel{}
+	require.NoError(t, populateFromMap(model, map[string]interface{}{"password": "expected", "-": "replacement"}))
+	assert.Equal(t, "expected", model.Password)
+}
