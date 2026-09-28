@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/forgego/forge/admin/core"
 	validation "github.com/forgego/forge/validate"
 	"github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
@@ -192,4 +193,157 @@ func TestRespondWriteError_ORMValidationErrorStillBadRequest(t *testing.T) {
 	code, msg, _ := decodeWriteError(t, rec)
 	assert.Equal(t, "validation_error", code)
 	assert.Equal(t, "validation failed: name is required", msg)
+}
+
+type bulkErrorBody struct {
+	Errors []bulkItemError `json:"errors"`
+	Error  struct {
+		Code    string `json:"code"`
+		Details struct {
+			Errors []bulkItemError `json:"errors"`
+		} `json:"details"`
+	} `json:"error"`
+}
+
+func decodeBulkErrors(t *testing.T, rec *httptest.ResponseRecorder) bulkErrorBody {
+	t.Helper()
+	var body bulkErrorBody
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	return body
+}
+
+var slugConflict = &pq.Error{
+	Code:       "23505",
+	Message:    `duplicate key value violates unique constraint "products_slug_key"`,
+	Detail:     "Key (slug)=(dup) already exists.",
+	Constraint: "products_slug_key",
+}
+
+func TestHandleBulkCreate_ClassifiesItemErrorsWithoutDriverText(t *testing.T) {
+	admin := &mockAdmin{
+		createObjectFn: func(data map[string]interface{}) (interface{}, error) {
+			switch data["name"] {
+			case "dup":
+				return nil, fmt.Errorf("insert failed: %w", slugConflict)
+			case "broken":
+				return nil, fmt.Errorf("insert failed: %w", &pq.Error{Code: "42P01", Message: `relation "secret_table" does not exist`})
+			}
+			return map[string]interface{}{"name": data["name"]}, nil
+		},
+	}
+	router := NewRouter(core.NewRegistry())
+
+	req := httptest.NewRequest(http.MethodPost, "/api/products/bulk-create", strings.NewReader(`[{"name":"ok"},{"name":"dup"},{"name":"broken"}]`))
+	rec := httptest.NewRecorder()
+	router.handleBulkCreate(admin)(rec, req)
+
+	require.Equal(t, http.StatusMultiStatus, rec.Code)
+	assert.NotContains(t, rec.Body.String(), "products_slug_key")
+	assert.NotContains(t, rec.Body.String(), "secret_table")
+	body := decodeBulkErrors(t, rec)
+	require.Len(t, body.Errors, 2)
+	assert.Equal(t, bulkItemError{Index: 1, Code: "conflict", Message: "A record with this slug already exists."}, body.Errors[0])
+	assert.Equal(t, "create_failed", body.Errors[1].Code)
+}
+
+func TestHandleBulkCreate_AllConflictsReturn409(t *testing.T) {
+	admin := &mockAdmin{
+		createObjectFn: func(data map[string]interface{}) (interface{}, error) {
+			return nil, fmt.Errorf("insert failed: %w", slugConflict)
+		},
+	}
+	router := NewRouter(core.NewRegistry())
+
+	req := httptest.NewRequest(http.MethodPost, "/api/products/bulk-create", strings.NewReader(`[{"name":"a"},{"name":"b"}]`))
+	rec := httptest.NewRecorder()
+	router.handleBulkCreate(admin)(rec, req)
+
+	require.Equal(t, http.StatusConflict, rec.Code)
+	assert.NotContains(t, rec.Body.String(), "products_slug_key")
+	body := decodeBulkErrors(t, rec)
+	assert.Equal(t, "create_failed", body.Error.Code)
+	require.Len(t, body.Error.Details.Errors, 2)
+	assert.Equal(t, "conflict", body.Error.Details.Errors[0].Code)
+}
+
+func TestHandleBulkUpdate_AllInvalidReferencesReturn400WithoutDriverText(t *testing.T) {
+	admin := &mockAdmin{
+		getObjectFn: func(id interface{}) (interface{}, error) {
+			return map[string]interface{}{"id": id}, nil
+		},
+		updateObjectFn: func(id interface{}, data map[string]interface{}) (interface{}, error) {
+			return nil, fmt.Errorf("update query failed: %w", &pq.Error{
+				Code:    "23503",
+				Message: `insert or update on table "products" violates foreign key constraint "products_brand_id_fkey"`,
+				Detail:  `Key (brand_id)=(99) is not present in table "brands".`,
+			})
+		},
+	}
+	router := NewRouter(core.NewRegistry())
+
+	req := httptest.NewRequest(http.MethodPost, "/api/products/bulk-update", strings.NewReader(`{"ids":[1,2],"data":{"brand_id":99}}`))
+	rec := httptest.NewRecorder()
+	router.handleBulkUpdate(admin)(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.NotContains(t, rec.Body.String(), "products_brand_id_fkey")
+	body := decodeBulkErrors(t, rec)
+	require.Len(t, body.Error.Details.Errors, 2)
+	assert.Equal(t, bulkItemError{Index: 0, Code: "invalid_reference", Message: "The selected brand_id does not exist."}, body.Error.Details.Errors[0])
+}
+
+func TestHandleBulkUpdate_UnclassifiedErrorIsGenericServerError(t *testing.T) {
+	admin := &mockAdmin{
+		getObjectFn: func(id interface{}) (interface{}, error) {
+			return map[string]interface{}{"id": id}, nil
+		},
+		updateObjectFn: func(id interface{}, data map[string]interface{}) (interface{}, error) {
+			return nil, errors.New(`pq: relation "secret_table" does not exist`)
+		},
+	}
+	router := NewRouter(core.NewRegistry())
+
+	req := httptest.NewRequest(http.MethodPost, "/api/products/bulk-update", strings.NewReader(`{"ids":[1],"data":{"active":true}}`))
+	rec := httptest.NewRecorder()
+	router.handleBulkUpdate(admin)(rec, req)
+
+	require.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.NotContains(t, rec.Body.String(), "secret_table")
+	body := decodeBulkErrors(t, rec)
+	require.Len(t, body.Error.Details.Errors, 1)
+	assert.Equal(t, "update_failed", body.Error.Details.Errors[0].Code)
+}
+
+func TestHandleBulkDelete_AllInUseReturn409(t *testing.T) {
+	admin := &mockAdmin{
+		getObjectFn: func(id interface{}) (interface{}, error) {
+			return map[string]interface{}{"id": id}, nil
+		},
+		deleteObjectFn: func(id interface{}) error {
+			return fmt.Errorf("delete failed: %w", &pq.Error{
+				Code:   "23503",
+				Detail: `Key (id)=(1) is still referenced from table "products".`,
+			})
+		},
+	}
+	router := NewRouter(core.NewRegistry())
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/products/bulk-delete", strings.NewReader(`{"ids":[1,2]}`))
+	rec := httptest.NewRecorder()
+	router.handleBulkDelete(admin)(rec, req)
+
+	require.Equal(t, http.StatusConflict, rec.Code)
+	body := decodeBulkErrors(t, rec)
+	require.Len(t, body.Error.Details.Errors, 2)
+	assert.Equal(t, "in_use", body.Error.Details.Errors[0].Code)
+}
+
+func TestBulkFailure_MixedClientErrorsReturn400AndAnyServerErrorReturns500(t *testing.T) {
+	rec := httptest.NewRecorder()
+	bulkFailure(rec, "delete_failed", "x", []bulkItemError{{Code: "in_use"}, {Code: "permission_denied"}})
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	rec = httptest.NewRecorder()
+	bulkFailure(rec, "delete_failed", "x", []bulkItemError{{Code: "delete_failed"}, {Code: "in_use"}, {Code: "not_found"}})
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 }

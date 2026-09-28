@@ -22,22 +22,36 @@ import (
 // it is logged and answered with a generic 500 so driver text (SQL, table and
 // constraint names) does not leak to the browser.
 func respondWriteError(w http.ResponseWriter, failureCode string, err error) {
+	f := classifyWriteError(failureCode, err)
+	respondError(w, f.status, f.code, f.message, f.details)
+}
+
+// writeFailure is the client-safe description of a failed create or update.
+type writeFailure struct {
+	status  int
+	code    string
+	message string
+	details map[string]interface{}
+}
+
+// classifyWriteError describes a failed create or update for the single and
+// bulk write endpoints alike. Client-fixable failures keep a 4xx status and a
+// message safe to show; anything else is logged and reported as failureCode
+// with a generic message, never the driver text.
+func classifyWriteError(failureCode string, err error) writeFailure {
 	var verrs *validation.ValidationErrors
 	if errors.As(err, &verrs) {
-		respondError(w, http.StatusBadRequest, "validation_error", err.Error(), validationDetails(err))
-		return
+		return writeFailure{http.StatusBadRequest, "validation_error", err.Error(), validationDetails(err)}
 	}
 	if v, ok := classifyConstraintViolation(err); ok {
 		details := map[string]interface{}{v.field: []string{v.message}}
-		respondError(w, v.status, v.code, v.message, details)
-		return
+		return writeFailure{v.status, v.code, v.message, details}
 	}
 	if !isDriverError(err) && isValidationError(err) {
-		respondError(w, http.StatusBadRequest, "validation_error", err.Error(), validationDetails(err))
-		return
+		return writeFailure{http.StatusBadRequest, "validation_error", err.Error(), nil}
 	}
 	log.Printf("admin: %s: %s", failureCode, strconv.Quote(err.Error()))
-	respondError(w, http.StatusInternalServerError, failureCode, "The change could not be saved because of a server error", nil)
+	return writeFailure{http.StatusInternalServerError, failureCode, "The change could not be saved because of a server error", nil}
 }
 
 // deleteFailure describes a failed delete without echoing driver text. A
