@@ -1,7 +1,7 @@
 ---
 sidebar_position: 5
 description: UI architecture, dashboard widgets, Recharts visualizations, custom plugin pages, and theming.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Admin UI, Widgets & Custom Plugins

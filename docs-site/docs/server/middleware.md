@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 description: Default middleware stack and utilities.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Middleware

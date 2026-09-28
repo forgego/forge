@@ -8,7 +8,7 @@ on:
       - '**/go.mod'
       - '**/go.sum'
       - 'docs-site/**'
-      - 'forge/admin/ui/**'
+      - 'admin/ui/**'
       - 'examples/ecommerce/**'
       - '**/Dockerfile'
       - '.github/workflows/security.yml'
@@ -19,7 +19,7 @@ on:
       - '**/go.mod'
       - '**/go.sum'
       - 'docs-site/**'
-      - 'forge/admin/ui/**'
+      - 'admin/ui/**'
       - 'examples/ecommerce/**'
       - '**/Dockerfile'
       - '.github/workflows/security.yml'
@@ -61,7 +61,7 @@ jobs:
             docs:
               - 'docs-site/**'
             admin_ui:
-              - 'forge/admin/ui/**'
+              - 'admin/ui/**'
             examples:
               - 'examples/ecommerce/**'
             docker:
@@ -97,8 +97,7 @@ jobs:
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
       
-      - name: Run govulncheck on forge
-        working-directory: forge
+      - name: Run govulncheck on the root module
         run: govulncheck ./...
       
       - name: Run govulncheck on tests
@@ -125,26 +124,9 @@ jobs:
       
       - name: Run Gosec Security Scanner
         continue-on-error: true
-        working-directory: forge
         run: |
           go install github.com/securego/gosec/v2/cmd/gosec@v2.29.0
-          gosec -fmt sarif -out ../gosec-results.sarif -exclude-dir=tests ./...
-          python3 - <<'PY'
-          import json
-
-          with open("../gosec-results.sarif", "r") as f:
-              data = json.load(f)
-
-          for run in data.get("runs", []):
-              for result in run.get("results", []):
-                  for loc in result.get("locations", []):
-                      aloc = loc.get("physicalLocation", {}).get("artifactLocation", {})
-                      uri = aloc.get("uri", "")
-                      if uri and not uri.startswith("forge/"):
-                          aloc["uri"] = "forge/" + uri
-          with open("../gosec-results.sarif", "w") as f:
-              json.dump(data, f, indent=2)
-          PY
+          gosec -fmt sarif -out gosec-results.sarif -exclude-dir=tests ./...
       
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
@@ -162,7 +144,7 @@ jobs:
       needs.changes.outputs.admin_ui == 'true'
     strategy:
       matrix:
-        directory: ['forge/admin/ui/web', 'docs-site']
+        directory: ['admin/ui/web', 'docs-site']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       
@@ -173,7 +155,7 @@ jobs:
              [ "${{ github.event_name }}" = "workflow_dispatch" ] || \
              [ "${{ needs.changes.outputs.workflows }}" = "true" ] || \
              [ "${{ matrix.directory }}" = "docs-site" -a "${{ needs.changes.outputs.docs }}" = "true" ] || \
-             [ "${{ matrix.directory }}" = "forge/admin/ui/web" -a "${{ needs.changes.outputs.admin_ui }}" = "true" ]; then
+             [ "${{ matrix.directory }}" = "admin/ui/web" -a "${{ needs.changes.outputs.admin_ui }}" = "true" ]; then
             echo "should_run=true" >> "$GITHUB_OUTPUT"
           else
             echo "should_run=false" >> "$GITHUB_OUTPUT"
@@ -216,7 +198,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --severity-threshold=high --file=forge/go.mod
+          args: --severity-threshold=high --file=go.mod
           command: test
 
   trivy:
@@ -290,9 +272,10 @@ jobs:
           scan-args: |-
             scan
             source
+            --lockfile=go.mod
             --recursive
             --skip-git
-            ./forge
+            ./admin/ui/web
             ./examples/ecommerce
 
   secret-scanning:
@@ -335,7 +318,6 @@ jobs:
         run: go install github.com/google/go-licenses@latest
       
       - name: Check licenses
-        working-directory: forge
         run: go-licenses report ./... --ignore github.com/forgego/forge
 
   scorecard:

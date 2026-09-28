@@ -246,7 +246,7 @@ Verified by reading the source, with locations.
 | **VB-03** | Literal `null` / inconsistent empties | list + view cells | One shared `<EmptyValue/>` rendering an em-dash at `--text-meta` muted. Note `val?.toString() \|\| —` also swallows empty strings — make the null check explicit. |
 | **VB-04** | Chart axes cramped, dark-mode contrast poor | `chart-widget.tsx`, `ChartWidget.tsx` | Shared chart theme: `--chart-*` ramp, shared tooltip component, min-height 280px, axis tick `--text-meta`, grid lines `--grid-line`. |
 | **VB-05** | Numeric filters render as free-text inputs | `ModelListPage.tsx` filter block — everything non-choice/date/boolean falls through to `<Input>` | Branch on `filter.type === "number"` → min/max numeric pair; `"relation"` → searchable select. |
-| **VB-06** | `created_at`/`updated_at` editable on create | **Backend, not UI.** `ModelUpsertPage.tsx` already does `if (field.read_only && mode === "create") return null` | The Go metadata emitter is not setting `read_only` on auto timestamps. Fix in `forge/admin` Go code. |
+| **VB-06** | `created_at`/`updated_at` editable on create | **Backend, not UI.** `ModelUpsertPage.tsx` already does `if (field.read_only && mode === "create") return null` | The Go metadata emitter is not setting `read_only` on auto timestamps. Fix in `admin` Go code. |
 | **VB-07** | Palette shows raw model keys | `GlobalSearch.tsx` | Use `verbose_name_plural` from the models cache. Resolved by the `CommandPalette` rebuild. |
 | **VB-08** | Mobile table overflows with no affordance | list page table wrapper | Sticky identity column + scroll-shadow affordance on the `overflow-x` container. |
 | **VB-09** | Toasts stack/overlap on rapid actions | `use-toast.ts` | `sonner` migration. |
@@ -426,8 +426,8 @@ navigation value immediately, at zero backend risk.
 **Phase 2 — backend (task 6.2), then frontend upgrade (task 4.2b).**
 The list serializer adds a sibling display key for each relation — `"<field>__display"`
 — carrying the related object's human label. `FieldMetadata`/`RelationMetadata` already
-exist in `forge/admin/core/metadata.go`; the serialization path is
-`forge/api/serializers/typed_serializer.go` → `Serialize`. Note the blast radius:
+exist in `admin/core/metadata.go`; the serialization path is
+`api/serializers/typed_serializer.go` → `Serialize`. Note the blast radius:
 `core.Metadata` has 6 callers across `metadata_builder.go`, `openapi.go`,
 `admin/api/rest/router.go` and `admin/core/admin.go`, with tests in
 `registry_test.go` and `router_test.go`. The change must be **additive** — a new

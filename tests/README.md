@@ -134,17 +134,17 @@ The release test gate validates that all database integration tests run and pass
 
 ### Running with the Reporter
 
-To summarize test output and enforce that required packages have no skipped tests, build the reporter once from `forge/` and pipe each module's `go test -json` into that binary:
+To summarize test output and enforce that required packages have no skipped tests, build the reporter once from the repository root and pipe each module's `go test -json` into that binary:
 
 ```bash
-# Build the reporter once from forge/:
-cd forge && go build -o /tmp/testreport ./internal/tools/testreport
+# Build the reporter once from the repository root:
+go build -o /tmp/testreport ./internal/tools/testreport
 
-# From the forge module:
+# From the repository root (root module):
 go test -count=1 -p 1 -json ./... | /tmp/testreport --require-no-skip '^github.com/.*/(identity|internal/testutils)'
 
 # From the tests module:
-cd ../tests
+cd tests
 go test -count=1 -p 1 -json ./... | /tmp/testreport --require-no-skip '^github.com/forgego/forge/tests/(integration|pkg_migrations|e2e)' --allow-skip 'tests/pkg_migrations$ ^TestMigrationApplySQLite$'
 ```
 
@@ -256,7 +256,7 @@ When adding new features:
 
 ## Test Status
 
-✅ **All major features tested**
+**All major features tested**
 - Schema definition and builders
 - Migration generation (all change types)
 - Migration execution (up/down/to version/rollback)
@@ -298,7 +298,7 @@ go mod download
 
 ## References
 
-- [Forge Schema Package](../forge/schema/)
-- [Forge Migration Package](../forge/db/migrate/)
-- [Forge DB Package](../forge/db/)
+- [Forge Schema Package](../schema/)
+- [Forge Migration Package](../db/migrate/)
+- [Forge DB Package](../db/)
 

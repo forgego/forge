@@ -21,13 +21,13 @@ forge is a Django-inspired Go framework intended to reduce boilerplate in CRUD w
 
 The value proposition, consistent with archived docs, is:
 
-- Schema-first model definition in Go (`forge/schema`).
-- AST-based code generation for type-safe managers/querysets (`forge/codegen`).
-- ORM/query engine (`forge/orm`) and reusable filtering (`forge/filter`).
-- A built-in admin system (`forge/admin`) that can be extended/overridden.
-- A DRF-like REST API layer (`forge/api`) with serializers/viewsets/auth/permissions/throttling.
-- A migration engine (`forge/db/migrate`) with CLI orchestration (`forge/cli`).
-- An identity system (`forge/identity`) with sessions/tokens/passwords.
+- Schema-first model definition in Go (`schema`).
+- AST-based code generation for type-safe managers/querysets (`codegen`).
+- ORM/query engine (`orm`) and reusable filtering (`filter`).
+- A built-in admin system (`admin`) that can be extended/overridden.
+- A DRF-like REST API layer (`api`) with serializers/viewsets/auth/permissions/throttling.
+- A migration engine (`db/migrate`) with CLI orchestration (`cli`).
+- An identity system (`identity`) with sessions/tokens/passwords.
 
 The product is validated by a multi-module test suite (unit tests + integration tests in `tests/`).
 
@@ -96,8 +96,8 @@ Success:
 
 Evidence:
 
-- CLI template references exist in `forge/cli/templates/templates/*`.
-- `forge/cli/commands/server/runserver.go` is implemented.
+- CLI template references exist in `cli/templates/templates/*`.
+- `cli/commands/server/runserver.go` is implemented.
 
 ### 5.2 Define a model and generate code
 
@@ -112,7 +112,7 @@ Success:
 
 Evidence:
 
-- `forge/codegen/ast_parser.go`, templates under `forge/codegen/templates`.
+- `codegen/ast_parser.go`, templates under `codegen/templates`.
 
 ### 5.3 Create migrations and apply them
 
@@ -127,7 +127,7 @@ Success:
 
 Evidence:
 
-- `forge/db/migrate/*`, `forge/db/migrations.go`, and `tests/integration/migrate/*`.
+- `db/migrate/*`, `db/migrations.go`, and `tests/integration/migrate/*`.
 
 ### 5.4 Use admin for CRUD
 
@@ -143,7 +143,7 @@ Success:
 
 Evidence:
 
-- `forge/admin/*` plus ecommerce example admin code.
+- `admin/*` plus ecommerce example admin code.
 
 ### 5.5 Expose REST APIs
 
@@ -159,7 +159,7 @@ Success:
 
 Evidence:
 
-- `forge/api/*` plus tests (`forge/api/*_test.go`).
+- `api/*` plus tests (`api/*_test.go`).
 
 ### 5.6 Authenticate users
 
@@ -175,7 +175,7 @@ Success:
 
 Evidence:
 
-- `forge/identity/*` and tests (`forge/identity/service/*_test.go`).
+- `identity/*` and tests (`identity/service/*_test.go`).
 
 ## 6. Functional requirements
 
@@ -185,7 +185,7 @@ Functional requirements are grouped by subsystem.
 
 FR-SCHEMA-1: The framework MUST provide a schema DSL for defining models in Go.
 
-- Implemented by: `forge/schema/*`.
+- Implemented by: `schema/*`.
 - Test expectation: schema builders must return chainable Field/Relation values.
 
 FR-SCHEMA-2: The schema DSL MUST support field options required by migrations and admin.
@@ -209,7 +209,7 @@ FR-SCHEMA-4: The schema DSL MUST provide meta options.
 
 FR-CODEGEN-1: The framework MUST parse schema definitions via Go AST.
 
-- Implemented by: `forge/codegen/ast_parser.go`.
+- Implemented by: `codegen/ast_parser.go`.
 
 FR-CODEGEN-2: The generator MUST emit type-safe code artifacts.
 
@@ -397,7 +397,7 @@ The archived docs referenced v1/v2 transitions. The current stance:
 
 ### 9.1 Logging
 
-- Use structured logging (`forge/log/*`).
+- Use structured logging (`log/*`).
 - Log request IDs and relevant error codes.
 
 ### 9.2 Metrics
@@ -459,7 +459,7 @@ Acceptance criteria are primarily test-based.
 
 ### 11.1 Must-pass tests
 
-- `go test ./forge/...`
+- `go test ./...`
 - `go test ./examples/ecommerce/...`
 - `go test ./tests/...`
 
@@ -491,7 +491,7 @@ These are deliberate unknowns that should be decided before major expansions:
 
 ## Appendix A: CLI surface (current)
 
-This appendix is a practical snapshot of the command surface. It intentionally mirrors the commands registered in `forge/cli/commands/registry.go`.
+This appendix is a practical snapshot of the command surface. It intentionally mirrors the commands registered in `cli/commands/registry.go`.
 
 ### A.1 Project scaffolding
 
@@ -532,16 +532,16 @@ This appendix ties acceptance gates to packages.
 - Migrations integration: `tests/integration/migrate/*`
 - Schema integration: `tests/integration/schema/*`
 - ORM integration: `tests/integration/orm/*`
-- API unit tests: `forge/api/*_test.go`
-- Identity unit tests: `forge/identity/*/*_test.go`
-- Filter tests: `forge/filter/*_test.go`
+- API unit tests: `api/*_test.go`
+- Identity unit tests: `identity/*/*_test.go`
+- Filter tests: `filter/*_test.go`
 
 ## Appendix C: Glossary
 
-- **Schema**: declarative model definition via `forge/schema`.
-- **Generated code**: `*.gen.go` files produced by `forge/codegen`.
-- **QuerySet**: chainable query builder API (`forge/orm/queryset.go`).
-- **Filter AST**: serialized boolean expression tree for filters (`forge/filter/ast.go`).
-- **Migration state**: in-memory schema reconstructed from migration SQL (`forge/db/migrate/state`).
+- **Schema**: declarative model definition via `schema`.
+- **Generated code**: `*.gen.go` files produced by `codegen`.
+- **QuerySet**: chainable query builder API (`orm/queryset.go`).
+- **Filter AST**: serialized boolean expression tree for filters (`filter/ast.go`).
+- **Migration state**: in-memory schema reconstructed from migration SQL (`db/migrate/state`).
 - **Bookkeeping table**: `schema_migrations` used to track versions.
 
