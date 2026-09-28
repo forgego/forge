@@ -13,14 +13,15 @@ func init() {
 
 // Register{{.ResourceName}}API registers the {{.ResourceName}} API endpoints
 func Register{{.ResourceName}}API(router *server.Router) {
-	// Create viewset
+	// {{.ModelName}}Objects is the manager `forge generate` writes for {{.ModelName}}.
 	viewset := api.NewBaseViewSet(
-		func() api.Serializer {
-			return New{{.ModelName}}Serializer()
-		},
-		{{.ModelName}}.Objects.Filter(),
+		New{{.ModelName}}Serializer,
+		{{.ModelName}}Objects,
 		&{{.ModelName}}{},
 	)
+	viewset.ExcludeResponseFields = api.NonSerializableFields(&{{.ModelName}}{})
+	viewset.ReadOnlyRequestFields = api.NonEditableFields(&{{.ModelName}}{})
+	viewset.RejectUnknownRequestFields = true
 
 	// Register routes
 	apiRouter := api.NewRouter("/api/v1")
@@ -36,7 +37,7 @@ type {{.ModelName}}Serializer struct {
 // New{{.ModelName}}Serializer creates a new serializer
 func New{{.ModelName}}Serializer() api.Serializer {
 	return &{{.ModelName}}Serializer{
-		BaseSerializer: api.NewBaseSerializer(),
+		BaseSerializer: api.NewBaseSerializer(nil),
 	}
 }
 

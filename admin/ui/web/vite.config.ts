@@ -26,7 +26,13 @@ export default defineConfig({
       if (hostType === "js") {
         return { runtime: `window.__forgeAssetUrl(${JSON.stringify(filename)})` };
       }
-      return { relative: false };   // html/css keep the "/admin/" base (server rewrites html)
+      if (hostType === "css") {
+        // Stylesheets are served as-is (only index.html is rewritten), so
+        // their font/image URLs must be relative to the stylesheet to work
+        // under a custom admin mount prefix.
+        return { relative: true };
+      }
+      return { relative: false };   // html keeps the "/admin/" base (server rewrites it)
     },
   },
   build: {

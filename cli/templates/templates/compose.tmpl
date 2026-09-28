@@ -6,6 +6,7 @@ services:
     ports:
       - "8000:8000"
     environment:
+      - FORGE_SERVER_HOST=0.0.0.0
       - FORGE_DATABASE_HOST=db
       - FORGE_DATABASE_USER=postgres
       - FORGE_DATABASE_PASSWORD=postgres

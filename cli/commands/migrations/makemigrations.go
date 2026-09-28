@@ -2,6 +2,8 @@ package migrations
 
 import (
 	"fmt"
+	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/forgego/forge/cli/core"
@@ -33,6 +35,22 @@ func (c *MakeMigrationsCommand) Definition() *cobra.Command {
 	cmd.Flags().Bool("merge", false, "Enable fixing of migration conflicts")
 	cmd.Flags().Bool("verbose", false, "Enable verbose output including parse errors and warnings")
 	return cmd
+}
+
+// newFiles returns the paths in after that are not in before, in sorted order.
+func newFiles(before, after []string) []string {
+	seen := make(map[string]bool, len(before))
+	for _, path := range before {
+		seen[path] = true
+	}
+	var added []string
+	for _, path := range after {
+		if !seen[path] {
+			added = append(added, path)
+		}
+	}
+	sort.Strings(added)
+	return added
 }
 
 // Execute runs the command logic
@@ -117,13 +135,22 @@ func (c *MakeMigrationsCommand) Execute(ctx *core.Context, args []string) error 
 			return fmt.Errorf("failed to create migration generator: %w", err)
 		}
 
+		before, _ := filepath.Glob(filepath.Join(migrationsDir, "*.sql"))
 		if err := gen.GenerateMigrations(migrationName); err != nil {
 			return fmt.Errorf("failed to generate migrations: %w", err)
 		}
+		after, _ := filepath.Glob(filepath.Join(migrationsDir, "*.sql"))
+		written := newFiles(before, after)
 
-		fmt.Printf("✓ Generated migration files with SQL from models:\n")
-		fmt.Printf("  %s/%s.up.sql\n", migrationsDir, migrationName)
-		fmt.Printf("  %s/%s.down.sql\n", migrationsDir, migrationName)
+		out := ctx.Cmd.OutOrStdout()
+		if len(written) == 0 {
+			fmt.Fprintln(out, "No changes detected; no migration written")
+			return nil
+		}
+		fmt.Fprintf(out, "✓ Generated migration files with SQL from models:\n")
+		for _, path := range written {
+			fmt.Fprintf(out, "  %s\n", path)
+		}
 	} else if empty {
 		// Create empty migration files
 		upPath, downPath, err := createMigrationFiles(migrationsDir, migrationName)

@@ -268,6 +268,7 @@ func (camelReadOnlyModel) Fields() []schema.Field {
 }
 
 type camelReadOnlyManager struct {
+	unusedListOperations
 	item *camelReadOnlyModel
 }
 

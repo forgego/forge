@@ -55,6 +55,17 @@ func orderChanges(changes []core.Change) []core.Change {
 	return ordered
 }
 
+// CascadeAction returns the SQL referential action for a model or SQL cascade name.
+func CascadeAction(cascade string) string {
+	return mapCascadeType(cascade)
+}
+
+// ColumnDefinition renders the column definition the driver's builder emits for field.
+func ColumnDefinition(driver core.Driver, field generator.FieldDefinition) (string, error) {
+	b := &baseBuilder{isSQLite: driver.IsSQLite(), isPostgres: driver.IsPostgreSQL()}
+	return b.BuildColumnDefinition(field)
+}
+
 // mapCascadeType maps cascade type strings to SQL
 func mapCascadeType(cascade string) string {
 	cascade = strings.TrimPrefix(cascade, "Cascade")
@@ -127,6 +138,9 @@ func formatDefaultValue(value interface{}, goType string, fieldType string, fiel
 func mapFieldTypeToSQL(field generator.FieldDefinition, isSQLite, isPostgres bool) string {
 	if dbType, ok := field.Options["db_type"].(string); ok && dbType != "" {
 		return dbType
+	}
+	if sqlType, ok := field.Options[core.SQLTypeOption].(string); ok && sqlType != "" {
+		return sqlType
 	}
 
 	switch field.Type {

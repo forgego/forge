@@ -256,6 +256,7 @@ export function FieldRenderer({
     case "fk":
       return (
         <SearchableSelect
+          id={field.name}
           model={relation?.related_model || field.related_model}
           value={value}
           onChange={(val) => onChange(val)}

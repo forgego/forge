@@ -36,6 +36,7 @@ func (s *readOnlyTestSerializer) Fields() []string {
 }
 
 type readOnlyTestManager struct {
+	unusedListOperations
 	mu      sync.Mutex
 	items   map[int64]*readOnlyTestItem
 	created *readOnlyTestItem

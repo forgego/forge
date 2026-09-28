@@ -44,6 +44,9 @@ func (c *Classifier) Classify(stmt string) StatementKind {
 		return StmtCreateTable
 	case strings.HasPrefix(upper, "ALTER TABLE"):
 		return StmtAlterTable
+	case strings.HasPrefix(upper, "DO ") && strings.Contains(upper, "ALTER TABLE"):
+		// The PostgreSQL builder guards foreign keys with DO $$ ... ALTER TABLE ... $$.
+		return StmtAlterTable
 	case strings.HasPrefix(upper, "CREATE INDEX") || strings.HasPrefix(upper, "CREATE UNIQUE INDEX"):
 		return StmtCreateIndex
 	case strings.HasPrefix(upper, "DROP TABLE"):

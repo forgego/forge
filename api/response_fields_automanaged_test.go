@@ -48,6 +48,7 @@ func newAutoManagedTestSerializer() Serializer {
 }
 
 type autoManagedTestManager struct {
+	unusedListOperations
 	mu      sync.Mutex
 	created *autoManagedTestModel
 }

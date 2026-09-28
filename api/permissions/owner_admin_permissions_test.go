@@ -64,6 +64,52 @@ func TestIsOwnerOrReadOnly_TaggedOwnerFields(t *testing.T) {
 	}
 }
 
+type w0GeneratedTask struct {
+	ID      int64 `json:"id" db:"id"`
+	OwnerId int64 `json:"owner_id" db:"owner_id"`
+}
+
+// w0EmbeddedTask mirrors a generated model: the tagged columns live on the
+// embedded <Model>Generated struct, not on the model type itself.
+type w0EmbeddedTask struct {
+	w0GeneratedTask
+}
+
+type w0GeneratedMember struct {
+	Id int64 `json:"id" db:"id"`
+}
+
+type w0EmbeddedMember struct {
+	w0GeneratedMember
+}
+
+type w0NilEmbeddedTask struct {
+	*w0GeneratedTask
+}
+
+func TestIsOwnerOrReadOnly_PromotedTaggedFields(t *testing.T) {
+	perm := NewIsOwnerOrReadOnly("owner_id")
+	view := &w0View{}
+	task := &w0EmbeddedTask{w0GeneratedTask{ID: 1, OwnerId: 7}}
+
+	for _, tt := range []struct {
+		name    string
+		user    interface{}
+		obj     interface{}
+		allowed bool
+	}{
+		{"owner allowed", &w0EmbeddedMember{w0GeneratedMember{Id: 7}}, task, true},
+		{"other member denied", &w0EmbeddedMember{w0GeneratedMember{Id: 8}}, task, false},
+		{"nil embedded pointer denied", &w0EmbeddedMember{w0GeneratedMember{Id: 7}}, &w0NilEmbeddedTask{}, false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPatch, "/tasks/1", nil)
+			authentication.SetUserOnRequest(req, tt.user)
+			assert.Equal(t, tt.allowed, perm.HasObjectPermission(req, view, tt.obj))
+		})
+	}
+}
+
 type w0UserWithStaff struct {
 	IsStaff bool
 }

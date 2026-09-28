@@ -21,7 +21,7 @@ Use schema primitives to define models and manage database changes with the migr
 ## Common Tasks
 - Preview migration plans with `forge migrate show`.
 - Lint migrations with `forge migrate lint` and `--verbose` when debugging.
-- Roll back with `forge migrate down 1` or apply to a version with `forge migrate up <n>`.
+- Roll back the last applied migration with `forge migrate rollback`. `forge migrate up` always applies every pending migration; there is no `migrate down` or target version.
 - Use `forge migrate fake` or `--fake-initial` for existing databases.
 
 ## Gotchas

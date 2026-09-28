@@ -1,0 +1,193 @@
+name: Install Smoke
+
+# Installs the forge CLI from the public module proxy, the way the README tells
+# users to, and checks that a new project builds and serves. Nothing here uses
+# the checkout except go.mod's Go version, so a replace directive or a local
+# build cannot hide a broken release.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to install: latest, a tag such as v0.1.2, or a commit hash'
+        required: false
+        default: latest
+  schedule:
+    # Weekly, Monday 06:17 UTC: catches @latest breaking without a new tag
+    # (a retraction, a proxy problem, or a dependency that disappeared).
+    - cron: '17 6 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: install-smoke-${{ github.ref }}-${{ inputs.version || 'auto' }}
+  cancel-in-progress: false
+
+jobs:
+  install-smoke:
+    name: Install ${{ github.event_name == 'push' && github.ref_name || inputs.version || 'latest' }} from the proxy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: smoke
+          POSTGRES_PASSWORD: smoke
+          POSTGRES_DB: smokeapp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U smoke -d smokeapp"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      REQUESTED_VERSION: ${{ github.event_name == 'push' && github.ref_name || inputs.version || 'latest' }}
+      GOPROXY: https://proxy.golang.org
+      GOFLAGS: -mod=mod
+      # Build with the minimum Go that go.mod declares; do not download a newer one.
+      GOTOOLCHAIN: local
+
+    steps:
+      - name: Read go.mod only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: source
+          sparse-checkout: go.mod
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Go from go.mod
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: source/go.mod
+          cache: false
+
+      - name: Resolve the version on the proxy
+        id: resolve
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$REQUESTED_VERSION" =~ ^(latest|v[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?|[0-9a-f]{7,40})$ ]]; then
+            echo "::error::Unsupported version '$REQUESTED_VERSION'"
+            exit 1
+          fi
+          # A tag can take a few minutes to become visible through the proxy.
+          for attempt in $(seq 1 20); do
+            if version=$(go list -m -f '{{.Version}}' "github.com/forgego/forge@${REQUESTED_VERSION}" 2>err.txt); then
+              echo "Resolved $REQUESTED_VERSION to $version"
+              echo "version=$version" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Attempt $attempt: $(cat err.txt)"
+            sleep 30
+          done
+          echo "::error::github.com/forgego/forge@${REQUESTED_VERSION} did not resolve on $GOPROXY"
+          exit 1
+
+      - name: go install the CLI
+        working-directory: ${{ runner.temp }}
+        env:
+          VERSION: ${{ steps.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 5); do
+            if go install "github.com/forgego/forge/cmd/forge@${VERSION}"; then
+              echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+              exit 0
+            fi
+            echo "go install attempt $attempt failed; retrying"
+            sleep 30
+          done
+          exit 1
+
+      - name: forge version reports the installed version
+        env:
+          VERSION: ${{ steps.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          got=$(forge version 2>/dev/null)
+          echo "$got"
+          if [ "$got" != "Forge ${VERSION}" ]; then
+            echo "::error::forge version printed '$got', want 'Forge ${VERSION}'"
+            exit 1
+          fi
+
+      - name: Create and build a project
+        working-directory: ${{ runner.temp }}
+        env:
+          VERSION: ${{ steps.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          forge new smokeapp --template simple --database postgres --docker=false
+          cd smokeapp
+          pinned=$(awk '$1 == "github.com/forgego/forge" { print $2 }' go.mod)
+          if [ "$pinned" != "$VERSION" ]; then
+            echo "::error::forge new pinned github.com/forgego/forge '${pinned}', want ${VERSION}"
+            cat go.mod
+            exit 1
+          fi
+          forge add app blog --example
+          forge generate --models ./app/blog --output ./app/blog
+          go mod tidy
+          go build ./...
+          go vet ./...
+          CGO_ENABLED=0 go build -trimpath -o server ./cmd/server
+
+      - name: Migrate, serve and shut down
+        working-directory: ${{ runner.temp }}/smokeapp
+        env:
+          FORGE_APP_ENV: production
+          FORGE_APP_DEBUG: 'false'
+          FORGE_SERVER_HOST: 127.0.0.1
+          FORGE_SERVER_PORT: '8000'
+          FORGE_DATABASE_HOST: 127.0.0.1
+          FORGE_DATABASE_PORT: '5432'
+          FORGE_DATABASE_USER: smoke
+          FORGE_DATABASE_PASSWORD: smoke
+          FORGE_DATABASE_NAME: smokeapp
+        run: |
+          set -euo pipefail
+          forge makemigrations initial --auto --models ./app/blog
+          forge migrate up
+          forge migrate status | tee status.txt
+          if grep -qE 'DIRTY|Pending Migrations' status.txt; then
+            echo "::error::migrations did not apply cleanly"
+            exit 1
+          fi
+
+          # The .env written by forge new supplies the production secrets.
+          ./server > server.log 2>&1 &
+          pid=$!
+          for i in $(seq 1 50); do
+            curl -fsS http://127.0.0.1:8000/health/live > /dev/null 2>&1 && break
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat server.log
+              echo "::error::server exited during startup"
+              exit 1
+            fi
+            sleep 0.2
+          done
+          for path in /health/live /health/ready /health /admin/; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:8000${path}")
+            echo "${path} -> ${code}"
+            if [ "$code" != 200 ]; then
+              cat server.log
+              echo "::error::${path} returned ${code}"
+              exit 1
+            fi
+          done
+
+          kill -TERM "$pid"
+          status=0
+          wait "$pid" || status=$?
+          cat server.log
+          if [ "$status" != 0 ]; then
+            echo "::error::server exited with status $status after SIGTERM; want a graceful exit 0"
+            exit 1
+          fi

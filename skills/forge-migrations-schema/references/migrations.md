@@ -90,21 +90,16 @@ forge migrate up
 
 This applies all migrations that haven't been run yet.
 
-### Apply Specific Migration
-
-```bash
-forge migrate up 2
-```
-
-Applies migrations up to version 2.
+There is no command to migrate to a specific version; `forge migrate up`
+ignores extra arguments and applies everything pending.
 
 ### Rollback
 
 ```bash
-forge migrate down 1
+forge migrate rollback
 ```
 
-Rolls back the last migration.
+Rolls back the last applied migration. Run it again to roll back further.
 
 ### Check Migration Status
 
@@ -294,10 +289,10 @@ Test both up and down migrations:
 forge migrate up
 
 # Rollback
-forge migrate down 1
+forge migrate rollback
 
 # Re-apply
-forge migrate up 1
+forge migrate up
 ```
 
 ### 4. Don't Modify Existing Migrations
@@ -355,8 +350,8 @@ If a migration fails:
 
 1. Check the error message
 2. Fix the SQL in the migration file
-3. Rollback if needed: `forge migrate down 1`
-4. Fix and re-apply: `forge migrate up 1`
+3. Rollback if needed: `forge migrate rollback`
+4. Fix and re-apply: `forge migrate up`
 
 ### Database State Mismatch
 

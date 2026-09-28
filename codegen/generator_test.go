@@ -73,6 +73,7 @@ func (Product) Hooks() *schema.ModelHooks {
 	assert.Contains(t, string(apiBytes), "type ProductViewSet struct")
 	assert.Contains(t, string(apiBytes), "vs.ExcludeResponseFields = api.NonSerializableFields(&Product{})")
 	assert.Contains(t, string(apiBytes), "vs.ReadOnlyRequestFields = api.NonEditableFields(&Product{})")
+	assert.Contains(t, string(apiBytes), "vs.RejectUnknownRequestFields = true")
 	assert.Contains(t, string(apiBytes), "RegisterProductRoutes(router *forgehttp.Router)")
 	assert.Contains(t, string(apiBytes), "RegisterAPIRoutes(router *forgehttp.Router)")
 }

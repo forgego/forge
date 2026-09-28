@@ -31,22 +31,33 @@ func getMethod(obj interface{}, methodName string) reflect.Value {
 	return reflect.Value{}
 }
 
-// fieldByTag finds a field whose db or json tag matches name (before first comma).
+// fieldByTag finds a field whose db or json tag matches name (before first
+// comma). It also searches fields promoted from embedded structs, such as the
+// <Model>Generated struct generated models embed, preferring the shallowest.
 func fieldByTag(v reflect.Value, t reflect.Type, name string) reflect.Value {
-	for i := 0; i < t.NumField(); i++ {
-		sf := t.Field(i)
+	var found reflect.Value
+	depth := 0
+	for _, sf := range reflect.VisibleFields(t) {
+		if found.IsValid() && len(sf.Index) >= depth {
+			continue
+		}
 		for _, tagKey := range []string{"db", "json"} {
 			tag := sf.Tag.Get(tagKey)
 			if tag == "" {
 				continue
 			}
 			tagName, _, _ := strings.Cut(tag, ",")
-			if tagName == name {
-				return v.Field(i)
+			if tagName != name {
+				continue
 			}
+			// A nil embedded pointer or an unexported path cannot be read.
+			if f, err := v.FieldByIndexErr(sf.Index); err == nil && f.CanInterface() {
+				found, depth = f, len(sf.Index)
+			}
+			break
 		}
 	}
-	return reflect.Value{}
+	return found
 }
 
 // getField gets a field by name using reflection

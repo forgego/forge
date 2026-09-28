@@ -384,7 +384,11 @@ NFR-MAINT-3: Prefer registries and interfaces.
 
 ## 8. Compatibility policy
 
-The archived docs referenced v1/v2 transitions. The current stance:
+The archived docs referenced v1/v2 transitions. The published policy for
+v0.x and v1, including what counts as public API, generated code and
+migration compatibility, is in the
+[support contract](../docs-site/docs/status.md#stability-and-breaking-changes).
+Requirements on the process:
 
 - Major version changes may break APIs.
 - Any breaking change must update:
@@ -507,11 +511,13 @@ This appendix is a practical snapshot of the command surface. It intentionally m
 ### A.3 Migrations
 
 - `forge makemigrations <name> [--auto] [--models <dir>] [--path <dir>]`
-- `forge migrate up`
-- `forge migrate down`
+- `forge migrate up [--dry-run]` (applies every pending migration)
+- `forge migrate rollback` (rolls back the last applied migration; there is no `migrate down`)
 - `forge migrate status`
-- `forge migrate force <version>`
-- `forge migrate rollback <version>`
+- `forge migrate show`, `forge migrate lint`
+- `forge migrate force <version>`, `forge migrate recover [--verify|--clean]`,
+  `forge migrate baseline [--adopt]`, `forge migrate fake`
+- `forge migrate squash` (registered, returns NotImplemented)
 
 ### A.4 Development
 

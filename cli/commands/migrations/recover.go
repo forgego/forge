@@ -3,9 +3,11 @@ package migrations
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/forgego/forge/cli/core"
 	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/db/migrate/checksum"
 	"github.com/forgego/forge/db/migrate/execute"
 	"github.com/spf13/cobra"
 )
@@ -35,6 +37,38 @@ func (c *RecoverCommand) Definition() *cobra.Command {
 	cmd.Flags().Uint("version", 0, "Specific migration version to mark clean (defaults to current dirty version)")
 	cmd.Flags().Bool("verify", false, "Compare applied migration files against recorded checksum baselines")
 	return cmd
+}
+
+// printDirtyRecoveryCommands prints both ways out of a dirty version. Marking
+// the version clean records it as applied, which is only right when its
+// changes are in the database; PostgreSQL rolls a failed migration file back.
+func printDirtyRecoveryCommands(out io.Writer, migrationsPath string, version uint) {
+	fmt.Fprintln(out, "If the failed migration left no changes (PostgreSQL runs each migration file in one")
+	fmt.Fprintln(out, "transaction, so a failed file is rolled back), fix the file and re-apply it:")
+	if previous, ok := previousMigrationVersion(migrationsPath, version); ok {
+		fmt.Fprintf(out, "   forge migrate force %d\n", previous)
+	} else {
+		fmt.Fprintln(out, "   DELETE FROM schema_migrations;   (no earlier migration to force to)")
+	}
+	fmt.Fprintln(out, "   forge migrate up")
+	fmt.Fprintln(out, "If you completed the migration's changes by hand instead, mark it applied:")
+	fmt.Fprintf(out, "   forge migrate recover --clean --version %d\n", version)
+}
+
+// previousMigrationVersion returns the highest migration version below version.
+func previousMigrationVersion(migrationsPath string, version uint) (uint, bool) {
+	index, err := checksum.IndexMigrationFiles(migrationsPath)
+	if err != nil {
+		return 0, false
+	}
+	var previous uint
+	found := false
+	for candidate, pair := range index {
+		if pair.Up != "" && candidate < version && (!found || candidate > previous) {
+			previous, found = candidate, true
+		}
+	}
+	return previous, found
 }
 
 // Execute runs the command logic
@@ -143,8 +177,7 @@ func (c *RecoverCommand) Execute(ctx *core.Context, args []string) error {
 			verifyErr = runVerify()
 		}
 	} else {
-		fmt.Fprintln(out, "To mark this migration as clean after fixing the database manually, run:")
-		fmt.Fprintf(out, "   forge migrate recover --clean --version %d\n", dirtyMigration.Version)
+		printDirtyRecoveryCommands(out, migrationsPath, dirtyMigration.Version)
 	}
 
 	if verifyErr != nil {

@@ -16,6 +16,8 @@ type routerTestModel struct {
 }
 
 type routerTestQueryset struct {
+	unusedUpdateOperation
+	unusedDeleteOperation
 	items []*routerTestModel
 }
 

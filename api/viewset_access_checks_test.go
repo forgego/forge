@@ -17,6 +17,8 @@ import (
 )
 
 type accessCheckQueryset struct {
+	unusedUpdateOperation
+	unusedDeleteOperation
 	items []*accessCheckModel
 }
 

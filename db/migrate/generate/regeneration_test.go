@@ -1,0 +1,237 @@
+package generate_test
+
+import (
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"testing"
+
+	"github.com/forgego/forge/db/migrate/core"
+	"github.com/forgego/forge/db/migrate/generate"
+)
+
+// Regression models for regeneration stability. Each exercises a column type,
+// default, relation or constraint whose recorded DDL previously failed to
+// round-trip, so makemigrations proposed a new migration for an unchanged model.
+const functionalModels = `package models
+
+import "github.com/forgego/forge/schema"
+
+type Author struct {
+	schema.BaseSchema
+}
+
+func (Author) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.StringField("name", schema.Required(), schema.Unique()),
+		schema.Float64Field("score", schema.Default(1.5)),
+		schema.Float32Field("ratio"),
+		schema.Int32Field("visits", schema.Default(0)),
+		schema.DecimalField("balance", schema.MaxDigits(12), schema.DecimalPlaces(2)),
+		schema.DateField("born_on"),
+		schema.DateTimeField("seen_at"),
+		schema.TimeField("created_at", schema.AutoNowAdd()),
+		schema.TimeField("updated_at", schema.AutoNow()),
+	}
+}
+
+func (Author) Meta() schema.Meta {
+	return schema.Meta{TableName: "authors"}
+}
+
+type Book struct {
+	schema.BaseSchema
+}
+
+func (Book) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.Int64Field("author_id", schema.Required()),
+		schema.Int64Field("editor_id"),
+		schema.Int64Field("reviewer_id"),
+		schema.Int32Field("pages", schema.Default(1)),
+		schema.StringField("isbn"),
+	}
+}
+
+func (Book) Meta() schema.Meta {
+	return schema.Meta{
+		TableName: "books",
+		Indexes:   []schema.Index{{Name: "books_isbn_idx", Fields: []string{"isbn"}}},
+		Constraints: []schema.Constraint{
+			{Name: "books_pages_positive", Type: "CHECK", Condition: "pages > 0"},
+			{Name: "books_isbn_key", Type: "UNIQUE", Fields: []string{"isbn"}},
+		},
+	}
+}
+
+func (Book) Relations() []schema.Relation {
+	return []schema.Relation{
+		schema.ForeignKeyField("author_id", "Author", schema.OnDelete(schema.CascadeCASCADE)),
+		schema.ForeignKeyField("editor_id", "Author", schema.OnDelete(schema.CascadeSET_NULL)),
+		schema.OneToOneField("reviewer_id", "Author", schema.OnDelete(schema.CascadePROTECT)),
+	}
+}
+`
+
+// fluentModels uses the builder-chain spelling the parser also reads.
+const fluentModels = `package models
+
+import "github.com/forgego/forge/schema"
+
+type User struct {
+	schema.BaseSchema
+}
+
+func (User) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("username").Required().MaxLength(150).Unique().Build(),
+		schema.Float64("score").Build(),
+		schema.Int32("visits").Build(),
+		schema.DateTime("created_at").Build(),
+	}
+}
+
+func (User) Meta() schema.Meta {
+	return schema.Meta{TableName: "users"}
+}
+
+type Post struct {
+	schema.BaseSchema
+}
+
+func (Post) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.Int64("user_id").Required().Build(),
+	}
+}
+
+func (Post) Meta() schema.Meta {
+	return schema.Meta{TableName: "posts"}
+}
+
+func (Post) Relations() []schema.Relation {
+	return []schema.Relation{
+		schema.ForeignKey("user_id", "User").OnDelete("CASCADE").Build(),
+	}
+}
+`
+
+func migrationFiles(t *testing.T, dir string) []string {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, entry := range entries {
+		names = append(names, entry.Name())
+	}
+	sort.Strings(names)
+	return names
+}
+
+func generateMigration(t *testing.T, modelsDir, migrationsDir string, driver core.Driver, name string) {
+	t.Helper()
+	gen, err := generate.NewMigrationGeneratorForDriver(modelsDir, migrationsDir, driver)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := gen.GenerateMigrations(name); err != nil {
+		t.Fatalf("generate %s: %v", name, err)
+	}
+}
+
+// TestRegenerationOfUnchangedModelsWritesNothing covers PostgreSQL. SQLite
+// regeneration is not covered: foreign keys declared inside SQLite CREATE TABLE
+// statements are not read back into schema state (SQLite apply is experimental).
+func TestRegenerationOfUnchangedModelsWritesNothing(t *testing.T) {
+	for _, driver := range []core.Driver{core.DriverPostgreSQL} {
+		for name, source := range map[string]string{"functional": functionalModels, "fluent": fluentModels} {
+			t.Run(string(driver)+"/"+name, func(t *testing.T) {
+				modelsDir := t.TempDir()
+				migrationsDir := t.TempDir()
+				if err := os.WriteFile(filepath.Join(modelsDir, "models.go"), []byte(source), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				generateMigration(t, modelsDir, migrationsDir, driver, "initial")
+				initial := migrationFiles(t, migrationsDir)
+				if len(initial) != 2 {
+					t.Fatalf("initial generation wrote %v", initial)
+				}
+				for i := 0; i < 2; i++ {
+					generateMigration(t, modelsDir, migrationsDir, driver, "again")
+					if got := migrationFiles(t, migrationsDir); len(got) != 2 {
+						extra, _ := os.ReadFile(filepath.Join(migrationsDir, got[len(got)-1]))
+						t.Fatalf("regenerating unchanged models wrote %v:\n%s", got, extra)
+					}
+				}
+			})
+		}
+	}
+}
+
+func TestInitialMigrationCreatesDeclaredConstraintsAndForeignKeys(t *testing.T) {
+	modelsDir := t.TempDir()
+	migrationsDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(modelsDir, "models.go"), []byte(functionalModels), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	generateMigration(t, modelsDir, migrationsDir, core.DriverPostgreSQL, "initial")
+	up, err := os.ReadFile(filepath.Join(migrationsDir, "000001_initial.up.sql"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`ADD CONSTRAINT fk_books_author_id FOREIGN KEY ("author_id") REFERENCES authors (id) ON DELETE CASCADE ON UPDATE NO ACTION;`,
+		`ADD CONSTRAINT fk_books_editor_id FOREIGN KEY ("editor_id") REFERENCES authors (id) ON DELETE SET NULL ON UPDATE NO ACTION;`,
+		`ADD CONSTRAINT fk_books_reviewer_id FOREIGN KEY ("reviewer_id") REFERENCES authors (id) ON DELETE RESTRICT ON UPDATE NO ACTION;`,
+		`ALTER TABLE books ADD CONSTRAINT books_pages_positive CHECK (pages > 0);`,
+		`ALTER TABLE books ADD CONSTRAINT books_isbn_key UNIQUE ("isbn");`,
+		`CREATE INDEX IF NOT EXISTS books_isbn_idx ON books ("isbn");`,
+	} {
+		if !strings.Contains(string(up), want) {
+			t.Errorf("initial migration lacks %s\n%s", want, up)
+		}
+	}
+}
+
+// TestChangedForeignKeyActionIsDetected keeps the stability fix from masking
+// real relation changes.
+func TestChangedForeignKeyActionIsDetected(t *testing.T) {
+	modelsDir := t.TempDir()
+	migrationsDir := t.TempDir()
+	file := filepath.Join(modelsDir, "models.go")
+	if err := os.WriteFile(file, []byte(functionalModels), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	generateMigration(t, modelsDir, migrationsDir, core.DriverPostgreSQL, "initial")
+	changed := strings.Replace(functionalModels, `schema.OnDelete(schema.CascadeSET_NULL)`, `schema.OnDelete(schema.CascadeCASCADE)`, 1)
+	changed = strings.Replace(changed, `schema.Float32Field("ratio")`, `schema.Float64Field("ratio")`, 1)
+	if err := os.WriteFile(file, []byte(changed), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	generateMigration(t, modelsDir, migrationsDir, core.DriverPostgreSQL, "change")
+	up, err := os.ReadFile(filepath.Join(migrationsDir, "000002_change.up.sql"))
+	if err != nil {
+		t.Fatalf("changed model produced no migration: %v", err)
+	}
+	for _, want := range []string{
+		`ALTER TABLE books DROP CONSTRAINT IF EXISTS fk_books_editor_id;`,
+		`FOREIGN KEY ("editor_id") REFERENCES authors (id) ON DELETE CASCADE`,
+		`ALTER TABLE authors ALTER COLUMN "ratio" TYPE DOUBLE PRECISION`,
+	} {
+		if !strings.Contains(string(up), want) {
+			t.Errorf("change migration lacks %s\n%s", want, up)
+		}
+	}
+	for _, unwanted := range []string{"fk_books_author_id", "fk_books_reviewer_id", `"score"`, `"visits"`, "books_pages_positive"} {
+		if strings.Contains(string(up), unwanted) {
+			t.Errorf("change migration touches unchanged %s\n%s", unwanted, up)
+		}
+	}
+}
