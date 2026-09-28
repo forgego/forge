@@ -15,7 +15,7 @@ updates:
     reviewers:
       - "hamidrabedi"
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore"
       include: "scope"
     groups:
       go-minor-patch:
@@ -39,7 +39,7 @@ updates:
       - "go"
       - "examples"
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore"
       include: "scope"
 
   # Go dependencies - tests
@@ -56,7 +56,7 @@ updates:
       - "go"
       - "tests"
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore"
       include: "scope"
 
   # NPM dependencies - admin UI
@@ -76,7 +76,7 @@ updates:
     reviewers:
       - "hamidrabedi"
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore"
       include: "scope"
     groups:
       react:
@@ -110,9 +110,15 @@ updates:
       - "documentation"
     versioning-strategy: increase
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore"
       include: "scope"
     groups:
+      # react and react-dom must move together; a split bump breaks the build.
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react*"
       docusaurus:
         patterns:
           - "@docusaurus/*"
@@ -133,7 +139,7 @@ updates:
       - "dependencies"
       - "github-actions"
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore"
       include: "scope"
     groups:
       actions:
