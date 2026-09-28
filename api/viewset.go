@@ -353,18 +353,28 @@ func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 	querysetValue = paginatableQueryset(querysetValue)
 
 	// Apply filtering from query params
-	qs := applyFilters(querysetValue, r, vs.Model)
-
-	// Apply explicit ordering, model Meta ordering, or a stable primary-key fallback.
-	qs = applyOrdering(qs, r, vs.Model, defaultOrdering(vs.Model)...)
-
-	// Get total count using cached method lookup
-	qsType := qs.Type()
-	countMethod, ok := globalCache.GetMethod(qsType, "Count")
-	if !ok {
-		_ = forgehttp.SendError(w, http.StatusInternalServerError, "Count method not found")
+	qs, err := applyFilters(querysetValue, r, vs.Model)
+	if err != nil {
+		vs.listConfigurationError(w, r, err)
 		return
 	}
+
+	// Apply explicit ordering, model Meta ordering, or a stable primary-key fallback.
+	qs, err = applyOrdering(qs, r, vs.Model, defaultOrdering(vs.Model)...)
+	if err != nil {
+		vs.listConfigurationError(w, r, err)
+		return
+	}
+
+	// Get total count using cached method lookup. Registration checks every
+	// statically typed chain result; a value whose type is only known now is
+	// checked here so a mismatch is a logged 500, not a reflect panic.
+	qsType := qs.Type()
+	if err := checkListCall(qsType, "Count"); err != nil {
+		vs.listConfigurationError(w, r, err)
+		return
+	}
+	countMethod, _ := globalCache.GetMethod(qsType, "Count")
 
 	var totalCount int64
 	results := countMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(ctx)})
@@ -385,6 +395,10 @@ func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 	// Apply pagination using cached method lookup
 	offset := (page - 1) * pageSize
 
+	if err := checkListCall(qsType, "Offset"); err != nil {
+		vs.listConfigurationError(w, r, err)
+		return
+	}
 	offsetMethod, ok := globalCache.GetMethod(qsType, "Offset")
 	if ok {
 		offsetResults := offsetMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(offset)})
@@ -396,6 +410,10 @@ func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if err := checkListCall(qsType, "Limit"); err != nil {
+		vs.listConfigurationError(w, r, err)
+		return
+	}
 	limitMethod, ok := globalCache.GetMethod(qsType, "Limit")
 	if ok {
 		limitResults := limitMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(pageSize)})
@@ -408,11 +426,11 @@ func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Execute query using cached method lookup
-	allMethod, ok := globalCache.GetMethod(qsType, "All")
-	if !ok {
-		_ = forgehttp.SendError(w, http.StatusInternalServerError, "All method not found")
+	if err := checkListCall(qsType, "All"); err != nil {
+		vs.listConfigurationError(w, r, err)
 		return
 	}
+	allMethod, _ := globalCache.GetMethod(qsType, "All")
 
 	var resultList []interface{}
 	allResults := allMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(ctx)})
@@ -1024,12 +1042,12 @@ func (r *Router) Handle(method, path string, handler http.HandlerFunc) {
 func (r *Router) registerResourceRoutes(router *forgehttp.Router, resource string, vs ViewSet) {
 	path := r.prefix + "/" + resource
 	router.Route(path, func(sub *forgehttp.Router) {
-		sub.Get("/", vs.List)
-		sub.Post("/", vs.Create)
-		sub.Get("/{id}", vs.Retrieve)
-		sub.Put("/{id}", vs.Update)
-		sub.Patch("/{id}", vs.PartialUpdate)
-		sub.Delete("/{id}", vs.Destroy)
+		sub.Get("/", withResource(resource, vs.List))
+		sub.Post("/", withResource(resource, vs.Create))
+		sub.Get("/{id}", withResource(resource, vs.Retrieve))
+		sub.Put("/{id}", withResource(resource, vs.Update))
+		sub.Patch("/{id}", withResource(resource, vs.PartialUpdate))
+		sub.Delete("/{id}", withResource(resource, vs.Destroy))
 		sub.Options("/", func(w http.ResponseWriter, r *http.Request) {
 			docs.OptionsHandler(w, r, vs, nil)
 		})
@@ -1132,11 +1150,15 @@ func maybeConvertToQueryset(qs reflect.Value) reflect.Value {
 	return first
 }
 
-// applyFilters applies query parameter filters to queryset
-func applyFilters(qs reflect.Value, r *http.Request, model interface{}) reflect.Value {
+// applyFilters applies query parameter filters to queryset. It fails when a
+// Filter result, whose type may only be known now, cannot be filtered further.
+func applyFilters(qs reflect.Value, r *http.Request, model interface{}) (reflect.Value, error) {
 	// Get filter parameters from query string
 	query := r.URL.Query()
 	qsType := qs.Type()
+	if err := checkListCall(qsType, "Filter"); err != nil {
+		return qs, err
+	}
 
 	// Get cached Filter method
 	filterMethod, hasFilter := globalCache.GetMethod(qsType, "Filter")
@@ -1163,6 +1185,9 @@ func applyFilters(qs reflect.Value, r *http.Request, model interface{}) reflect.
 					if newQS := results[0].Interface(); newQS != nil {
 						qs = reflect.ValueOf(newQS)
 						qsType = qs.Type()
+						if err := checkListCall(qsType, "Filter"); err != nil {
+							return qs, err
+						}
 						// Update cached method for new queryset type
 						filterMethod, hasFilter = globalCache.GetMethod(qsType, "Filter")
 					}
@@ -1171,7 +1196,7 @@ func applyFilters(qs reflect.Value, r *http.Request, model interface{}) reflect.
 		}
 	}
 
-	return qs
+	return qs, nil
 }
 
 func buildFilterExpr(rawKey string, rawValue string) orm.Expression {
@@ -1253,19 +1278,22 @@ func parseFilterValue(raw string) interface{} {
 }
 
 // applyOrdering applies request ordering or the supplied model defaults.
-func applyOrdering(qs reflect.Value, r *http.Request, model interface{}, defaults ...string) reflect.Value {
+func applyOrdering(qs reflect.Value, r *http.Request, model interface{}, defaults ...string) (reflect.Value, error) {
 	ordering := r.URL.Query().Get("ordering")
 	if ordering == "" {
 		ordering = strings.Join(defaults, ",")
 		if ordering == "" {
-			return qs
+			return qs, nil
 		}
 	}
 
 	qsType := qs.Type()
+	if err := checkListCall(qsType, "OrderBy"); err != nil {
+		return qs, err
+	}
 	orderByMethod, ok := globalCache.GetMethod(qsType, "OrderBy")
 	if !ok {
-		return qs
+		return qs, nil
 	}
 
 	rawFields := strings.Split(ordering, ",")
@@ -1290,16 +1318,16 @@ func applyOrdering(qs reflect.Value, r *http.Request, model interface{}, default
 		args = append(args, reflect.ValueOf(field))
 	}
 	if len(args) <= 1 { // Only receiver, no fields
-		return qs
+		return qs, nil
 	}
 	results := orderByMethod.Func.Call(args)
 	if len(results) > 0 {
 		if newQS := results[0].Interface(); newQS != nil {
-			return reflect.ValueOf(newQS)
+			return reflect.ValueOf(newQS), nil
 		}
 	}
 
-	return qs
+	return qs, nil
 }
 
 func defaultOrdering(model interface{}) []string {
