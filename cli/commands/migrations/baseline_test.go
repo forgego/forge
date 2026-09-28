@@ -57,5 +57,5 @@ func TestBaselineCommands(t *testing.T) {
 	require.NoError(t, err)
 	out, err = run(NewRecoverCommand(), "--verify")
 	require.Error(t, err)
-	require.Contains(t, out, "Dirty migration detected at version 1")
+	require.Contains(t, out, "dirty migration detected at version 1")
 }

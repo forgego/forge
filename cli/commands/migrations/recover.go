@@ -119,7 +119,7 @@ func (c *RecoverCommand) Execute(ctx *core.Context, args []string) error {
 		return nil
 	}
 
-	fmt.Fprintf(out, "⚠️  Dirty migration detected at version %d!\n", dirtyMigration.Version)
+	fmt.Fprintf(out, "Warning: dirty migration detected at version %d!\n", dirtyMigration.Version)
 	fmt.Fprintf(out, "   Error: %s\n\n", dirtyMigration.ErrorMsg)
 	fmt.Fprintln(out, "Recommended recovery steps:")
 	steps := rec.GetRecoverySteps(fmt.Sprintf("%d", dirtyMigration.Version), dirtyMigration.ErrorMsg)

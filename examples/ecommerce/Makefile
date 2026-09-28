@@ -29,103 +29,103 @@ help:
 
 # Install dependencies
 install:
-	@echo "📦 Installing dependencies..."
+	@echo "Installing dependencies..."
 	go mod download
 	go mod tidy
-	@echo "✅ Dependencies installed"
+	@echo "Dependencies installed"
 
 # Generate code from models
 generate:
-	@echo "🔧 Generating code..."
+	@echo "Generating code..."
 	forge generate
-	@echo "✅ Code generated"
+	@echo "Code generated"
 
 # Run migrations
 migrate:
-	@echo "🗄️  Running migrations..."
-	forge migrate
-	@echo "✅ Migrations applied"
+	@echo "Running migrations..."
+	forge migrate up
+	@echo "Migrations applied"
 
 # Rollback migrations
 migrate-down:
-	@echo "↩️  Rolling back migration..."
+	@echo "Rolling back migration..."
 	forge migrate rollback
-	@echo "✅ Migration rolled back"
+	@echo "Migration rolled back"
 
 # Show migration status
 migrate-status:
-	@echo "📊 Migration status:"
+	@echo "Migration status:"
 	forge migrate status
 
 # Start development server
 run:
-	@echo "🚀 Starting server..."
+	@echo "Starting server..."
 	forge runserver
 
 # Run tests
 test:
-	@echo "🧪 Running tests..."
+	@echo "Running tests..."
 	go test -v ./...
-	@echo "✅ Tests complete"
+	@echo "Tests complete"
 
 # Run tests with coverage
 test-coverage:
-	@echo "🧪 Running tests with coverage..."
+	@echo "Running tests with coverage..."
 	go test -cover -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
-	@echo "✅ Coverage report generated: coverage.html"
+	@echo "Coverage report generated: coverage.html"
 
 # Clean generated files
 clean:
-	@echo "🧹 Cleaning..."
+	@echo "Cleaning..."
 	find . -name "*_gen.go" -delete
 	find . -name "*.test" -delete
 	rm -f ecommerce
 	rm -f coverage.out coverage.html
-	@echo "✅ Clean complete"
+	@echo "Clean complete"
 
 # Docker commands
 docker-up:
-	@echo "🐳 Starting Docker containers..."
+	@echo "Starting Docker containers..."
 	docker-compose up -d
-	@echo "✅ Containers started"
+	@echo "Containers started"
 
 docker-down:
-	@echo "🐳 Stopping Docker containers..."
+	@echo "Stopping Docker containers..."
 	docker-compose down
-	@echo "✅ Containers stopped"
+	@echo "Containers stopped"
 
 docker-logs:
 	docker-compose logs -f
 
 # Database commands
 db-create:
-	@echo "🗄️  Creating database..."
+	@echo "Creating database..."
 	createdb ecommerce_db || echo "Database already exists"
 
 db-drop:
-	@echo "⚠️  Dropping database..."
+	@echo "Dropping database..."
 	dropdb ecommerce_db || echo "Database doesn't exist"
 
 db-reset: db-drop db-create migrate
-	@echo "✅ Database reset complete"
+	@echo "Database reset complete"
 
 # Seed database with sample data
 seed:
-	@echo "🌱 Seeding database..."
+	@echo "Seeding database..."
 	go run scripts/seed.go
-	@echo "✅ Database seeded"
+	@echo "Database seeded"
 
 # Create superuser
 superuser:
-	@echo "👤 Creating superuser..."
+	@echo "Creating superuser..."
 	forge createsuperuser
 
 # Build for production
 build:
-	@echo "🏗️  Building production binary..."
+	@echo "Building production binary..."
 	go build -o ecommerce -ldflags="-s -w" .
-	@echo "✅ Build complete: ./ecommerce"
+	@echo "Build complete: ./ecommerce"
 
 # Admin UI commands
 admin-ui:        ## Build the admin UI bundle (admin/ui/dist)
@@ -144,7 +144,7 @@ demo: admin-ui run-go   ## One command: build the admin UI and start the server
 
 # Full setup (for new developers)
 setup: install db-create generate migrate
-	@echo "✅ Setup complete!"
+	@echo "Setup complete."
 	@echo ""
 	@echo "Next steps:"
 	@echo "  1. Create a superuser: make superuser"
@@ -156,36 +156,36 @@ all: setup seed run
 
 # Development workflow (watch for changes)
 dev:
-	@echo "🔄 Starting development mode..."
+	@echo "Starting development mode..."
 	forge runserver --reload
 
 # Lint code
 lint:
-	@echo "🔍 Running linters..."
+	@echo "Running linters..."
 	golangci-lint run ./...
-	@echo "✅ Linting complete"
+	@echo "Linting complete"
 
 # Format code
 fmt:
-	@echo "✨ Formatting code..."
+	@echo "Formatting code..."
 	go fmt ./...
 	gofmt -s -w .
-	@echo "✅ Formatting complete"
+	@echo "Formatting complete"
 
 # Check code
 check:
-	@echo "✅ Running checks..."
+	@echo "Running checks..."
 	forge check
 	go vet ./...
-	@echo "✅ Checks complete"
+	@echo "Checks complete"
 
 # Run everything (check, test, build)
 ci: check test build
-	@echo "✅ CI pipeline complete"
+	@echo "CI pipeline complete"
 
 # Show project stats
 stats:
-	@echo "📊 Project Statistics:"
+	@echo "Project Statistics:"
 	@echo ""
 	@echo "Models:"
 	@find app -name "models.go" -exec wc -l {} + | tail -1

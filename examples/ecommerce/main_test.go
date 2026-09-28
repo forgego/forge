@@ -184,7 +184,7 @@ func TestBuildEcommerceRouter_HTTPReachability(t *testing.T) {
 				if status != http.StatusOK {
 					return newTestErr("expected / status 200, got %d", status)
 				}
-				if !strings.Contains(body, "Forge Framework") || !strings.Contains(body, "Live Interactive Storefront") {
+				if !strings.Contains(body, "Forge ecommerce example") || !strings.Contains(body, ">Storefront<") {
 					return newTestErr("expected storefront page content, got %q", body)
 				}
 				return nil

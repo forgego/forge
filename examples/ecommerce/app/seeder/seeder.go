@@ -55,7 +55,7 @@ func getId(ctx context.Context, database *db.DB, table string, col string, val i
 
 // Seed executes full synthetic data generation across all ecommerce domains.
 func Seed(ctx context.Context, database *db.DB) error {
-	log.Println("🌱 Starting comprehensive ecommerce data generation...")
+	log.Println("Seeding ecommerce sample data...")
 
 	catMap, err := seedCategories(ctx, database)
 	if err != nil {
@@ -113,7 +113,7 @@ func Seed(ctx context.Context, database *db.DB) error {
 
 	seedAuditHistory(ctx)
 
-	log.Println("✅ All ecommerce models successfully seeded with rich fake data!")
+	log.Println("Sample data seeded.")
 	return nil
 }
 

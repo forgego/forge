@@ -105,7 +105,7 @@ func (c *CheckCommand) Execute(ctx *core.Context, args []string) error {
 	if len(warnings) > 0 {
 		fmt.Println("\nWarnings:")
 		for _, warning := range warnings {
-			fmt.Printf("  ⚠ %s\n", warning)
+			fmt.Printf("  ! %s\n", warning)
 		}
 	}
 

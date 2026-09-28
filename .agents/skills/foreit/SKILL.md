@@ -9,7 +9,7 @@ Forge is a type-safe, full-stack Go web framework with batteries included (ORM, 
 
 ## Tech Stack
 
-- **Primary Language**: Go (1.21+)
+- **Primary Language**: Go (1.26+)
 - **Architecture**: Modular framework packages at the repository root with reference application under `examples/ecommerce/`
 - **Docs**: Docusaurus site under `docs-site/`
 

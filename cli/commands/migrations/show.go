@@ -132,7 +132,7 @@ func (c *ShowCommand) Execute(ctx *core.Context, args []string) error {
 			if fileLoader, ok := loader.(*dbstate.FileStateLoader); ok {
 				parseErrors := fileLoader.GetParseErrors()
 				if len(parseErrors) > 0 {
-					fmt.Println("⚠️  Parse Warnings:")
+					fmt.Println("Parse warnings:")
 					for _, perr := range parseErrors {
 						fmt.Printf("  %s", perr.File)
 						if perr.Line > 0 {

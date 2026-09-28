@@ -120,15 +120,15 @@ jobs:
           SENSITIVE_FILES: ${{ steps.sensitive_files.outputs.files }}
         with:
           script: |
-            let message = '## ⚠️ Security Review\n\n';
+            let message = '## Security review\n\n';
             
             if ('${{ steps.govulncheck.outputs.vulnerabilities_found }}' === 'true') {
-              message += '### 🔴 Vulnerabilities Found\n\n';
+              message += '### Vulnerabilities found\n\n';
               message += 'Go vulnerability scanner found issues. Please check the workflow logs.\n\n';
             }
             
             if ('${{ steps.sensitive_files.outputs.sensitive_files_changed }}' === 'true') {
-              message += '### 🟡 Sensitive Files Modified\n\n';
+              message += '### Sensitive files modified\n\n';
               message += 'The following sensitive files were modified:\n\n';
               message += '```\n' + process.env.SENSITIVE_FILES + '\n```\n\n';
               message += 'Please ensure:\n';

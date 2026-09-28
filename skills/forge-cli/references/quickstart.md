@@ -418,10 +418,10 @@ posts, err := PostObjects.
 ## Summary
 
 forge gives you:
-- ✅ **Type Safety** - Compile-time checking
-- ✅ **Code Generation** - No boilerplate
-- ✅ **Auto Admin** - Full CRUD interface
-- ✅ **Django Experience** - Familiar patterns
-- ✅ **Go Performance** - Fast and efficient
+- **Type Safety** - Compile-time checking
+- **Code Generation** - No boilerplate
+- **Auto Admin** - Full CRUD interface
+- **Django Experience** - Familiar patterns
+- **Go Performance** - Fast and efficient
 
 Ready to build? Start with the [Installation Guide](/docs/getting-started/installation) or explore the [Full Guides](/docs/guides/models).

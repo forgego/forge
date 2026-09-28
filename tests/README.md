@@ -256,7 +256,7 @@ When adding new features:
 
 ## Test Status
 
-✅ **All major features tested**
+**All major features tested**
 - Schema definition and builders
 - Migration generation (all change types)
 - Migration execution (up/down/to version/rollback)

@@ -73,7 +73,7 @@ func (c *ForceCommand) Execute(ctx *core.Context, args []string) error {
 
 	// Safety check: warn if not dirty
 	if !currentStatus.Dirty {
-		fmt.Println("⚠️  WARNING: Database is not in a dirty state.")
+		fmt.Println("Warning: database is not in a dirty state.")
 		fmt.Println("   Force command should only be used after manually fixing a failed migration.")
 		fmt.Print("   Continue anyway? (yes/no): ")
 
@@ -88,7 +88,7 @@ func (c *ForceCommand) Execute(ctx *core.Context, args []string) error {
 	// Force set version using golang-migrate's Force method
 	// We need to access the underlying migrate instance
 	// For now, we'll add a method to MigrationRunner
-	fmt.Printf("⚠️  Forcing migration version to %d...\n", version)
+	fmt.Printf("Forcing migration version to %d...\n", version)
 	fmt.Println("   This will mark the database as clean at this version.")
 	fmt.Println("   Make sure you have manually fixed any issues before proceeding.")
 

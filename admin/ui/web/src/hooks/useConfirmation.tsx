@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Trash2, Ban } from "lucide-react";
+import { AlertTriangle, Trash2, Ban, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 interface ConfirmationDialogProps {
@@ -74,7 +74,7 @@ export function ConfirmationDialog({
           >
             {loading || isConfirming ? (
               <>
-                <span className="animate-spin mr-2">⏳</span>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                 Processing...
               </>
             ) : (

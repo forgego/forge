@@ -63,7 +63,7 @@ func (c *LintCommand) Execute(ctx *core.Context, args []string) error {
 			if fileLoader, ok := loader.(*state.FileStateLoader); ok {
 				parseErrors := fileLoader.GetParseErrors()
 				if len(parseErrors) > 0 {
-					fmt.Println("\n📋 Parse Errors (from state loader):")
+					fmt.Println("\nParse errors (from state loader):")
 					for _, perr := range parseErrors {
 						fmt.Printf("  %s", perr.File)
 						if perr.Line > 0 {
@@ -95,7 +95,7 @@ func (c *LintCommand) Execute(ctx *core.Context, args []string) error {
 
 	// Print results
 	if len(errors) > 0 {
-		fmt.Println("❌ Errors:")
+		fmt.Println("Errors:")
 		for _, result := range errors {
 			fmt.Printf("  %s: %s\n", filepath.Base(result.File), result.Message)
 		}
@@ -103,7 +103,7 @@ func (c *LintCommand) Execute(ctx *core.Context, args []string) error {
 	}
 
 	if len(warnings) > 0 {
-		fmt.Println("⚠️  Warnings:")
+		fmt.Println("Warnings:")
 		for _, result := range warnings {
 			fmt.Printf("  %s: %s\n", filepath.Base(result.File), result.Message)
 		}
@@ -111,7 +111,7 @@ func (c *LintCommand) Execute(ctx *core.Context, args []string) error {
 	}
 
 	if len(infos) > 0 {
-		fmt.Println("ℹ️  Info:")
+		fmt.Println("Info:")
 		for _, result := range infos {
 			fmt.Printf("  %s: %s\n", filepath.Base(result.File), result.Message)
 		}
