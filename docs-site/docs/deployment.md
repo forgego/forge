@@ -145,7 +145,8 @@ exits 1: `StartWithGracefulShutdown` returns `graceful shutdown: context
 deadline exceeded` and the generated `main.go` passes it to `log.Fatal`,
 which exits without running deferred calls such as closing the database. A
 second SIGINT or SIGTERM during the wait ends the process at once with the
-default signal behavior. Set your supervisor's stop timeout
+default signal behavior, so a wrapper that forwards both SIGINT and SIGTERM
+skips the drain; send one signal. Set your supervisor's stop timeout
 above `graceful_timeout` (for example `docker stop -t 40`, or
 `terminationGracePeriodSeconds` if you run it on a cluster yourself).
 

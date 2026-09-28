@@ -28,7 +28,8 @@ the change.
   `PATCH` is unchanged.
 - A field tagged `json:",omitempty"` is accepted in requests under its Go
   name, the name responses use, so a response can be sent back as a `PUT`
-  body.
+  body. Such a field whose schema is neither serialized nor editable stays
+  unwritable.
 - `forge makemigrations` now emits the foreign keys declared with
   `schema.ForeignKeyField` and `Meta.Constraints`, which it silently skipped.
   In an existing project the next migration adds them and fails if rows
@@ -80,7 +81,9 @@ the change.
   4xx errors without raw database text, in single and bulk create and update
   alike, and other database errors are a generic 500;
   deleting a referenced record is a 409, as is a bulk delete in which every
-  record is referenced; edits send only changed fields;
+  record is referenced. Bulk result items carry the classified code
+  (`validation_error`, `conflict`, `invalid_reference`) instead of
+  `create_failed` or `update_failed`. Edits send only changed fields;
   partially applied bulk actions list each skipped record; the foreign-key
   picker is labelled; fonts load under a custom mount prefix.
 - ORM: `Filter(Or(a, b)).Filter(c)` keeps the OR group intact.

@@ -131,6 +131,9 @@ type requestField struct {
 	// name empty (json:",omitempty"). It is "" when the field has no json
 	// tag or is tagged json:"-".
 	key string
+	// keyFromGoName is set when key is the Go name because the json tag
+	// leaves the name empty.
+	keyFromGoName bool
 	// schema is the schema field backing the struct field, or nil.
 	schema *schema.Field
 }
@@ -141,6 +144,7 @@ func newRequestField(schemaFields map[string]*schema.Field, field reflect.Struct
 		f.key = strings.Split(tag, ",")[0]
 		if f.key == "" {
 			f.key = field.Name
+			f.keyFromGoName = true
 		}
 		if f.key == "-" {
 			f.key = ""
@@ -153,9 +157,15 @@ func newRequestField(schemaFields map[string]*schema.Field, field reflect.Struct
 // writable reports whether request input may write the field. A field
 // hidden from JSON is writable only when the schema declares it write-only
 // (editable, never serialized), such as a password; anything else hidden
-// stays out of reach of request input.
+// stays out of reach of request input. A key taken from the Go name
+// (json:",omitempty") is writable only when its schema field is serialized
+// or editable, the rule knownRequestFields uses to hide it, so the Go-name
+// key never opens up a field that was hidden before it existed.
 func (f requestField) writable() bool {
 	if f.key != "" {
+		if f.keyFromGoName && f.schema != nil {
+			return f.schema.Serialize || f.schema.Editable
+		}
 		return true
 	}
 	return f.schema != nil && f.schema.Editable && !f.schema.Serialize

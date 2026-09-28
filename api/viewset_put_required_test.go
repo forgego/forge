@@ -240,3 +240,30 @@ func (putSlugModel) Fields() []schema.Field {
 		schema.StringField("slug", schema.Required()),
 	}
 }
+
+// hiddenInternalModel has a json:",omitempty" field whose schema neither
+// serializes nor lets clients edit it. Its Go-name key must not make it
+// request-writable.
+type hiddenInternalModel struct {
+	schema.BaseSchema
+	ID           int64  `json:"id" db:"id"`
+	Name         string `json:"name" db:"name"`
+	PasswordHash string `json:",omitempty" db:"password_hash"`
+}
+
+func (hiddenInternalModel) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.StringField("name"),
+		{Name: "password_hash", Type: schema.TypeString, Editable: false, Serialize: false},
+	}
+}
+
+func TestPopulateFromMap_NeverWritesHiddenNonEditableFields(t *testing.T) {
+	m := &hiddenInternalModel{PasswordHash: "keep"}
+	require.NoError(t, populateFromMap(m, map[string]interface{}{
+		"name": "n", "PasswordHash": "pwned", "password_hash": "pwned",
+	}))
+	assert.Equal(t, "n", m.Name)
+	assert.Equal(t, "keep", m.PasswordHash, "a json:\",omitempty\" field that is neither serialized nor editable must not be written")
+}

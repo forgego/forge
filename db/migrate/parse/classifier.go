@@ -1,8 +1,14 @@
 package parse
 
 import (
+	"regexp"
 	"strings"
 )
+
+// dropColumnStatement matches ALTER TABLE .. DROP COLUMN by its structure,
+// so a literal that merely contains "DROP COLUMN" (a default or a CHECK
+// condition) does not turn an ADD COLUMN or ADD CONSTRAINT into a drop.
+var dropColumnStatement = regexp.MustCompile(`(?is)^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?\S+\s+DROP\s+COLUMN\b`)
 
 // StatementKind represents the type of SQL statement
 type StatementKind int
@@ -42,7 +48,7 @@ func (c *Classifier) Classify(stmt string) StatementKind {
 	switch {
 	case strings.HasPrefix(upper, "CREATE TABLE"):
 		return StmtCreateTable
-	case strings.HasPrefix(upper, "ALTER TABLE") && strings.Contains(upper, "DROP COLUMN"):
+	case dropColumnStatement.MatchString(stmt):
 		// Checked before other ALTER TABLE statements, which do not parse
 		// DROP COLUMN, so a dropped column is read back into schema state.
 		return StmtDropColumn
