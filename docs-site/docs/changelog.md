@@ -72,6 +72,10 @@ the change.
   the new `log.NewLoggerFromSettings`, and its `config.yaml` has a `logging`
   section (`level: debug`, `format: console`). `config.LoadSettings` now reads
   `logging.outputs`. Before, `main.go` ignored every `logging.*` key (#294).
+- The ecommerce example shuts down gracefully with
+  `StartWithGracefulShutdown`, draining in-flight requests on SIGINT or
+  SIGTERM and closing its database, instead of `log.Fatal(ListenAndServe())`
+  (#294).
 - `forge version` prints the version the binary was installed from, and
   `forge new` pins that version in the new project's `go.mod` instead of
   `v0.1.0` (#286).
