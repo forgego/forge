@@ -8,11 +8,11 @@ import (
 func init() {
 	// Auto-register API routes
 	// Example:
-	// Register{{.ResourceName}}API(router)
+	// Register{{goName .ResourceName}}API(router)
 }
 
-// Register{{.ResourceName}}API registers the {{.ResourceName}} API endpoints
-func Register{{.ResourceName}}API(router *server.Router) {
+// Register{{goName .ResourceName}}API registers the {{.ResourceName}} API endpoints
+func Register{{goName .ResourceName}}API(router *server.Router) {
 	// {{.ModelName}}Objects is the manager `forge generate` writes for {{.ModelName}}.
 	viewset := api.NewBaseViewSet(
 		New{{.ModelName}}Serializer,

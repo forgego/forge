@@ -54,7 +54,7 @@ func RenderTemplate(templateName string, data TemplateData) ([]byte, error) {
 
 // renderTemplateContent renders template content with data
 func renderTemplateContent(content string, data TemplateData) ([]byte, error) {
-	tmpl, err := template.New("template").Parse(content)
+	tmpl, err := template.New("template").Funcs(funcMap).Parse(content)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse template: %w", err)
 	}

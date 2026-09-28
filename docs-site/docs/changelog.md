@@ -80,6 +80,9 @@ the change.
   pagination (there is no limit/offset or cursor pagination), and the
   OpenAPI document has the `info` block only, with no Swagger UI and no
   `forge routes` command (#294).
+- `forge add api blog-posts` emits `RegisterBlogPostsAPI` instead of the
+  invalid `RegisterBlog-PostsAPI`; the URL segment stays `blog-posts`. Names
+  that cannot form a Go identifier are rejected (#294).
 - `forge version` prints the version the binary was installed from, and
   `forge new` pins that version in the new project's `go.mod` instead of
   `v0.1.0` (#286).
