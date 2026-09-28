@@ -13,6 +13,7 @@ and running behavior.
 - [Technical debt](TECH-DEBT.md) — recorded maintenance concerns.
 - [Known bugs](BUGS.md) — recorded defects; verify status against current code.
 - [Review standard](REVIEWING.md) — flow, architecture, naming, and test evidence.
+- [Releasing](RELEASING.md) — tags, changelog, release evidence, upgrade rehearsal, retraction.
 - [Documentation policy](DOCUMENTATION-POLICY.md) — public/local ownership and maintenance.
 
 ## Admin design
