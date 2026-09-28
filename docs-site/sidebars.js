@@ -10,7 +10,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Start Here',
-      items: ['index', 'introduction', 'quickstart', 'installation'],
+      items: ['index', 'introduction', 'quickstart', 'installation', 'status', 'deployment'],
     },
     {
       type: 'category',
@@ -63,7 +63,6 @@ const sidebars = {
         'api-reference/fields',
         'api-reference/hooks',
         'api-reference/relations',
-        'status',
       ],
     },
     {

@@ -10,10 +10,16 @@ The server can expose health, readiness, liveness, metrics, and profiling endpoi
 
 ## Endpoints
 
-- Health check path
-- /ready and /live
-- /metrics
-- /debug profiling (dev only)
+- `server.health_check_path` (default `/health`): runs every registered check; 503 if any fails
+- `<health path>/ready`: the same checks, reported as readiness
+- `<health path>/live`: always 200 while the process serves requests
+- `/metrics` when `server.metrics_enabled` is true: reports uptime only
+- `/debug` profiling, only when both `server.enable_profiling` and `app.debug` are true
+
+No check is registered by default, so `/health` and `/ready` return 200 even
+when the database is unreachable. Register one with
+`server.RegisterHealthCheckFunc`; the [deployment guide](/docs/deployment/)
+shows a database check.
 
 ## Next steps
 
