@@ -57,11 +57,25 @@ func (w *Writer) renderCombined(definitions []*ModelDefinition) ([]byte, error) 
 
 	// Prepare template data
 	data := map[string]interface{}{
-		"Package": packageName,
-		"Models":  definitions,
+		"Package":   packageName,
+		"Models":    definitions,
+		"NeedsTime": usesTimePackage(definitions),
 	}
 
 	return executeTemplate(t, data)
+}
+
+// usesTimePackage reports whether any generated field type refers to the time
+// package, so gen.go imports "time" only when it is used.
+func usesTimePackage(definitions []*ModelDefinition) bool {
+	for _, def := range definitions {
+		for _, field := range def.Fields {
+			if strings.Contains(field.GoType, "time.") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // WriteAPI writes all generated REST API code to an api_gen.go file

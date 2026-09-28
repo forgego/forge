@@ -2,6 +2,8 @@ package generator
 
 import (
 	"errors"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"testing"
@@ -236,4 +238,40 @@ func TestWriteCombinedAndAPI_SuccessRemovesDestinationBackups(t *testing.T) {
 	backups, err := filepath.Glob(filepath.Join(tmpDir, ".*.bak-*"))
 	require.NoError(t, err)
 	assert.Empty(t, backups)
+}
+
+func TestRenderCombined_ImportsTimeOnlyWhenUsed(t *testing.T) {
+	cases := map[string]struct {
+		goType   string
+		wantTime bool
+	}{
+		"no time field": {goType: "string", wantTime: false},
+		"time field":    {goType: "time.Time", wantTime: true},
+		"optional time": {goType: "*time.Time", wantTime: true},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			defs := []*ModelDefinition{{
+				Package: "blog",
+				Name:    "Article",
+				Meta:    MetaDefinition{TableName: "articles"},
+				Fields: []FieldDefinition{
+					{Name: "id", Type: "Int64Field", GoType: "int64", PrimaryKey: true, AutoIncrement: true},
+					{Name: "value", Type: "Field", GoType: tc.goType},
+				},
+			}}
+			src, err := NewWriter().renderCombined(defs)
+			require.NoError(t, err)
+
+			file, err := parser.ParseFile(token.NewFileSet(), "gen.go", src, parser.ImportsOnly)
+			require.NoError(t, err)
+			hasTime := false
+			for _, imp := range file.Imports {
+				if imp.Path.Value == `"time"` {
+					hasTime = true
+				}
+			}
+			assert.Equal(t, tc.wantTime, hasTime)
+		})
+	}
 }

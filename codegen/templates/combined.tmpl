@@ -2,7 +2,9 @@
 package {{.Package}}
 
 import (
+{{- if .NeedsTime}}
 	"time"
+{{- end}}
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
 	validate "github.com/forgego/forge/validate"
