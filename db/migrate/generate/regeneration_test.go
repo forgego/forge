@@ -149,11 +149,11 @@ func generateMigration(t *testing.T, modelsDir, migrationsDir string, driver cor
 	}
 }
 
-// TestRegenerationOfUnchangedModelsWritesNothing covers PostgreSQL. SQLite
-// regeneration is not covered: foreign keys declared inside SQLite CREATE TABLE
-// statements are not read back into schema state (SQLite apply is experimental).
+// TestRegenerationOfUnchangedModelsWritesNothing covers PostgreSQL and SQLite,
+// whose foreign keys and constraints are declared inside CREATE TABLE and read
+// back from there. The initial migration must also apply (see applyMigrations).
 func TestRegenerationOfUnchangedModelsWritesNothing(t *testing.T) {
-	for _, driver := range []core.Driver{core.DriverPostgreSQL} {
+	for _, driver := range []core.Driver{core.DriverPostgreSQL, core.DriverSQLite} {
 		for name, source := range map[string]string{"functional": functionalModels, "fluent": fluentModels} {
 			t.Run(string(driver)+"/"+name, func(t *testing.T) {
 				modelsDir := t.TempDir()
@@ -173,6 +173,7 @@ func TestRegenerationOfUnchangedModelsWritesNothing(t *testing.T) {
 						t.Fatalf("regenerating unchanged models wrote %v:\n%s", got, extra)
 					}
 				}
+				applyMigrations(t, driver, migrationsDir)
 			})
 		}
 	}
