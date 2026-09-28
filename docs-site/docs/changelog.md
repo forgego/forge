@@ -76,6 +76,10 @@ the change.
   `StartWithGracefulShutdown`, draining in-flight requests on SIGINT or
   SIGTERM and closing its database, instead of `log.Fatal(ListenAndServe())`
   (#294).
+- The API docs describe only what exists: list responses use page-number
+  pagination (there is no limit/offset or cursor pagination), and the
+  OpenAPI document has the `info` block only, with no Swagger UI and no
+  `forge routes` command (#294).
 - `forge version` prints the version the binary was installed from, and
   `forge new` pins that version in the new project's `go.mod` instead of
   `v0.1.0` (#286).
