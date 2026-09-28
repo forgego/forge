@@ -1200,14 +1200,17 @@ func parseFilterValue(raw string) interface{} {
 	if raw == "" {
 		return raw
 	}
-	if boolVal, err := strconv.ParseBool(raw); err == nil {
-		return boolVal
-	}
+	// Numbers before booleans: strconv.ParseBool accepts "1" and "0", and
+	// PostgreSQL rejects a boolean compared with an integer column such as a
+	// foreign key (?project_id=1). A number still matches a boolean column.
 	if intVal, err := strconv.ParseInt(raw, 10, 64); err == nil {
 		return intVal
 	}
 	if floatVal, err := strconv.ParseFloat(raw, 64); err == nil {
 		return floatVal
+	}
+	if boolVal, err := strconv.ParseBool(raw); err == nil {
+		return boolVal
 	}
 	return raw
 }
