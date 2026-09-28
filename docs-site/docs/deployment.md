@@ -60,9 +60,10 @@ a development starting point.
   `database.max_idle_conns` (10), `database.conn_max_lifetime` (5m),
   `database.conn_max_idle_time` (2m). Keep `max_open_conns` below the
   server's `max_connections`, minus what migrations and administration need.
-- Forge builds a `key=value` connection string without quoting values. A
-  password containing spaces, quotes or backslashes breaks the connection;
-  generate passwords from letters and digits until that is fixed.
+- Forge builds a `key=value` connection string with every value quoted, so a
+  password may contain spaces, quotes and backslashes. An empty
+  `database.password` is left out, so `PGPASSWORD` or a pgpass file can
+  supply it.
 - There is no `DATABASE_URL` setting.
 
 ## Settings and secrets

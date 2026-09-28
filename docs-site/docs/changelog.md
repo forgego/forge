@@ -99,6 +99,9 @@ the change.
   `server.trusted_proxies` setting, so clients behind a trusted reverse proxy
   no longer share one lockout; forwarding headers from other peers are
   ignored (#290).
+- `db.NewDBFromConfig` quotes the PostgreSQL connection values, so a
+  password with spaces, quotes or backslashes connects, and an empty
+  password no longer swallows the database name (#290).
 
 ### Added
 

@@ -117,8 +117,7 @@ func NewDBFromConfig(cfg *config.Config) (*DB, error) {
 
 	var dsn string
 	if driver == "postgres" || driver == "postgresql" {
-		dsn = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-			host, port, user, password, name, sslmode)
+		dsn = postgresKeywordDSN(host, port, user, password, name, sslmode)
 	} else if driver == "sqlite" || driver == "sqlite3" {
 		dsn = name // For SQLite, name is the file path
 	} else {
