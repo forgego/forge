@@ -26,6 +26,11 @@ the change.
   `Default("uuid_generate_v7()")` must switch to `DBDefault(...)` before the
   next `makemigrations`, which would otherwise propose changing the column
   default to the quoted text (#296).
+- `server.RealIP`, part of `DefaultMiddlewares`, honors `X-Forwarded-For`
+  and `X-Real-IP` only from peers listed in `server.trusted_proxies`. Before,
+  it trusted the headers from any client, so a request could set its own
+  `RemoteAddr`. Behind a reverse proxy, list the proxy there to keep seeing
+  client addresses.
 - `Manager.Create`, `Save` and `BulkCreate` write explicit zero values
   (`false`, `0`, `""`) on fields with a schema `Default`, instead of leaving
   the column out, so the column's `DEFAULT` clause no longer replaces them

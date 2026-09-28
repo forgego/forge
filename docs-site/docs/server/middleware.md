@@ -11,7 +11,9 @@ Default middleware includes request ID, logging, recoverer, and timeouts.
 ## Default stack
 
 - RequestID
-- RealIP
+- RealIP: replaces `r.RemoteAddr` with the client IP from `X-Forwarded-For`
+  or `X-Real-IP`, but only when the direct peer is listed in
+  `server.trusted_proxies`; headers from any other peer are ignored
 - Recoverer
 - Logger
 - Timeout
