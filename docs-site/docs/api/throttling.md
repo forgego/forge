@@ -1,7 +1,7 @@
 ---
 sidebar_position: 6
 description: Request rate limiting, sliding window throttling, and HTTP 429 Too Many Requests handling.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # API Throttling & Rate Limiting

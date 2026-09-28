@@ -270,7 +270,7 @@ go run main.go
 
 The admin interface is a modern React application served directly by the Go server at http://localhost:8020/admin/. The port is configured via `server.port` in `config/config.yaml` (default `8020`, or overridden by the `FORGE_SERVER_PORT` environment variable). Log in with default credentials `admin` / `admin123` (configured via `admin.username` and `admin.password` in `config/config.yaml`).
 
-Without building the UI bundle, the server falls back to serving a placeholder stub page (`forge/admin/ui/stub/index.html`).
+Without building the UI bundle, the server falls back to serving a placeholder stub page (`admin/ui/stub/index.html`).
 
 ### Quick Start
 

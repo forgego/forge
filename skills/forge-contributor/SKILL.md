@@ -15,7 +15,7 @@ description: Contributor workflow for working on the Forge framework itself (cor
 - The user asks about release or security checks.
 
 ## Workflow
-1. Identify which areas you touched: `forge/`, `tests/`, `docs-site/`, `forge/admin/ui/`, `examples/`, or `.github/workflows/`.
+1. Identify which areas you touched: the root module packages, `tests/`, `docs-site/`, `admin/ui/`, `examples/`, or `.github/workflows/`.
 2. Run the required validations for those areas.
 3. Update contributor documentation if the workflow or test strategy changed.
 4. Make sure CI and security checks will pass for the changed areas.
@@ -23,7 +23,7 @@ description: Contributor workflow for working on the Forge framework itself (cor
 ## Required Validations (Summary)
 - Go core: unit tests, lint, build, and security checks.
 - Tests suite: integration tests and CLI e2e tests when core changes affect migrations, ORM, or CLI.
-- Admin UI: build, lint, and unit tests when `forge/admin/ui/**` changes.
+- Admin UI: build, lint, and unit tests when `admin/ui/**` changes.
 - Docs site: build the docs site when `docs-site/**` changes.
 - Examples: build and test ecommerce sample when `examples/ecommerce/**` changes or core changes affect it.
 

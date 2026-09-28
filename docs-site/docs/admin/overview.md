@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 description: Modern React 19 Admin SPA, declarative configuration, RBAC, audit logging, and custom plugins.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Admin Console Overview

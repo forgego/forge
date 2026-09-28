@@ -1,7 +1,7 @@
 ---
 sidebar_position: 4
 description: Admin faceted list filters, smart chips, date range pickers, and saved views.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Admin List Filters & Saved Views

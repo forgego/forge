@@ -85,7 +85,7 @@ The system validates that all dependencies exist before generating migrations.
 ### Apply All Pending Migrations
 
 ```bash
-forge migrate
+forge migrate up
 ```
 
 This applies all migrations that haven't been run yet.
@@ -291,7 +291,7 @@ Test both up and down migrations:
 
 ```bash
 # Apply
-forge migrate
+forge migrate up
 
 # Rollback
 forge migrate down 1
@@ -464,7 +464,7 @@ func RunMigration(ctx context.Context, db *sql.DB) error {
 
 ## Appendix: Internals
 
-Package map under `forge/db/migrate/`:
+Package map under `db/migrate/`:
 
 - `generate/` — model diffing and migration file generation
 - `state/` — schema-state tracking

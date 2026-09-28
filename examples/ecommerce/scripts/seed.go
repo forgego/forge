@@ -15,7 +15,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	log.Println("🌱 Seeding Forge Ecommerce Database...")
+	log.Println("Seeding the ecommerce database...")
 
 	cfg := config.NewConfig()
 	sqlitePath := cfg.GetString("database.sqlite_path", filepath.Join(".", "ecommerce.sqlite"))
@@ -53,5 +53,5 @@ func main() {
 		log.Fatalf("Failed to seed database: %v", err)
 	}
 
-	log.Println("🎉 Database seeded successfully with all models and relations!")
+	log.Println("Database seeded.")
 }

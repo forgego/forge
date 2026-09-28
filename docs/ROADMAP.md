@@ -11,7 +11,7 @@ A checked box here records intent, not proof. A release is ready only when
 every one of the following holds, each backed by recorded evidence (command,
 commit, and pass/fail/skip counts):
 
-1. **Framework suite.** `go test -race ./...` in `forge/` passes, and the
+1. **Framework suite.** `go test -race ./...` at the repository root passes, and the
    database tests run against PostgreSQL. A skip caused by missing database
    infrastructure counts as a gap, not a pass.
 2. **Independent consumer.** A freshly generated project, outside this
@@ -45,7 +45,7 @@ commit, and pass/fail/skip counts):
 - [ ] TODO/FIXME burn-down across admin, ORM/schema/migrations,
       API/server reliability edges.
 - [x] Password-hash guard (`strings.HasPrefix(hash,"$2a$")`)
-      to avoid double-hashing in `forge/identity/utils`.
+      to avoid double-hashing in `identity/utils`.
 
 ### Next
 

@@ -16,9 +16,9 @@
   --ifm-color-primary-lightest: #475569;
 
   /* Accent Colors */
-  --ifm-color-accent: #3b82f6;
-  --ifm-color-accent-dark: #2563eb;
-  --ifm-color-accent-light: #60a5fa;
+  --ifm-color-accent: #C2410C;
+  --ifm-color-accent-dark: #9A3412;
+  --ifm-color-accent-light: #EA580C;
 
   /* Background Colors */
   --ifm-background-color: #ffffff;
@@ -29,8 +29,8 @@
   --ifm-font-color-base: #0f172a;
   --ifm-font-color-secondary: #475569;
   --ifm-heading-color: #0f172a;
-  --ifm-link-color: #3b82f6;
-  --ifm-link-hover-color: #2563eb;
+  --ifm-link-color: #C2410C;
+  --ifm-link-hover-color: #9A3412;
 
   /* Code Colors */
   --ifm-code-font-size: 0.9em;
@@ -66,11 +66,11 @@
   --ifm-navbar-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
 
   /* Forge Custom Tokens */
-  --forge-accent-gradient: linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #06b6d4 100%);
+  --forge-accent-gradient: linear-gradient(135deg, #C2410C 0%, #F26B1D 100%);
   --forge-card-glow: 0 10px 30px -10px rgba(59, 130, 246, 0.15);
   --forge-badge-bg: rgba(59, 130, 246, 0.1);
   --forge-badge-border: rgba(59, 130, 246, 0.25);
-  --forge-code-tab-active: #2563eb;
+  --forge-code-tab-active: #9A3412;
 }
 
 /* Dark Theme */
@@ -83,8 +83,8 @@
   --ifm-color-primary-lighter: #f1f5f9;
   --ifm-color-primary-lightest: #ffffff;
 
-  --ifm-color-accent: #60a5fa;
-  --ifm-color-accent-dark: #3b82f6;
+  --ifm-color-accent: #FB923C;
+  --ifm-color-accent-dark: #F26B1D;
   --ifm-color-accent-light: #93c5fd;
 
   --ifm-background-color: #080c14;
@@ -94,7 +94,7 @@
   --ifm-font-color-base: #f1f5f9;
   --ifm-font-color-secondary: #94a3b8;
   --ifm-heading-color: #ffffff;
-  --ifm-link-color: #38bdf8;
+  --ifm-link-color: #FB923C;
   --ifm-link-hover-color: #7dd3fc;
 
   --ifm-code-background: #0d1527;
@@ -107,11 +107,11 @@
   --ifm-navbar-background-color: rgba(8, 12, 20, 0.9);
   --ifm-navbar-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 
-  --forge-accent-gradient: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+  --forge-accent-gradient: linear-gradient(135deg, #FDBA74 0%, #F26B1D 100%);
   --forge-card-glow: 0 12px 36px -8px rgba(56, 189, 248, 0.2);
   --forge-badge-bg: rgba(56, 189, 248, 0.12);
   --forge-badge-border: rgba(56, 189, 248, 0.3);
-  --forge-code-tab-active: #38bdf8;
+  --forge-code-tab-active: #FB923C;
 }
 
 /* Typography */
@@ -305,12 +305,12 @@ pre code {
 }
 
 .button--primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #C2410C 0%, #9A3412 100%);
   border: none;
 }
 
 .button--primary:hover {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, #9A3412 0%, #7C2D12 100%);
   transform: translateY(-1px);
 }
 

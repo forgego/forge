@@ -18,7 +18,7 @@ Get forge up and running on your machine in a few minutes.
 
 Before installing forge, make sure you have:
 
-- **Go 1.25 or later** - [Download Go](https://go.dev/dl/)
+- **Go 1.26 or later** - [Download Go](https://go.dev/dl/)
 - **PostgreSQL 12 or later** - [Download PostgreSQL](https://www.postgresql.org/download/)
 - **Basic knowledge of Go** - Familiarity with Go syntax and concepts
 
@@ -33,7 +33,7 @@ Clone the repository and build:
 ```bash
 git clone https://github.com/forgego/forge.git
 cd forge
-go build -o forge ./cli/cmd
+go build -o forge ./cmd/forge
 ```
 
 Add `forge` to your PATH:
@@ -45,7 +45,7 @@ export PATH="$PATH:/path/to/forge"
 ### Option 2: Install via go install
 
 ```bash
-go install github.com/forgego/forge/cli/cmd@latest
+go install github.com/forgego/forge/cmd/forge@latest
 ```
 
 Make sure `$GOPATH/bin` or `$HOME/go/bin` is in your PATH.
@@ -53,7 +53,7 @@ Make sure `$GOPATH/bin` or `$HOME/go/bin` is in your PATH.
 ### Option 3: Release Binaries
 
 Pre-compiled release binaries are published with tagged releases on GitHub:
-`https://github.com/hamidrabedi/foreit/releases`
+`https://github.com/forgego/forge/releases`
 
 ### Verify Installation
 
@@ -120,7 +120,7 @@ Now that you have forge installed:
 
 ### Go Version Issues
 
-If you get errors about Go version, make sure you're using Go 1.25 or later:
+If you get errors about Go version, make sure you're using Go 1.26 or later:
 
 ```bash
 go version
@@ -162,4 +162,3 @@ Recommended tools for forge development:
 ## What's Next?
 
 Ready to create your first application? Head over to the [Quick Start Guide](/docs/getting-started/quickstart)!
-

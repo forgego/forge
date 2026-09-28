@@ -1,7 +1,7 @@
 ---
 sidebar_position: 11
 description: Automatic OpenAPI 3.0 specification generation, Swagger UI, and schema export.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # OpenAPI 3.0 & Swagger UI

@@ -20,7 +20,7 @@ The Forge team takes security bugs seriously. We appreciate your efforts to resp
 Instead, please report them via one of these methods:
 
 1. **GitHub Security Advisories** (Preferred)
-   - Go to the [Security tab](https://github.com/hamidrabedi/foreit/security)
+   - Go to the [Security tab](https://github.com/forgego/forge/security)
    - Click "Report a vulnerability"
    - Fill in the details
 
@@ -112,7 +112,7 @@ Content-Security-Policy: default-src 'self'
 
 ### Filter Security
 
-- The filter AST (`forge/filter`) is a default-deny whitelist: only
+- The filter AST (`filter`) is a default-deny whitelist: only
   explicitly allowed fields and lookups can be queried.
 - Cost scoring plus a JOIN-explosion guard bound filter complexity.
 

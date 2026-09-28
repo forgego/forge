@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 description: Declarative Admin ModelConfig, ListDisplay, search, filters, fieldsets, and permissions.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Admin Model Configuration
