@@ -99,8 +99,7 @@ func (p *TableParser) parseColumnDefinition(colDef string) (generator.FieldDefin
 	remaining := colDef[len(nameMatch[0]):]
 
 	// Extract SQL type
-	typeRegex := regexp.MustCompile(`^\s+(\w+(?:\([^)]+\))?)`)
-	typeMatch := typeRegex.FindStringSubmatch(remaining)
+	typeMatch := columnTypeRegex.FindStringSubmatch(remaining)
 	if len(typeMatch) < 2 {
 		return generator.FieldDefinition{}, fmt.Errorf("could not parse column type")
 	}
@@ -113,7 +112,7 @@ func (p *TableParser) parseColumnDefinition(colDef string) (generator.FieldDefin
 		Name:    columnName,
 		Type:    mapSQLTypeToFieldType(sqlType),
 		GoType:  mapSQLTypeToGoType(sqlType),
-		Options: make(map[string]interface{}),
+		Options: map[string]interface{}{SQLTypeOption: NormalizeSQLType(sqlType)},
 	}
 
 	// Extract options from sqlType like VARCHAR(255), NUMERIC(10, 2)
@@ -225,9 +224,25 @@ func splitColumnDefinitions(defs string) []string {
 	return columns
 }
 
+// SQLTypeOption is the field option under which the parser records a column's
+// SQL type as a migration file declared it (see core.SQLTypeOption).
+const SQLTypeOption = core.SQLTypeOption
+
+// columnTypeRegex matches a column type, including the multi-word types the
+// SQL builder emits (DOUBLE PRECISION, TIMESTAMP WITH TIME ZONE).
+var columnTypeRegex = regexp.MustCompile(`(?i)^\s+((?:DOUBLE\s+PRECISION|CHARACTER\s+VARYING|(?:TIMESTAMP|TIME)\s+WITH(?:OUT)?\s+TIME\s+ZONE|\w+)(?:\s*\([^)]+\))?)`)
+
+// NormalizeSQLType upper-cases a SQL type and collapses its whitespace so that
+// equivalent spellings compare equal.
+func NormalizeSQLType(sqlType string) string {
+	normalized := strings.Join(strings.Fields(strings.ToUpper(sqlType)), " ")
+	normalized = strings.ReplaceAll(normalized, " (", "(")
+	return strings.ReplaceAll(normalized, ", ", ",")
+}
+
 // mapSQLTypeToFieldType maps SQL types to field types
 func mapSQLTypeToFieldType(sqlType string) string {
-	sqlType = strings.ToUpper(sqlType)
+	sqlType = NormalizeSQLType(sqlType)
 
 	// Remove size/precision
 	if idx := strings.Index(sqlType, "("); idx > 0 {
@@ -239,7 +254,7 @@ func mapSQLTypeToFieldType(sqlType string) string {
 		return "Int64"
 	case "SMALLINT":
 		return "Int32"
-	case "TEXT", "VARCHAR", "CHAR":
+	case "TEXT", "VARCHAR", "CHAR", "CHARACTER VARYING":
 		return "String"
 	case "BOOLEAN", "BOOL":
 		return "Bool"
@@ -249,9 +264,9 @@ func mapSQLTypeToFieldType(sqlType string) string {
 		return "Decimal"
 	case "DATE":
 		return "Date"
-	case "TIMESTAMP", "TIMESTAMP WITH TIME ZONE":
+	case "TIMESTAMP", "TIMESTAMP WITH TIME ZONE", "TIMESTAMP WITHOUT TIME ZONE":
 		return "DateTime"
-	case "TIME":
+	case "TIME", "TIME WITH TIME ZONE", "TIME WITHOUT TIME ZONE":
 		return "Time"
 	case "UUID":
 		return "UUID"

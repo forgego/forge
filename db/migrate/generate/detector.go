@@ -3,10 +3,12 @@ package generate
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/forgego/forge/codegen"
 	"github.com/forgego/forge/db/migrate/core"
+	"github.com/forgego/forge/db/migrate/sql"
 )
 
 // ChangeDetector detects changes between current and previous model states
@@ -16,11 +18,33 @@ type ChangeDetector interface {
 }
 
 // Detector is the default implementation of ChangeDetector
-type Detector struct{}
+type Detector struct {
+	// driver, when set, lets the detector compare columns by the DDL the
+	// driver's builder renders, so a model that still renders the recorded
+	// column produces no change.
+	driver core.Driver
+}
 
 // NewDetector creates a new change detector
 func NewDetector() ChangeDetector {
 	return &Detector{}
+}
+
+// NewDetectorForDriver creates a change detector that compares columns by the
+// DDL rendered for driver.
+func NewDetectorForDriver(driver core.Driver) ChangeDetector {
+	return &Detector{driver: driver}
+}
+
+// isForeignKeyRelation reports whether a relation type creates a foreign key
+// constraint. Both the fluent (ForeignKey) and functional (ForeignKeyField)
+// constructor names are accepted.
+func isForeignKeyRelation(relationType string) bool {
+	switch relationType {
+	case "ForeignKey", "ForeignKeyField", "OneToOne", "OneToOneField":
+		return true
+	}
+	return false
 }
 
 // DetectChanges compares current models to previous state and returns all changes
@@ -42,7 +66,8 @@ func (d *Detector) DetectChanges(current, previous []*generator.ModelDefinition)
 	}
 
 	// Detect table-level changes
-	for tableName, currentDef := range currentMap {
+	for _, tableName := range sortedKeys(currentMap) {
+		currentDef := currentMap[tableName]
 		previousDef, exists := previousMap[tableName]
 		if !exists {
 			// New table - create table and add all indexes/foreign keys
@@ -58,7 +83,7 @@ func (d *Detector) DetectChanges(current, previous []*generator.ModelDefinition)
 
 			// Add foreign keys for new table
 			for _, rel := range currentDef.Relations {
-				if rel.Type == "ForeignKey" || rel.Type == "OneToOne" {
+				if isForeignKeyRelation(rel.Type) {
 					// Check if the relation column exists in fields
 					hasColumn := false
 					for _, field := range currentDef.Fields {
@@ -81,6 +106,14 @@ func (d *Detector) DetectChanges(current, previous []*generator.ModelDefinition)
 					}
 				}
 			}
+
+			// Add table constraints for new table
+			for _, constr := range currentDef.Meta.Constraints {
+				changes = append(changes, &core.AddConstraint{
+					Table:      tableName,
+					Constraint: constr,
+				})
+			}
 		} else if previousDef != nil {
 			// Existing table - detect column, index, constraint changes
 			tableChanges, err := d.detectTableChanges(currentDef, previousDef, tableName, current)
@@ -92,7 +125,8 @@ func (d *Detector) DetectChanges(current, previous []*generator.ModelDefinition)
 	}
 
 	// Detect dropped tables
-	for tableName, prevDef := range previousMap {
+	for _, tableName := range sortedKeys(previousMap) {
+		prevDef := previousMap[tableName]
 		if _, exists := currentMap[tableName]; !exists {
 			changes = append(changes, &core.DropTable{
 				Table:      tableName,
@@ -155,7 +189,8 @@ func (d *Detector) detectColumnChanges(tableName string, current, previous []gen
 	}
 
 	// Detect new columns
-	for name, field := range currentMap {
+	for _, name := range sortedKeys(currentMap) {
+		field := currentMap[name]
 		if _, exists := previousMap[name]; !exists {
 			changes = append(changes, &core.AddColumn{
 				Table:  tableName,
@@ -165,7 +200,8 @@ func (d *Detector) detectColumnChanges(tableName string, current, previous []gen
 	}
 
 	// Detect dropped columns
-	for name, prevField := range previousMap {
+	for _, name := range sortedKeys(previousMap) {
+		prevField := previousMap[name]
 		if _, exists := currentMap[name]; !exists {
 			col := prevField
 			changes = append(changes, &core.DropColumn{
@@ -177,7 +213,8 @@ func (d *Detector) detectColumnChanges(tableName string, current, previous []gen
 	}
 
 	// Detect modified columns
-	for name, currentField := range currentMap {
+	for _, name := range sortedKeys(currentMap) {
+		currentField := currentMap[name]
 		if previousField, exists := previousMap[name]; exists {
 			if d.fieldChanged(currentField, previousField) {
 				changes = append(changes, &core.ModifyColumn{
@@ -194,6 +231,9 @@ func (d *Detector) detectColumnChanges(tableName string, current, previous []gen
 
 // fieldChanged checks if a field has changed
 func (d *Detector) fieldChanged(current, previous generator.FieldDefinition) bool {
+	if d.sameColumnDDL(current, previous) {
+		return false
+	}
 	if current.Type != previous.Type {
 		return true
 	}
@@ -281,7 +321,8 @@ func (d *Detector) detectIndexChanges(tableName string, current, previous []gene
 	}
 
 	// Detect new indexes
-	for name, idx := range currentMap {
+	for _, name := range sortedKeys(currentMap) {
+		idx := currentMap[name]
 		if _, exists := previousMap[name]; !exists {
 			changes = append(changes, &core.AddIndex{
 				Table: tableName,
@@ -301,7 +342,7 @@ func (d *Detector) detectIndexChanges(tableName string, current, previous []gene
 	}
 
 	// Detect dropped indexes
-	for name := range previousMap {
+	for _, name := range sortedKeys(previousMap) {
 		if _, exists := currentMap[name]; !exists {
 			changes = append(changes, &core.DropIndex{
 				Table:     tableName,
@@ -329,6 +370,35 @@ func (d *Detector) indexChanged(current, previous generator.IndexDefinition) boo
 	return false
 }
 
+// sameColumnDDL reports whether both fields render to the same column DDL for
+// the detector's driver. Fields reconstructed from migration files carry their
+// recorded SQL type, so an unchanged model compares equal even when its builder
+// name (StringField) differs from the name inferred from SQL (String).
+func (d *Detector) sameColumnDDL(current, previous generator.FieldDefinition) bool {
+	if d.driver == "" {
+		return false
+	}
+	currentDDL, err := sql.ColumnDefinition(d.driver, canonicalColumn(current))
+	if err != nil {
+		return false
+	}
+	previousDDL, err := sql.ColumnDefinition(d.driver, canonicalColumn(previous))
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(strings.Join(strings.Fields(currentDDL), " "), strings.Join(strings.Fields(previousDDL), " "))
+}
+
+// canonicalColumn states the nullability AutoNowAdd implies explicitly, so the
+// builder renders NOT NULL in the same position as for a column read back from
+// SQL, where it is an ordinary required field.
+func canonicalColumn(field generator.FieldDefinition) generator.FieldDefinition {
+	if autoNowAdd, ok := field.Options["auto_now_add"].(bool); ok && autoNowAdd && !field.PrimaryKey {
+		field.Required = true
+	}
+	return field
+}
+
 // detectForeignKeyChanges detects foreign key changes
 func (d *Detector) detectForeignKeyChanges(tableName string, current, previous []generator.RelationDefinition, currentDef, previousDef *generator.ModelDefinition, allDefs []*generator.ModelDefinition) ([]core.Change, error) {
 	var changes []core.Change
@@ -337,13 +407,13 @@ func (d *Detector) detectForeignKeyChanges(tableName string, current, previous [
 	previousMap := make(map[string]generator.RelationDefinition)
 
 	for _, rel := range current {
-		if rel.Type == "ForeignKey" || rel.Type == "OneToOne" {
+		if isForeignKeyRelation(rel.Type) {
 			currentMap[rel.Name] = rel
 		}
 	}
 
 	for _, rel := range previous {
-		if rel.Type == "ForeignKey" || rel.Type == "OneToOne" {
+		if isForeignKeyRelation(rel.Type) {
 			previousMap[rel.Name] = rel
 		}
 	}
@@ -351,7 +421,7 @@ func (d *Detector) detectForeignKeyChanges(tableName string, current, previous [
 	// Find target table names using all model definitions
 	targetTableMap := make(map[string]string)
 	for _, rel := range current {
-		if rel.Type == "ForeignKey" || rel.Type == "OneToOne" {
+		if isForeignKeyRelation(rel.Type) {
 			targetTable := findTargetTable(rel.To, allDefs)
 			if targetTable != "" {
 				targetTableMap[rel.Name] = targetTable
@@ -360,7 +430,8 @@ func (d *Detector) detectForeignKeyChanges(tableName string, current, previous [
 	}
 
 	// Detect new foreign keys
-	for name, rel := range currentMap {
+	for _, name := range sortedKeys(currentMap) {
+		rel := currentMap[name]
 		// Validate that the relation column exists in the table's fields
 		hasColumn := false
 		for _, field := range currentDef.Fields {
@@ -388,7 +459,7 @@ func (d *Detector) detectForeignKeyChanges(tableName string, current, previous [
 		} else {
 			// Check if foreign key changed
 			prevRel := previousMap[name]
-			if d.relationChanged(rel, prevRel) {
+			if d.relationChanged(rel, prevRel, targetTableMap[name], resolveTargetTable(prevRel.To, allDefs)) {
 				targetTable := targetTableMap[name]
 				if targetTable == "" {
 					// Skip if target table not found
@@ -405,7 +476,7 @@ func (d *Detector) detectForeignKeyChanges(tableName string, current, previous [
 	}
 
 	// Detect dropped foreign keys
-	for name := range previousMap {
+	for _, name := range sortedKeys(previousMap) {
 		if _, exists := currentMap[name]; !exists {
 			changes = append(changes, &core.DropForeignKey{
 				Table:  tableName,
@@ -417,19 +488,31 @@ func (d *Detector) detectForeignKeyChanges(tableName string, current, previous [
 	return changes, nil
 }
 
-// relationChanged checks if a relation has changed
-func (d *Detector) relationChanged(current, previous generator.RelationDefinition) bool {
-	if current.To != previous.To {
+// relationChanged checks if a relation has changed. Targets are compared as
+// table names and referential actions as the SQL they render to, because
+// relations reconstructed from migration files carry table names and SQL
+// actions while model relations carry model names and cascade constants.
+func (d *Detector) relationChanged(current, previous generator.RelationDefinition, currentTarget, previousTarget string) bool {
+	if currentTarget != previousTarget {
 		return true
 	}
 	currentOnDelete, _ := current.Options["on_delete"].(string)
 	previousOnDelete, _ := previous.Options["on_delete"].(string)
-	if currentOnDelete != previousOnDelete {
+	if sql.CascadeAction(currentOnDelete) != sql.CascadeAction(previousOnDelete) {
 		return true
 	}
 	currentOnUpdate, _ := current.Options["on_update"].(string)
 	previousOnUpdate, _ := previous.Options["on_update"].(string)
-	return currentOnUpdate != previousOnUpdate
+	return sql.CascadeAction(currentOnUpdate) != sql.CascadeAction(previousOnUpdate)
+}
+
+// resolveTargetTable returns the table for a relation target given as either a
+// model name or, for relations reconstructed from migrations, a table name.
+func resolveTargetTable(target string, allDefs []*generator.ModelDefinition) string {
+	if table := findTargetTable(target, allDefs); table != "" {
+		return table
+	}
+	return target
 }
 
 // detectConstraintChanges detects constraint changes
@@ -448,7 +531,8 @@ func (d *Detector) detectConstraintChanges(tableName string, current, previous [
 	}
 
 	// Detect new constraints
-	for name, constr := range currentMap {
+	for _, name := range sortedKeys(currentMap) {
+		constr := currentMap[name]
 		if _, exists := previousMap[name]; !exists {
 			changes = append(changes, &core.AddConstraint{
 				Table:      tableName,
@@ -458,7 +542,7 @@ func (d *Detector) detectConstraintChanges(tableName string, current, previous [
 	}
 
 	// Detect dropped constraints
-	for name := range previousMap {
+	for _, name := range sortedKeys(previousMap) {
 		if _, exists := currentMap[name]; !exists {
 			changes = append(changes, &core.DropConstraint{
 				Table:          tableName,
@@ -468,6 +552,17 @@ func (d *Detector) detectConstraintChanges(tableName string, current, previous [
 	}
 
 	return changes, nil
+}
+
+// sortedKeys returns a map's keys in order, so detected changes, and the
+// migration SQL written from them, do not depend on map iteration order.
+func sortedKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // getTableName gets the table name from a model definition

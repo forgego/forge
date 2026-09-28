@@ -65,7 +65,7 @@ func NewMigrationGeneratorWithDefaults(modelsDir, migrationsDir string) (*Migrat
 // NewMigrationGeneratorForDriver creates a new migration generator with default dependencies for the given driver
 func NewMigrationGeneratorForDriver(modelsDir, migrationsDir string, driver core.Driver) (*MigrationGenerator, error) {
 	// Create dependencies
-	detector := NewDetector()
+	detector := NewDetectorForDriver(driver)
 	sqlBuilder, err := sql.NewSQLBuilder(driver)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create SQL builder: %w", err)
