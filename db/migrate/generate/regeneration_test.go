@@ -344,3 +344,22 @@ func TestDroppedConstraintIsRestoredOnDown(t *testing.T) {
 		t.Errorf("up touches the unchanged UNIQUE constraint:\n%s", up)
 	}
 }
+
+// TestModifiedColumnIsReadBack covers ALTER TABLE .. ALTER COLUMN, which was
+// not read back, so every later run modified the column again.
+func TestModifiedColumnIsReadBack(t *testing.T) {
+	source := mustReplace(t, functionalModels, `schema.Float32Field("ratio")`,
+		`schema.Float64Field("ratio", schema.Required(), schema.Default(2.5))`)
+	source = mustReplace(t, source, `schema.Int32Field("visits", schema.Default(0))`, `schema.Int32Field("visits")`)
+	up, down := regenerateWith(t, core.DriverPostgreSQL, source, "modify_columns")
+	assertContainsAll(t, "up", up,
+		`ALTER TABLE authors ALTER COLUMN "ratio" TYPE DOUBLE PRECISION USING ("ratio"::DOUBLE PRECISION);`,
+		`ALTER TABLE authors ALTER COLUMN "ratio" SET NOT NULL;`,
+		`ALTER TABLE authors ALTER COLUMN "ratio" SET DEFAULT 2.500000;`,
+		`ALTER TABLE authors ALTER COLUMN "visits" DROP DEFAULT;`)
+	assertContainsAll(t, "down", down,
+		`ALTER TABLE authors ALTER COLUMN "ratio" TYPE REAL USING ("ratio"::REAL);`,
+		`ALTER TABLE authors ALTER COLUMN "ratio" DROP NOT NULL;`,
+		`ALTER TABLE authors ALTER COLUMN "ratio" DROP DEFAULT;`,
+		`ALTER TABLE authors ALTER COLUMN "visits" SET DEFAULT 0;`)
+}

@@ -111,6 +111,11 @@ func (p *DDLParser) parseAlterTable(sql string) ([]core.Change, error) {
 		p.SetTableContext(matches[1])
 	}
 
+	// ALTER TABLE ALTER COLUMN
+	if change := parseAlterColumn(sql); change != nil {
+		return []core.Change{change}, nil
+	}
+
 	// ALTER TABLE ADD COLUMN
 	// Check for "ADD COLUMN" specifically to avoid matching "ADD CONSTRAINT"
 	if strings.Contains(upper, "ADD COLUMN") {
@@ -194,6 +199,49 @@ func (p *DDLParser) parseAddConstraint(sql string) *core.AddConstraint {
 		constraint.Condition = body
 	}
 	return &core.AddConstraint{Table: matches[1], Constraint: constraint}
+}
+
+// alterColumnRegex matches the ALTER TABLE .. ALTER COLUMN statements the
+// PostgreSQL builder emits for a modified column.
+var alterColumnRegex = regexp.MustCompile(`(?is)^ALTER\s+TABLE\s+["']?(\w+)["']?\s+ALTER\s+(?:COLUMN\s+)?["']?(\w+)["']?\s+(.*?)\s*;?\s*$`)
+
+var (
+	alterColumnTypeRegex       = regexp.MustCompile(`(?is)^(?:SET\s+DATA\s+)?TYPE(\s+.*)$`)
+	alterColumnSetDefaultRegex = regexp.MustCompile(`(?is)^SET\s+DEFAULT\s+(.*)$`)
+	alterColumnNotNullRegex    = regexp.MustCompile(`(?i)^(SET|DROP)\s+NOT\s+NULL$`)
+	alterColumnDropDefault     = regexp.MustCompile(`(?i)^DROP\s+DEFAULT$`)
+)
+
+// parseAlterColumn parses ALTER TABLE t ALTER COLUMN c TYPE .. | SET/DROP
+// NOT NULL | SET DEFAULT .. | DROP DEFAULT. It returns nil for any other
+// statement.
+func parseAlterColumn(sql string) *core.AlterColumn {
+	matches := alterColumnRegex.FindStringSubmatch(strings.TrimSpace(sql))
+	if matches == nil {
+		return nil
+	}
+	change := &core.AlterColumn{Table: matches[1], Column: matches[2]}
+	action := strings.TrimSpace(matches[3])
+	switch {
+	case alterColumnNotNullRegex.MatchString(action):
+		notNull := strings.EqualFold(alterColumnNotNullRegex.FindStringSubmatch(action)[1], "SET")
+		change.NotNull = &notNull
+	case alterColumnDropDefault.MatchString(action):
+		change.DropDefault = true
+	case alterColumnSetDefaultRegex.MatchString(action):
+		change.SetDefault = true
+		change.Default = parseDefaultValue(alterColumnSetDefaultRegex.FindStringSubmatch(action)[1])
+	case alterColumnTypeRegex.MatchString(action):
+		typeMatch := columnTypeRegex.FindStringSubmatch(alterColumnTypeRegex.FindStringSubmatch(action)[1])
+		if typeMatch == nil {
+			return nil
+		}
+		field := fieldForSQLType("", typeMatch[1])
+		change.NewType = &field
+	default:
+		return nil
+	}
+	return change
 }
 
 // parseAddColumn parses ALTER TABLE ADD COLUMN statements

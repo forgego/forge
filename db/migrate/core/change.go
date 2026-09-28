@@ -17,6 +17,7 @@ const (
 	ChangeTypeDropColumn       ChangeType = "DropColumn"
 	ChangeTypeModifyColumn     ChangeType = "ModifyColumn"
 	ChangeTypeRenameColumn     ChangeType = "RenameColumn"
+	ChangeTypeAlterColumn      ChangeType = "AlterColumn"
 	ChangeTypeAddIndex         ChangeType = "AddIndex"
 	ChangeTypeDropIndex        ChangeType = "DropIndex"
 	ChangeTypeModifyIndex      ChangeType = "ModifyIndex"
@@ -104,6 +105,27 @@ type ModifyColumn struct {
 func (c *ModifyColumn) Type() ChangeType  { return ChangeTypeModifyColumn }
 func (c *ModifyColumn) TableName() string { return c.Table }
 func (c *ModifyColumn) Reversible() bool  { return true }
+
+// AlterColumn is one ALTER TABLE .. ALTER COLUMN clause read back from a
+// migration file. Only the SQL parser produces it, to update a recorded column
+// in schema state; the detector emits ModifyColumn instead.
+type AlterColumn struct {
+	Table  string
+	Column string
+	// NewType, when set, carries the type, Go type and type options of a
+	// TYPE clause.
+	NewType *generator.FieldDefinition
+	// NotNull, when set, records SET NOT NULL (true) or DROP NOT NULL (false).
+	NotNull *bool
+	// SetDefault records SET DEFAULT Default; DropDefault records DROP DEFAULT.
+	SetDefault  bool
+	DropDefault bool
+	Default     interface{}
+}
+
+func (c *AlterColumn) Type() ChangeType  { return ChangeTypeAlterColumn }
+func (c *AlterColumn) TableName() string { return c.Table }
+func (c *AlterColumn) Reversible() bool  { return false }
 
 // RenameColumn represents renaming a column
 type RenameColumn struct {

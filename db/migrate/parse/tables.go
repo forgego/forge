@@ -156,38 +156,7 @@ func (p *TableParser) parseColumnDefinition(colDef string) (generator.FieldDefin
 	sqlType := typeMatch[1]
 	remaining = remaining[len(typeMatch[0]):]
 
-	// Parse column attributes
-	field := generator.FieldDefinition{
-		Name:    columnName,
-		Type:    mapSQLTypeToFieldType(sqlType),
-		GoType:  mapSQLTypeToGoType(sqlType),
-		Options: map[string]interface{}{SQLTypeOption: NormalizeSQLType(sqlType)},
-	}
-
-	// Extract options from sqlType like VARCHAR(255), NUMERIC(10, 2)
-	upperSQLType := strings.ToUpper(sqlType)
-	if openIdx := strings.Index(upperSQLType, "("); openIdx > 0 {
-		if closeIdx := strings.Index(upperSQLType, ")"); closeIdx > openIdx {
-			inner := upperSQLType[openIdx+1 : closeIdx]
-			if strings.HasPrefix(upperSQLType, "VARCHAR") || strings.HasPrefix(upperSQLType, "CHAR") {
-				if maxLen, err := strconv.Atoi(strings.TrimSpace(inner)); err == nil {
-					field.Options["max_length"] = maxLen
-				}
-			} else if strings.HasPrefix(upperSQLType, "NUMERIC") || strings.HasPrefix(upperSQLType, "DECIMAL") {
-				parts := strings.Split(inner, ",")
-				if len(parts) >= 1 {
-					if maxDigits, err := strconv.Atoi(strings.TrimSpace(parts[0])); err == nil {
-						field.Options["max_digits"] = maxDigits
-					}
-				}
-				if len(parts) >= 2 {
-					if decimalPlaces, err := strconv.Atoi(strings.TrimSpace(parts[1])); err == nil {
-						field.Options["decimal_places"] = decimalPlaces
-					}
-				}
-			}
-		}
-	}
+	field := fieldForSQLType(columnName, sqlType)
 
 	// Check for PRIMARY KEY
 	if strings.Contains(strings.ToUpper(remaining), "PRIMARY KEY") {
@@ -233,6 +202,43 @@ func (p *TableParser) parseColumnDefinition(colDef string) (generator.FieldDefin
 	}
 
 	return field, nil
+}
+
+// fieldForSQLType returns a field of the given SQL type, with the options its
+// size or precision implies, as for VARCHAR(255) or NUMERIC(10, 2).
+func fieldForSQLType(name, sqlType string) generator.FieldDefinition {
+	field := generator.FieldDefinition{
+		Name:    name,
+		Type:    mapSQLTypeToFieldType(sqlType),
+		GoType:  mapSQLTypeToGoType(sqlType),
+		Options: map[string]interface{}{SQLTypeOption: NormalizeSQLType(sqlType)},
+	}
+
+	// Extract options from sqlType like VARCHAR(255), NUMERIC(10, 2)
+	upperSQLType := strings.ToUpper(sqlType)
+	if openIdx := strings.Index(upperSQLType, "("); openIdx > 0 {
+		if closeIdx := strings.Index(upperSQLType, ")"); closeIdx > openIdx {
+			inner := upperSQLType[openIdx+1 : closeIdx]
+			if strings.HasPrefix(upperSQLType, "VARCHAR") || strings.HasPrefix(upperSQLType, "CHAR") {
+				if maxLen, err := strconv.Atoi(strings.TrimSpace(inner)); err == nil {
+					field.Options["max_length"] = maxLen
+				}
+			} else if strings.HasPrefix(upperSQLType, "NUMERIC") || strings.HasPrefix(upperSQLType, "DECIMAL") {
+				parts := strings.Split(inner, ",")
+				if len(parts) >= 1 {
+					if maxDigits, err := strconv.Atoi(strings.TrimSpace(parts[0])); err == nil {
+						field.Options["max_digits"] = maxDigits
+					}
+				}
+				if len(parts) >= 2 {
+					if decimalPlaces, err := strconv.Atoi(strings.TrimSpace(parts[1])); err == nil {
+						field.Options["decimal_places"] = decimalPlaces
+					}
+				}
+			}
+		}
+	}
+	return field
 }
 
 // splitColumnDefinitions splits column definitions from CREATE TABLE
