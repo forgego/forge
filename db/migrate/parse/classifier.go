@@ -42,6 +42,10 @@ func (c *Classifier) Classify(stmt string) StatementKind {
 	switch {
 	case strings.HasPrefix(upper, "CREATE TABLE"):
 		return StmtCreateTable
+	case strings.HasPrefix(upper, "ALTER TABLE") && strings.Contains(upper, "DROP COLUMN"):
+		// Checked before other ALTER TABLE statements, which do not parse
+		// DROP COLUMN, so a dropped column is read back into schema state.
+		return StmtDropColumn
 	case strings.HasPrefix(upper, "ALTER TABLE"):
 		return StmtAlterTable
 	case strings.HasPrefix(upper, "DO ") && strings.Contains(upper, "ALTER TABLE"):
@@ -53,8 +57,6 @@ func (c *Classifier) Classify(stmt string) StatementKind {
 		return StmtDropTable
 	case strings.HasPrefix(upper, "DROP INDEX"):
 		return StmtDropIndex
-	case strings.Contains(upper, "ALTER TABLE") && strings.Contains(upper, "DROP COLUMN"):
-		return StmtDropColumn
 	}
 
 	// Check for non-DDL statements (skip these)

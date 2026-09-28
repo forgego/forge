@@ -235,3 +235,64 @@ func TestChangedForeignKeyActionIsDetected(t *testing.T) {
 		}
 	}
 }
+
+// regenerateWith generates the initial migration for functionalModels, then
+// one named name for source, and returns that migration's up and down SQL. A
+// further regeneration must write nothing, and on PostgreSQL the migrations
+// must apply up, down and up again when a test database is configured.
+func regenerateWith(t *testing.T, driver core.Driver, source, name string) (string, string) {
+	t.Helper()
+	modelsDir := t.TempDir()
+	migrationsDir := t.TempDir()
+	file := filepath.Join(modelsDir, "models.go")
+	if err := os.WriteFile(file, []byte(functionalModels), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	generateMigration(t, modelsDir, migrationsDir, driver, "initial")
+	if err := os.WriteFile(file, []byte(source), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	generateMigration(t, modelsDir, migrationsDir, driver, name)
+	up, err := os.ReadFile(filepath.Join(migrationsDir, "000002_"+name+".up.sql"))
+	if err != nil {
+		t.Fatalf("changed model produced no migration: %v", err)
+	}
+	down, err := os.ReadFile(filepath.Join(migrationsDir, "000002_"+name+".down.sql"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	generateMigration(t, modelsDir, migrationsDir, driver, "again")
+	if got := migrationFiles(t, migrationsDir); len(got) != 4 {
+		extra, _ := os.ReadFile(filepath.Join(migrationsDir, got[len(got)-1]))
+		t.Fatalf("regenerating after %s wrote %v:\n%s", name, got, extra)
+	}
+	applyOnPostgres(t, driver, migrationsDir)
+	return string(up), string(down)
+}
+
+func mustReplace(t *testing.T, source, old, replacement string) string {
+	t.Helper()
+	if !strings.Contains(source, old) {
+		t.Fatalf("fixture lacks %q", old)
+	}
+	return strings.Replace(source, old, replacement, 1)
+}
+
+func assertContainsAll(t *testing.T, label, got string, wants ...string) {
+	t.Helper()
+	for _, want := range wants {
+		if !strings.Contains(got, want) {
+			t.Errorf("%s lacks %s\n%s", label, want, got)
+		}
+	}
+}
+
+// TestDroppedColumnIsReadBack covers ALTER TABLE .. DROP COLUMN, which used to
+// be classified as an unparsed ALTER TABLE, so every later run dropped the
+// column again.
+func TestDroppedColumnIsReadBack(t *testing.T) {
+	source := mustReplace(t, functionalModels, "\t\tschema.Float32Field(\"ratio\"),\n", "")
+	up, down := regenerateWith(t, core.DriverPostgreSQL, source, "drop_ratio")
+	assertContainsAll(t, "up", up, `ALTER TABLE authors DROP COLUMN IF EXISTS ratio;`)
+	assertContainsAll(t, "down", down, `ALTER TABLE authors ADD COLUMN "ratio" REAL;`)
+}
