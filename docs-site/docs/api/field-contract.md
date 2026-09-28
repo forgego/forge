@@ -34,7 +34,7 @@ vs.ReadOnlyRequestFields = api.NonEditableFields(&Product{})     // ignore read-
 
 ## Responses
 
-A response contains every exported struct field that has a `json` tag other than `-`, under its JSON name. The viewset then removes the following keys, in order:
+A response contains every exported struct field that has a `json` tag other than `-`, under its JSON name. A tag that gives no name, such as `json:",omitempty"`, uses the Go field name. The viewset then removes the following keys, in order:
 
 1. `ExcludeResponseFields`.
 2. Keys not listed in the serializer's `Fields()`, when that list is non-empty. A nil or empty `Fields()` keeps every field.
@@ -46,8 +46,8 @@ A response contains every exported struct field that has a `json` tag other than
 
 `POST`, `PUT` and `PATCH` bodies must be JSON objects. For each key, the viewset does one of the following:
 
-- **Writes it** when it names a field by its JSON name or, for a field in the schema, by its schema name, column name, `db` tag or Go name. The value is converted to the field's Go type, and a value that cannot be converted fails with `400`.
-- **Ignores it** when it names a read-only field: a key in `ReadOnlyRequestFields`, one of the serializer's `ReadOnlyFields()`, or the primary key. These are matched without regard to case. The primary key in a `PUT` or `PATCH` body never changes which row is written. That row comes from the URL.
+- **Writes it** when it names a field by the name responses use (see [Responses](#responses)) or, for a field in the schema, by its schema name, column name, `db` tag or Go name. These names are matched exactly, so `TITLE` does not write `title`. A field tagged `json:"-"` (or without a `json` tag) is written only when it is write-only, and then only under its schema names. The value is converted to the field's Go type, and a value that cannot be converted fails with `400`.
+- **Ignores it** when it names a read-only field: a key in `ReadOnlyRequestFields`, one of the serializer's `ReadOnlyFields()` (or `ReadonlyFields()`), or the primary key. These are matched without regard to case. The primary key in a `PUT` or `PATCH` body never changes which row is written. That row comes from the URL.
 - **Ignores or rejects it** when it names nothing. See [Unknown keys](#unknown-keys).
 
 The serializer's `Fields()` only trims responses. It does not limit which fields a request can write. Use `ReadOnlyRequestFields` or `ReadOnlyFields()` for that.
@@ -89,7 +89,15 @@ Read-only keys that clients echo back from an earlier response, such as `id` and
 
 ### PUT and PATCH
 
-`PUT` is a full update. Its body must name every required, writable schema field that has no default, and a missing one fails with `400` naming the field. Optional fields left out of a `PUT` keep their stored values; `PUT` does not reset them. `PATCH` is a partial update and writes only the keys present. After the keys are applied, the whole object is validated, so a `PATCH` that leaves a required field empty also fails with `400`.
+`PUT` is a full update. Its body must supply every schema field that is:
+
+- required (`Required: true`);
+- writable by the request: `Editable: true`, not database-owned, not ignored as read-only above, and backed by a struct field the viewset writes (a `json:"-"` field counts only when it is write-only);
+- without a Go-side `Default`.
+
+A missing one fails with `400` naming the field. A field with only a `DBDefault` is still required, because the viewset never applies a database default to a row that already exists. A write-only required field, such as a password, is never in a response, so a client must send it again on every `PUT`; use `PATCH` to change other fields without it.
+
+Optional fields left out of a `PUT` keep their stored values; `PUT` does not reset them. `PATCH` is a partial update and writes only the keys present. After the keys are applied, the whole object is validated, so a `PATCH` that leaves a required field empty also fails with `400`.
 
 ---
 

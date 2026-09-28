@@ -86,8 +86,8 @@ func RegisterUserViewSet(router *api.Router) {
         func() api.Serializer {
             return models.NewUserSerializer()
         },
-        models.UserObjects.Filter(), // QuerySet
-        &models.User{},                // Model instance
+        models.UserObjects, // Queryset: the generated manager
+        &models.User{},     // Model instance
     )
 
     router.Register("users", viewset)
@@ -337,7 +337,7 @@ func NewPostViewSet() *PostViewSet {
     return &PostViewSet{
         BaseViewSet: api.NewBaseViewSet(
             NewPostSerializer,
-            PostObjects.Filter(),
+            PostObjects,
             &Post{},
         ),
     }

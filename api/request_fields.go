@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/forgego/forge/api/exceptions"
+	"github.com/forgego/forge/schema"
 )
 
 // unknownRequestFieldMessage is the per-key error for a rejected request key.
@@ -36,7 +37,8 @@ func (vs *BaseViewSet) allowRequestFields(w http.ResponseWriter, r *http.Request
 
 // unknownRequestFields returns the sorted keys of data that the viewset
 // neither writes nor deliberately ignores. A key is known when it is:
-//   - the json name of a model field without a schema entry;
+//   - the request key of a model field without a schema entry (its json
+//     name, or its Go name under json:",omitempty", as responses name it);
 //   - any name of a schema field (schema, column, db tag, json or Go name)
 //     that clients can see or write: Serialize or Editable, or write-only
 //     (Editable and not Serialize) when the struct hides it with json:"-";
@@ -89,15 +91,122 @@ func unknownRequestFields(model interface{}, serializer Serializer, data map[str
 func knownRequestFields(model interface{}) (known, hidden map[string]struct{}) {
 	known = make(map[string]struct{})
 	hidden = make(map[string]struct{})
+	walkRequestFields(model, func(field requestField) {
+		if field.schema == nil {
+			if field.key != "" {
+				known[field.key] = struct{}{}
+			}
+			return
+		}
+		names := resolvedFieldNames(model, *field.schema)
+		visible := field.key != "" && (field.schema.Serialize || field.schema.Editable)
+		writeOnly := field.key == "" && field.writable()
+		if !visible && !writeOnly {
+			for _, name := range names {
+				hidden[strings.ToLower(name)] = struct{}{}
+			}
+			return
+		}
+		if field.key != "" {
+			known[field.key] = struct{}{}
+		}
+		for _, name := range names {
+			known[name] = struct{}{}
+		}
+	})
+	for name := range known {
+		delete(hidden, strings.ToLower(name))
+	}
+	return known, hidden
+}
+
+// requestField is a struct field as request input sees it. populateFromMap,
+// knownRequestFields and missingRequiredFields share it, so they agree on
+// which fields a request writes and under which keys.
+type requestField struct {
+	goName string
+	dbTag  string
+	// key is the field's own request key, named as modelToMap names it in
+	// responses: the json tag name, or the Go name when the tag leaves the
+	// name empty (json:",omitempty"). It is "" when the field has no json
+	// tag or is tagged json:"-".
+	key string
+	// schema is the schema field backing the struct field, or nil.
+	schema *schema.Field
+}
+
+func newRequestField(schemaFields map[string]*schema.Field, field reflect.StructField) requestField {
+	f := requestField{goName: field.Name, dbTag: strings.Split(field.Tag.Get("db"), ",")[0]}
+	if tag := field.Tag.Get("json"); tag != "" && tag != "-" {
+		f.key = strings.Split(tag, ",")[0]
+		if f.key == "" {
+			f.key = field.Name
+		}
+		if f.key == "-" {
+			f.key = ""
+		}
+	}
+	f.schema = schemaFieldForStructField(schemaFields, field, f.key, f.dbTag)
+	return f
+}
+
+// writable reports whether request input may write the field. A field
+// hidden from JSON is writable only when the schema declares it write-only
+// (editable, never serialized), such as a password; anything else hidden
+// stays out of reach of request input.
+func (f requestField) writable() bool {
+	if f.key != "" {
+		return true
+	}
+	return f.schema != nil && f.schema.Editable && !f.schema.Serialize
+}
+
+// ignoredBy reports whether ignored, a set of lowercased keys, names the
+// field under any of its names.
+func (f requestField) ignoredBy(model interface{}, ignored map[string]bool) bool {
+	names := []string{f.key, f.goName, f.dbTag}
+	if f.schema != nil {
+		names = append(names, resolvedFieldNames(model, *f.schema)...)
+	}
+	for _, name := range names {
+		if name != "" && ignored[strings.ToLower(name)] {
+			return true
+		}
+	}
+	return false
+}
+
+// lookup returns the value data holds for the field and the key it was
+// found under. Keys match exactly: the field's own key first, then its
+// schema aliases.
+func (f requestField) lookup(model interface{}, data map[string]interface{}) (string, interface{}, bool) {
+	if f.key != "" {
+		if value, ok := data[f.key]; ok {
+			return f.key, value, true
+		}
+	}
+	if f.schema != nil {
+		for _, alias := range resolvedFieldNames(model, *f.schema) {
+			if value, ok := data[alias]; ok {
+				return alias, value, true
+			}
+		}
+	}
+	return "", nil, false
+}
+
+// walkRequestFields calls fn for each exported, non-embedded field of
+// model's struct type, descending into embedded structs.
+func walkRequestFields(model interface{}, fn func(requestField)) {
 	if model == nil {
-		return known, hidden
+		return
 	}
 	modelType := reflect.TypeOf(model)
 	for modelType.Kind() == reflect.Ptr {
 		modelType = modelType.Elem()
 	}
 	if modelType.Kind() != reflect.Struct {
-		return known, hidden
+		return
 	}
 	schemaFields := schemaFieldsByRequestName(model)
 
@@ -121,36 +230,8 @@ func knownRequestFields(model interface{}) (known, hidden map[string]struct{}) {
 				}
 				continue
 			}
-			key := strings.Split(field.Tag.Get("json"), ",")[0]
-			jsonHidden := key == "" || key == "-"
-			dbTag := strings.Split(field.Tag.Get("db"), ",")[0]
-			fieldSchema := schemaFieldForStructField(schemaFields, field, key, dbTag)
-			if fieldSchema == nil {
-				if !jsonHidden {
-					known[key] = struct{}{}
-				}
-				continue
-			}
-			names := resolvedFieldNames(model, *fieldSchema)
-			visible := !jsonHidden && (fieldSchema.Serialize || fieldSchema.Editable)
-			writeOnly := jsonHidden && fieldSchema.Editable && !fieldSchema.Serialize
-			if !visible && !writeOnly {
-				for _, name := range names {
-					hidden[strings.ToLower(name)] = struct{}{}
-				}
-				continue
-			}
-			if !jsonHidden {
-				known[key] = struct{}{}
-			}
-			for _, name := range names {
-				known[name] = struct{}{}
-			}
+			fn(newRequestField(schemaFields, field))
 		}
 	}
 	walk(modelType, 0)
-	for name := range known {
-		delete(hidden, strings.ToLower(name))
-	}
-	return known, hidden
 }

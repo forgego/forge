@@ -20,8 +20,15 @@ the change.
 - Generated and `forge add api` viewsets reject unknown request keys with a
   400 (`RejectUnknownRequestFields`). Hand-written viewsets keep ignoring
   them unless they opt in (#245).
-- `PUT` is a full update: a body missing a required, writable field without
-  a default is a 400. `PATCH` is unchanged.
+- `PUT` is a full update: a body missing a required, request-writable field
+  without a Go-side `Default` is a 400. A field with only a `DBDefault` is
+  still required, and a required write-only field such as a password must be
+  sent again on every `PUT`. Read-only fields (including the serializer's
+  `ReadonlyFields()`) and fields a request cannot write are not required.
+  `PATCH` is unchanged.
+- A field tagged `json:",omitempty"` is accepted in requests under its Go
+  name, the name responses use, so a response can be sent back as a `PUT`
+  body.
 - `forge makemigrations` now emits the foreign keys declared with
   `schema.ForeignKeyField` and `Meta.Constraints`, which it silently skipped.
   In an existing project the next migration adds them and fails if rows
