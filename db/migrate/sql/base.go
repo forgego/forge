@@ -128,6 +128,64 @@ func impliesNotNull(field generator.FieldDefinition) bool {
 	return ok && autoNowAdd
 }
 
+// unalterableColumnChange returns the first part of a column's definition that
+// differs between old and new and that ALTER COLUMN cannot change here, or ""
+// when there is none: its name, primary key, identity, UNIQUE or generated
+// expression. The builder fails on such a change rather than render no SQL,
+// which would hide it.
+func unalterableColumnChange(old, new generator.FieldDefinition) string {
+	switch {
+	case columnName(old) != columnName(new):
+		return "column name (db_column)"
+	case old.PrimaryKey != new.PrimaryKey:
+		return "PRIMARY KEY"
+	case old.AutoIncrement != new.AutoIncrement:
+		return "identity (AutoIncrement)"
+	case optionBool(old, "unique") != optionBool(new, "unique"):
+		return "UNIQUE"
+	case generatedExpr(old) != generatedExpr(new):
+		return "generated expression"
+	}
+	return ""
+}
+
+func columnName(field generator.FieldDefinition) string {
+	if dbColumn, ok := field.Options["db_column"].(string); ok && dbColumn != "" {
+		return dbColumn
+	}
+	return field.Name
+}
+
+func optionBool(field generator.FieldDefinition, key string) bool {
+	value, _ := field.Options[key].(bool)
+	return value
+}
+
+// generatedExpr returns a generated column's expression and storage, or ""
+// for an ordinary column.
+func generatedExpr(field generator.FieldDefinition) string {
+	if !optionBool(field, "generated") {
+		return ""
+	}
+	expr, _ := field.Options["generated_expr"].(string)
+	if expr == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s stored=%t", expr, optionBool(field, "generated_stored"))
+}
+
+// unalterableColumnError reports a column change that makemigrations cannot
+// express as ALTER COLUMN.
+func unalterableColumnError(table string, column generator.FieldDefinition, part string) error {
+	return core.NewMigrationError(
+		core.ErrInvalidChange,
+		fmt.Sprintf("changing the %s of existing column %s.%s is not supported by makemigrations; "+
+			"revert the model change, or see \"Changes makemigrations cannot generate\" in the migrations guide",
+			part, table, column.Name),
+		nil,
+	)
+}
+
 // BuildCreateTable generates CREATE TABLE statement
 func (b *baseBuilder) BuildCreateTable(c *core.CreateTable) (string, error) {
 	tableName := c.TableName()

@@ -246,6 +246,9 @@ func (b *PostgreSQLBuilder) buildChangeDownSQL(change core.Change) (string, erro
 
 // BuildModifyColumn generates ALTER TABLE ALTER COLUMN statement for PostgreSQL
 func (b *PostgreSQLBuilder) BuildModifyColumn(c *core.ModifyColumn) (string, error) {
+	if part := unalterableColumnChange(c.OldColumn, c.NewColumn); part != "" {
+		return "", unalterableColumnError(c.Table, c.NewColumn, part)
+	}
 	newType := mapFieldTypeToSQL(c.NewColumn, false, true)
 	oldType := mapFieldTypeToSQL(c.OldColumn, false, true)
 

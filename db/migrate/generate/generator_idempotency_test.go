@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/forgego/forge/db/migrate/core"
+	"github.com/forgego/forge/db/migrate/sql"
+	"github.com/forgego/forge/db/migrate/state"
 )
 
 const idempotencyModelsSrc = `package tracker
@@ -99,6 +101,56 @@ func TestGenerateMigrations_IdempotentAcrossRuns(t *testing.T) {
 			assert.Empty(t, generate("unchanged_again"), "unchanged models must not write a migration")
 		})
 	}
+}
+
+// silentBuilder renders no SQL for any change set.
+type silentBuilder struct{ sql.SQLBuilder }
+
+func (silentBuilder) BuildUpSQL([]core.Change) (string, error)   { return "", nil }
+func (silentBuilder) BuildDownSQL([]core.Change) (string, error) { return "\n", nil }
+
+// TestGenerateMigrations_EmptySQLWritesNothing covers change sets that render
+// no SQL, which used to write an empty migration pair on every run.
+func TestGenerateMigrations_EmptySQLWritesNothing(t *testing.T) {
+	modelsDir := t.TempDir()
+	migrationsDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(modelsDir, "models.go"), []byte(idempotencyModelsSrc), 0o644))
+	builder, err := sql.NewSQLBuilder(core.DriverPostgreSQL)
+	require.NoError(t, err)
+	gen, err := NewMigrationGeneratorWithDriver(modelsDir, migrationsDir, core.DriverPostgreSQL,
+		NewDetectorForDriver(core.DriverPostgreSQL), silentBuilder{builder}, state.NewFileStateLoader(migrationsDir))
+	require.NoError(t, err)
+	require.NoError(t, gen.GenerateMigrations("empty"))
+	entries, err := os.ReadDir(migrationsDir)
+	if !os.IsNotExist(err) {
+		require.NoError(t, err)
+		assert.Empty(t, entries, "a change set without SQL must not write a migration")
+	}
+}
+
+// TestGenerateMigrations_UnrenderableColumnChangeFails keeps the empty-SQL
+// guard from hiding a real change: a column change the PostgreSQL builder
+// cannot express fails instead of writing nothing.
+func TestGenerateMigrations_UnrenderableColumnChangeFails(t *testing.T) {
+	modelsDir := t.TempDir()
+	migrationsDir := t.TempDir()
+	modelsPath := filepath.Join(modelsDir, "models.go")
+	require.NoError(t, os.WriteFile(modelsPath, []byte(idempotencyModelsSrc), 0o644))
+	gen, err := NewMigrationGeneratorForDriver(modelsDir, migrationsDir, core.DriverPostgreSQL)
+	require.NoError(t, err)
+	require.NoError(t, gen.GenerateMigrations("initial"))
+
+	unique := strings.Replace(idempotencyModelsSrc, `schema.StringField("title", schema.Required(), schema.MaxLength(200))`,
+		`schema.StringField("title", schema.Required(), schema.MaxLength(200), schema.Unique())`, 1)
+	require.NotEqual(t, idempotencyModelsSrc, unique)
+	require.NoError(t, os.WriteFile(modelsPath, []byte(unique), 0o644))
+	gen, err = NewMigrationGeneratorForDriver(modelsDir, migrationsDir, core.DriverPostgreSQL)
+	require.NoError(t, err)
+	err = gen.GenerateMigrations("unique_title")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `tasks.title`)
+	assert.Contains(t, err.Error(), "UNIQUE")
+	assert.Len(t, migrationFiles(t, migrationsDir), 2, "a failed generation must not write a migration")
 }
 
 func migrationFiles(t *testing.T, dir string) []string {

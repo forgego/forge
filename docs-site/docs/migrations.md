@@ -86,6 +86,19 @@ reaches a database with data in it.
   taken at, and `forge migrate recover --verify` checks the files you have against it.
   Run `forge migrate up` to apply the migrations that came after the backup.
 
+### Changes makemigrations cannot generate
+
+`makemigrations` stops with an error, and writes nothing, when a model change has no
+generated SQL. It does not write an empty or comment-only migration that would be proposed
+again on every run.
+
+- **PostgreSQL column changes.** A column's type, `NOT NULL`, and default (`Default`,
+  `DBDefault`, `AutoNow`, `AutoNowAdd`) are changed with `ALTER COLUMN`. A change to an
+  existing column's `Unique()`, primary key, `AutoIncrement`, generated expression, or
+  `DBColumn` name is not generated. For uniqueness on an existing table, declare a
+  `UNIQUE` constraint in `Meta.Constraints` instead of adding `Unique()` to the field.
+  Otherwise, revert the model change.
+
 ---
 
 ## Recovering from a Failed Migration
