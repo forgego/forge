@@ -28,6 +28,7 @@ type TemplateData struct {
 	MigrationName   string
 	Timestamp       string
 	DatabaseType    string
+	ForgeVersion    string // module version new projects require
 }
 
 // RenderTemplate renders a template with the given data
