@@ -113,7 +113,9 @@ func TestCreateConfigFileEnablesDebugOnlyInLocalEnv(t *testing.T) {
 
 	require.Equal(t, "true", readDotEnv(t, filepath.Join(projectPath, ".env"))["FORGE_APP_DEBUG"])
 
-	configBytes, err := os.ReadFile(filepath.Join(projectPath, "config", "config.yaml"))
-	require.NoError(t, err)
-	require.NotContains(t, string(configBytes), "debug")
+	// Parse the file: logging.level legitimately says "debug".
+	v := viper.New()
+	v.SetConfigFile(filepath.Join(projectPath, "config", "config.yaml"))
+	require.NoError(t, v.ReadInConfig())
+	require.False(t, v.IsSet("app.debug"), "config.yaml must not set app.debug")
 }
