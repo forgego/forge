@@ -94,9 +94,9 @@ func (c *NewCommand) Execute(ctx *core.Context, args []string) error {
 		databaseType = dbFlag
 	}
 
-	var includeDocker bool
-	dockerFlag, _ := ctx.Cmd.Flags().GetBool("docker")
-	if !dockerFlag {
+	// Prompt only when --docker was not given, so --docker=false skips the prompt.
+	includeDocker, _ := ctx.Cmd.Flags().GetBool("docker")
+	if !ctx.Cmd.Flags().Changed("docker") {
 		prompt := &survey.Confirm{
 			Message: "Include Docker setup?",
 			Default: false,
@@ -104,8 +104,6 @@ func (c *NewCommand) Execute(ctx *core.Context, args []string) error {
 		if err := survey.AskOne(prompt, &includeDocker); err != nil {
 			return fmt.Errorf("failed to get docker choice: %w", err)
 		}
-	} else {
-		includeDocker = true
 	}
 
 	// Determine template

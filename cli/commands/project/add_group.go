@@ -21,13 +21,8 @@ func (g *AddGroup) Definition() *cobra.Command {
 		Long:  "Add apps, models, handlers, APIs, and services to your Forge project",
 	}
 
-	// Add subcommands
-	cmd.AddCommand(NewAddAppCommand().Definition())
-	cmd.AddCommand(NewAddModelCommand().Definition())
-	cmd.AddCommand(NewAddHandlerCommand().Definition())
-	cmd.AddCommand(NewAddAPICommand().Definition())
-	cmd.AddCommand(NewAddServiceCommand().Definition())
-
+	// Subcommands come from Commands(); the registry attaches them with their
+	// handlers. Adding them here too would shadow the handlers with no-op copies.
 	return cmd
 }
 
