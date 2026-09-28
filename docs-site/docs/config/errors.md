@@ -1,7 +1,7 @@
 ---
 sidebar_position: 7
 description: Error and problem detail settings.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Error Settings

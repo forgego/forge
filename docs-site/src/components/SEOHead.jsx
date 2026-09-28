@@ -9,10 +9,10 @@ export default function SEOHead({
   title,
   description,
   keywords = [],
-  image = '/forge-social-card.svg',
+  image = '/social-card.png',
   type = 'website',
   url,
-  author = 'forge Framework',
+  author = 'The Forge authors',
 }) {
   const {siteConfig} = useDocusaurusContext();
   const siteBaseUrl = `${siteConfig.url}${siteConfig.baseUrl}`;
@@ -29,10 +29,10 @@ export default function SEOHead({
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
-    name: 'forge',
-    applicationCategory: 'WebApplication',
+    name: 'Forge',
+    applicationCategory: 'DeveloperApplication',
     operatingSystem: 'Any',
-    description: description || 'Django-like Go framework with type safety',
+    description: description || siteConfig.tagline,
     url: fullUrl,
     author: {
       '@type': 'Organization',
@@ -42,11 +42,6 @@ export default function SEOHead({
       '@type': 'Offer',
       price: '0',
       priceCurrency: 'USD',
-    },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '5',
-      ratingCount: '1',
     },
   };
 
@@ -67,15 +62,13 @@ export default function SEOHead({
       <meta property="og:type" content={type} />
       <meta property="og:url" content={fullUrl} />
       <meta property="og:image" content={imageUrl} />
-      <meta property="og:site_name" content="forge Framework" />
+      <meta property="og:site_name" content="Forge" />
 
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:url" content={fullUrl} />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:image" content={imageUrl} />
-      <meta name="twitter:site" content="@forgego" />
-      <meta name="twitter:creator" content="@forgego" />
 
       {/* Canonical URL */}
       <link rel="canonical" href={fullUrl} />

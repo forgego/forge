@@ -1,7 +1,7 @@
 ---
 sidebar_position: 10
 description: Define type-safe models, fields, constraints, generated columns, relations, and lifecycle hooks.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Models & Schema DSL

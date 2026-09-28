@@ -1,7 +1,7 @@
 ---
 sidebar_position: 4
 description: Health checks, readiness, metrics, and profiling.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Health & Metrics

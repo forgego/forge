@@ -1,7 +1,7 @@
 ---
 sidebar_position: 22
 description: Advanced filtering with FilterSets, URL query parameter binding, search filters, and AST parsing.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Filters & FilterSets

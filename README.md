@@ -1,153 +1,165 @@
-# 🔥 Forge Framework
-
 <div align="center">
 
-[![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?style=for-the-badge&logo=go)](https://go.dev/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![Tests](https://img.shields.io/github/actions/workflow/status/forgego/forge/test.yml?branch=master&label=Tests&style=for-the-badge)](https://github.com/forgego/forge/actions)
-[![Security](https://img.shields.io/github/actions/workflow/status/forgego/forge/security.yml?branch=master&label=Security&style=for-the-badge)](https://github.com/forgego/forge/security)
-[![Documentation](https://img.shields.io/badge/docs-online-success?style=for-the-badge)](https://forgego.github.io/forge/)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/logo-dark.svg">
+  <img src=".github/assets/logo.svg" alt="Forge" width="96">
+</picture>
 
-**A Django-like Go framework with full type safety, code generation, and extensibility.**
+# Forge
 
-[Documentation](https://forgego.github.io/forge/) • [Examples](examples/ecommerce/) • [API Reference](https://forgego.github.io/forge/docs/api-reference/schema) • [Contributing](CONTRIBUTING.md)
+**The batteries-included web framework for Go.**
+
+Define a model once. Forge generates typed queries, SQL migrations,<br>
+a REST API and an admin panel for it.
+
+[![Tests](https://github.com/forgego/forge/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/forgego/forge/actions/workflows/test.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/forgego/forge.svg)](https://pkg.go.dev/github.com/forgego/forge)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+[Documentation](https://forgego.github.io/forge/) ·
+[Quickstart](https://forgego.github.io/forge/docs/quickstart/) ·
+[Example app](examples/ecommerce/) ·
+[Capability status](https://forgego.github.io/forge/docs/status/)
 
 </div>
 
----
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/admin-products-dark.png">
+  <img src=".github/assets/admin-products.png" alt="The Forge admin listing products from the ecommerce example">
+</picture>
 
-## Features
+## Why Forge
 
-- Type-safe ORM and migrations
-- Code generation for models and admin
-- Extensible plugin system
-- Auto generation of admin pages from models
+Go gives you excellent building blocks, and then you wire the same pieces
+together for every project: models, queries, migrations, an admin, an API.
+Forge takes the approach Django made popular and brings it to Go. You write
+the schema, and the rest is generated or configured from it, as ordinary Go
+code you can read and change.
 
-## Quick Start
+- **Schema-first models.** Fields, indexes, relations and hooks live in one Go
+  definition per model.
+- **Typed queries.** `forge generate` writes a manager and typed field accessors
+  for each model, so a misspelled column is a compile error.
+- **Migrations from your models.** `forge makemigrations --auto` compares your
+  models with the migration history and writes the SQL.
+- **Built-in admin.** A React admin with search, filters, saved views, bulk
+  actions, change history and per-object permission hooks.
+- **REST API layer.** ViewSets, serializers, pagination, throttling and an
+  OpenAPI document, modelled on Django REST Framework.
+- **Secure defaults.** Password hashing, sessions, CSRF protection, secure
+  cookies, CORS checks and rate limiting.
 
-### 1. Install the CLI
+> [!NOTE]
+> Forge is pre-1.0 and its API may still change. PostgreSQL is the primary
+> tested database. The [capability status](https://forgego.github.io/forge/docs/status/)
+> page lists what is verified in CI and what is still partial.
 
-Install the `forge` command without cloning the repo:
+## A quick look
+
+A model:
+
+```go
+package catalog
+
+import "github.com/forgego/forge/schema"
+
+type Product struct {
+	schema.BaseSchema
+}
+
+func (Product) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.StringField("name", schema.Required(), schema.MaxLength(200)),
+		schema.Float64Field("price", schema.Required()),
+		schema.BoolField("is_active", schema.Default(true)),
+	}
+}
+
+func (Product) Meta() schema.Meta {
+	return schema.Meta{TableName: "products"}
+}
+```
+
+A typed query, using the code `forge generate` writes for it:
+
+```go
+p := catalog.ProductFieldsInstance
+
+qs, err := catalog.ProductObjects.Filter(orm.And(p.IsActive.Eq(true), p.Price.Lte(150)))
+if err != nil {
+	return err
+}
+products, err := qs.OrderBy(p.Price.Desc()).Limit(20).All(ctx)
+```
+
+An admin page for it:
+
+```go
+admin.Register(&admin.Config[catalog.Product]{
+	ListDisplay:  []admin.Field{p.Name, p.Price, p.IsActive},
+	SearchFields: []admin.Field{p.Name},
+})
+```
+
+## Try the example app
+
+The [ecommerce example](examples/ecommerce/) has 57 models across 10 apps,
+with the admin and REST API wired up. Docker runs it with PostgreSQL:
+
+```bash
+git clone https://github.com/forgego/forge.git
+cd forge/examples/ecommerce
+docker compose up --build
+```
+
+Then open <http://localhost:8020/admin/> and sign in as `admin` / `admin123`.
+Those demo credentials are set in the example's `main.go`; do not reuse them.
+
+## Install
+
+Install the `forge` command:
 
 ```bash
 go install github.com/forgego/forge/cmd/forge@latest
 ```
 
-Make sure `$GOBIN` (or `$GOPATH/bin`) is on your `PATH`, then verify:
-
-```bash
-forge --help
-```
-
-### 2. Create a New Project
-
-```bash
-forge new myapp
-cd myapp
-```
-
-### 3. Configure Database
-
-Edit `config/config.yaml` with your PostgreSQL credentials.
-
-### 4. Define Models
-
-Edit `models/example.go` or create new model files:
-
-```go
-package models
-
-import "github.com/forgego/forge/schema"
-
-type Post struct {
-	schema.BaseSchema
-}
-
-func (Post) Fields() []schema.Field {
-	return []schema.Field{
-		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
-		schema.StringField("title", schema.Required(), schema.MaxLength(200)),
-		schema.TextField("content", schema.Required()),
-	}
-}
-
-func (Post) Meta() schema.Meta {
-	return schema.Meta{
-		TableName: "posts",
-		VerboseName: "Post",
-	}
-}
-
-func (Post) Relations() []schema.Relation {
-	return []schema.Relation{}
-}
-
-func (Post) Hooks() *schema.ModelHooks {
-	return nil
-}
-```
-
-### 5. Generate Code
-
-```bash
-forge generate
-```
-
-### 6. Run Migrations
-
-```bash
-forge makemigrations
-forge migrate up
-```
-
-### 7. Start Server
-
-```bash
-forge runserver
-```
-
-Visit `http://localhost:8000/admin/` for the auto-generated admin interface!
-
-For detailed instructions, see the [Quickstart Guide](docs-site/docs/quickstart.md).
-
-## Install as a Library
-
-If you want to use Forge packages directly in an existing Go project:
+Add the framework to an existing module:
 
 ```bash
 go get github.com/forgego/forge@latest
 ```
 
-Then import the packages you need, for example:
+Forge needs Go 1.26 or later.
 
-```go
-import "github.com/forgego/forge/schema"
-```
-
-## CLI Usage (Forge Commands)
-
-Once installed, the `forge` binary is your entry point:
+## Start a project
 
 ```bash
-forge new myapp
-forge generate
-forge makemigrations
+forge new myapp --database sqlite --template simple
+cd myapp
+forge add app blog --example
+forge generate --models ./app/blog --output ./app/blog
+forge makemigrations initial --auto --models ./app/blog
 forge migrate up
-forge runserver
 ```
 
-Run `forge --help` to see all commands and flags.
+The [quickstart](https://forgego.github.io/forge/docs/quickstart/) covers the
+next steps, and `forge --help` lists every command.
 
-## Documentation & Support
+## Documentation
 
-- Docs index: [docs/README.md](docs/README.md)
-- Product: [PRD](docs/PRD.md) • [Design](docs/DESIGN.md) • [Roadmap](docs/ROADMAP.md)
-- Maintenance: [Tech debt](docs/TECH-DEBT.md) • [Known issues](docs/BUGS.md)
-- Admin design: [admin-ui-system](docs/design/admin-ui-system.md)
-- Docs: https://forgego.github.io/forge/
-- Issues: https://github.com/forgego/forge/issues
-- Security policy: [SECURITY.md](SECURITY.md)
+- [User documentation](https://forgego.github.io/forge/): models, ORM,
+  migrations, admin, REST API, configuration.
+- [Design](docs/DESIGN.md), [product requirements](docs/PRD.md) and
+  [roadmap](docs/ROADMAP.md) for how Forge is built and where it is going.
+- [Contributor docs index](docs/README.md).
+
+## Contributing
+
+Bug reports, questions and pull requests are welcome. Read
+[CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. To report a
+vulnerability, follow [SECURITY.md](SECURITY.md) instead of opening an issue.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+Forge is released under the [MIT License](LICENSE).

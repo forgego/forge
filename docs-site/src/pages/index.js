@@ -1,258 +1,173 @@
 import React, { useState } from 'react';
 import Layout from '@theme/Layout';
 import Link from '@docusaurus/Link';
+import ThemedImage from '@theme/ThemedImage';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import SEOHead from '@site/src/components/SEOHead';
 import styles from './index.module.css';
 
+// Samples follow the code in examples/ecommerce so they stay honest.
 const CODE_TABS = [
   {
     id: 'schema',
-    label: '1. Declarative Schema DSL',
-    tagline: 'Define models, constraints, generated columns, and relations with zero boilerplate.',
-    lang: 'Go',
-    code: `package models
+    label: 'Model',
+    tagline: 'Describe fields, indexes and relations in plain Go. Everything else is generated from this.',
+    code: `package catalog
 
 import "github.com/forgego/forge/schema"
 
 type Product struct {
-    schema.BaseModel
+    schema.BaseSchema
 }
 
 func (Product) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64("id").Primary().AutoIncrement(),
-        schema.String("sku").MaxLength(64).Unique().DBIndex(),
-        schema.String("name").MaxLength(255).Required(),
-        schema.Decimal("price", 10, 2).Required(),
-        schema.Float64("tax_rate").DBDefault("0.10"),
-        schema.GeneratedColumn("price_with_tax", "price * (1 + tax_rate)", true),
-        schema.Bool("in_stock").DBDefault("true"),
-        schema.ForeignKey("category_id", "Category", schema.CascadeSET_NULL),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+        schema.StringField("name", schema.Required(), schema.MaxLength(200)),
+        schema.StringField("sku", schema.Required(), schema.Unique()),
+        schema.Float64Field("price", schema.Required()),
+        schema.BoolField("is_active", schema.Default(true)),
+        schema.TimeField("created_at", schema.AutoNowAdd()),
     }
+}
+
+func (Product) Meta() schema.Meta {
+    return schema.Meta{TableName: "products", OrderBy: []string{"name"}}
 }`,
   },
   {
     id: 'orm',
-    label: '2. Type-Safe QuerySet',
-    tagline: 'Complex queries with compile-time safety, boolean Q-expressions, and aggregations.',
-    lang: 'Go',
-    code: `// Expressive, type-safe queries with zero runtime reflection
-products, err := ProductManager.
-    Filter(
-        orm.And(
-            ProductExpr.InStock.Eq(true),
-            ProductExpr.PriceWithTax.Lte(150.00),
-            ProductExpr.Category.Slug.In("laptops", "accessories"),
-        ),
-    ).
-    SelectRelated("Category").
-    OrderBy("-PriceWithTax").
-    Limit(20).
-    All(ctx)
+    label: 'Query',
+    tagline: 'forge generate writes a manager and typed fields for each model. A misspelled column is a compile error.',
+    code: `p := catalog.ProductFieldsInstance
 
-// Rich aggregations without raw SQL
-stats, err := ProductManager.
-    Filter(ProductExpr.InStock.Eq(true)).
-    Aggregate(ctx,
-        orm.Count("id", "total_products"),
-        orm.Avg("price", "average_price"),
-        orm.Max("price", "highest_price"),
-    )`,
+qs, err := catalog.ProductObjects.Filter(orm.And(
+    p.IsActive.Eq(true),
+    p.Price.Lte(150),
+))
+if err != nil {
+    return err
+}
+
+products, err := qs.
+    OrderBy(p.Price.Desc()).
+    Limit(20).
+    All(ctx)`,
   },
   {
     id: 'admin',
-    label: '3. Instant Admin Console',
-    tagline: 'Production React 19 SPA with TanStack Router, custom actions, history, and widgets.',
-    lang: 'Go',
-    code: `// Register models with search, filters, saved views, and bulk actions
-admin.Register[Product](site, admin.ModelConfig[Product]{
-    ListDisplay:  []string{"SKU", "Name", "Category", "PriceWithTax", "InStock"},
-    SearchFields: []string{"SKU", "Name"},
-    ListFilter:   []string{"InStock", "Category"},
-    Actions: []admin.Action{
-        {
-            ID:    "restock",
-            Label: "Restock Inventory (+50)",
-            Handler: func(ctx context.Context, ids []any) error {
-                return InventoryService.Restock(ctx, ids, 50)
-            },
-        },
-    },
+    label: 'Admin',
+    tagline: 'Register a model to get list, search, filter and edit screens in the built-in admin.',
+    code: `p := catalog.ProductFieldsInstance
+
+admin.Register(&admin.Config[catalog.Product]{
+    ListDisplay:    []admin.Field{p.Name, p.Sku, p.Price, p.IsActive},
+    ListFilter:     []admin.Field{p.IsActive},
+    SearchFields:   []admin.Field{p.Name, p.Sku},
+    ReadOnlyFields: []string{"created_at"},
 })`,
   },
   {
     id: 'api',
-    label: '4. REST API & OpenAPI',
-    tagline: 'ViewSets, ModelSerializers, pagination, rate throttling, and OpenAPI 3.0 generation.',
-    lang: 'Go',
-    code: `// ViewSets provide full CRUD, filtering, pagination, and OpenAPI spec
-type ProductViewSet struct {
-    api.ModelViewSet[Product]
-}
-
-func RegisterAPI(router chi.Router) {
-    viewset := &ProductViewSet{
-        Serializer: &ProductSerializer{},
-        Pagination: api.NewLimitOffsetPagination(50),
-        Throttling: api.NewUserRateThrottle("100/min"),
-    }
-    api.RegisterViewSet(router, "/api/v1/products", viewset)
-}
-// Automatically serves interactive OpenAPI 3.0 documentation at /api/openapi.json`,
+    label: 'REST API',
+    tagline: 'Expose a model as a REST resource with a ViewSet, in the style of Django REST Framework.',
+    code: `router.Register("products", &api.ViewSetConfig{
+    Model:      &catalog.Product{},
+    Queryset:   catalog.ProductObjects,
+    Serializer: api.NewBaseSerializer(nil),
+})`,
   },
 ];
 
 const PILLARS = [
   {
-    icon: '⚡',
-    title: 'Type-Safe ORM & QuerySets',
+    title: 'Schema-first models',
     description:
-      'Catch query typos at compile time. Generated expression trees, SelectRelated JOINs, PrefetchRelated batching, and orm.Q boolean logic.',
-    link: '/docs/orm',
-  },
-  {
-    icon: '🖥️',
-    title: 'Instant React 19 Admin SPA',
-    description:
-      'Modern, responsive admin console with TanStack router, search, filter chips, saved views, audit logs, and Recharts KPI widgets.',
-    link: '/docs/admin/overview',
-  },
-  {
-    icon: '🔄',
-    title: 'AST-Driven Migrations',
-    description:
-      'Zero-hassle schema evolution. Introspects Go AST code to detect changes, generates deterministic migrations, and verifies checksums.',
-    link: '/docs/migrations',
-  },
-  {
-    icon: '🚀',
-    title: 'REST APIs & Serializers',
-    description:
-      'Django REST Framework-inspired ViewSets and ModelSerializers. Out-of-the-box cursor pagination, rate throttling, and OpenAPI 3.0.',
-    link: '/docs/api/overview',
-  },
-  {
-    icon: '📐',
-    title: 'Declarative Schema DSL',
-    description:
-      'Functional & builder syntax, Generated Columns, DB default expressions, collation, custom field types, and lifecycle hooks.',
+      'Fields, indexes, relations and hooks live in one Go definition per model. The generator, migrations, admin and API all read from it.',
     link: '/docs/models',
   },
   {
-    icon: '🛡️',
-    title: 'Enterprise Identity & RBAC',
+    title: 'Typed queries',
     description:
-      'Secure password hashing with bcrypt, session token repositories, granular view/add/change/delete model permissions.',
-    link: '/docs/identity',
+      'Generated managers and field accessors give you chainable, lazy QuerySets with typed comparisons, ordering, relations and aggregates.',
+    link: '/docs/orm',
   },
   {
-    icon: '🔒',
-    title: 'Production Security Defaults',
+    title: 'Migrations from your models',
     description:
-      'Gorilla CSRF with configurable exempt paths, HttpOnly SameSite secure cookies, CORS origin validation, and health checks.',
+      'makemigrations --auto compares your models with the migration history and writes the SQL. Checksums catch migration files edited after they ran.',
+    link: '/docs/migrations',
+  },
+  {
+    title: 'Built-in admin',
+    description:
+      'A React admin with search, filters, bulk actions, inline relations, change history and per-object permission hooks.',
+    link: '/docs/admin/overview',
+  },
+  {
+    title: 'REST API layer',
+    description:
+      'ViewSets, serializers, pagination, throttling, versioning and an OpenAPI document, modelled on Django REST Framework.',
+    link: '/docs/api/overview',
+  },
+  {
+    title: 'Secure defaults',
+    description:
+      'Password hashing, sessions and tokens, CSRF protection, secure cookies, CORS checks and rate limiting are on from the start.',
     link: '/docs/server/security',
-  },
-  {
-    icon: '🛠️',
-    title: 'Modern Developer CLI',
-    description:
-      'Full suite of CLI commands: forge new, makemigrations, migrate, generate, routes, and check for schema consistency.',
-    link: '/docs/quickstart',
-  },
-];
-
-const COMPARISONS = [
-  {
-    feature: 'Model & Schema Definition',
-    stdlib: 'Manual structs + raw SQL DDL',
-    others: 'GORM struct tags or SQLBoiler',
-    forge: 'Declarative Schema DSL (builder + functional options)',
-  },
-  {
-    feature: 'Query Safety',
-    stdlib: 'String SQL, runtime error prone',
-    others: 'Partial type-safety or strings',
-    forge: '100% Type-Safe Expressions & orm.Q boolean trees',
-  },
-  {
-    feature: 'Admin Panel',
-    stdlib: 'Build from scratch (weeks of UI)',
-    others: 'Third-party admin plugins or none',
-    forge: 'Built-in React 19 SPA with RBAC, widgets & history',
-  },
-  {
-    feature: 'Database Migrations',
-    stdlib: 'Manual SQL scripts + migration tool',
-    others: 'External CLI tools (golang-migrate)',
-    forge: 'Built-in AST diffing, auto-generation & recovery',
-  },
-  {
-    feature: 'REST API & Serialization',
-    stdlib: 'Manual Chi/Gin handlers & DTOs',
-    others: 'Manual boilerplate per endpoint',
-    forge: 'ModelSerializers, ViewSets, Throttling & OpenAPI 3.0',
-  },
-  {
-    feature: 'Security & CSRF',
-    stdlib: 'Manual middleware wiring',
-    others: 'Basic middleware or external libs',
-    forge: 'Batteries-included CSRF exemptions, secure sessions & RBAC',
   },
 ];
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState(CODE_TABS[0].id);
-
   const selectedCode = CODE_TABS.find((t) => t.id === activeTab) || CODE_TABS[0];
+  const adminLight = useBaseUrl('/img/admin-products.png');
+  const adminDark = useBaseUrl('/img/admin-products-dark.png');
 
   return (
     <>
       <SEOHead
-        title="Forge - Django-like Web Framework for Go"
-        description="The batteries-included Go web framework. Type-safe ORM, auto-generated React admin SPA, REST APIs, and AST migrations."
+        title="Forge: the batteries-included web framework for Go"
+        description="Define a model once. Forge generates typed queries, SQL migrations, a REST API and an admin panel for it."
         keywords={[
-          'go framework',
-          'golang web framework',
+          'go web framework',
+          'golang framework',
           'go orm',
-          'django for go',
-          'type-safe orm',
           'go admin panel',
           'go migrations',
-          'forge framework',
+          'django for go',
         ]}
         url="/"
       />
       <Layout
-        title="The Type-Safe Django for Go"
-        description="Django-inspired developer velocity with Go's raw performance and type safety.">
-        
-        {/* Modern Hero */}
+        title="The batteries-included web framework for Go"
+        description="Define a model once. Forge generates typed queries, SQL migrations, a REST API and an admin panel for it.">
         <header className={styles.hero}>
           <div className={styles.heroGlowLeft} />
           <div className={styles.heroGlowRight} />
           <div className={styles.heroContent}>
             <div className={styles.badge}>
               <span className={styles.badgeDot} />
-              v1.0.0 • The Type-Safe Django for Go
+              Open source, MIT licensed, pre-1.0
             </div>
             <h1 className={styles.heroTitle}>
-              Django Velocity.<br />
-              <span className={styles.gradientText}>Go Performance.</span>
+              Define the model.
+              <br />
+              <span className={styles.gradientText}>Forge builds the rest.</span>
             </h1>
             <p className={styles.heroSubtitle}>
-              Forge is the batteries-included web framework for Go. Declarative Schema DSL, 
-              type-safe QuerySets, automatic React 19 Admin SPA, REST APIs with ModelSerializers, 
-              and zero-downtime AST migrations.
+              Forge is a batteries-included web framework for Go. Describe your data once, and
+              Forge generates typed queries, SQL migrations, a REST API and an admin panel for it.
             </p>
             <div className={styles.heroActions}>
               <Link className={styles.btnPrimary} to="/docs/quickstart">
-                Get Started →
+                Get started
               </Link>
               <Link className={styles.btnSecondary} to="/docs/introduction">
-                Architecture Tour
+                Read the introduction
               </Link>
-              <Link className={styles.btnGhost} to="/docs/features">
-                Features Matrix
+              <Link className={styles.btnGhost} href="https://github.com/forgego/forge">
+                View on GitHub
               </Link>
             </div>
             <div className={styles.heroCommandWrapper}>
@@ -265,43 +180,41 @@ export default function Home() {
         </header>
 
         <main>
-          {/* Interactive Code Window */}
           <section className={styles.codeShowcase}>
             <div className={styles.container}>
               <div className={styles.sectionHeader}>
-                <span className={styles.sectionSub}>CLEAN & DECLARATIVE</span>
-                <h2>One toolkit. Infinite velocity.</h2>
-                <p>Define your domain schema once. Forge generates everything else with complete type safety.</p>
+                <span className={styles.sectionSub}>How it fits together</span>
+                <h2>One definition, four outputs</h2>
+                <p>Write the model. Forge reads it to build queries, the admin and the API.</p>
               </div>
 
               <div className={styles.interactiveWindow}>
-                {/* Window Header */}
                 <div className={styles.windowHeader}>
                   <div className={styles.windowDots}>
                     <span className={styles.dotRed} />
                     <span className={styles.dotYellow} />
                     <span className={styles.dotGreen} />
                   </div>
-                  <div className={styles.windowTabs}>
+                  <div className={styles.windowTabs} role="tablist">
                     {CODE_TABS.map((tab) => (
                       <button
                         key={tab.id}
                         type="button"
+                        role="tab"
+                        aria-selected={activeTab === tab.id}
                         className={`${styles.tabBtn} ${activeTab === tab.id ? styles.tabBtnActive : ''}`}
                         onClick={() => setActiveTab(tab.id)}>
                         {tab.label}
                       </button>
                     ))}
                   </div>
-                  <div className={styles.windowLang}>Go 1.21+</div>
+                  <div className={styles.windowLang}>Go 1.26+</div>
                 </div>
 
-                {/* Tab Description */}
                 <div className={styles.windowDescription}>
-                  <span>💡 {selectedCode.tagline}</span>
+                  <span>{selectedCode.tagline}</span>
                 </div>
 
-                {/* Code Content */}
                 <div className={styles.windowContent}>
                   <pre className={styles.codePre}>
                     <code>{selectedCode.code}</code>
@@ -311,113 +224,99 @@ export default function Home() {
             </div>
           </section>
 
-          {/* 8 Core Pillars */}
+          <section className={styles.adminShowcase}>
+            <div className={styles.container}>
+              <div className={styles.sectionHeader}>
+                <span className={styles.sectionSub}>The admin</span>
+                <h2>An admin for every model you register</h2>
+                <p>Search, filters, saved views, bulk actions and export. Shown here with the ecommerce example.</p>
+              </div>
+              <ThemedImage
+                className={styles.adminShot}
+                alt="Forge admin showing the product list from the ecommerce example"
+                sources={{light: adminLight, dark: adminDark}}
+                width={1800}
+                height={1075}
+                loading="lazy"
+              />
+            </div>
+          </section>
+
           <section className={styles.pillarsSection}>
             <div className={styles.container}>
               <div className={styles.sectionHeader}>
-                <span className={styles.sectionSub}>BATTERIES INCLUDED</span>
-                <h2>Built for mission-critical Go backends</h2>
-                <p>Every subsystem is engineered to work seamlessly together with uncompromising type safety.</p>
+                <span className={styles.sectionSub}>What is included</span>
+                <h2>The parts most web backends need</h2>
+                <p>Each part works on its own, and they are designed to work together.</p>
               </div>
 
               <div className={styles.pillarsGrid}>
                 {PILLARS.map((pillar) => (
                   <Link key={pillar.title} to={pillar.link} className={styles.pillarCard}>
-                    <div className={styles.pillarIcon}>{pillar.icon}</div>
                     <h3 className={styles.pillarTitle}>{pillar.title}</h3>
                     <p className={styles.pillarDescription}>{pillar.description}</p>
-                    <span className={styles.pillarLearnMore}>Read documentation →</span>
+                    <span className={styles.pillarLearnMore}>Read the docs</span>
                   </Link>
                 ))}
               </div>
             </div>
           </section>
 
-          {/* Why Forge Comparison Table */}
-          <section className={styles.matrixSection}>
-            <div className={styles.container}>
-              <div className={styles.sectionHeader}>
-                <span className={styles.sectionSub}>BENCHMARK & PRODUCTIVITY</span>
-                <h2>Why engineering teams choose Forge</h2>
-                <p>Stop re-inventing admin dashboards, migration engines, and serializer plumbing.</p>
-              </div>
-
-              <div className={styles.tableWrapper}>
-                <table className={styles.comparisonTable}>
-                  <thead>
-                    <tr>
-                      <th>Framework Capability</th>
-                      <th>Go Standard Library</th>
-                      <th>Typical Go Stack (Chi/GORM)</th>
-                      <th className={styles.forgeColHeader}>Forge Framework</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {COMPARISONS.map((row) => (
-                      <tr key={row.feature}>
-                        <td className={styles.featureCell}>{row.feature}</td>
-                        <td className={styles.standardCell}>{row.stdlib}</td>
-                        <td className={styles.othersCell}>{row.others}</td>
-                        <td className={styles.forgeCell}>{row.forge}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-
-          {/* 3-Step Quickstart */}
           <section className={styles.quickStart}>
             <div className={styles.container}>
               <div className={styles.quickStartContent}>
                 <div className={styles.sectionHeader}>
-                  <span className={styles.sectionSub}>ZERO TO PRODUCTION</span>
-                  <h2>From zero to running in under 60 seconds</h2>
-                  <p>Forge provides everything required to scaffold, migrate, and run your project.</p>
+                  <span className={styles.sectionSub}>Try it</span>
+                  <h2>See a complete Forge app running</h2>
+                  <p>
+                    The ecommerce example has 57 models across 10 apps, with the admin and REST API
+                    wired up. Docker runs it with PostgreSQL.
+                  </p>
                 </div>
                 <div className={styles.quickStartSteps}>
                   <div className={styles.step}>
                     <span className={styles.stepNumber}>1</span>
                     <div className={styles.stepInfo}>
-                      <h4>Create your project</h4>
-                      <p>Scaffold a full project structure with SQLite or PostgreSQL.</p>
+                      <h4>Clone the repository</h4>
+                      <p>The example lives in examples/ecommerce.</p>
                     </div>
-                    <code>forge new myapp --sqlite</code>
+                    <code>git clone https://github.com/forgego/forge.git</code>
                   </div>
                   <div className={styles.step}>
                     <span className={styles.stepNumber}>2</span>
                     <div className={styles.stepInfo}>
-                      <h4>Generate & apply migrations</h4>
-                      <p>AST analysis detects your models and creates migrations automatically.</p>
+                      <h4>Start it with Docker</h4>
+                      <p>Builds the app and the admin UI, and starts PostgreSQL.</p>
                     </div>
-                    <code>forge makemigrations &amp;&amp; forge migrate</code>
+                    <code>cd forge/examples/ecommerce &amp;&amp; docker compose up --build</code>
                   </div>
                   <div className={styles.step}>
                     <span className={styles.stepNumber}>3</span>
                     <div className={styles.stepInfo}>
-                      <h4>Launch server &amp; admin</h4>
-                      <p>Start Chi HTTP server, REST endpoints, and the React admin console.</p>
+                      <h4>Open the admin</h4>
+                      <p>Browse the generated admin for every model in the example.</p>
                     </div>
-                    <code>forge runserver</code>
+                    <code>http://localhost:8020/admin/</code>
                   </div>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Bottom CTA */}
           <section className={styles.cta}>
             <div className={styles.container}>
               <div className={styles.ctaContent}>
-                <h2>Ready to build with Forge?</h2>
-                <p>Join developers building scalable, type-safe web applications with Django-grade velocity.</p>
+                <h2>Know what you are adopting</h2>
+                <p>
+                  Forge is pre-1.0. PostgreSQL is the primary tested database. The capability status
+                  page lists what is verified in CI and what is still partial.
+                </p>
                 <div className={styles.ctaActions}>
-                  <Link className={styles.btnPrimary} to="/docs/quickstart">
-                    Start Quickstart Guide →
+                  <Link className={styles.btnPrimary} to="/docs/status">
+                    Capability status
                   </Link>
-                  <Link className={styles.btnOutline} href="https://github.com/forgego/forge" target="_blank">
-                    Star on GitHub
+                  <Link className={styles.btnOutline} href="https://github.com/forgego/forge">
+                    Source on GitHub
                   </Link>
                 </div>
               </div>
