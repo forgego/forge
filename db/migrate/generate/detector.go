@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/forgego/forge/codegen"
 	"github.com/forgego/forge/db/migrate/core"
@@ -386,7 +387,38 @@ func (d *Detector) sameColumnDDL(current, previous generator.FieldDefinition) bo
 	if err != nil {
 		return false
 	}
-	return strings.EqualFold(strings.Join(strings.Fields(currentDDL), " "), strings.Join(strings.Fields(previousDDL), " "))
+	return normalizeDDL(currentDDL) == normalizeDDL(previousDDL)
+}
+
+// normalizeDDL upper-cases DDL and collapses its whitespace outside quoted
+// literals and identifiers, which it keeps exactly, so a default that changes
+// only in case or spacing still compares unequal.
+func normalizeDDL(ddl string) string {
+	var b strings.Builder
+	var quote rune
+	pendingSpace := false
+	for _, r := range ddl {
+		if quote != 0 {
+			b.WriteRune(r)
+			if r == quote {
+				quote = 0
+			}
+			continue
+		}
+		if unicode.IsSpace(r) {
+			pendingSpace = b.Len() > 0
+			continue
+		}
+		if pendingSpace {
+			b.WriteByte(' ')
+			pendingSpace = false
+		}
+		if r == '\'' || r == '"' {
+			quote = r
+		}
+		b.WriteRune(unicode.ToUpper(r))
+	}
+	return b.String()
 }
 
 // canonicalColumn states the nullability AutoNowAdd implies explicitly, so the
@@ -478,9 +510,12 @@ func (d *Detector) detectForeignKeyChanges(tableName string, current, previous [
 	// Detect dropped foreign keys
 	for _, name := range sortedKeys(previousMap) {
 		if _, exists := currentMap[name]; !exists {
+			prevRel := previousMap[name]
 			changes = append(changes, &core.DropForeignKey{
-				Table:  tableName,
-				FKName: fmt.Sprintf("fk_%s_%s", tableName, name),
+				Table:       tableName,
+				FKName:      fmt.Sprintf("fk_%s_%s", tableName, name),
+				Relation:    &prevRel,
+				TargetTable: resolveTargetTable(prevRel.To, allDefs),
 			})
 		}
 	}
@@ -530,28 +565,59 @@ func (d *Detector) detectConstraintChanges(tableName string, current, previous [
 		previousMap[constr.Name] = constr
 	}
 
-	// Detect new constraints
+	// Detect new constraints, and changed ones, which are dropped and re-added
 	for _, name := range sortedKeys(currentMap) {
 		constr := currentMap[name]
-		if _, exists := previousMap[name]; !exists {
-			changes = append(changes, &core.AddConstraint{
-				Table:      tableName,
-				Constraint: constr,
+		prevConstr, exists := previousMap[name]
+		if exists && !constraintChanged(constr, prevConstr) {
+			continue
+		}
+		if exists {
+			changes = append(changes, &core.DropConstraint{
+				Table:          tableName,
+				ConstraintName: name,
+				Constraint:     &prevConstr,
 			})
 		}
+		changes = append(changes, &core.AddConstraint{
+			Table:      tableName,
+			Constraint: constr,
+		})
 	}
 
 	// Detect dropped constraints
 	for _, name := range sortedKeys(previousMap) {
 		if _, exists := currentMap[name]; !exists {
+			prevConstr := previousMap[name]
 			changes = append(changes, &core.DropConstraint{
 				Table:          tableName,
 				ConstraintName: name,
+				Constraint:     &prevConstr,
 			})
 		}
 	}
 
 	return changes, nil
+}
+
+// constraintChanged reports whether a constraint's type, condition or fields
+// changed. Conditions compare as normalized SQL, so a constraint read back
+// from a migration file equals the model's unchanged one.
+func constraintChanged(current, previous generator.ConstraintDefinition) bool {
+	if !strings.EqualFold(current.Type, previous.Type) {
+		return true
+	}
+	if normalizeDDL(current.Condition) != normalizeDDL(previous.Condition) {
+		return true
+	}
+	return !reflect.DeepEqual(nonNil(current.Fields), nonNil(previous.Fields))
+}
+
+func nonNil(values []string) []string {
+	if values == nil {
+		return []string{}
+	}
+	return values
 }
 
 // sortedKeys returns a map's keys in order, so detected changes, and the

@@ -149,30 +149,43 @@ func (r *Router) handleReplace(admin core.AdminInterface) http.HandlerFunc {
 
 // bulkFailure responds for a bulk operation in which every item failed.
 // Client-caused failures (bad input, not found, permission denied,
-// validation) map to 4xx; only unexpected storage errors stay 500.
+// validation, constraint conflicts) map to 4xx; any unexpected storage error
+// makes the whole response 500. When every item failed with the same client
+// status (all 403, all 409) that status is used, otherwise 400.
 func bulkFailure(w http.ResponseWriter, code, message string, errs []bulkItemError) {
-	status := http.StatusBadRequest
-	allPermissionDenied := len(errs) > 0
+	status := 0
 	for _, e := range errs {
-		switch e.Code {
-		case "permission_denied":
-			continue
-		case "invalid_item", "invalid_id", "not_found", "in_use":
-			allPermissionDenied = false
-			continue
-		default:
-			allPermissionDenied = false
-			if !isValidationError(errors.New(e.Message)) {
-				status = http.StatusInternalServerError
-			}
+		itemStatus := bulkItemStatus(e.Code)
+		switch {
+		case itemStatus == http.StatusInternalServerError:
+			status = itemStatus
+		case status == 0:
+			status = itemStatus
+		case status != itemStatus && status != http.StatusInternalServerError:
+			status = http.StatusBadRequest
 		}
 	}
-	if allPermissionDenied {
-		status = http.StatusForbidden
+	if status == 0 {
+		status = http.StatusBadRequest
 	}
 	respondError(w, status, code, message, map[string]interface{}{
 		"errors": errs,
 	})
+}
+
+// bulkItemStatus is the HTTP status a single bulk item's failure code would
+// carry on the matching single-object endpoint.
+func bulkItemStatus(code string) int {
+	switch code {
+	case "permission_denied":
+		return http.StatusForbidden
+	case "conflict", "in_use":
+		return http.StatusConflict
+	case "invalid_item", "invalid_id", "not_found", "validation_error", "invalid_reference":
+		return http.StatusBadRequest
+	default:
+		return http.StatusInternalServerError
+	}
 }
 
 // validationDetails converts field validation errors into the per-field
@@ -320,10 +333,11 @@ func (r *Router) handleBulkCreate(admin core.AdminInterface) http.HandlerFunc {
 
 			obj, err := admin.CreateObject(ctx, data)
 			if err != nil {
+				f := classifyWriteError("create_failed", err)
 				errors = append(errors, bulkItemError{
 					Index:   i,
-					Code:    "create_failed",
-					Message: err.Error(),
+					Code:    f.code,
+					Message: f.message,
 				})
 				continue
 			}
@@ -415,10 +429,11 @@ func (r *Router) handleBulkUpdate(admin core.AdminInterface) http.HandlerFunc {
 
 			obj, err := admin.UpdateObject(ctx, id, payload.Data)
 			if err != nil {
+				f := classifyWriteError("update_failed", err)
 				errors = append(errors, bulkItemError{
 					Index:   i,
-					Code:    "update_failed",
-					Message: err.Error(),
+					Code:    f.code,
+					Message: f.message,
 				})
 				continue
 			}

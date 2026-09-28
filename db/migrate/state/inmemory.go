@@ -60,6 +60,10 @@ func (s *InMemoryState) Apply(changes []core.Change) error {
 			if err := s.applyModifyColumn(c); err != nil {
 				return err
 			}
+		case *core.AlterColumn:
+			if err := s.applyAlterColumn(c); err != nil {
+				return err
+			}
 		case *core.RenameColumn:
 			if table, exists := s.state.Tables[c.Table]; exists {
 				if col, exists := table.Columns[c.OldName]; exists {
@@ -209,6 +213,46 @@ func (s *InMemoryState) applyModifyColumn(c *core.ModifyColumn) error {
 		colState.Unique = unique
 	}
 	table.Columns[c.NewColumn.Name] = colState
+	return nil
+}
+
+// typeOptionKeys are the column options derived from its SQL type, which a
+// TYPE clause replaces.
+var typeOptionKeys = []string{core.SQLTypeOption, "db_type", "max_length", "max_digits", "decimal_places"}
+
+func (s *InMemoryState) applyAlterColumn(c *core.AlterColumn) error {
+	table, exists := s.state.Tables[c.Table]
+	if !exists {
+		return fmt.Errorf("table %s does not exist", c.Table)
+	}
+	col, exists := table.Columns[c.Column]
+	if !exists {
+		return fmt.Errorf("column %s.%s does not exist", c.Table, c.Column)
+	}
+	options := make(map[string]interface{}, len(col.Options))
+	for key, value := range col.Options {
+		options[key] = value
+	}
+	if c.NewType != nil {
+		col.Type = c.NewType.Type
+		col.GoType = c.NewType.GoType
+		for _, key := range typeOptionKeys {
+			delete(options, key)
+		}
+		for key, value := range c.NewType.Options {
+			options[key] = value
+		}
+	}
+	col.Options = options
+	if c.NotNull != nil {
+		col.Required = *c.NotNull
+	}
+	if c.SetDefault {
+		col.Default = c.Default
+	}
+	if c.DropDefault {
+		col.Default = nil
+	}
 	return nil
 }
 

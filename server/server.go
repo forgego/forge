@@ -164,16 +164,19 @@ func (s *Server) Start() error {
 // StartWithGracefulShutdown starts the server and blocks until it fails or
 // the process receives SIGINT or SIGTERM. On a signal the server stops
 // accepting connections and waits up to server.graceful_timeout seconds for
-// in-flight requests to finish before returning.
+// in-flight requests to finish before returning. Default signal handling is
+// restored as soon as the first signal arrives, so a second SIGINT or SIGTERM
+// during the drain terminates the process immediately.
 func (s *Server) StartWithGracefulShutdown() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	return s.serveUntil(ctx)
+	return s.serveUntil(ctx, stop)
 }
 
 // serveUntil runs the server until it fails or ctx is done, then shuts it
-// down gracefully.
-func (s *Server) serveUntil(ctx context.Context) error {
+// down gracefully. onDone, when non-nil, runs once ctx is done and before the
+// drain starts; StartWithGracefulShutdown uses it to stop catching signals.
+func (s *Server) serveUntil(ctx context.Context, onDone func()) error {
 	if err := s.validateProductionSecrets(); err != nil {
 		return err
 	}
@@ -186,6 +189,9 @@ func (s *Server) serveUntil(ctx context.Context) error {
 	case err := <-serverErr:
 		return err
 	case <-ctx.Done():
+	}
+	if onDone != nil {
+		onDone()
 	}
 
 	if err := s.Shutdown(context.Background()); err != nil {

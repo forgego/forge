@@ -5,6 +5,10 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
+	"os/exec"
+	"runtime"
+	"syscall"
 	"testing"
 	"time"
 
@@ -20,6 +24,95 @@ func freeTCPPort(t *testing.T) string {
 	require.NoError(t, err)
 	require.NoError(t, l.Close())
 	return port
+}
+
+// TestStartWithGracefulShutdownSecondSignalKills runs a server in a child
+// process with a request that never finishes, sends SIGTERM to start the
+// drain, then a second SIGTERM. The second signal must kill the child at once
+// instead of being swallowed until server.graceful_timeout expires.
+func TestStartWithGracefulShutdownSecondSignalKills(t *testing.T) {
+	if os.Getenv("FORGE_TEST_SIGNAL_CHILD") == "1" {
+		runSignalChild()
+		return
+	}
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX signals only")
+	}
+
+	port := freeTCPPort(t)
+	cmd := exec.Command(os.Args[0], "-test.run=^TestStartWithGracefulShutdownSecondSignalKills$")
+	cmd.Env = append(os.Environ(), "FORGE_TEST_SIGNAL_CHILD=1", "FORGE_TEST_SIGNAL_PORT="+port)
+	require.NoError(t, cmd.Start())
+	exited := make(chan error, 1)
+	go func() { exited <- cmd.Wait() }()
+	defer func() { _ = cmd.Process.Kill() }()
+
+	base := "http://127.0.0.1:" + port
+	require.Eventually(t, func() bool {
+		conn, err := net.Dial("tcp", "127.0.0.1:"+port)
+		if err != nil {
+			return false
+		}
+		_ = conn.Close()
+		return true
+	}, 10*time.Second, 20*time.Millisecond)
+
+	// Hold a request open so the drain cannot finish on its own.
+	go func() {
+		resp, err := http.Get(base + "/hang")
+		if err == nil {
+			_ = resp.Body.Close()
+		}
+	}()
+	time.Sleep(200 * time.Millisecond)
+
+	require.NoError(t, cmd.Process.Signal(syscall.SIGTERM))
+	// The drain has started once the listener is closed.
+	require.Eventually(t, func() bool {
+		conn, err := net.Dial("tcp", "127.0.0.1:"+port)
+		if err != nil {
+			return true
+		}
+		_ = conn.Close()
+		return false
+	}, 10*time.Second, 20*time.Millisecond)
+
+	select {
+	case err := <-exited:
+		t.Fatalf("child exited before the second signal: %v", err)
+	default:
+	}
+
+	require.NoError(t, cmd.Process.Signal(syscall.SIGTERM))
+	select {
+	case err := <-exited:
+		var exitErr *exec.ExitError
+		require.ErrorAs(t, err, &exitErr)
+		status, ok := exitErr.Sys().(syscall.WaitStatus)
+		require.True(t, ok)
+		require.True(t, status.Signaled(), "child should die from the second signal, got %v", err)
+		require.Equal(t, syscall.SIGTERM, status.Signal())
+	case <-time.After(5 * time.Second):
+		t.Fatal("second SIGTERM was swallowed during the graceful drain")
+	}
+}
+
+func runSignalChild() {
+	settings := &config.Settings{
+		App:    config.AppSettings{Env: "test"},
+		Server: config.ServerSettings{Host: "127.0.0.1", Port: os.Getenv("FORGE_TEST_SIGNAL_PORT"), ReadTimeout: 60, WriteTimeout: 60, GracefulTimeout: 60},
+	}
+	srv, err := NewServer(config.NewConfig(), settings, nil)
+	if err != nil {
+		os.Exit(3)
+	}
+	srv.RegisterRoutes(func(r *Router) {
+		r.Get("/hang", func(_ http.ResponseWriter, req *http.Request) {
+			<-make(chan struct{})
+		})
+	})
+	_ = srv.StartWithGracefulShutdown()
+	os.Exit(0)
 }
 
 // TestServeUntilDrainsInFlightRequests checks the shutdown path used by
@@ -47,7 +140,8 @@ func TestServeUntilDrainsInFlightRequests(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	serveErr := make(chan error, 1)
-	go func() { serveErr <- srv.serveUntil(ctx) }()
+	signalsReleased := make(chan struct{})
+	go func() { serveErr <- srv.serveUntil(ctx, func() { close(signalsReleased) }) }()
 
 	base := "http://127.0.0.1:" + port
 	require.Eventually(t, func() bool {
@@ -78,6 +172,13 @@ func TestServeUntilDrainsInFlightRequests(t *testing.T) {
 	<-started
 
 	cancel()
+	// Signal handling must be released while the request is still draining,
+	// so a second Ctrl+C is not swallowed.
+	select {
+	case <-signalsReleased:
+	case <-time.After(5 * time.Second):
+		t.Fatal("serveUntil did not release signal handling before draining")
+	}
 	// Shutdown closes the listener first; wait until new connections fail.
 	require.Eventually(t, func() bool {
 		conn, err := net.Dial("tcp", "127.0.0.1:"+port)
