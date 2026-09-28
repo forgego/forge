@@ -419,3 +419,32 @@ func TestBaseViewSet_Create_AppliesSchemaDefaultsBeforeValidation(t *testing.T) 
 		assert.Equal(t, "published", mgr.last.Status)
 	})
 }
+
+type hiddenPrivilegeModel struct {
+	schema.BaseSchema
+	ID          int64  `json:"id" db:"id"`
+	IsSuperuser bool   `json:"-" db:"is_superuser"`
+	Secret      string `json:"-" db:"secret"`
+}
+
+func (hiddenPrivilegeModel) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		// Serialized by default: hidden only by the json tag, so not write-only.
+		schema.BoolField("is_superuser"),
+		// Write-only but not editable.
+		{Name: "secret", DBColumn: "secret", Type: schema.TypeString, Editable: false, Serialize: false},
+	}
+}
+
+func TestPopulateFromMap_HiddenFieldsWritableOnlyWhenSchemaWriteOnly(t *testing.T) {
+	model := &hiddenPrivilegeModel{}
+	err := populateFromMap(model, map[string]interface{}{
+		"is_superuser": true,
+		"IsSuperuser":  true,
+		"secret":       "x",
+	})
+	require.NoError(t, err)
+	assert.False(t, model.IsSuperuser, "a json:\"-\" field that the schema serializes must not be writable")
+	assert.Empty(t, model.Secret, "a json:\"-\" field that is not editable must not be writable")
+}
