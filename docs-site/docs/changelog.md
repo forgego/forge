@@ -49,6 +49,12 @@ the change.
   `app.debug` true when `app.env` is production. Projects from `forge new`
   turn it on in the local `.env`; older projects that relied on the default
   set `FORGE_APP_DEBUG=true` for development (#290).
+- An unauthenticated request that fails a permission answers 401 Not
+  Authenticated with a `WWW-Authenticate` challenge when the first
+  authentication class can issue one (`Token` for `TokenAuthentication`,
+  `Bearer` for JWT, `Basic realm="api"` for basic auth), as in Django REST
+  framework. With session or API key authentication first, or none, it stays
+  403. Authenticated requests that fail a permission stay 403 (#294).
 
 ### Fixed
 

@@ -169,12 +169,38 @@ func (vs *BaseViewSet) SetAction(action string) {
 	vs.action = action
 }
 
-func (vs *BaseViewSet) authenticateRequest(r *http.Request) error {
-	authClasses := vs.Authentication
-	if authClasses == nil {
-		authClasses = GetDefaultAuthentication()
+// authenticators returns the viewset's authentication classes, falling back to the configured defaults.
+func (vs *BaseViewSet) authenticators() []authentication.Authentication {
+	if vs.Authentication != nil {
+		return vs.Authentication
 	}
-	result, err := authentication.AuthenticateRequest(r, authClasses)
+	return GetDefaultAuthentication()
+}
+
+// authenticateHeader returns the WWW-Authenticate challenge of the first
+// authentication class, or "" when there is none or it cannot issue one.
+// As in Django REST framework, only the first class is consulted.
+func (vs *BaseViewSet) authenticateHeader(r *http.Request) string {
+	authClasses := vs.authenticators()
+	if len(authClasses) == 0 || authClasses[0] == nil {
+		return ""
+	}
+	return authClasses[0].AuthenticateHeader(r)
+}
+
+// permissionDenied builds the error for a failed permission check. An
+// unauthenticated request answers 401 Not Authenticated when the first
+// authentication class can issue a WWW-Authenticate challenge; otherwise, and
+// for authenticated requests, it answers 403 Permission Denied.
+func (vs *BaseViewSet) permissionDenied(r *http.Request, message string) error {
+	if _, authenticated := authentication.GetUserFromRequest(r); !authenticated && vs.authenticateHeader(r) != "" {
+		return exceptions.NewNotAuthenticated("")
+	}
+	return exceptions.NewPermissionDenied(message)
+}
+
+func (vs *BaseViewSet) authenticateRequest(r *http.Request) error {
+	result, err := authentication.AuthenticateRequest(r, vs.authenticators())
 	if err != nil {
 		return exceptions.NewAuthenticationFailed(err.Error())
 	}
@@ -220,10 +246,10 @@ func (vs *BaseViewSet) checkPermissions(r *http.Request) error {
 	}
 	for _, permission := range perms {
 		if !permission.HasPermission(r, reqView) {
-			return exceptions.NewPermissionDenied(permission.GetMessage())
+			return vs.permissionDenied(r, permission.GetMessage())
 		}
 	}
-	return exceptions.NewPermissionDenied("Permission denied")
+	return vs.permissionDenied(r, "Permission denied")
 }
 
 func (vs *BaseViewSet) checkObjectPermissions(r *http.Request, object interface{}) error {
@@ -237,10 +263,10 @@ func (vs *BaseViewSet) checkObjectPermissions(r *http.Request, object interface{
 	}
 	for _, permission := range perms {
 		if !permission.HasObjectPermission(r, reqView, object) {
-			return exceptions.NewPermissionDenied(permission.GetMessage())
+			return vs.permissionDenied(r, permission.GetMessage())
 		}
 	}
-	return exceptions.NewPermissionDenied("Permission denied")
+	return vs.permissionDenied(r, "Permission denied")
 }
 
 func (vs *BaseViewSet) checkThrottles(r *http.Request) error {
@@ -279,6 +305,12 @@ func (vs *BaseViewSet) checkRequest(w http.ResponseWriter, r *http.Request, acti
 }
 
 func (vs *BaseViewSet) handleException(w http.ResponseWriter, r *http.Request, err error) {
+	switch err.(type) {
+	case *exceptions.NotAuthenticated, *exceptions.AuthenticationFailed:
+		if challenge := vs.authenticateHeader(r); challenge != "" {
+			w.Header().Set("WWW-Authenticate", challenge)
+		}
+	}
 	if vs.ErrorWriter != nil {
 		vs.ErrorWriter(w, r, err)
 		return
