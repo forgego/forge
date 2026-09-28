@@ -87,6 +87,8 @@ the change.
   partially applied bulk actions list each skipped record; the foreign-key
   picker is labelled; fonts load under a custom mount prefix.
 - ORM: `Filter(Or(a, b)).Filter(c)` keeps the OR group intact.
+- `/health` and `/health/ready` report a failing check as `unhealthy` or
+  `not ready` without its error text; the cause is logged instead (#290).
 
 ### Added
 

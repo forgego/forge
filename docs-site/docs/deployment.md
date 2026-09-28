@@ -115,14 +115,14 @@ The server registers these routes (`server.health_check_path` defaults to
 ```go
 server.RegisterHealthCheckFunc("database", func(ctx context.Context) error {
 	if err := database.PingContext(ctx); err != nil {
-		return errors.New("unreachable") // the message is returned in the response body
+		return err
 	}
 	return nil
 })
 ```
 
-A failing check's error message appears in the public response, so return a
-fixed message as above rather than the driver error.
+A failing check is reported publicly only as `unhealthy` or `not ready`; the
+error text goes to the server log (standard `log` output), quoted.
 
 ## Database loss
 
