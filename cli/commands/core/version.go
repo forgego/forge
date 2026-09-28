@@ -26,7 +26,6 @@ func (c *VersionCommand) Definition() *cobra.Command {
 
 // Execute runs the command logic
 func (c *VersionCommand) Execute(ctx *core.Context, args []string) error {
-	fmt.Println("Forge CLI v0.1.0")
-	fmt.Println("Forge Framework v0.1.0")
+	fmt.Printf("Forge %s\n", core.Version())
 	return nil
 }

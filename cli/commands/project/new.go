@@ -161,6 +161,7 @@ func createProjectStructure(projectPath, projectName string, template templates.
 	templateData := templates.TemplateData{
 		ProjectName:  projectName,
 		DatabaseType: databaseType,
+		ForgeVersion: core.Version(),
 	}
 
 	// Render and write files from structure
