@@ -32,7 +32,7 @@ func respondWriteError(w http.ResponseWriter, failureCode string, err error) {
 		respondError(w, v.status, v.code, v.message, details)
 		return
 	}
-	if isValidationError(err) {
+	if !isDriverError(err) && isValidationError(err) {
 		respondError(w, http.StatusBadRequest, "validation_error", err.Error(), validationDetails(err))
 		return
 	}
@@ -81,6 +81,12 @@ func classifyConstraintViolation(err error) (constraintViolation, bool) {
 		case "23514":
 			return checkViolation(), true
 		}
+		// Class 22 is "data exception": a value the column type cannot hold
+		// (22001 too long, 22007 bad timestamp, 22P02 bad integer, ...).
+		// The driver message quotes the rejected input, so it is replaced.
+		if pgErr.Code.Class() == "22" {
+			return dataException(field), true
+		}
 		return constraintViolation{}, false
 	}
 
@@ -105,6 +111,18 @@ func classifyConstraintViolation(err error) (constraintViolation, bool) {
 		}
 	}
 	return constraintViolation{}, false
+}
+
+// isDriverError reports whether err comes from a supported database driver.
+// Driver messages quote SQL, identifiers and rejected input, so the keyword
+// fallback in isValidationError must never echo them.
+func isDriverError(err error) bool {
+	var pgErr *pq.Error
+	if errors.As(err, &pgErr) {
+		return true
+	}
+	var liteErr sqlite3.Error
+	return errors.As(err, &liteErr)
 }
 
 func singleField(field string) string {
@@ -149,4 +167,13 @@ func checkViolation() constraintViolation {
 		field:   "non_field_errors",
 		message: "A value is not allowed by a database constraint.",
 	}
+}
+
+func dataException(field string) constraintViolation {
+	f := singleField(field)
+	msg := "A value is not valid for its field."
+	if f != "non_field_errors" {
+		msg = fmt.Sprintf("%s has an invalid value.", f)
+	}
+	return constraintViolation{status: http.StatusBadRequest, code: "validation_error", field: f, message: msg}
 }

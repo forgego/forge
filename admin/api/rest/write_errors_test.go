@@ -128,3 +128,68 @@ func TestRespondWriteError_UnexpectedErrorDoesNotLeakDriverText(t *testing.T) {
 	assert.Equal(t, "update_failed", code)
 	assert.False(t, strings.Contains(msg, "secret_table"))
 }
+
+func TestRespondWriteError_PostgresDataExceptionIsValidationWithoutDriverText(t *testing.T) {
+	cases := []struct {
+		name  string
+		err   *pq.Error
+		field string
+	}{
+		{"invalid timestamp", &pq.Error{Code: "22007", Message: `invalid input syntax for type timestamp: "secret-input"`}, "non_field_errors"},
+		{"invalid integer", &pq.Error{Code: "22P02", Message: `invalid input syntax for type integer: "secret-input"`}, "non_field_errors"},
+		{"value too long", &pq.Error{Code: "22001", Message: `value too long for type character varying(2) secret-input`}, "non_field_errors"},
+		{"column named", &pq.Error{Code: "22001", Message: `value too long secret-input`, Column: "slug"}, "slug"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			respondWriteError(rec, "create_failed", fmt.Errorf("insert failed: %w", tc.err))
+
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			code, msg, details := decodeWriteError(t, rec)
+			assert.Equal(t, "validation_error", code)
+			assert.Equal(t, []string{msg}, details[tc.field])
+			assert.NotContains(t, rec.Body.String(), "secret-input")
+			assert.NotContains(t, rec.Body.String(), "syntax")
+		})
+	}
+}
+
+func TestRespondWriteError_DriverErrorsSkipKeywordFallback(t *testing.T) {
+	// Both messages contain a keyword isValidationError matches
+	// ("required"), but a driver error is never echoed to the client.
+	pgErr := &pq.Error{Code: "42703", Message: `column "is_required_secret" does not exist`}
+
+	db, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	defer db.Close()
+	_, liteErr := db.Exec(`SELECT is_required_secret FROM sqlite_master`)
+	require.Error(t, liteErr)
+
+	for name, driverErr := range map[string]error{"postgres": pgErr, "sqlite": liteErr} {
+		t.Run(name, func(t *testing.T) {
+			require.True(t, isValidationError(driverErr), "precondition: keyword heuristic matches")
+			rec := httptest.NewRecorder()
+			respondWriteError(rec, "update_failed", fmt.Errorf("update failed: %w", driverErr))
+
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+			code, _, _ := decodeWriteError(t, rec)
+			assert.Equal(t, "update_failed", code)
+			assert.NotContains(t, rec.Body.String(), "is_required_secret")
+		})
+	}
+}
+
+func TestRespondWriteError_ORMValidationErrorStillBadRequest(t *testing.T) {
+	// orm.Manager wraps Clean/Validate failures as "validation failed: ...";
+	// they are not driver errors, so the keyword fallback still applies.
+	err := fmt.Errorf("validation failed: %w", errors.New("name is required"))
+
+	rec := httptest.NewRecorder()
+	respondWriteError(rec, "create_failed", err)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	code, msg, _ := decodeWriteError(t, rec)
+	assert.Equal(t, "validation_error", code)
+	assert.Equal(t, "validation failed: name is required", msg)
+}
