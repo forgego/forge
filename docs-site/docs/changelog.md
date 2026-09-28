@@ -13,6 +13,15 @@ the change.
 
 ### Breaking
 
+- `Manager.Create`, `Save` and `BulkCreate` write explicit zero values
+  (`false`, `0`, `""`) instead of leaving the column out, so a column default
+  no longer replaces them. Code that relied on a `Default` filling a field the
+  struct left at zero must build the instance with `manager.New()` (or call
+  `orm.ApplyDefaults`) first. The admin create endpoint now stores the zero
+  value for a field the request omits; the public REST API still applies the
+  schema `Default`. Zero foreign keys, `nil` pointers, zero `time.Time`
+  values, zero unique optional fields and zero `DBDefault` fields are still
+  left to the database (#291).
 - `api.Router.Register` and `RegisterRoutes` panic when a viewset's data
   access is misconfigured, naming the resource and each missing operation.
   Before, the route answered 500 per request. Set `ReadOnly` for list and
@@ -43,6 +52,13 @@ the change.
 
 ### Fixed
 
+- Creating a record with a boolean unchecked, a number set to 0 or a text
+  left empty stores that value instead of the column default, in the ORM,
+  the admin and the REST API (#291).
+- `AutoNow` fields such as `updated_at` are refreshed on every
+  `Manager.Update`, `Save` and `UpdateFields` (including admin edits), in the
+  database and on the struct. Updates no longer write generated columns or
+  clear a zero `AutoNowAdd` timestamp (#291).
 - `forge version` prints the version the binary was installed from, and
   `forge new` pins that version in the new project's `go.mod` instead of
   `v0.1.0` (#286).

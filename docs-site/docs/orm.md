@@ -183,6 +183,11 @@ err = ProductManager.Update(ctx, product)
 err = ProductManager.Delete(ctx, product.ID)
 ```
 
+`Create` writes every field as the struct holds it, including `false`, `0`
+and `""`; a schema `Default` is applied by `ProductManager.New()`, not at
+insert. `Update` and `Save` refresh `AutoNow` fields. See
+[defaults, zero values and timestamps](/docs/models/#defaults-zero-values-and-timestamps).
+
 ### High-Performance Bulk Operations
 
 Avoid thousands of individual round-trips with bulk operations:

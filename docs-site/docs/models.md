@@ -182,6 +182,48 @@ schema.StringField("status",
 )
 ```
 
+### Defaults, zero values and timestamps
+
+Forge follows Django: `Create` writes the value each field of the struct
+holds, and a `Default` is applied when an instance is *constructed*, not when
+it is inserted. A Go struct cannot tell an unset `bool` from `false`, so an
+explicit `false`, `0` or `""` is stored as is, even when the field declares
+`Default(true)`, `Default(5)` or `Default("draft")`.
+
+To start from the declared defaults, build the instance with the manager and
+then set your values:
+
+```go
+post, err := PostObjects.New() // applies every schema Default
+post.Title = "Hello"
+err = PostObjects.Create(ctx, post) // status is "draft", published is false
+```
+
+The REST API does the same: a key missing from a create request gets the
+field's `Default`, and a key sent as `false`, `0` or `""` is written.
+
+`Create` leaves a column out of the `INSERT`, so the database fills it, only
+when:
+
+| Column | Omitted when |
+| :--- | :--- |
+| Auto-increment primary key, generated column | always |
+| `AutoNow` / `AutoNowAdd` timestamp | the Go value is zero (the column defaults to the current time) |
+| Field with a `DBDefault` | the Go value is zero; use a pointer type such as `*bool` to store an explicit zero |
+| Pointer, slice, map or interface | it is `nil` (`NULL`, or the column default) |
+| Struct value such as `time.Time` | it is the zero value |
+| Foreign key column | it is `0` or `""` (`NULL` instead of a reference to row 0) |
+| Unique, optional field | it is the zero value (`NULL`, so two blank rows do not collide) |
+
+Apart from the first three rows, a required field is always written, even when zero.
+
+`AutoNow` fields are set to the current time on every `Update`, `Save` and
+`UpdateFields`, both in the database and on the struct (`time.Time`,
+`*time.Time` or `string` fields). `AutoNowAdd` fields are set once, by the
+database, on insert; an update never clears them. Like Django's
+`QuerySet.update()`, `QuerySet.Update` and `BulkUpdate` write only the
+columns you name.
+
 ---
 
 ## Relationships & Cascade Behaviors
