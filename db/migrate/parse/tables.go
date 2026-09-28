@@ -32,6 +32,10 @@ var tableConstraintRegex = regexp.MustCompile(`(?i)^(?:CONSTRAINT\s|FOREIGN\s+KE
 // declare them inside CREATE TABLE.
 var tableForeignKeyRegex = regexp.MustCompile(`(?i)^(?:CONSTRAINT\s+["']?\w+["']?\s+)?FOREIGN\s+KEY\s*\(\s*["']?(\w+)["']?\s*\)\s*REFERENCES\s+["']?(\w+)["']?\s*\(\s*["']?\w+["']?\s*\)(?:\s+ON\s+DELETE\s+(SET\s+NULL|SET\s+DEFAULT|NO\s+ACTION|\w+))?(?:\s+ON\s+UPDATE\s+(SET\s+NULL|SET\s+DEFAULT|NO\s+ACTION|\w+))?`)
 
+// tableCheckUniqueRegex matches a named CHECK or UNIQUE table constraint, as
+// SQLite migrations declare them inside CREATE TABLE.
+var tableCheckUniqueRegex = regexp.MustCompile(`(?is)^CONSTRAINT\s+["']?(\w+)["']?\s+(CHECK|UNIQUE)\s*\((.*)\)$`)
+
 // ParseCreateTable parses a CREATE TABLE statement and returns a CreateTable change
 func (p *TableParser) ParseCreateTable(sql string) (*core.CreateTable, error) {
 	createTable, _, err := p.ParseCreateTableWithForeignKeys(sql)
@@ -56,12 +60,15 @@ func (p *TableParser) ParseCreateTableWithForeignKeys(sql string) (*core.CreateT
 	// Parse columns
 	var fields []generator.FieldDefinition
 	var foreignKeys []*core.AddForeignKey
+	var constraints []generator.ConstraintDefinition
 	columnParts := splitColumnDefinitions(columnsDef)
 
 	for _, colDef := range columnParts {
 		if trimmed := strings.TrimSpace(colDef); tableConstraintRegex.MatchString(trimmed) {
 			if fk := parseTableForeignKey(tableName, trimmed); fk != nil {
 				foreignKeys = append(foreignKeys, fk)
+			} else if constraint, ok := parseTableCheckUnique(trimmed); ok {
+				constraints = append(constraints, constraint)
 			}
 			continue
 		}
@@ -78,7 +85,8 @@ func (p *TableParser) ParseCreateTableWithForeignKeys(sql string) (*core.CreateT
 		Name:   toPascalCase(tableName),
 		Fields: fields,
 		Meta: generator.MetaDefinition{
-			TableName: tableName,
+			TableName:   tableName,
+			Constraints: constraints,
 		},
 	}
 
@@ -109,6 +117,28 @@ func parseTableForeignKey(tableName, constraint string) *core.AddForeignKey {
 		},
 		TargetTable: matches[2],
 	}
+}
+
+// parseTableCheckUnique parses a named CHECK or UNIQUE table constraint.
+func parseTableCheckUnique(constraint string) (generator.ConstraintDefinition, bool) {
+	matches := tableCheckUniqueRegex.FindStringSubmatch(constraint)
+	if matches == nil {
+		return generator.ConstraintDefinition{}, false
+	}
+	return constraintDefinition(matches[1], matches[2], matches[3]), true
+}
+
+// constraintDefinition builds a CHECK or UNIQUE constraint from its name, type
+// and the text inside its parentheses.
+func constraintDefinition(name, constraintType, body string) generator.ConstraintDefinition {
+	def := generator.ConstraintDefinition{Name: name, Type: strings.ToUpper(constraintType)}
+	body = strings.TrimSpace(body)
+	if def.Type == "UNIQUE" {
+		def.Fields = extractIndexFieldsFromString(body)
+	} else {
+		def.Condition = body
+	}
+	return def
 }
 
 func extractColumnDefinitions(sql string, searchStart int) (string, error) {

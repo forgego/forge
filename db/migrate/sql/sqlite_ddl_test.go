@@ -130,6 +130,44 @@ func TestSQLiteBuilder_CreateTable_WithForeignKeys(t *testing.T) {
 	assert.Empty(t, getTableColumns(t, db, "products"))
 }
 
+// TestSQLiteBuilder_CreateTable_WithConstraints declares the CHECK and UNIQUE
+// constraints of a new table inside CREATE TABLE, since SQLite has no ALTER
+// TABLE .. ADD CONSTRAINT.
+func TestSQLiteBuilder_CreateTable_WithConstraints(t *testing.T) {
+	categories := makeCategoryModel()
+	changes := []core.Change{
+		&core.CreateTable{Table: categories},
+		&core.AddConstraint{Table: "categories", Constraint: generator.ConstraintDefinition{
+			Name: "categories_name_key", Type: "UNIQUE", Fields: []string{"name"}}},
+		&core.AddConstraint{Table: "categories", Constraint: generator.ConstraintDefinition{
+			Name: "categories_name_nonempty", Type: "CHECK", Condition: "name <> ''"}},
+	}
+
+	builder := NewSQLiteBuilder()
+	upSQL, err := builder.BuildUpSQL(changes)
+	require.NoError(t, err)
+	assert.NotContains(t, upSQL, "ADD CONSTRAINT")
+	assert.Contains(t, upSQL, `CONSTRAINT categories_name_key UNIQUE ("name")`)
+	assert.Contains(t, upSQL, `CONSTRAINT categories_name_nonempty CHECK (name <> '')`)
+
+	db := openMemoryDB(t)
+	_, err = db.Exec(upSQL)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO categories (name) VALUES ('a')`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO categories (name) VALUES ('a')`)
+	require.Error(t, err, "UNIQUE constraint must be enforced")
+	_, err = db.Exec(`INSERT INTO categories (name) VALUES ('')`)
+	require.Error(t, err, "CHECK constraint must be enforced")
+
+	downSQL, err := builder.BuildDownSQL(changes)
+	require.NoError(t, err)
+	assert.NotContains(t, downSQL, "constraint support")
+	_, err = db.Exec(downSQL)
+	require.NoError(t, err)
+	assert.Empty(t, getTableColumns(t, db, "categories"))
+}
+
 func TestSQLiteBuilder_DropColumn_Executes(t *testing.T) {
 	db := openMemoryDB(t)
 	_, err := db.Exec("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT, name TEXT);")
@@ -175,6 +213,7 @@ func TestSQLiteBuilder_AddColumn_Rollback_Executes(t *testing.T) {
 
 func TestSQLiteBuilder_UnsupportedOperations_Error(t *testing.T) {
 	rel := generator.RelationDefinition{Name: "category_id"}
+	check := generator.ConstraintDefinition{Name: "chk_positive", Type: "CHECK", Condition: "id > 0"}
 
 	tests := []struct {
 		name       string
@@ -217,6 +256,18 @@ func TestSQLiteBuilder_UnsupportedOperations_Error(t *testing.T) {
 			isDown:     true,
 			change:     &core.ModifyForeignKey{Table: "products", OldFK: rel, NewFK: rel, TargetTable: "categories"},
 			errSnippet: "modify foreign key is not supported on SQLite without rebuilding the table",
+		},
+		{
+			name:       "AddConstraint on existing table up",
+			isDown:     false,
+			change:     &core.AddConstraint{Table: "products", Constraint: check},
+			errSnippet: "add constraint is not supported on SQLite without rebuilding the table",
+		},
+		{
+			name:       "AddConstraint on existing table down",
+			isDown:     true,
+			change:     &core.AddConstraint{Table: "products", Constraint: check},
+			errSnippet: "add constraint is not supported on SQLite without rebuilding the table",
 		},
 		{
 			name:       "DropConstraint up",

@@ -188,17 +188,7 @@ func (p *DDLParser) parseAddConstraint(sql string) *core.AddConstraint {
 	if len(matches) < 5 {
 		return nil
 	}
-	constraint := generator.ConstraintDefinition{
-		Name: matches[2],
-		Type: strings.ToUpper(matches[3]),
-	}
-	body := strings.TrimSpace(matches[4])
-	if constraint.Type == "UNIQUE" {
-		constraint.Fields = extractIndexFieldsFromString(body)
-	} else {
-		constraint.Condition = body
-	}
-	return &core.AddConstraint{Table: matches[1], Constraint: constraint}
+	return &core.AddConstraint{Table: matches[1], Constraint: constraintDefinition(matches[2], matches[3], matches[4])}
 }
 
 // alterColumnRegex matches the ALTER TABLE .. ALTER COLUMN statements the

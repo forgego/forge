@@ -365,6 +365,33 @@ func TestModifiedColumnIsReadBack(t *testing.T) {
 		`ALTER TABLE authors ALTER COLUMN "visits" SET DEFAULT 0;`)
 }
 
+// TestSQLiteDeclaresNewTableConstraintsInCreateTable covers SQLite, which has
+// no ALTER TABLE .. ADD CONSTRAINT: a new table's Meta constraints go inside
+// CREATE TABLE, and are read back from there.
+func TestSQLiteDeclaresNewTableConstraintsInCreateTable(t *testing.T) {
+	modelsDir := t.TempDir()
+	migrationsDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(modelsDir, "models.go"), []byte(functionalModels), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	generateMigration(t, modelsDir, migrationsDir, core.DriverSQLite, "initial")
+	up, err := os.ReadFile(filepath.Join(migrationsDir, "000001_initial.up.sql"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertContainsAll(t, "up", string(up),
+		`CONSTRAINT books_pages_positive CHECK (pages > 0)`,
+		`CONSTRAINT books_isbn_key UNIQUE ("isbn")`)
+	if strings.Contains(string(up), "ADD CONSTRAINT") {
+		t.Errorf("SQLite migration uses ALTER TABLE .. ADD CONSTRAINT:\n%s", up)
+	}
+	generateMigration(t, modelsDir, migrationsDir, core.DriverSQLite, "again")
+	if got := migrationFiles(t, migrationsDir); len(got) != 2 {
+		extra, _ := os.ReadFile(filepath.Join(migrationsDir, got[len(got)-1]))
+		t.Fatalf("regenerating unchanged models wrote %v:\n%s", got, extra)
+	}
+}
+
 // TestChangedStringDefaultCaseIsDetected covers a default that differs only in
 // case: string literals must compare exactly.
 func TestChangedStringDefaultCaseIsDetected(t *testing.T) {
