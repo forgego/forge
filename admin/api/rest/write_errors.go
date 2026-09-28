@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 
 	validation "github.com/forgego/forge/validate"
@@ -35,7 +36,7 @@ func respondWriteError(w http.ResponseWriter, failureCode string, err error) {
 		respondError(w, http.StatusBadRequest, "validation_error", err.Error(), validationDetails(err))
 		return
 	}
-	log.Printf("admin: %s: %s", failureCode, sanitizeLogText(err.Error()))
+	log.Printf("admin: %s: %s", failureCode, strconv.Quote(err.Error()))
 	respondError(w, http.StatusInternalServerError, failureCode, "The change could not be saved because of a server error", nil)
 }
 
@@ -46,17 +47,8 @@ func deleteFailure(err error) (status int, code, message string) {
 	if v, ok := classifyConstraintViolation(err); ok && v.code == "invalid_reference" {
 		return http.StatusConflict, "in_use", "Other records still refer to this record, so it cannot be deleted."
 	}
-	log.Printf("admin: delete_failed: %s", sanitizeLogText(err.Error()))
+	log.Printf("admin: delete_failed: %s", strconv.Quote(err.Error()))
 	return http.StatusInternalServerError, "delete_failed", "The record could not be deleted because of a server error"
-}
-
-// sanitizeLogText strips line breaks from error text before it is logged.
-// Driver errors can quote submitted values, and a newline in one would let a
-// client forge extra log lines.
-func sanitizeLogText(s string) string {
-	s = strings.ReplaceAll(s, "\n", " ")
-	s = strings.ReplaceAll(s, "\r", " ")
-	return s
 }
 
 type constraintViolation struct {
