@@ -87,12 +87,16 @@ func (p *DDLParser) parseCreateTable(sql string) ([]core.Change, error) {
 		p.SetTableContext(matches[1])
 	}
 
-	createTable, err := p.tableParser.ParseCreateTable(sql)
+	createTable, foreignKeys, err := p.tableParser.ParseCreateTableWithForeignKeys(sql)
 	if err != nil {
 		// Fail softly: return as UnknownChange
 		return []core.Change{&core.UnknownChange{SQL: sql}}, nil
 	}
-	return []core.Change{createTable}, nil
+	changes := []core.Change{createTable}
+	for _, fk := range foreignKeys {
+		changes = append(changes, fk)
+	}
+	return changes, nil
 }
 
 // parseAlterTable parses ALTER TABLE statements
