@@ -88,7 +88,7 @@ func TestRespondWriteError_SQLiteUniqueViolationIsFieldConflict(t *testing.T) {
 }
 
 func TestRespondWriteError_TypedValidationErrorIsBadRequest(t *testing.T) {
-	// "unknown field" carries no keyword the string heuristic recognises.
+	// "unknown field" carries no keyword the string heuristic recognizes.
 	verrs := &validation.ValidationErrors{}
 	verrs.Add("bogus", "unknown field")
 

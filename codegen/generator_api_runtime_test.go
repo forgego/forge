@@ -65,11 +65,11 @@ func TestGeneratedAPI(t *testing.T) {
 	router := forgehttp.NewRouter()
 	RegisterAPIRoutes(router)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/products/", strings.NewReader(`+"`"+`{"name":"x","nmae":"typo","id":7,"created_at":"now"}`+"`"+`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/products/", strings.NewReader(`+"`"+`{"name":"x","bogus":"typo","id":7,"created_at":"now"}`+"`"+`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "nmae") {
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "bogus") {
 		t.Fatalf("unknown key: got %d %s", rec.Code, rec.Body.String())
 	}
 	for _, echoed := range []string{"\"id\"", "created_at", "\"name\""} {

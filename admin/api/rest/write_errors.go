@@ -61,7 +61,7 @@ type constraintViolation struct {
 // such as `Key (slug)=(shoes) already exists.`
 var pqKeyColumns = regexp.MustCompile(`^Key \(([^)]+)\)=`)
 
-// classifyConstraintViolation recognises PostgreSQL and SQLite integrity
+// classifyConstraintViolation recognizes PostgreSQL and SQLite integrity
 // errors and describes them without echoing the driver message.
 func classifyConstraintViolation(err error) (constraintViolation, bool) {
 	var pgErr *pq.Error
