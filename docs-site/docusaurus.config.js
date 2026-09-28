@@ -6,15 +6,15 @@ const darkCodeTheme = require('prism-react-renderer').themes.dracula;
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'forge - Django-like Go Framework',
-  tagline: 'Django-inspired productivity for Go with type safety and performance.',
+  title: 'Forge',
+  tagline: 'The batteries-included web framework for Go.',
   favicon: 'favicon.svg',
 
-  url: 'https://hamidrabedi.github.io',
-  baseUrl: '/foreit/',
+  url: 'https://forgego.github.io',
+  baseUrl: '/forge/',
 
-  organizationName: 'hamidrabedi',
-  projectName: 'foreit',
+  organizationName: 'forgego',
+  projectName: 'forge',
 
   markdown: {
     hooks: {
@@ -37,7 +37,7 @@ const config = {
       ({
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
-          editUrl: 'https://github.com/hamidrabedi/foreit/tree/main/docs-site/',
+          editUrl: 'https://github.com/forgego/forge/tree/master/docs-site/',
           showLastUpdateAuthor: false,
           showLastUpdateTime: false,
         },
@@ -53,20 +53,19 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
-      image: 'forge-social-card.svg',
+      image: 'social-card.png',
       metadata: [
-        {name: 'keywords', content: 'go, golang, framework, django, orm, type-safe, web framework, rest api, code generation, postgresql'},
-        {name: 'author', content: 'forge Framework'},
+        {name: 'keywords', content: 'go, golang, web framework, orm, migrations, admin panel, rest api, code generation, postgresql, sqlite'},
         {property: 'og:type', content: 'website'},
-        {property: 'og:site_name', content: 'forge Framework'},
+        {property: 'og:site_name', content: 'Forge'},
         {name: 'twitter:card', content: 'summary_large_image'},
-        {name: 'twitter:site', content: '@forgego'},
       ],
       navbar: {
-        title: 'forge',
+        title: 'Forge',
         logo: {
-          alt: 'forge Logo',
+          alt: 'Forge',
           src: 'logo.svg',
+          srcDark: 'logo-dark.svg',
         },
         items: [
           {
@@ -101,14 +100,14 @@ const config = {
             position: 'left',
           },
           {
-            href: 'https://github.com/hamidrabedi/foreit',
+            href: 'https://github.com/forgego/forge',
             label: 'GitHub',
             position: 'right',
           },
         ],
       },
       footer: {
-        style: 'dark',
+        style: 'light',
         links: [
           {
             title: 'Start Here',
@@ -135,11 +134,11 @@ const config = {
               {label: 'Changelog', to: '/docs/changelog'},
               {label: 'Community', to: '/docs/community'},
               {label: 'Security', to: '/docs/security'},
-              {label: 'GitHub Repository', href: 'https://github.com/hamidrabedi/foreit'},
+              {label: 'GitHub Repository', href: 'https://github.com/forgego/forge'},
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} Forge Framework. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear()} The Forge authors. MIT License.`,
       },
       prism: {
         theme: lightCodeTheme,
@@ -150,19 +149,6 @@ const config = {
         defaultMode: 'light',
         disableSwitch: false,
         respectPrefersColorScheme: true,
-      },
-      announcementBar: {
-        id: 'announcement-bar',
-        content: 'forge v1.0.0 is now available.',
-        backgroundColor: '#334155',
-        textColor: '#ffffff',
-        isCloseable: true,
-      },
-      algolia: {
-        appId: 'YOUR_APP_ID',
-        apiKey: 'YOUR_SEARCH_API_KEY',
-        indexName: 'forge',
-        contextualSearch: true,
       },
     }),
 

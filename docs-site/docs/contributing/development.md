@@ -7,9 +7,9 @@ description: Contributor entry point for Forge development.
 
 Start with the canonical guide:
 
-- [CONTRIBUTING on GitHub (master)](https://github.com/hamidrabedi/foreit/blob/master/CONTRIBUTING.md)
-- [Review standard](https://github.com/hamidrabedi/foreit/blob/master/docs/REVIEWING.md)
-- [Documentation policy](https://github.com/hamidrabedi/foreit/blob/master/docs/DOCUMENTATION-POLICY.md)
+- [CONTRIBUTING on GitHub (master)](https://github.com/forgego/forge/blob/master/CONTRIBUTING.md)
+- [Review standard](https://github.com/forgego/forge/blob/master/docs/REVIEWING.md)
+- [Documentation policy](https://github.com/forgego/forge/blob/master/docs/DOCUMENTATION-POLICY.md)
 
 ## Validation summary
 

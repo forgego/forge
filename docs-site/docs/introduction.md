@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 description: Forge brings Django's productivity to Go with type safety and performance.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Introduction
@@ -107,7 +107,7 @@ Run `forge generate` and get:
 When you change models, run:
 ```bash
 forge makemigrations
-forge migrate
+forge migrate up
 ```
 
 Forge detects changes and generates SQL migrations automatically.

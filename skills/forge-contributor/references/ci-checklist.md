@@ -8,11 +8,11 @@ Use this as the authoritative "everything must happen" list. Run the checks that
 - Docs site requires Node >= 20 (see `docs-site/package.json`).
 
 ## Core Go (Forge framework)
-- `cd forge`
+- Run from the repository root.
 - `go mod download`
 - `go test -v -race -coverprofile=coverage.out ./...`
 - `go build ./...`
-- `golangci-lint run --timeout=5m --config=../.golangci.yml`
+- `golangci-lint run --timeout=5m --config=.golangci.yml`
 - `go install golang.org/x/vuln/cmd/govulncheck@latest`
 - `govulncheck ./...`
 
@@ -24,16 +24,14 @@ Use this as the authoritative "everything must happen" list. Run the checks that
 - `go test -v -timeout 15m ./integration/...`
 
 ## CLI E2E Tests
-- `cd forge`
-- `go mod download`
-- `go build -o <bin>/forge ./cli/cmd`
+- From the repository root: `go build -o <bin>/forge ./cmd/forge`
 - Add `<bin>` to PATH for the test run.
-- `cd ..\\tests`
+- `cd tests`
 - `$env:RUN_POSTGRES_TESTS="1"`
 - `go test -v ./e2e/cli/...`
 
-## Admin UI (forge/admin/ui/web)
-- `cd forge/admin/ui/web`
+## Admin UI (admin/ui/web)
+- `cd admin/ui/web`
 - `npm ci`
 - `npm run build`
 - `npm run lint`

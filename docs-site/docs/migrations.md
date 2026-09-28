@@ -1,7 +1,7 @@
 ---
 sidebar_position: 12
 description: Automatic AST model change detection, migration workflows, checksum validation, and disaster recovery.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Migrations & Disaster Recovery
@@ -17,7 +17,7 @@ Forge includes a zero-configuration database migration engine inspired by Django
 forge makemigrations [name] --auto
 
 # Apply pending migrations to the database
-forge migrate
+forge migrate up
 
 # Inspect migration status across all apps
 forge migrate status

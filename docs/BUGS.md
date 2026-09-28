@@ -9,9 +9,6 @@
 - [ ] Admin UI unit tests are environment-blocked in some runners:
       vitest/Vite fails with `spawn EPERM`. Re-attempt once spawn
       restrictions are resolved.
-- [ ] The 24x7 orchestrator degraded after ~09:45 (exit-1/no-message
-      loop, dozens of empty message files, identical snapshots).
-      Diagnose that failure mode before any 24x7 rerun.
 
 ## Ecommerce example
 

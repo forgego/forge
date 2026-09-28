@@ -50,13 +50,13 @@ These principles are adapted from archived architecture/design docs, but verifie
 ### 3.1 Type-safe first
 
 - The default experience should be type-safe.
-- Generated QuerySets embed `forge/orm.BaseQuerySet[T]` and expose typed `Fields` instances.
+- Generated QuerySets embed `orm.BaseQuerySet[T]` and expose typed `Fields` instances.
 - Prefer compile-time constraints; only fall back to runtime interfaces when needed.
 
 ### 3.2 Dynamic when needed
 
 - Dynamic queries exist for runtime-defined fields and filters.
-- `forge/filter` and runtime field references in `forge/orm` support this.
+- `filter` and runtime field references in `orm` support this.
 
 ### 3.3 Convention over configuration
 
@@ -65,7 +65,7 @@ These principles are adapted from archived architecture/design docs, but verifie
 
 ### 3.4 Extensibility over hard-coding
 
-- Registries (`forge/admin/core/registry.go`, `forge/schema/registry.go`, `forge/identity/backends/registry.go`) are preferred over hard-coded lists.
+- Registries (`admin/core/registry.go`, `schema/registry.go`, `identity/backends/registry.go`) are preferred over hard-coded lists.
 - Interfaces shape extension points and allow mocking.
 
 ### 3.5 Security by default
@@ -84,8 +84,8 @@ Invariants are the rules we preserve even during large refactors.
 
 ### 4.1 Schema -> AST -> migrations invariants
 
-- Every schema builder option that affects SQL must be captured by `forge/codegen/ast_parser.go`.
-- Every captured option must be reflected in the SQL builder (`forge/db/migrate/sql/*`) and preserved in state conversion if required.
+- Every schema builder option that affects SQL must be captured by `codegen/ast_parser.go`.
+- Every captured option must be reflected in the SQL builder (`db/migrate/sql/*`) and preserved in state conversion if required.
 - Primary keys are always treated as required (NOT NULL). This prevents invalid migrations against identity columns.
 
 ### 4.2 Registry invariants
@@ -128,7 +128,7 @@ Design reason: chainable methods map cleanly to AST extraction and maintain read
 
 ### 5.4 Errors
 
-- Prefer typed, structured errors for API surfaces (`forge/api/errors/*`).
+- Prefer typed, structured errors for API surfaces (`api/errors/*`).
 - Preserve root cause for debugging but expose safe, consistent messages externally.
 
 ## 6. Design patterns used
@@ -139,14 +139,14 @@ Patterns below are described against current packages.
 
 Used when multiple behaviors exist behind a common interface.
 
-- Identity auth backends: `forge/identity/backends/interface.go` and `forge/identity/backends/registry.go`.
-- API auth mechanisms: `forge/api/authentication/*`.
+- Identity auth backends: `identity/backends/interface.go` and `identity/backends/registry.go`.
+- API auth mechanisms: `api/authentication/*`.
 
 ### 6.2 Repository pattern
 
 Used to isolate data access.
 
-- Identity repositories: `forge/identity/repository/*`.
+- Identity repositories: `identity/repository/*`.
 
 Design reason: services can be tested independently from DB drivers.
 
@@ -154,55 +154,55 @@ Design reason: services can be tested independently from DB drivers.
 
 Used to encapsulate business logic.
 
-- Identity services: `forge/identity/service/*`.
+- Identity services: `identity/service/*`.
 
 ### 6.4 Factory pattern
 
 Used to build composite systems with injected dependencies.
 
-- Identity factory patterns exist in `forge/identity/factory.go`.
+- Identity factory patterns exist in `identity/factory.go`.
 
 ### 6.5 Builder pattern
 
 Used for fluent construction of schema fields/relations and query expressions.
 
-- Schema field constructors and options: `forge/schema/fields_functional.go`.
-- Relations chain methods: `forge/schema/relation.go`.
-- Query expression builders: `forge/orm/expression.go`.
+- Schema field constructors and options: `schema/fields_functional.go`.
+- Relations chain methods: `schema/relation.go`.
+- Query expression builders: `orm/expression.go`.
 
 ### 6.6 Registry pattern
 
 Used to centralize discovery and extension.
 
-- Admin registry: `forge/admin/core/registry.go`.
-- CLI registry: `forge/cli/core/registry.go`.
-- Schema registry: `forge/schema/registry.go`.
+- Admin registry: `admin/core/registry.go`.
+- CLI registry: `cli/core/registry.go`.
+- Schema registry: `schema/registry.go`.
 
 ### 6.7 Template method pattern
 
 Used in codegen templates and in base viewsets.
 
-- Codegen: `forge/codegen/templates/*`.
+- Codegen: `codegen/templates/*`.
 - API viewsets: base types expose common flows and override hooks.
 
 ### 6.8 Chain of responsibility
 
 Used in middleware chains.
 
-- Server middleware: `forge/server/middleware.go`.
-- API middleware integration: `forge/api/middleware_integration.go`.
+- Server middleware: `server/middleware.go`.
+- API middleware integration: `api/middleware_integration.go`.
 
 ### 6.9 Decorator pattern
 
 Used to wrap querysets and values querysets.
 
-- Values/ValuesList wrappers: `forge/orm/queryset.go` defines `ValuesQuerySet` and `ValuesListQuerySet` wrappers.
+- Values/ValuesList wrappers: `orm/queryset.go` defines `ValuesQuerySet` and `ValuesListQuerySet` wrappers.
 
 ### 6.10 Observer/event pattern
 
 Used in admin notifications.
 
-- Admin notifications and hooks: `forge/admin/core/notifications.go`.
+- Admin notifications and hooks: `admin/core/notifications.go`.
 
 ## 7. Schema DSL design
 
@@ -219,7 +219,7 @@ A schema DSL expresses these directly and keeps AST extraction deterministic.
 
 ### 7.2 Field model
 
-`forge/schema/field.go` defines the field model: name, type, required, unique, primary key, auto increment, default, and an options map for additional metadata.
+`schema/field.go` defines the field model: name, type, required, unique, primary key, auto increment, default, and an options map for additional metadata.
 
 Design notes:
 
@@ -228,7 +228,7 @@ Design notes:
 
 ### 7.3 Temporal traits
 
-`forge/schema/field_traits.go` defines traits, including temporal fields with `AutoNow` and `AutoNowAdd`.
+`schema/field_traits.go` defines traits, including temporal fields with `AutoNow` and `AutoNowAdd`.
 
 Design reason: these traits allow the SQL builder to set driver-specific defaults (e.g., `DEFAULT now()` in Postgres).
 
@@ -243,7 +243,7 @@ Generated columns are modeled via `WithGeneratedColumn(expression, stored)`.
 
 ### 7.5 Relations
 
-`forge/schema/relation.go` defines relations and chain methods.
+`schema/relation.go` defines relations and chain methods.
 
 Important decisions:
 
@@ -265,7 +265,7 @@ Meta exists so:
 
 The archive emphasized AST parsing to avoid reflection at runtime. The current code follows that:
 
-- `forge/codegen/ast_parser.go` parses source and extracts model definitions.
+- `codegen/ast_parser.go` parses source and extracts model definitions.
 - This allows generation of strongly typed helpers and avoids runtime field lookups.
 
 ### 8.2 Option extraction model
@@ -278,7 +278,7 @@ Design reason:
 
 ### 8.3 Template boundaries
 
-Templates in `forge/codegen/templates` are the only place where generated code structure should be defined.
+Templates in `codegen/templates` are the only place where generated code structure should be defined.
 
 Rules:
 
@@ -301,7 +301,7 @@ Writer should avoid clobbering user code.
 
 ## 9. ORM/QuerySet design
 
-Described against the current implementation in `forge/orm/*`.
+Described against the current implementation in `orm/*`.
 
 ### 9.1 QuerySet as a persistent builder
 
@@ -317,7 +317,7 @@ Design reason:
 - easy to compose filters across admin/API
 - safe reuse in concurrent contexts
 
-Implementation: `forge/orm/queryset.go` clones and returns new QuerySet values on most operations.
+Implementation: `orm/queryset.go` clones and returns new QuerySet values on most operations.
 
 ### 9.2 Field expressions
 
@@ -333,7 +333,7 @@ These are projection tools:
 - `Values("id", "name")` returns a list of maps (or map-like rows) for dynamic output.
 - `ValuesList("id", "name")` returns `[][]interface{}`.
 
-See tests: `forge/orm/queryset_test.go`.
+See tests: `orm/queryset_test.go`.
 
 ### 9.4 SelectRelated and PrefetchRelated
 
@@ -346,16 +346,16 @@ No dedicated guardrail currently reports access to a relation that was not loade
 
 ### 9.5 Updates
 
-- Update builders (`forge/orm/update_builder.go` and helpers) support safe partial updates.
-- Manager CRUD (`forge/orm/manager.go`) is the main entry point for Create/Update/Delete with hooks.
+- Update builders (`orm/update_builder.go` and helpers) support safe partial updates.
+- Manager CRUD (`orm/manager.go`) is the main entry point for Create/Update/Delete with hooks.
 
 ### 9.6 Transactions and unit of work
 
-`forge/db/transaction.go` is used by services/repositories. The ORM does not attempt to hide transaction boundaries; it exposes enough primitives for explicit, business-aligned transactions.
+`db/transaction.go` is used by services/repositories. The ORM does not attempt to hide transaction boundaries; it exposes enough primitives for explicit, business-aligned transactions.
 
 ## 10. Filtering design
 
-Described against current `forge/filter/*`.
+Described against current `filter/*`.
 
 ### 10.1 Why a separate filtering subsystem
 
@@ -388,7 +388,7 @@ Design requirements:
 - Prevent expensive queries by applying cost scoring.
 - Prevent JOIN explosion via optimization strategies.
 
-Implementation: `forge/filter/security.go`, `optimizer.go`, `metrics.go`.
+Implementation: `filter/security.go`, `optimizer.go`, `metrics.go`.
 
 ### 10.4 Integration points
 
@@ -404,7 +404,7 @@ Implementation: `forge/filter/security.go`, `optimizer.go`, `metrics.go`.
 
 ### 11.2 State is reconstructed from migration files
 
-Rather than depending only on database introspection, the state manager (`forge/db/migrate/state/loader.go`) reconstructs schema from existing migration SQL. This enables:
+Rather than depending only on database introspection, the state manager (`db/migrate/state/loader.go`) reconstructs schema from existing migration SQL. This enables:
 
 - running generation without a database
 - deterministic diffs in CI
@@ -427,21 +427,21 @@ Key design concerns:
 
 SQL generation is separated by driver to avoid "lowest common denominator" output.
 
-- Postgres: `forge/db/migrate/sql/postgres.go`
-- SQLite: `forge/db/migrate/sql/sqlite.go`
+- Postgres: `db/migrate/sql/postgres.go`
+- SQLite: `db/migrate/sql/sqlite.go`
 
 ### 11.5 Recovery and verification
 
 Dirty-state recovery is built into the system.
 
-- `forge/db/migrate/execute/recover.go` provides tools to inspect and recover.
+- `db/migrate/execute/recover.go` provides tools to inspect and recover.
 - `verify/*` provides lint/safety checks.
 
 The design is to fail loudly on dirty state by default, but provide force/recovery mechanisms that are test-covered.
 
 ## 12. Admin design
 
-This section reconciles the archived admin redesign notes with the implemented admin system in `forge/admin/*`.
+This section reconciles the archived admin redesign notes with the implemented admin system in `admin/*`.
 
 ### 12.1 Design goals
 
@@ -474,20 +474,20 @@ The design reduces duplication: models are the single source of truth.
 
 Archived docs promoted a headless admin.
 
-The current implementation includes REST routers (`forge/admin/api/rest/router.go`) and UI helpers (`forge/admin/ui/*`), allowing either:
+The current implementation includes REST routers (`admin/api/rest/router.go`) and UI helpers (`admin/ui/*`), allowing either:
 
 - a JS SPA consuming admin APIs
 - server-rendered admin pages
 
 ### 12.5 Audit/history
 
-`forge/admin/core/history.go` provides an audit trail building block.
+`admin/core/history.go` provides an audit trail building block.
 
 Design requirement: history must be opt-in and storage-agnostic.
 
 ## 13. API framework design
 
-Derived from archived REST/API docs and the implemented `forge/api/*`.
+Derived from archived REST/API docs and the implemented `api/*`.
 
 ### 13.1 ViewSet abstraction
 
@@ -509,11 +509,11 @@ Design goal: predictable behavior across JSON/XML/YAML/HTML/CSV.
 ### 13.4 Errors
 
 - API errors return problem details and stable error codes.
-- Exceptions are mapped via `forge/api/errors/mapper.go`.
+- Exceptions are mapped via `api/errors/mapper.go`.
 
 ### 13.5 OpenAPI
 
-OpenAPI generation exists (`forge/api/docs/openapi.go`). It must remain consistent with actual route wiring.
+OpenAPI generation exists (`api/docs/openapi.go`). It must remain consistent with actual route wiring.
 
 ## 14. Identity design
 
@@ -558,7 +558,7 @@ Middleware populates request context and enforces permissions.
 
 Security is layered:
 
-- request protection: CSRF, CORS, rate limiting (`forge/server/security.go`, `forge/server/ratelimit.go`).
+- request protection: CSRF, CORS, rate limiting (`server/security.go`, `server/ratelimit.go`).
 - identity enforcement: auth middleware.
 - query safety: parameterized SQL builder and filter security.
 
@@ -574,7 +574,7 @@ Scaling notes:
 
 - Prefer database-side filtering.
 - Use pagination by default.
-- Cache at API layer when needed (`forge/api/caching/*`).
+- Cache at API layer when needed (`api/caching/*`).
 
 ## 18. Testing strategy
 
@@ -664,30 +664,30 @@ This table records which configurations are verified for release.
 
 | Capability | Status | Limits | Requirement | Evidence |
 | --- | --- | --- | --- | --- |
-| ORM query building | verified | Primary verified database target is PostgreSQL; supports type-safe query construction, basic CRUD, filtering, ordering, pagination, and projection (`Values`/`ValuesList`). Complex window functions and recursive CTEs are not modeled in DSL. | FR-015, FR-017, FR-018, FR-022 | `tests/integration/db` (`TestORMCRUDWithRelations`), `forge/orm` (`TestPrefetchRelated_Integration`), CI job `integration-tests` |
-| Relation traversal and prefetch | verified | Supports `SelectRelated` (SQL JOINs for foreign keys and one-to-one) and `PrefetchRelated` (batched secondary queries for many-to-many and reverse relations); accessing un-preloaded relations produces explicit errors to prevent implicit N+1 queries. | FR-018, FR-019 | `tests/integration/db` (`TestORMCRUDWithRelations`), `forge/orm` (`TestPrefetchRelated_Integration`, `TestManyToMany_Prefetch_SnakeCaseModelNameColumns`), CI job `integration-tests` |
-| Count, Sum, Avg, Min, Max (ungrouped, via `orm.AggregateValues`) | verified | on PostgreSQL and SQLite (evaluated per relation scope; predicates constrain relation aggregates; many-to-many aggregate paths not supported yet) | — | `forge/orm/aggregates_test.go` |
-| Grouped aggregates, STDDEV/VARIANCE, custom registered aggregates, many-to-many aggregate paths | unverified | Not implemented; calls are rejected with NotImplemented before SQL runs. | — | `forge/orm/aggregates_test.go` rejection test |
-| Union, Intersection, Difference | unverified | Not implemented; calls return NotImplemented. | — | `forge/orm/queryset_not_implemented_test.go` |
-| Integer primary keys | verified | int64 keys named id | — | `forge/orm` (`TestManager_WithTx_Commit`) |
+| ORM query building | verified | Primary verified database target is PostgreSQL; supports type-safe query construction, basic CRUD, filtering, ordering, pagination, and projection (`Values`/`ValuesList`). Complex window functions and recursive CTEs are not modeled in DSL. | FR-015, FR-017, FR-018, FR-022 | `tests/integration/db` (`TestORMCRUDWithRelations`), `orm` (`TestPrefetchRelated_Integration`), CI job `integration-tests` |
+| Relation traversal and prefetch | verified | Supports `SelectRelated` (SQL JOINs for foreign keys and one-to-one) and `PrefetchRelated` (batched secondary queries for many-to-many and reverse relations); accessing un-preloaded relations produces explicit errors to prevent implicit N+1 queries. | FR-018, FR-019 | `tests/integration/db` (`TestORMCRUDWithRelations`), `orm` (`TestPrefetchRelated_Integration`, `TestManyToMany_Prefetch_SnakeCaseModelNameColumns`), CI job `integration-tests` |
+| Count, Sum, Avg, Min, Max (ungrouped, via `orm.AggregateValues`) | verified | on PostgreSQL and SQLite (evaluated per relation scope; predicates constrain relation aggregates; many-to-many aggregate paths not supported yet) | — | `orm/aggregates_test.go` |
+| Grouped aggregates, STDDEV/VARIANCE, custom registered aggregates, many-to-many aggregate paths | unverified | Not implemented; calls are rejected with NotImplemented before SQL runs. | — | `orm/aggregates_test.go` rejection test |
+| Union, Intersection, Difference | unverified | Not implemented; calls return NotImplemented. | — | `orm/queryset_not_implemented_test.go` |
+| Integer primary keys | verified | int64 keys named id | — | `orm` (`TestManager_WithTx_Commit`) |
 | UUID and string primary keys in `Manager.Get` | unverified | Not supported: Manager.Get takes an int64 key. | — | no test; `Manager.Get` signature |
-| Transactions | verified | Single-connection and nested transactions supported via savepoints (`WithTx`, `Savepoint`, `RollbackTo`) with validated savepoint identifiers (alphanumeric/underscore, ≤128 chars); multi-database 2PC/XA distributed transactions not supported. | FR-020, FR-026 | `forge/db` (`TestWithTx_*`), `forge/orm` (`TestManager_WithTx_*`), `forge/orm` (`TestPrefetchRelated_BareSQLTx`), CI job `unit-tests` |
+| Transactions | verified | Single-connection and nested transactions supported via savepoints (`WithTx`, `Savepoint`, `RollbackTo`) with validated savepoint identifiers (alphanumeric/underscore, ≤128 chars); multi-database 2PC/XA distributed transactions not supported. | FR-020, FR-026 | `db` (`TestWithTx_*`), `orm` (`TestManager_WithTx_*`), `orm` (`TestPrefetchRelated_BareSQLTx`), CI job `unit-tests` |
 | Migrations (PostgreSQL) | verified | Forward and reverse migration generation from model diffs without a live database; requires PostgreSQL 15+; supports table, column, index, and constraint generation, dirty state tracking, and recovery. | FR-024, FR-025, FR-026, FR-027, FR-028, FR-029, FR-030 | `tests/pkg_migrations` (`TestMigrationApplyPostgres`), `tests/integration/migrate/*`, `tests/e2e/cli` (`TestCLIApplyMigration`), CI jobs `integration-tests`, `cli-e2e`, and `release-gate` |
-| SQLite migration apply | unverified | No automated apply test: the migration generator has no driver selection; tests/pkg_migrations skips it (`TestMigrationApplySQLite`); SQL generation exists (`forge/db/migrate/sql/sqlite.go`), but automated apply against live SQLite databases is not exercised in CI. | FR-023, FR-026 | [`tests/pkg_migrations/migration_integration_test.go:21-23`](../tests/pkg_migrations/migration_integration_test.go) (`TestMigrationApplySQLite` skipped; CI job `release-gate` explicitly allows skip) |
-| REST API generation | partial | Code generator emits serializers, viewsets, and route registration (`forge/codegen/templates/api.tmpl`); API dispatch, content negotiation, pagination, and error mapping are verified using in-memory mock stores (`tests/integration/api/api_integration_test.go`), but generated REST endpoints are not verified end-to-end against a live database. | FR-043, FR-044, FR-045, FR-046, FR-047, FR-048, FR-049 | `forge/codegen` (`TestGeneratorGenerateEmitsMustNewManagerDeclaration`), `tests/integration/api` (`api_integration_test.go`), `forge/api/*`, CI job `unit-tests` |
-| Admin UI | partial | Metadata reflection, CRUD action execution, list display, and history are verified with Go unit tests (`forge/admin/*`); web frontend components are tested via Vitest (`npm run test`); Playwright configs exist (`forge/admin/ui/web/playwright.config.ts`, `tests/e2e/admin`), but live browser E2E tests against a real database are not executed in CI. | FR-052, FR-053, FR-054, FR-055, FR-056, FR-057, FR-058, FR-061 | `forge/admin/ui/web` (`npm run test`), `forge/admin/core/*`, `forge/admin/api/rest/*`, CI job `frontend` |
-| Authentication and permissions | verified | Built-in username/password authentication, sessions, and bearer token issuance are verified against PostgreSQL; model and object-level authorization checks are enforced in admin/API middleware, but third-party identity providers (OAuth/OIDC) and fine-grained field-level permissions are not implemented. | FR-035, FR-036, FR-037, FR-038 | `forge/identity/...` (`repository`, `backends`, `service`), `examples/ecommerce` (`TestBuildEcommerceRouter_AdminAPIBulkUpdateObjectSpecificPaymentChangePermission`), CI job `release-gate` (`--require-no-skip '^github.com/.*/(identity|internal/testutils)'`) |
+| SQLite migration apply | unverified | No automated apply test: the migration generator has no driver selection; tests/pkg_migrations skips it (`TestMigrationApplySQLite`); SQL generation exists (`db/migrate/sql/sqlite.go`), but automated apply against live SQLite databases is not exercised in CI. | FR-023, FR-026 | [`tests/pkg_migrations/migration_integration_test.go:21-23`](../tests/pkg_migrations/migration_integration_test.go) (`TestMigrationApplySQLite` skipped; CI job `release-gate` explicitly allows skip) |
+| REST API generation | partial | Code generator emits serializers, viewsets, and route registration (`codegen/templates/api.tmpl`); API dispatch, content negotiation, pagination, and error mapping are verified using in-memory mock stores (`tests/integration/api/api_integration_test.go`), but generated REST endpoints are not verified end-to-end against a live database. | FR-043, FR-044, FR-045, FR-046, FR-047, FR-048, FR-049 | `codegen` (`TestGeneratorGenerateEmitsMustNewManagerDeclaration`), `tests/integration/api` (`api_integration_test.go`), `api/*`, CI job `unit-tests` |
+| Admin UI | partial | Metadata reflection, CRUD action execution, list display, and history are verified with Go unit tests (`admin/*`); web frontend components are tested via Vitest (`npm run test`); Playwright configs exist (`admin/ui/web/playwright.config.ts`, `tests/e2e/admin`), but live browser E2E tests against a real database are not executed in CI. | FR-052, FR-053, FR-054, FR-055, FR-056, FR-057, FR-058, FR-061 | `admin/ui/web` (`npm run test`), `admin/core/*`, `admin/api/rest/*`, CI job `frontend` |
+| Authentication and permissions | verified | Built-in username/password authentication, sessions, and bearer token issuance are verified against PostgreSQL; model and object-level authorization checks are enforced in admin/API middleware, but third-party identity providers (OAuth/OIDC) and fine-grained field-level permissions are not implemented. | FR-035, FR-036, FR-037, FR-038 | `identity/...` (`repository`, `backends`, `service`), `examples/ecommerce` (`TestBuildEcommerceRouter_AdminAPIBulkUpdateObjectSpecificPaymentChangePermission`), CI job `release-gate` (`--require-no-skip '^github.com/.*/(identity|internal/testutils)'`) |
 | Background tasks | unverified | Not implemented; asynchronous worker queues and background job scheduling are planned on roadmap. | FR-033, FR-060 | None (no background task package or tests in repository; planned in [`docs/ROADMAP.md`](ROADMAP.md)) |
-| Caching | partial | In-memory cache only (`NewMemoryCache` with TTL expiration and concurrent-safe map); no distributed cache backend (e.g. Redis/Memcached) or persistent caching is implemented or tested against a real service. | FR-041 | `forge/api/caching` (`TestMemoryCache_*`), `forge/api` (`TestMethodCache_*`), CI job `unit-tests` |
+| Caching | partial | In-memory cache only (`NewMemoryCache` with TTL expiration and concurrent-safe map); no distributed cache backend (e.g. Redis/Memcached) or persistent caching is implemented or tested against a real service. | FR-041 | `api/caching` (`TestMemoryCache_*`), `api` (`TestMethodCache_*`), CI job `unit-tests` |
 | CLI tooling | verified | Project creation, migration authoring, applying, and status inspection are supported via CLI commands (`makemigrations`, `migrate up`, `migrate status`) tested against PostgreSQL in CLI E2E tests; interactive scaffolding (`forge new`) is not database-tested. | FR-063 | `tests/e2e/cli` (`TestCLIApplyMigration`, `TestCLIMakemigrations`, `TestCLIStatus`), CI job `cli-e2e` |
-| Schema DSL and code generation | partial | Declarative Go schema DSL models fields, traits, relations, and meta; AST parser and code generator produce typed structs and QuerySets; tested via unit tests without live database connection. | FR-010, FR-011, FR-012, FR-014, FR-015 | `forge/schema/*`, `forge/codegen/*`, CI job `unit-tests` |
+| Schema DSL and code generation | partial | Declarative Go schema DSL models fields, traits, relations, and meta; AST parser and code generator produce typed structs and QuerySets; tested via unit tests without live database connection. | FR-010, FR-011, FR-012, FR-014, FR-015 | `schema/*`, `codegen/*`, CI job `unit-tests` |
 
 ### Supported configurations
 
 | Component | Supported version | Where it is pinned |
 | --- | --- | --- |
-| Go runtime & toolchain | `1.26.0` (floor / minimum language directive); `1.26.8` and `1.27.1` (tested versions) | Language floor: [`forge/go.mod:3`](../forge/go.mod) (`go 1.26.0`). Tested versions: [`.github/workflows/test.yml`](../.github/workflows/test.yml) (job `unit-tests` lines 63-64 matrix `['1.26.8', '1.27.1']`; jobs `integration-tests` line 125, `lint` line 160, `build` line 182, `cli-e2e` line 242, `security` line 286, `release-gate` line 324 pin `1.27.1`) |
+| Go runtime & toolchain | `1.26.0` (floor / minimum language directive); `1.26.8` and `1.27.1` (tested versions) | Language floor: [`go.mod:3`](../go.mod) (`go 1.26.0`). Tested versions: [`.github/workflows/test.yml`](../.github/workflows/test.yml) (job `unit-tests` lines 63-64 matrix `['1.26.8', '1.27.1']`; jobs `integration-tests` line 123, `lint` line 158, `build` line 178, `cli-e2e` line 238, `security` line 279, `release-gate` line 317 pin `1.27.1`) |
 | PostgreSQL database service | `15` (major tag only; pins `postgres:15`, no minor version pinned) | [`.github/workflows/test.yml`](../.github/workflows/test.yml) (jobs `integration-tests` line 106, `cli-e2e` line 223, and `release-gate` line 306) |
-| SQLite driver | `v1.14.52` | [`forge/go.mod:18`](../forge/go.mod) (`github.com/mattn/go-sqlite3 v1.14.52`) |
+| SQLite driver | `v1.14.52` | [`go.mod:29`](../go.mod) (`github.com/mattn/go-sqlite3 v1.14.52`) |
 | Node.js runtime | `26.8.1` | [`.github/workflows/test.yml`](../.github/workflows/test.yml) (job `frontend` line 198) |
-| Admin UI browser projects | `chromium` (Desktop Chrome emulation, 1280x720) and `mobile` (Desktop Chrome mobile emulation, 375x812) | [`forge/admin/ui/web/playwright.config.ts:21-30`](../forge/admin/ui/web/playwright.config.ts) (projects `chromium` and `mobile`) |
+| Admin UI browser projects | `chromium` (Desktop Chrome emulation, 1280x720) and `mobile` (Desktop Chrome mobile emulation, 375x812) | [`admin/ui/web/playwright.config.ts:21-30`](../admin/ui/web/playwright.config.ts) (projects `chromium` and `mobile`) |

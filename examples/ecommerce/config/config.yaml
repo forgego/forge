@@ -27,7 +27,7 @@ admin:
   items_per_page: 20
   username: admin
   password: admin123
-  static_dir: ../../forge/admin/ui/dist
+  static_dir: ../../admin/ui/dist
 
 api:
   enabled: true

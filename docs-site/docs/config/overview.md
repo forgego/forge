@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 description: Configuration overview and layout.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Config Overview

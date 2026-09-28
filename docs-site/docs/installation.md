@@ -1,7 +1,7 @@
 ---
 sidebar_position: 3
 description: Complete installation guide for Forge framework.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Installation
@@ -12,7 +12,7 @@ This guide covers everything you need to install and set up Forge for developmen
 
 ### Go Version
 
-Forge requires Go 1.21 or higher. Check your version:
+Forge requires Go 1.26 or higher. Check your version:
 
 ```bash
 go version
@@ -50,7 +50,7 @@ The Forge CLI provides commands for project creation, code generation, migration
 Install the `forge` command globally:
 
 ```bash
-go install github.com/forgego/forge/cli/cmd@latest
+go install github.com/forgego/forge/cmd/forge@latest
 ```
 
 This installs the binary to `$GOPATH/bin` or `$GOBIN`.
@@ -60,7 +60,7 @@ This installs the binary to `$GOPATH/bin` or `$GOBIN`.
 Check that `forge` is available:
 
 ```bash
-forge --version
+forge version
 ```
 
 Expected output:
@@ -199,7 +199,7 @@ Configure your database in `config/config.yaml`, then:
 ```bash
 forge generate
 forge makemigrations init --auto
-forge migrate
+forge migrate up
 forge runserver
 ```
 
@@ -212,7 +212,7 @@ Visit http://localhost:8000/admin/ to see the admin interface.
 To upgrade to the latest version:
 
 ```bash
-go install github.com/forgego/forge/cli/cmd@latest
+go install github.com/forgego/forge/cmd/forge@latest
 ```
 
 ### Upgrade Library
@@ -227,7 +227,7 @@ go mod tidy
 ### Check Version
 
 ```bash
-forge --version
+forge version
 ```
 
 ## Troubleshooting
@@ -379,5 +379,5 @@ Now that Forge is installed:
 ## Getting Help
 
 - [Documentation](/docs/) - Full documentation
-- [GitHub Issues](https://github.com/hamidrabedi/foreit/issues) - Report issues
-- [Examples](https://github.com/hamidrabedi/foreit/tree/main/examples) - Sample projects
+- [GitHub Issues](https://github.com/forgego/forge/issues) - Report issues
+- [Examples](https://github.com/forgego/forge/tree/master/examples) - Sample projects

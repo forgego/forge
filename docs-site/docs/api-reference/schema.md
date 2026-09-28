@@ -1,6 +1,6 @@
 ---
 sidebar_position: 1
-description: API Reference for the forge/schema package.
+description: API Reference for the schema package.
 ---
 
 # Schema API Reference

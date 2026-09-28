@@ -1,7 +1,7 @@
 ---
 sidebar_position: 8
 description: Versioning strategies for APIs.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Versioning

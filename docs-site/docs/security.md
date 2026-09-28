@@ -7,4 +7,4 @@ description: Security policy and reporting.
 
 Report security issues privately. See the full policy here:
 
-- https://github.com/hamidrabedi/foreit/blob/main/SECURITY.md
+- https://github.com/forgego/forge/blob/master/SECURITY.md

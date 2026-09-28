@@ -4,7 +4,7 @@ Get started with the Forge Ecommerce example in 5 minutes!
 
 ## Prerequisites
 
-- Go 1.21 or later
+- Go 1.26 or later
 - PostgreSQL 12 or later
 - Forge CLI installed
 
@@ -158,11 +158,11 @@ ecommerce/
 **Login** with the superuser account you created.
 
 **Explore:**
-- 📦 **Catalog** - Products, Categories, Brands, Variants
-- 👥 **Customers** - Customer management, Addresses, Wish Lists
-- 📋 **Orders** - Order processing, Payments, Shipments
-- 📊 **Inventory** - Stock levels, Warehouses, Transfers, Alerts
-- ⭐ **Marketing** - Reviews, Coupons, Questions
+- **Catalog** - Products, Categories, Brands, Variants
+- **Customers** - Customer management, Addresses, Wish Lists
+- **Orders** - Order processing, Payments, Shipments
+- **Inventory** - Stock levels, Warehouses, Transfers, Alerts
+- **Marketing** - Reviews, Coupons, Questions
 
 **Try:**
 - Create a category
@@ -383,4 +383,4 @@ MIT
 
 ---
 
-**Happy Coding! 🚀**
+**Happy Coding!**
