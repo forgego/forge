@@ -296,3 +296,51 @@ func TestDroppedColumnIsReadBack(t *testing.T) {
 	assertContainsAll(t, "up", up, `ALTER TABLE authors DROP COLUMN IF EXISTS ratio;`)
 	assertContainsAll(t, "down", down, `ALTER TABLE authors ADD COLUMN "ratio" REAL;`)
 }
+
+// TestDroppedForeignKeyIsRestoredOnDown covers a model that drops a relation
+// but keeps its column: the down migration must re-add the recorded FK.
+func TestDroppedForeignKeyIsRestoredOnDown(t *testing.T) {
+	source := mustReplace(t, functionalModels,
+		"\t\tschema.OneToOneField(\"reviewer_id\", \"Author\", schema.OnDelete(schema.CascadePROTECT)),\n", "")
+	up, down := regenerateWith(t, core.DriverPostgreSQL, source, "drop_reviewer_fk")
+	assertContainsAll(t, "up", up, `ALTER TABLE books DROP CONSTRAINT IF EXISTS fk_books_reviewer_id;`)
+	assertContainsAll(t, "down", down,
+		`ALTER TABLE books ADD CONSTRAINT fk_books_reviewer_id FOREIGN KEY ("reviewer_id") REFERENCES authors (id) ON DELETE RESTRICT ON UPDATE NO ACTION;`)
+	for _, unwanted := range []string{"fk_books_author_id", "fk_books_editor_id", "DROP COLUMN"} {
+		if strings.Contains(up, unwanted) {
+			t.Errorf("up touches unchanged %s\n%s", unwanted, up)
+		}
+	}
+}
+
+// TestDroppedForeignKeyColumnIsRestoredBeforeItsForeignKey drops a relation
+// with its column: the down migration must re-add the column before the FK.
+func TestDroppedForeignKeyColumnIsRestoredBeforeItsForeignKey(t *testing.T) {
+	source := mustReplace(t, functionalModels,
+		"\t\tschema.OneToOneField(\"reviewer_id\", \"Author\", schema.OnDelete(schema.CascadePROTECT)),\n", "")
+	source = mustReplace(t, source, "\t\tschema.Int64Field(\"reviewer_id\"),\n", "")
+	up, down := regenerateWith(t, core.DriverPostgreSQL, source, "drop_reviewer")
+	dropFK := strings.Index(up, "DROP CONSTRAINT IF EXISTS fk_books_reviewer_id")
+	dropColumn := strings.Index(up, "DROP COLUMN IF EXISTS reviewer_id")
+	if dropFK < 0 || dropColumn < 0 || dropFK > dropColumn {
+		t.Errorf("up must drop the FK, then the column:\n%s", up)
+	}
+	addColumn := strings.Index(down, `ADD COLUMN "reviewer_id"`)
+	addFK := strings.Index(down, "ADD CONSTRAINT fk_books_reviewer_id")
+	if addColumn < 0 || addFK < 0 || addColumn > addFK {
+		t.Errorf("down must add the column, then the FK:\n%s", down)
+	}
+}
+
+// TestDroppedConstraintIsRestoredOnDown covers a model that drops a Meta
+// constraint: the down migration must re-add the recorded definition.
+func TestDroppedConstraintIsRestoredOnDown(t *testing.T) {
+	source := mustReplace(t, functionalModels,
+		"\t\t\t{Name: \"books_pages_positive\", Type: \"CHECK\", Condition: \"pages > 0\"},\n", "")
+	up, down := regenerateWith(t, core.DriverPostgreSQL, source, "drop_pages_check")
+	assertContainsAll(t, "up", up, `ALTER TABLE books DROP CONSTRAINT IF EXISTS books_pages_positive;`)
+	assertContainsAll(t, "down", down, `ALTER TABLE books ADD CONSTRAINT books_pages_positive CHECK (pages > 0);`)
+	if strings.Contains(up, "books_isbn_key") {
+		t.Errorf("up touches the unchanged UNIQUE constraint:\n%s", up)
+	}
+}

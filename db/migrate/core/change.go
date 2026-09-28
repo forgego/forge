@@ -158,10 +158,13 @@ func (c *AddForeignKey) Type() ChangeType  { return ChangeTypeAddForeignKey }
 func (c *AddForeignKey) TableName() string { return c.Table }
 func (c *AddForeignKey) Reversible() bool  { return true }
 
-// DropForeignKey represents dropping a foreign key
+// DropForeignKey represents dropping a foreign key. Relation and TargetTable,
+// when set, record the dropped foreign key so the down migration can re-add it.
 type DropForeignKey struct {
-	Table  string
-	FKName string
+	Table       string
+	FKName      string
+	Relation    *generator.RelationDefinition
+	TargetTable string
 }
 
 func (c *DropForeignKey) Type() ChangeType  { return ChangeTypeDropForeignKey }
@@ -190,10 +193,12 @@ func (c *AddConstraint) Type() ChangeType  { return ChangeTypeAddConstraint }
 func (c *AddConstraint) TableName() string { return c.Table }
 func (c *AddConstraint) Reversible() bool  { return true }
 
-// DropConstraint represents dropping a constraint
+// DropConstraint represents dropping a constraint. Constraint, when set,
+// records the dropped definition so the down migration can re-add it.
 type DropConstraint struct {
 	Table          string
 	ConstraintName string
+	Constraint     *generator.ConstraintDefinition
 }
 
 func (c *DropConstraint) Type() ChangeType  { return ChangeTypeDropConstraint }

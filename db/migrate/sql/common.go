@@ -12,6 +12,16 @@ import (
 func orderChanges(changes []core.Change) []core.Change {
 	ordered := make([]core.Change, 0, len(changes))
 
+	// Foreign keys and constraints are dropped before anything else, so a
+	// constraint re-added under the same name, or a dropped column, follows
+	// its drop, and the down migration re-adds them after everything they
+	// depend on has been restored.
+	for _, change := range changes {
+		if isConstraintDrop(change) {
+			ordered = append(ordered, change)
+		}
+	}
+
 	// First pass: CreateTable
 	for _, change := range changes {
 		if change.Type() == core.ChangeTypeCreateTable {
@@ -47,12 +57,18 @@ func orderChanges(changes []core.Change) []core.Change {
 		ct := change.Type()
 		if ct != core.ChangeTypeCreateTable && ct != core.ChangeTypeAddColumn && ct != core.ChangeTypeRenameColumn &&
 			ct != core.ChangeTypeModifyColumn && ct != core.ChangeTypeAddForeignKey && ct != core.ChangeTypeModifyForeignKey &&
-			ct != core.ChangeTypeAddIndex && ct != core.ChangeTypeModifyIndex && ct != core.ChangeTypeAddConstraint {
+			ct != core.ChangeTypeAddIndex && ct != core.ChangeTypeModifyIndex && ct != core.ChangeTypeAddConstraint &&
+			!isConstraintDrop(change) {
 			ordered = append(ordered, change)
 		}
 	}
 
 	return ordered
+}
+
+func isConstraintDrop(change core.Change) bool {
+	ct := change.Type()
+	return ct == core.ChangeTypeDropForeignKey || ct == core.ChangeTypeDropConstraint
 }
 
 // CascadeAction returns the SQL referential action for a model or SQL cascade name.

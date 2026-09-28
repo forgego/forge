@@ -478,9 +478,12 @@ func (d *Detector) detectForeignKeyChanges(tableName string, current, previous [
 	// Detect dropped foreign keys
 	for _, name := range sortedKeys(previousMap) {
 		if _, exists := currentMap[name]; !exists {
+			prevRel := previousMap[name]
 			changes = append(changes, &core.DropForeignKey{
-				Table:  tableName,
-				FKName: fmt.Sprintf("fk_%s_%s", tableName, name),
+				Table:       tableName,
+				FKName:      fmt.Sprintf("fk_%s_%s", tableName, name),
+				Relation:    &prevRel,
+				TargetTable: resolveTargetTable(prevRel.To, allDefs),
 			})
 		}
 	}
@@ -544,9 +547,11 @@ func (d *Detector) detectConstraintChanges(tableName string, current, previous [
 	// Detect dropped constraints
 	for _, name := range sortedKeys(previousMap) {
 		if _, exists := currentMap[name]; !exists {
+			prevConstr := previousMap[name]
 			changes = append(changes, &core.DropConstraint{
 				Table:          tableName,
 				ConstraintName: name,
+				Constraint:     &prevConstr,
 			})
 		}
 	}
