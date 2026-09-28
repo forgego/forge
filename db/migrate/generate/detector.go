@@ -565,15 +565,24 @@ func (d *Detector) detectConstraintChanges(tableName string, current, previous [
 		previousMap[constr.Name] = constr
 	}
 
-	// Detect new constraints
+	// Detect new constraints, and changed ones, which are dropped and re-added
 	for _, name := range sortedKeys(currentMap) {
 		constr := currentMap[name]
-		if _, exists := previousMap[name]; !exists {
-			changes = append(changes, &core.AddConstraint{
-				Table:      tableName,
-				Constraint: constr,
+		prevConstr, exists := previousMap[name]
+		if exists && !constraintChanged(constr, prevConstr) {
+			continue
+		}
+		if exists {
+			changes = append(changes, &core.DropConstraint{
+				Table:          tableName,
+				ConstraintName: name,
+				Constraint:     &prevConstr,
 			})
 		}
+		changes = append(changes, &core.AddConstraint{
+			Table:      tableName,
+			Constraint: constr,
+		})
 	}
 
 	// Detect dropped constraints
@@ -589,6 +598,26 @@ func (d *Detector) detectConstraintChanges(tableName string, current, previous [
 	}
 
 	return changes, nil
+}
+
+// constraintChanged reports whether a constraint's type, condition or fields
+// changed. Conditions compare as normalized SQL, so a constraint read back
+// from a migration file equals the model's unchanged one.
+func constraintChanged(current, previous generator.ConstraintDefinition) bool {
+	if !strings.EqualFold(current.Type, previous.Type) {
+		return true
+	}
+	if normalizeDDL(current.Condition) != normalizeDDL(previous.Condition) {
+		return true
+	}
+	return !reflect.DeepEqual(nonNil(current.Fields), nonNil(previous.Fields))
+}
+
+func nonNil(values []string) []string {
+	if values == nil {
+		return []string{}
+	}
+	return values
 }
 
 // sortedKeys returns a map's keys in order, so detected changes, and the

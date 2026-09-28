@@ -365,6 +365,25 @@ func TestModifiedColumnIsReadBack(t *testing.T) {
 		`ALTER TABLE authors ALTER COLUMN "visits" SET DEFAULT 0;`)
 }
 
+// TestChangedConstraintIsDetected covers a constraint that keeps its name but
+// changes its CHECK condition or UNIQUE fields: it is dropped and re-added.
+func TestChangedConstraintIsDetected(t *testing.T) {
+	source := mustReplace(t, functionalModels, `Condition: "pages > 0"`, `Condition: "pages > 1"`)
+	source = mustReplace(t, source, `Fields: []string{"isbn"}},`, `Fields: []string{"isbn", "pages"}},`)
+	up, down := regenerateWith(t, core.DriverPostgreSQL, source, "change_constraints")
+	assertContainsAll(t, "up", up,
+		`ALTER TABLE books DROP CONSTRAINT IF EXISTS books_pages_positive;`,
+		`ALTER TABLE books ADD CONSTRAINT books_pages_positive CHECK (pages > 1);`,
+		`ALTER TABLE books DROP CONSTRAINT IF EXISTS books_isbn_key;`,
+		`ALTER TABLE books ADD CONSTRAINT books_isbn_key UNIQUE ("isbn", "pages");`)
+	assertContainsAll(t, "down", down,
+		`ALTER TABLE books ADD CONSTRAINT books_pages_positive CHECK (pages > 0);`,
+		`ALTER TABLE books ADD CONSTRAINT books_isbn_key UNIQUE ("isbn");`)
+	if strings.Index(up, "DROP CONSTRAINT IF EXISTS books_pages_positive") > strings.Index(up, "ADD CONSTRAINT books_pages_positive") {
+		t.Errorf("up must drop the old constraint before adding the new one:\n%s", up)
+	}
+}
+
 // TestSQLiteDeclaresNewTableConstraintsInCreateTable covers SQLite, which has
 // no ALTER TABLE .. ADD CONSTRAINT: a new table's Meta constraints go inside
 // CREATE TABLE, and are read back from there.
