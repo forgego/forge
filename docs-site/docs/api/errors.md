@@ -1,7 +1,7 @@
 ---
 sidebar_position: 10
 description: API exceptions and error responses.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # API Errors

@@ -1,7 +1,7 @@
 ---
 sidebar_position: 25
 description: Validation, error handling, and problem details.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Validation & Errors

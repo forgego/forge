@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 description: Production REST API framework with ViewSets, ModelSerializers, pagination, rate throttling, and OpenAPI 3.0 generation.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # REST API Framework Overview

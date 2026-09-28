@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 description: ModelSerializers, field whitelisting, input validation, and nested relational serialization.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # ModelSerializers & Validation

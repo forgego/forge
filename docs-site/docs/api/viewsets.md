@@ -1,7 +1,7 @@
 ---
 sidebar_position: 3
 description: Type-safe CRUD endpoints, custom action routes, permissions, and query filtering with ViewSets.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # ViewSets & Endpoint Handlers

@@ -1,21 +1,20 @@
 # Build from the repository root so the local Forge module is available.
 FROM node:26.8.1-alpine AS admin
-WORKDIR /src/forge/admin/ui/web
-COPY forge/admin/ui/web/package*.json ./
+WORKDIR /src/admin/ui/web
+COPY admin/ui/web/package*.json ./
 RUN npm ci
-COPY forge/admin/ui/web/ ./
+COPY admin/ui/web/ ./
 RUN npm run build
 
 FROM golang:1.27.1-alpine AS builder
 RUN apk add --no-cache gcc musl-dev
 WORKDIR /src
-COPY forge/go.mod forge/go.sum ./forge/
+COPY go.mod go.sum ./
 COPY examples/ecommerce/go.mod examples/ecommerce/go.sum ./examples/ecommerce/
 WORKDIR /src/examples/ecommerce
 RUN go mod download
-COPY forge/ /src/forge/
-COPY examples/ecommerce/ ./
-COPY --from=admin /src/forge/admin/ui/dist /src/forge/admin/ui/dist
+COPY . /src/
+COPY --from=admin /src/admin/ui/dist /src/admin/ui/dist
 RUN CGO_ENABLED=1 go build -tags embed -o /out/ecommerce .
 
 FROM alpine:latest

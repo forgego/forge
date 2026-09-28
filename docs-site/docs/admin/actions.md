@@ -1,7 +1,7 @@
 ---
 sidebar_position: 3
 description: Custom batch operations, bulk actions, confirmation dialogs, and data export.
-image: /forge-social-card.svg
+image: /social-card.png
 ---
 
 # Admin Actions & Batch Operations

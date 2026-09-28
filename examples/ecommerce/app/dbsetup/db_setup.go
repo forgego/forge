@@ -20,7 +20,7 @@ func adaptDDL(driver, stmt string) string {
 // SetupSchema creates the database schema for the ecommerce example
 func SetupSchema(database *db.DB) {
 	ctx := context.Background()
-	log.Println("🛠️  Setting up database schema...")
+	log.Println("Setting up database schema...")
 
 	// Categories
 	_, err := database.ExecContext(ctx, adaptDDL(database.Driver, `
@@ -1474,5 +1474,5 @@ func SetupSchema(database *db.DB) {
 		log.Fatalf("Failed to create exchange_rates table: %v", err)
 	}
 
-	log.Println("✅ Database schema setup complete")
+	log.Println("Database schema setup complete")
 }
