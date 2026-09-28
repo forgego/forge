@@ -58,6 +58,17 @@ the change.
 - `forge makemigrations` on unchanged models writes nothing and prints
   `No changes detected`; it no longer re-types columns, re-adds foreign keys
   or drops `created_at` defaults, and it prints the files it actually wrote.
+- `forge makemigrations` on PostgreSQL no longer fails when a model drops a
+  relation or a `Meta` constraint; the down migration re-adds it. A
+  constraint whose CHECK condition or UNIQUE fields change is dropped and
+  re-added, and a string default that changes only in case is migrated.
+- `forge makemigrations` reads dropped and altered columns, array types such
+  as `TEXT[]`, and defaults containing spaces, commas or quotes back from
+  migration files, so it no longer repeats those changes on every run.
+- SQLite migrations declare a new table's constraints inside `CREATE TABLE`
+  and default auto timestamps to `CURRENT_TIMESTAMP`, so they apply. Adding
+  a constraint to, or changing a foreign key of, an existing SQLite table
+  is an error instead of invalid SQL.
 - `forge migrate recover` no longer advises marking a rolled-back failed
   migration clean.
 - `gen.go` for models with relations compiles.
