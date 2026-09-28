@@ -72,11 +72,10 @@ func (p *ASTParser) ParseDirectory(dir string) ([]*ModelDefinition, error) {
 						if len(field.Names) != 0 {
 							continue
 						}
-						embedded := field.Type
-						if pointer, ok := embedded.(*ast.StarExpr); ok {
-							embedded = pointer.X
-						}
-						if ident, ok := embedded.(*ast.Ident); ok {
+						// Only value embeddings promote usable ID methods: a
+						// pointer embedding is nil in a new model, so the
+						// promoted SetID would panic after Create inserts it.
+						if ident, ok := field.Type.(*ast.Ident); ok {
 							embeddedTypesByModel[key] = append(embeddedTypesByModel[key], node.Name.Name+"."+ident.Name)
 						}
 					}

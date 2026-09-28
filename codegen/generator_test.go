@@ -215,6 +215,24 @@ func (Product) Fields() []schema.Field {
 	assert.FileExists(t, filepath.Join(tmpDir, "api_gen.go"))
 }
 
+func TestGeneratorGenerate_RejectsPointerEmbeddedIDMethods(t *testing.T) {
+	tmpDir := t.TempDir()
+	modelSrc := `package testmodels
+import "github.com/forgego/forge/schema"
+type Identified struct { key int64 }
+func (i *Identified) GetID() int64 { return i.key }
+func (i *Identified) SetID(id int64) { i.key = id }
+type Product struct { schema.BaseSchema; *Identified }
+func (Product) Fields() []schema.Field {
+	return []schema.Field{schema.Int64("id").Primary().AutoIncrement().Build()}
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "models.go"), []byte(modelSrc), 0644))
+	err := NewGenerator(tmpDir, tmpDir).SetGenerateAPI(true).Generate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no concrete int64 ID or Id field")
+}
+
 func TestGeneratorGenerate_InvalidAPIModelPreservesGeneratedFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 	modelSrc := `package testmodels
