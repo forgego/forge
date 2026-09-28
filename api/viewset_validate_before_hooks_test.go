@@ -42,6 +42,7 @@ func (m *hookRecordingModel) BeforeUpdate(ctx context.Context) error {
 }
 
 type hookRecordingManager struct {
+	unusedListOperations
 	mu       sync.Mutex
 	items    map[int64]*hookRecordingModel
 	nextID   int64

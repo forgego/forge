@@ -28,6 +28,7 @@ func (refetchFailureModel) Fields() []schema.Field {
 }
 
 type refetchFailureManager struct {
+	unusedListOperations
 	item          *refetchFailureModel
 	createCalls   int
 	updateCalls   int

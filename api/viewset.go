@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"net/http"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -75,6 +76,9 @@ type BaseViewSet struct {
 	ExcludeResponseFields []string
 	// ReadOnlyRequestFields holds request keys ignored on create and update; nil accepts every field.
 	ReadOnlyRequestFields []string
+	// ReadOnly exposes only list and retrieve. Create, update, partial update
+	// and destroy respond 405, and the Queryset needs only read operations.
+	ReadOnly bool
 	// Authentication uses the current defaults when nil; a non-nil empty slice disables authentication.
 	Authentication []authentication.Authentication
 	// Permissions uses the current defaults when nil; a non-nil empty slice disables permission checks.
@@ -124,13 +128,18 @@ func NewBaseViewSet(serializer func() Serializer, queryset, model interface{}) *
 
 // getManager gets the manager for operations
 func (vs *BaseViewSet) getManager() reflect.Value {
-	// If Queryset is set and looks like a manager (has Create method), use it
+	// If Queryset is set and looks like a manager (has Create method, or Get
+	// for a read-only viewset), use it
 	if vs.Queryset != nil {
 		qsValue := reflect.ValueOf(vs.Queryset)
 		qsType := qsValue.Type()
 
+		required := "Create"
+		if vs.ReadOnly {
+			required = "Get"
+		}
 		// Use cached method lookup instead of MethodByName
-		if _, ok := globalCache.GetMethod(qsType, "Create"); ok {
+		if _, ok := globalCache.GetMethod(qsType, required); ok {
 			return qsValue
 		}
 	}
@@ -185,6 +194,7 @@ func (vs *BaseViewSet) viewForRequest(r *http.Request) *BaseViewSet {
 		Model:                 vs.Model,
 		ExcludeResponseFields: vs.ExcludeResponseFields,
 		ReadOnlyRequestFields: vs.ReadOnlyRequestFields,
+		ReadOnly:              vs.ReadOnly,
 		Authentication:        vs.Authentication,
 		Permissions:           vs.Permissions,
 		Throttles:             vs.Throttles,
@@ -401,7 +411,7 @@ func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 // Create handles POST /resource/
 func (vs *BaseViewSet) Create(w http.ResponseWriter, r *http.Request) {
 	r = withAction(r, "create")
-	if !vs.checkRequest(w, r, "create") {
+	if !vs.checkRequest(w, r, "create") || !vs.allowWrite(w, r) {
 		return
 	}
 	ctx := r.Context()
@@ -573,7 +583,7 @@ func (vs *BaseViewSet) Update(w http.ResponseWriter, r *http.Request) {
 
 func (vs *BaseViewSet) update(w http.ResponseWriter, r *http.Request, action string) {
 	r = withAction(r, action)
-	if !vs.checkRequest(w, r, action) {
+	if !vs.checkRequest(w, r, action) || !vs.allowWrite(w, r) {
 		return
 	}
 	ctx := r.Context()
@@ -739,7 +749,7 @@ func (vs *BaseViewSet) PartialUpdate(w http.ResponseWriter, r *http.Request) {
 // Destroy handles DELETE /resource/{id}/
 func (vs *BaseViewSet) Destroy(w http.ResponseWriter, r *http.Request) {
 	r = withAction(r, "destroy")
-	if !vs.checkRequest(w, r, "destroy") {
+	if !vs.checkRequest(w, r, "destroy") || !vs.allowWrite(w, r) {
 		return
 	}
 	ctx := r.Context()
@@ -902,8 +912,14 @@ func NewRouter(prefix string) *Router {
 	}
 }
 
-// Register registers a viewset with a resource name
+// Register registers a viewset with a resource name. It panics when the
+// viewset's configuration cannot serve requests (see
+// BaseViewSet.CheckConfiguration), like Action does for an invalid method:
+// both are programming errors that must stop startup, not per-request 500s.
 func (r *Router) Register(resource string, vs ViewSet) {
+	if err := checkViewSet(resource, vs); err != nil {
+		panic(err.Error())
+	}
 	r.routes[resource] = vs
 }
 
@@ -988,8 +1004,20 @@ func (r *Router) registerActions(router *forgehttp.Router) {
 	}
 }
 
-// RegisterRoutes registers all routes on a chi router
+// RegisterRoutes registers all routes on a chi router. It checks every
+// viewset again first, so configuration changed after Register still fails
+// at startup, and panics before mounting any route when one is invalid.
 func (r *Router) RegisterRoutes(router *forgehttp.Router) {
+	resources := make([]string, 0, len(r.routes))
+	for resource := range r.routes {
+		resources = append(resources, resource)
+	}
+	sort.Strings(resources)
+	for _, resource := range resources {
+		if err := checkViewSet(resource, r.routes[resource]); err != nil {
+			panic(err.Error())
+		}
+	}
 	for resource, vs := range r.routes {
 		r.registerResourceRoutes(router, resource, vs)
 	}

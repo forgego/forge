@@ -29,7 +29,14 @@ func (p listOnlyPermission) HasObjectPermission(r *http.Request, view permission
 func (p listOnlyPermission) GetMessage() string { return "only list is permitted" }
 func (p listOnlyPermission) GetCode() string    { return "permission_denied" }
 
-type dummyQueryset struct{}
+type dummyQueryset struct {
+	unusedUpdateOperation
+}
+
+// dummyModel is the model for viewsets backed by dummyQueryset.
+type dummyModel struct {
+	ID int64 `json:"id"`
+}
 
 func (d *dummyQueryset) All(context.Context) (interface{}, error) {
 	return []map[string]interface{}{{"id": 1}}, nil
@@ -43,13 +50,14 @@ func (d *dummyQueryset) Get(_ context.Context, id int64) (interface{}, error) {
 	return map[string]interface{}{"id": id}, nil
 }
 func (d *dummyQueryset) Delete(context.Context, interface{}) error { return nil }
+func (d *dummyQueryset) Create(context.Context, interface{}) error { return nil }
 
 func TestConcurrentActionPermissionIsolation(t *testing.T) {
 	qs := &dummyQueryset{}
 	vs := NewBaseViewSet(
 		func() Serializer { return NewBaseSerializer(nil) },
 		qs,
-		map[string]interface{}{},
+		&dummyModel{},
 	)
 	vs.Permissions = []permissions.Permission{listOnlyPermission{}}
 

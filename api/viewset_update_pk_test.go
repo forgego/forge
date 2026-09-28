@@ -36,6 +36,8 @@ func (s *updateTestItemSerializer) Fields() []string {
 }
 
 type fakeUpdateManager struct {
+	unusedListOperations
+	unusedDeleteOperation
 	mu    sync.Mutex
 	items map[int64]*updateTestItem
 }
@@ -132,6 +134,8 @@ func (s *codeTestModelSerializer) Fields() []string {
 }
 
 type fakeCodeUpdateManager struct {
+	unusedListOperations
+	unusedDeleteOperation
 	mu    sync.Mutex
 	items map[string]*codeTestModel
 }

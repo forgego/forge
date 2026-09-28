@@ -493,6 +493,7 @@ Derived from archived REST/API docs and the implemented `api/*`.
 
 - ViewSets centralize CRUD behavior with override hooks.
 - Serializer is provided as a factory (`func() Serializer`) to avoid shared mutable state.
+- Data access is resolved by method name, so `Router.Register` and `Router.RegisterRoutes` check each viewset's serializer, model and queryset operations and panic on a mismatch: configuration errors stop startup instead of becoming per-request 500s. `ReadOnly` viewsets need only read operations. See `docs-site/docs/api/data-access.md`.
 
 ### 13.2 Serializer design
 

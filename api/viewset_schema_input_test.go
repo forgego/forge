@@ -66,6 +66,7 @@ func (requiredSchemaModel) Fields() []schema.Field {
 }
 
 type requiredSchemaManager struct {
+	unusedListOperations
 	createCalled bool
 }
 
@@ -173,6 +174,7 @@ func newSchemaInputSerializer() Serializer {
 }
 
 type schemaInputManager struct {
+	unusedListOperations
 	mu     sync.Mutex
 	items  map[int64]*schemaInputModel
 	nextID int64

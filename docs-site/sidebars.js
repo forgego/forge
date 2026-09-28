@@ -29,6 +29,7 @@ const sidebars = {
         'api/overview',
         'api/serializers',
         'api/viewsets',
+        'api/data-access',
         'api/authentication',
         'api/permissions',
         'api/throttling',

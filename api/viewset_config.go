@@ -23,6 +23,8 @@ type ViewSetConfig struct {
 	Permissions    []permissions.Permission
 	Throttles      []throttling.Throttle
 	ErrorWriter    func(http.ResponseWriter, *http.Request, error)
+	// ReadOnly is copied to BaseViewSet.ReadOnly.
+	ReadOnly bool
 
 	// Internal viewset created lazily
 	viewSet *ConfigurableViewSet
@@ -47,6 +49,7 @@ func NewConfigurableViewSet(config *ViewSetConfig) *ConfigurableViewSet {
 	base.Permissions = config.Permissions
 	base.Throttles = config.Throttles
 	base.ErrorWriter = config.ErrorWriter
+	base.ReadOnly = config.ReadOnly
 
 	return &ConfigurableViewSet{
 		BaseViewSet: base,

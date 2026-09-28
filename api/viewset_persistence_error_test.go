@@ -36,6 +36,7 @@ func (s *persistenceTestSerializer) Fields() []string {
 }
 
 type persistenceTestManager struct {
+	unusedListOperations
 	mu          sync.Mutex
 	items       map[int64]*persistenceTestItem
 	createErr   error
@@ -100,6 +101,10 @@ func (qs *persistenceErrorQuerySet) Limit(limit int) interface{} { return qs }
 
 func (qs *persistenceErrorQuerySet) Offset(offset int) interface{} { return qs }
 
+func (qs *persistenceErrorQuerySet) Get(context.Context, int64) (interface{}, error) {
+	return nil, qs.err
+}
+
 func newPersistenceRouter(mgr *persistenceTestManager) *forgehttp.Router {
 	vs := NewBaseViewSet(newPersistenceTestSerializer, mgr, &persistenceTestItem{})
 	router := NewRouter("/api")
@@ -145,6 +150,7 @@ func TestBaseViewSet_PersistenceError_DoesNotLeakMessage(t *testing.T) {
 		&persistenceErrorQuerySet{err: secret},
 		&persistenceTestItem{},
 	)
+	vs.ReadOnly = true
 	router := NewRouter("/api")
 	router.Register("items", vs)
 	listHandler := forgehttp.NewRouter()
