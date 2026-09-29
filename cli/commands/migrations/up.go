@@ -62,6 +62,16 @@ func (c *UpCommand) Execute(ctx *core.Context, args []string) error {
 		// Dry-run mode: show what would be executed
 		fmt.Fprintln(out, "Dry-run mode: Preview of migrations that would be applied:")
 		fmt.Fprintln(out)
+		// An invalid server.stores fails here as it does in a real run, so
+		// a CI dry run does not approve a config the deploy will reject.
+		enabled, err := frameworkStoresEnabled(ctx.Config)
+		if err != nil {
+			return err
+		}
+		if enabled {
+			fmt.Fprintln(out, "  Framework store tables (server.stores: database) are migrated first if pending")
+			fmt.Fprintln(out)
+		}
 
 		// Find all migration files
 		pattern := filepath.Join(migrationsPath, "*_*.up.sql")
@@ -186,6 +196,16 @@ func (c *UpCommand) Execute(ctx *core.Context, args []string) error {
 		}
 	}
 
+	// Framework store tables (server.stores: database) come first; they
+	// do not depend on the application's schema.
+	if err := applyFrameworkMigrations(cmdCtx, ctx.Config, database, out); err != nil {
+		return err
+	}
+	if enabled, _ := frameworkStoresEnabled(ctx.Config); enabled && !hasMigrationFiles(migrationsPath) {
+		fmt.Fprintf(out, "No application migrations in %s\n", migrationsPath)
+		return nil
+	}
+
 	// Create migration runner
 	runner, err := db.NewMigrationRunner(database, migrationsPath)
 	if err != nil {
@@ -200,4 +220,15 @@ func (c *UpCommand) Execute(ctx *core.Context, args []string) error {
 
 	fmt.Fprintln(out, "✓ Migrations applied successfully")
 	return nil
+}
+
+// hasMigrationFiles reports whether dir holds at least one up or down
+// migration file.
+func hasMigrationFiles(dir string) bool {
+	for _, pattern := range []string{"*.up.sql", "*.down.sql"} {
+		if matches, _ := filepath.Glob(filepath.Join(dir, pattern)); len(matches) > 0 {
+			return true
+		}
+	}
+	return false
 }

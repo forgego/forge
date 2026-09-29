@@ -11,6 +11,7 @@ export interface FieldMetadata {
   widget: string;
   validators?: ValidatorMetadata[];
   default_value?: any;
+  has_default?: boolean;
   max_length?: number;
   min_length?: number;
   max_value?: any;

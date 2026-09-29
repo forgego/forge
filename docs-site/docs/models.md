@@ -199,8 +199,9 @@ post.Title = "Hello"
 err = PostObjects.Create(ctx, post) // status is "draft", published is false
 ```
 
-The REST API does the same: a key missing from a create request gets the
-field's `Default`, and a key sent as `false`, `0` or `""` is written.
+The REST API and the admin do the same: a key missing from a create request
+gets the field's `Default`, and a key sent as `false`, `0` or `""` is
+written. The admin create form also starts each field at its `Default`.
 
 `Create` leaves a column out of the `INSERT`, so the database fills it, only
 when:

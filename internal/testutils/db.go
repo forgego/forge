@@ -3,11 +3,29 @@ package testutils
 import (
 	"database/sql"
 	"fmt"
+	"net"
+	"net/url"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/lib/pq"
 )
+
+// postgresURL builds a postgres:// connection URL with every component
+// escaped, so a user, password or database name containing spaces, quotes
+// or other special characters stays intact. (testutils cannot import the db
+// package's keyword DSN helper: db's own tests import testutils.)
+func postgresURL(host string, port int, user, password, dbname string) string {
+	u := url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword(user, password),
+		Host:     net.JoinHostPort(host, strconv.Itoa(port)),
+		Path:     "/" + dbname,
+		RawQuery: "sslmode=disable",
+	}
+	return u.String()
+}
 
 // SetupTestDB creates a connection to the test PostgreSQL database
 func SetupTestDB(t *testing.T) *sql.DB {
@@ -32,13 +50,11 @@ func SetupTestDB(t *testing.T) *sql.DB {
 		dbname = n
 	}
 
-	dsn := testDatabaseURL(fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname))
+	dsn := testDatabaseURL(postgresURL(host, port, user, password, dbname))
 
 	if os.Getenv("FORGE_TEST_DATABASE_URL") == "" {
 		// Open connection to 'postgres' db to check/create 'forge_test'
-		defaultDSN := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=disable",
-			host, port, user, password)
+		defaultDSN := postgresURL(host, port, user, password, "postgres")
 		defaultDB, err := sql.Open("postgres", defaultDSN)
 		if err == nil {
 			defer defaultDB.Close()

@@ -7,30 +7,29 @@ import (
 	"time"
 
 	"github.com/forgego/forge/api/authentication"
-	internalratelimit "github.com/forgego/forge/internal/ratelimit"
 )
 
 // UserRateThrottle throttles authenticated user requests.
 type UserRateThrottle struct {
 	Rate     string
 	Scope    string
-	store    Store
+	store    Store // set by WithStore; nil uses the default factory
+	defaults *defaultStore
 	parseErr error
 }
 
 // NewUserRateThrottle creates a new user rate throttle.
 func NewUserRateThrottle(rate string) *UserRateThrottle {
 	limit, window, err := parseRate(rate)
-	var store Store
-	if err == nil {
-		store = internalratelimit.NewFixedWindowCounter(limit, window)
-	}
-	return &UserRateThrottle{
+	throttle := &UserRateThrottle{
 		Rate:     rate,
 		Scope:    "user",
-		store:    store,
 		parseErr: err,
 	}
+	if err == nil {
+		throttle.defaults = &defaultStore{name: "user/" + rate, limit: limit, window: window}
+	}
+	return throttle
 }
 
 // NewUserRateThrottleWithStore creates a new user rate throttle with a custom store.
@@ -51,11 +50,15 @@ func (t *UserRateThrottle) AllowRequest(r *http.Request, view interface{}) (bool
 	if t.parseErr != nil {
 		return true, 0, t.parseErr
 	}
-	if t.store == nil {
+	store := t.store
+	if store == nil && t.defaults != nil {
+		store = t.defaults.get()
+	}
+	if store == nil {
 		return true, 0, nil
 	}
 	key := "throttle_user_" + t.GetScope(r, view)
-	allowed, retryAfter := t.store.Allow(key)
+	allowed, retryAfter := allow(store, r, key)
 	return allowed, retryAfter, nil
 }
 

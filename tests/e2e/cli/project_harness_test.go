@@ -66,6 +66,15 @@ func TestCLIProjectHarness(t *testing.T) {
 	})
 	waitForHealthy(t, port)
 	checkAdmin(t, port)
+
+	// forge new sets server.stores: database, so forge migrate up created
+	// the framework store tables and the admin token lives in the database.
+	stored, err := sql.Open("sqlite3", seedPath)
+	require.NoError(t, err)
+	defer stored.Close()
+	var tokens int
+	require.NoError(t, stored.QueryRow(`SELECT count(*) FROM forge_admin_tokens`).Scan(&tokens))
+	require.Equal(t, 1, tokens, "the admin login token is stored in the database")
 }
 
 func patchGeneratedProject(projectDir string) error {
@@ -159,6 +168,7 @@ func updateMainForAdmin(projectDir string) error {
 	mainContent := `package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -187,7 +197,8 @@ func main() {
 	}
 	defer database.Close()
 
-	srv, err := server.NewServer(cfg, settings, logger)
+	// forge new sets server.stores: database, which needs the database.
+	srv, err := server.NewServer(cfg, settings, logger, server.WithDatabase(database))
 	if err != nil {
 		stdlog.Fatal(err)
 	}
@@ -201,6 +212,9 @@ func main() {
 			adminPath := strings.TrimRight(settings.Admin.Path, "/")
 			site := admin.DefaultSite.WithUIConfig(admin.UIConfig{Prefix: adminPath})
 			site.SetDB(database)
+			if err := site.UseStores(context.Background(), settings.Server.Stores); err != nil {
+				stdlog.Fatal(err)
+			}
 			router.Mount(adminPath, site.Handler())
 		}
 	})

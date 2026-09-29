@@ -26,18 +26,24 @@ the change.
   `Default("uuid_generate_v7()")` must switch to `DBDefault(...)` before the
   next `makemigrations`, which would otherwise propose changing the column
   default to the quoted text (#296).
+- `server.RealIP`, part of `DefaultMiddlewares`, honors `X-Forwarded-For`
+  and `X-Real-IP` only from peers listed in `server.trusted_proxies`. Before,
+  it trusted the headers from any client, so a request could set its own
+  `RemoteAddr`. Behind a reverse proxy, list the proxy there to keep seeing
+  client addresses.
 - `Manager.Create`, `Save` and `BulkCreate` write explicit zero values
   (`false`, `0`, `""`) on fields with a schema `Default`, instead of leaving
   the column out, so the column's `DEFAULT` clause no longer replaces them
-  (required fields were already written). Code that relied on a `Default` filling a
-  field the struct left at zero must build the instance with `manager.New()`
-  (or call `orm.ApplyDefaults`) first. The admin create endpoint now stores
-  the zero value for a defaulted field the request omits; the public REST API
-  still applies the schema `Default`. Optional fields without a `Default`,
-  zero foreign keys, `nil` pointers, zero `time.Time` values, zero unique
-  optional fields, zero `DBDefault` fields and `""` on non-text columns (UUID,
-  JSON, decimal, date and time, non-text custom `DBType`) are still left to the
-  database, so they store `NULL` or the column default as before (#291).
+  (required fields were already written). Code that relied on a `Default`
+  filling a field the struct left at zero must build the instance with
+  `manager.New()`
+  (or call `orm.ApplyDefaults`) first. The admin create endpoint and the
+  public REST API apply the schema `Default` to a field the request omits.
+  Optional fields without a `Default`, zero foreign keys, `nil` pointers,
+  zero `time.Time` values, zero unique optional fields, zero `DBDefault`
+  fields and `""` on non-text columns (UUID, JSON, decimal, date and time,
+  non-text custom `DBType`) are still left to the database, so they store
+  `NULL` or the column default as before (#291).
 - `api.Router.Register` and `RegisterRoutes` panic when a viewset's data
   access is misconfigured, naming the resource and each missing operation.
   Before, the route answered 500 per request. Set `ReadOnly` for list and
@@ -74,6 +80,30 @@ the change.
 
 ### Fixed
 
+- A malformed `logging.outputs` value, which `config.LoadSettings` ignores so
+  logs go to the console, is reported as a warning when the server starts.
+  The new `config.Config.SettingsWarnings` returns it. Before, it was
+  silently ignored.
+- The API field contract documents which zero values `POST` still leaves to
+  the database: `DBDefault` fields, optional foreign keys and optional unique
+  fields, whether the key is omitted or sent as zero.
+- The REST API overview and ViewSets pages use the real API
+  (`api.NewBaseViewSet`, `api.NewRouter`, `Router.Register`, `Router.Action`
+  and `throttling.NewUserRateThrottle`) instead of `api.ModelViewSet[T]`,
+  `api.RegisterViewSet`, `CustomActions` and a `GetQuerySet` override, which
+  do not exist. Detail routes are documented without a trailing slash.
+- The ecommerce example (server and seed script) builds its PostgreSQL
+  connection string with the new exported `db.PostgresKeywordDSN`, and the
+  test database helper builds an escaped URL, so a password or database name
+  with spaces or quotes connects. Before, both formatted unquoted
+  keyword/value strings.
+- The admin create form starts with each field's schema `Default` (from the
+  metadata `default_value`), and the admin create endpoint applies the
+  `Default` of a field the request omits, as the public REST API does. Before,
+  a `Default(true)` checkbox started unchecked and an omitted field stored
+  the zero value. Admin metadata no longer fails to encode for a model with
+  a callable `Default` such as `time.Now`; that field reports no
+  `default_value`.
 - Creating a record with a boolean unchecked, a number set to 0 or a text
   left empty stores that value instead of the column default, in the ORM,
   the admin and the REST API (#291).
@@ -185,6 +215,46 @@ the change.
   a PostgreSQL schema lifecycle test, schema DSL fixtures, admin browser
   journeys against PostgreSQL, and an install smoke test from the public
   module proxy on every tag and weekly.
+- Shared stores for running more than one instance (#293). With the new
+  `server.stores: database` setting, sessions (`forge_session`), API
+  throttling counters, admin bearer tokens, the admin login lockout, saved
+  views and admin change history are kept in PostgreSQL or SQLite instead of
+  process memory, so they survive restarts and are shared by every instance
+  on the database. Throttle counts are one atomic upsert per request and
+  expired rows are deleted by the instances without a cron job. The tables
+  are framework migrations embedded in Forge: `forge migrate up` applies
+  them before the application's migrations and tracks them in
+  `forge_framework_migrations` (`stores.Migrate` does the same from Go), and
+  `forge migrate status` shows their version. `forge new` projects set
+  `stores: database` and pass the database to the server and the admin
+  (`server.WithDatabase`, `admin.Site.UseStores`). The library default stays
+  `memory`, so existing projects are unchanged; to switch, add those two
+  calls to `main.go`, set `server.stores: database` and run
+  `forge migrate up`. With database stores, `server.NewServer` and
+  `UseStores` fail at startup until the tables exist. New APIs: package
+  `stores` and `stores/adminstore`, `server.Option`, `Server.SessionManager`,
+  `throttling.SetDefaultStoreFactory`, `throttling.ContextStore`, `rest.TokenStore`,
+  `rest.SavedViewStore`, `rest.LoginAttemptStore` and `Router.SetStores`.
+  The admin API answers 503 instead of 401 when its token or lockout store
+  cannot be reached, and admin history records a logged-in admin by username
+  instead of the printed user map.
+  Database throttle and admin lockout queries are bound to the request's
+  context and to `stores.DefaultQueryTimeout` (two seconds, changed with
+  `WithTimeout`), so a stalled database cannot hold requests: a throttle then
+  allows the request and logs the error, and admin login answers 503. A server created with
+  `server.stores: memory` resets throttles to process memory even after an
+  earlier server in the process used the database, and
+  `Site.UseStores(ctx, "memory")` (or the new `Site.UseMemoryStores`) undoes
+  an earlier `UseDatabaseStores`. `forge migrate up --dry-run` rejects an
+  invalid `server.stores` like the real run does.
+- The admin create endpoint no longer replaces an explicit `null` with the
+  field's schema `Default`: a nullable (pointer) field stores `NULL`, and a
+  non-pointer field stores its zero value (`false`, `0`, `""`), as it did
+  before defaults were applied on create. A sent list or map replaces the
+  default instead of being merged into it.
+- Admin field metadata carries `has_default`, set for any schema `Default`
+  including a callable one such as `time.Now`. The create form no longer
+  requires such a field in the browser, since the server fills it.
 
 ## v0.1.1 (2026-09-28)
 

@@ -18,7 +18,7 @@ import (
 const awkwardPassword = `p a'ss\word`
 
 func TestPostgresKeywordDSN_QuotesValues(t *testing.T) {
-	dsn := postgresKeywordDSN("db.internal", 6543, "app user", awkwardPassword, "my db", "verify-full")
+	dsn := PostgresKeywordDSN("db.internal", 6543, "app user", awkwardPassword, "my db", "verify-full")
 
 	cfg, err := pq.NewConfig(dsn)
 	require.NoError(t, err, "dsn %q must parse", dsn)
@@ -32,7 +32,7 @@ func TestPostgresKeywordDSN_QuotesValues(t *testing.T) {
 }
 
 func TestPostgresKeywordDSN_EmptyPasswordOmitted(t *testing.T) {
-	dsn := postgresKeywordDSN("localhost", 5432, "postgres", "", "forge", "disable")
+	dsn := PostgresKeywordDSN("localhost", 5432, "postgres", "", "forge", "disable")
 	require.NotContains(t, dsn, "password=")
 
 	cfg, err := pq.NewConfig(dsn)

@@ -34,6 +34,30 @@ type HistoryManager interface {
 	GetHistory(ctx context.Context, modelName string, objectID string) ([]LogEntry, error)
 }
 
+// HistoryBackend is implemented by history managers that keep their
+// entries in another HistoryManager once one is set, such as the
+// compatibility admin.HistoryManager. UseSiteHistory sets it.
+type HistoryBackend interface {
+	SetHistoryBackend(HistoryManager)
+}
+
+// UseSiteHistory makes the site's shared history manager this admin's
+// history, unless the config chose its own. A config that left
+// HistoryManager unset switches from the in-memory default to hm; a config
+// whose manager implements HistoryBackend keeps it and has it write to hm.
+func (a *Admin[T]) UseSiteHistory(hm HistoryManager) {
+	if hm == nil {
+		return
+	}
+	if a.defaultHistory {
+		a.config.HistoryManager = hm
+		return
+	}
+	if backend, ok := a.config.HistoryManager.(HistoryBackend); ok {
+		backend.SetHistoryBackend(hm)
+	}
+}
+
 // MemoryHistoryManager implements an in-memory thread-safe HistoryManager
 type MemoryHistoryManager struct {
 	mu      sync.RWMutex

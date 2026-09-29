@@ -1055,7 +1055,7 @@ func TestHandleSavedViewSave_CreatesViewWith201(t *testing.T) {
 	router.handleSavedViewSave(rec, req)
 	require.Equal(t, http.StatusCreated, rec.Code)
 
-	var view savedView
+	var view SavedView
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &view))
 	assert.Equal(t, "Active", view.Name)
 	require.NotEmpty(t, view.ID)
@@ -1076,12 +1076,12 @@ func TestHandleSavedViewSave_UpsertsSameNameWith200(t *testing.T) {
 
 	first := save(`{"name":"Active","filters":{"a":"1"}}`)
 	require.Equal(t, http.StatusCreated, first.Code)
-	var firstView savedView
+	var firstView SavedView
 	require.NoError(t, json.Unmarshal(first.Body.Bytes(), &firstView))
 
 	second := save(`{"name":"active","filters":{"a":"2"}}`)
 	require.Equal(t, http.StatusOK, second.Code)
-	var secondView savedView
+	var secondView SavedView
 	require.NoError(t, json.Unmarshal(second.Body.Bytes(), &secondView))
 	assert.Equal(t, firstView.ID, secondView.ID)
 }
@@ -1109,7 +1109,7 @@ func TestHandleSavedViewDelete_DeletesView(t *testing.T) {
 	rec := httptest.NewRecorder()
 	router.handleSavedViewSave(rec, req)
 	require.Equal(t, http.StatusCreated, rec.Code)
-	var view savedView
+	var view SavedView
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &view))
 
 	delReq := httptest.NewRequest(http.MethodDelete, "/api/saved-views/products/"+view.ID, nil)
