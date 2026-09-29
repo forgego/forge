@@ -70,7 +70,9 @@ func buildMetadata[T any](s schema.Schema, config *Config[T], name string) (*Met
 // A callable default (such as time.Now) is evaluated per instance on the
 // server and cannot be JSON-encoded, so it is reported as no default.
 func staticDefault(def interface{}) interface{} {
-	if def == nil || reflect.ValueOf(def).Kind() == reflect.Func {
+	// A database function default (now(), gen_random_uuid(), ...) is not a
+	// value the form can prefill; the database fills the column.
+	if def == nil || reflect.ValueOf(def).Kind() == reflect.Func || schema.IsDatabaseFunctionDefault(def) {
 		return nil
 	}
 	return def
@@ -351,7 +353,8 @@ func inferWidget(field schema.Field) string {
 		return "checkbox"
 	case schema.TypeDate:
 		return "date"
-	case schema.TypeDateTime:
+	// TimeField is a timestamp column like DateTimeField.
+	case schema.TypeDateTime, schema.TypeTime:
 		return "datetime"
 	case schema.TypeForeignKey:
 		return "select"

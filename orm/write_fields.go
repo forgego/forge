@@ -51,7 +51,7 @@ func insertOmitsZeroValue(field schema.Field, value interface{}, fkColumns map[s
 	if !rv.IsZero() {
 		return false
 	}
-	if field.PrimaryKey || field.AutoNow || field.AutoNowAdd || field.DBDefault != "" {
+	if field.PrimaryKey || field.AutoNow || field.AutoNowAdd || field.DBDefault != "" || schema.IsDatabaseFunctionDefault(field.Default) {
 		return true
 	}
 	if field.Required {
@@ -205,7 +205,9 @@ func ApplyDefaults(instance interface{}) error {
 		return fmt.Errorf("instance must implement schema.Schema")
 	}
 	for _, field := range schemaInstance.Fields() {
-		if field.Default == nil {
+		// A database function default (now(), gen_random_uuid(), ...) is
+		// evaluated by the database when Create leaves the column out.
+		if field.Default == nil || schema.IsDatabaseFunctionDefault(field.Default) {
 			continue
 		}
 		fv, ok := settableSchemaField(instance, field)

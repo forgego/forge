@@ -3,6 +3,7 @@ import { Checkbox } from "../ui/checkbox";
 import { SearchableSelect } from "../ui/searchable-select";
 import { Switch } from "../ui/switch";
 import { X } from "lucide-react";
+import { fromDateTimeLocal, toDateTimeLocal } from "./datetime";
 import { resolveFieldKind, isIntegerField } from "./resolve-field-kind";
 import type { InlineFieldRendererProps } from "./types";
 
@@ -113,8 +114,8 @@ export function InlineFieldRenderer({
         <Input
           type="datetime-local"
           id={field.name}
-          value={value || ""}
-          onChange={(e) => onChange(e.target.value)}
+          value={toDateTimeLocal(value)}
+          onChange={(e) => onChange(fromDateTimeLocal(e.target.value))}
           className="rounded-lg border-border/50 bg-background/50 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
           required={field.required}
           disabled={isReadOnly}

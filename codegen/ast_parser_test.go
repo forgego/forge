@@ -249,3 +249,28 @@ func parseSingleModelDefinition(t *testing.T, src string) *ModelDefinition {
 
 	return defs[0]
 }
+
+// A field whose Default names a database function is filled by the database
+// when left empty, so its generated validation tag must not require a value.
+func TestParseFile_DatabaseFunctionDefaultIsNotRequiredByTag(t *testing.T) {
+	src := `package models
+import "github.com/forgego/forge/schema"
+
+type Item struct { schema.BaseSchema }
+
+func (Item) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary()),
+		schema.UUIDField("uid", schema.Required(), schema.Default("gen_random_uuid()")),
+		schema.StringField("name", schema.Required(), schema.Default("draft")),
+	}
+}
+`
+	def := parseSingleModelDefinition(t, src)
+	if got := def.Fields[1].ValidationTag; got != "omitempty" {
+		t.Errorf("uid tag = %q, want omitempty", got)
+	}
+	if got := def.Fields[2].ValidationTag; got != "required" {
+		t.Errorf("a literal default keeps required, got %q", got)
+	}
+}

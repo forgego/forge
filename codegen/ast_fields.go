@@ -6,6 +6,8 @@ import (
 	"go/token"
 	"strconv"
 	"strings"
+
+	"github.com/forgego/forge/schema"
 )
 
 // extractFields extracts field definitions from Fields() method
@@ -493,8 +495,12 @@ func (p *ASTParser) extractDefaultValue(call *ast.CallExpr) interface{} {
 func (p *ASTParser) buildValidationTag(fieldType string, options map[string]interface{}) string {
 	var tags []string
 
-	// Check if Required() was called
-	if required, ok := options["required"].(bool); ok && required {
+	// A field whose Default names a database function is filled by the
+	// database when left empty, so the empty value is valid on insert.
+	if schema.IsDatabaseFunctionDefault(options["default"]) {
+		tags = append(tags, "omitempty")
+	} else if required, ok := options["required"].(bool); ok && required {
+		// Check if Required() was called
 		tags = append(tags, "required")
 	}
 
