@@ -28,10 +28,13 @@ type Server struct {
 	logger   *log.Logger
 	config   *config.Config
 	settings *config.Settings
+	sessions *SessionManager
 }
 
-// NewServer creates a new framework server
-func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger) (*Server, error) {
+// NewServer creates a new framework server. With server.stores set to
+// database, pass WithDatabase: sessions and API throttling counters are then
+// kept in the database.
+func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger, opts ...Option) (*Server, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("server config is nil")
 	}
@@ -45,6 +48,18 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 	// even if an earlier server in this process configured some.
 	if err := netutil.SetTrustedProxies(settings.Server.TrustedProxies); err != nil {
 		return nil, fmt.Errorf("invalid server.trusted_proxies: %w", err)
+	}
+
+	var options serverOptions
+	for _, opt := range opts {
+		opt(&options)
+	}
+	shared, err := sharedStores(settings, options)
+	if err != nil {
+		return nil, err
+	}
+	if shared != nil {
+		useSharedThrottling(shared)
 	}
 
 	// Create router
@@ -75,9 +90,13 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 	secureCookies := isProductionEnv(settings)
 
 	// Add session middleware if configured
+	var sessionManager *SessionManager
 	if settings.Security.SessionSecret != "" {
-		sessionManager := NewSessionManager([]byte(settings.Security.SessionSecret))
+		sessionManager = NewSessionManager([]byte(settings.Security.SessionSecret))
 		sessionManager.Cookie.Secure = secureCookies
+		if shared != nil {
+			sessionManager.Store = shared.Sessions()
+		}
 		router.Use(sessionManager.Middleware())
 	}
 
@@ -141,9 +160,17 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 		logger:   logger,
 		config:   cfg,
 		settings: settings,
+		sessions: sessionManager,
 	}
 
 	return server, nil
+}
+
+// SessionManager returns the session manager behind the forge_session
+// cookie, or nil when security.session_secret is empty. Handlers read and
+// write session values through it.
+func (s *Server) SessionManager() *SessionManager {
+	return s.sessions
 }
 
 // RegisterRoutes registers routes on the server's router
