@@ -314,6 +314,6 @@ func TestRateLimiter_FailsOpenWhenTheDatabaseStalls(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 		_, _, err = limiter.AllowContext(ctx, "k")
-		assert.ErrorIs(t, err, context.Canceled, "a cancelled request stops the query")
+		assert.ErrorIs(t, err, context.Canceled, "a canceled request stops the query")
 	})
 }
