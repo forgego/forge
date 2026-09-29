@@ -58,9 +58,7 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 	if err != nil {
 		return nil, err
 	}
-	if shared != nil {
-		useSharedThrottling(shared)
-	}
+	useSharedThrottling(shared)
 
 	// Create router
 	router := NewRouter()

@@ -226,8 +226,9 @@ needed. Behind a proxy, list it in `server.trusted_proxies`
 (`FORGE_SERVER_TRUSTED_PROXIES`); otherwise every client shares the proxy's
 address, and failed logins from one client can lock out everyone. Throttle
 counts use one atomic `INSERT ... ON CONFLICT` per request.
-If the database is unreachable, throttled requests are allowed (and logged),
-while admin logins answer 503 because the lockout cannot be checked.
+If the database is unreachable or does not answer within two seconds,
+throttled requests are allowed (and logged), while admin logins answer 503
+because the lockout cannot be checked.
 
 This state stays in process memory whatever `server.stores` says:
 

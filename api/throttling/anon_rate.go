@@ -56,7 +56,7 @@ func (t *AnonRateThrottle) AllowRequest(r *http.Request, view interface{}) (bool
 		return true, 0, nil
 	}
 	key := "throttle_anon_" + t.GetScope(r, view)
-	allowed, retryAfter := store.Allow(key)
+	allowed, retryAfter := allow(store, r, key)
 	return allowed, retryAfter, nil
 }
 

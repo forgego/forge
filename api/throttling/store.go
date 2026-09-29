@@ -1,6 +1,9 @@
 package throttling
 
 import (
+	"context"
+	stdlog "log"
+	"net/http"
 	"sync/atomic"
 	"time"
 
@@ -11,6 +14,30 @@ import (
 // Implementations must be safe for concurrent use by multiple goroutines.
 type Store interface {
 	Allow(key string) (allowed bool, retryAfter time.Duration)
+}
+
+// ContextStore is a Store whose check does I/O, such as a database-backed
+// counter. Throttles call AllowContext with the request's context, so a slow
+// backend stops when the client goes away. An error allows the request and
+// is logged: an unreachable store must not refuse traffic.
+type ContextStore interface {
+	Store
+	AllowContext(ctx context.Context, key string) (allowed bool, retryAfter time.Duration, err error)
+}
+
+// allow checks key against store, through AllowContext with r's context when
+// store supports it.
+func allow(store Store, r *http.Request, key string) (bool, time.Duration) {
+	cs, ok := store.(ContextStore)
+	if !ok {
+		return store.Allow(key)
+	}
+	allowed, retryAfter, err := cs.AllowContext(r.Context(), key)
+	if err != nil {
+		stdlog.Printf("forge/throttling: store error, allowing request: %v", err)
+		return true, 0
+	}
+	return allowed, retryAfter
 }
 
 // StoreFactory builds the store of a throttle that was not given one with

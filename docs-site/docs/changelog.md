@@ -233,11 +233,19 @@ the change.
   `forge migrate up`. With database stores, `server.NewServer` and
   `UseStores` fail at startup until the tables exist. New APIs: package
   `stores` and `stores/adminstore`, `server.Option`, `Server.SessionManager`,
-  `throttling.SetDefaultStoreFactory`, `rest.TokenStore`,
+  `throttling.SetDefaultStoreFactory`, `throttling.ContextStore`, `rest.TokenStore`,
   `rest.SavedViewStore`, `rest.LoginAttemptStore` and `Router.SetStores`.
   The admin API answers 503 instead of 401 when its token or lockout store
   cannot be reached, and admin history records a logged-in admin by username
   instead of the printed user map.
+  A database throttle check is bound to the request's context and to two
+  seconds, after which the request is allowed and the error logged, so a
+  stalled database cannot hold requests. A server created with
+  `server.stores: memory` resets throttles to process memory even after an
+  earlier server in the process used the database.
+- Admin field metadata carries `has_default`, set for any schema `Default`
+  including a callable one such as `time.Now`. The create form no longer
+  requires such a field in the browser, since the server fills it.
 
 ## v0.1.1 (2026-09-28)
 

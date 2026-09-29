@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createDefaults } from "./create-defaults";
+import { createDefaults, formField } from "./create-defaults";
 
 describe("createDefaults", () => {
   it("prefills writable fields from default_value", () => {
@@ -30,5 +30,18 @@ describe("createDefaults", () => {
         { name: "notes", read_only: false, default_value: null },
       ])
     ).toEqual({});
+  });
+});
+
+describe("formField", () => {
+  it("does not require a defaulted field on create, even without default_value", () => {
+    // A callable default (time.Now) has has_default but no default_value.
+    const field = { name: "published_at", required: true, has_default: true };
+    expect(formField(field, "create").required).toBe(false);
+  });
+
+  it("keeps required for fields without a default and on edit", () => {
+    expect(formField({ required: true }, "create").required).toBe(true);
+    expect(formField({ required: true, has_default: true }, "edit").required).toBe(true);
   });
 });

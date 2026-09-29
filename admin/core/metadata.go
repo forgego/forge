@@ -41,14 +41,18 @@ type FieldMetadata struct {
 	Widget       string              `json:"widget"`
 	Validators   []ValidatorMetadata `json:"validators,omitempty"`
 	DefaultValue interface{}         `json:"default_value,omitempty"`
-	MaxLength    int                 `json:"max_length,omitempty"`
-	MinLength    int                 `json:"min_length,omitempty"`
-	MaxValue     interface{}         `json:"max_value,omitempty"`
-	MinValue     interface{}         `json:"min_value,omitempty"`
-	Accept       string              `json:"accept,omitempty"`       // For file uploads
-	MaxSize      int64               `json:"max_size,omitempty"`     // For file uploads
-	Multiple     bool                `json:"multiple,omitempty"`     // For file uploads
-	AllowCreate  bool                `json:"allow_create,omitempty"` // For relations
+	// HasDefault reports that the schema declares a Default, including a
+	// callable one that DefaultValue cannot carry. The server fills such a
+	// field on create, so the create form does not require it.
+	HasDefault  bool        `json:"has_default,omitempty"`
+	MaxLength   int         `json:"max_length,omitempty"`
+	MinLength   int         `json:"min_length,omitempty"`
+	MaxValue    interface{} `json:"max_value,omitempty"`
+	MinValue    interface{} `json:"min_value,omitempty"`
+	Accept      string      `json:"accept,omitempty"`       // For file uploads
+	MaxSize     int64       `json:"max_size,omitempty"`     // For file uploads
+	Multiple    bool        `json:"multiple,omitempty"`     // For file uploads
+	AllowCreate bool        `json:"allow_create,omitempty"` // For relations
 }
 
 // Choice represents a choice for a field

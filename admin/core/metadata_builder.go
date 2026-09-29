@@ -91,6 +91,7 @@ func buildFieldsMetadata(s schema.Schema) ([]FieldMetadata, error) {
 			ReadOnly:     !field.Editable || isAutoManaged(field), // Auto-managed fields or non-editable fields are read-only
 			Widget:       inferWidget(field),
 			DefaultValue: staticDefault(field.Default),
+			HasDefault:   field.Default != nil,
 		}
 
 		// Add field-specific metadata

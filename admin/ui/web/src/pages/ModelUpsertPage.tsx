@@ -24,7 +24,7 @@ import { FieldRenderer } from "../components/form/FieldRenderer";
 import { InlineRelations } from "../components/form/InlineRelations";
 import { HistorySection } from "../components/form/HistorySection";
 import { changedFields } from "../components/form/changed-fields";
-import { createDefaults } from "../components/form/create-defaults";
+import { createDefaults, formField } from "../components/form/create-defaults";
 
 interface ModelFormPageProps {
   mode: "create" | "edit";
@@ -370,7 +370,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
 
   const renderField = (field: any) => (
     <FieldRenderer
-      field={field}
+      field={formField(field, mode)}
       // Preserve 0/false: only null/undefined become "".
       value={formData[field.name] ?? ""}
       onChange={(val: any) => handleChange(field.name, val)}
@@ -474,7 +474,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
                             className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80"
                           >
                             {field.label}{" "}
-                            {field.required && (
+                            {formField(field, mode).required && (
                               <span className="text-destructive font-normal">
                                 *
                               </span>

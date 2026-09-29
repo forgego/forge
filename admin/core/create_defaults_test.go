@@ -119,6 +119,9 @@ func TestBuildFieldsMetadata_DefaultValues(t *testing.T) {
 	assert.Equal(t, true, byName["is_active"].DefaultValue)
 	assert.Equal(t, "draft", byName["status"].DefaultValue)
 	assert.Nil(t, byName["created_at"].DefaultValue, "a callable default has no static value to prefill")
+	assert.True(t, byName["created_at"].HasDefault, "a callable default is still a default the create form must not require")
+	assert.True(t, byName["status"].HasDefault)
+	assert.False(t, byName["name"].HasDefault)
 
 	// The metadata must stay JSON-encodable even with a callable default.
 	_, err = json.Marshal(fields)

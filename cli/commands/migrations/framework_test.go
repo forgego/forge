@@ -87,6 +87,11 @@ func TestMigrateUp_FrameworkTablesWithoutApplicationMigrations(t *testing.T) {
 	require.NoError(t, err, out)
 	assert.Contains(t, out, "No application migrations in")
 	assert.True(t, sqliteTableExists(t, dbPath, "forge_sessions"))
+
+	out, err = runMigrateCommand(t, NewStatusCommand().Definition(), "--path", dir)
+	require.NoError(t, err, out)
+	assert.Contains(t, out, "Framework store tables (server.stores: database): version 1 of 1, up to date",
+		"the framework version shows even without application migrations")
 }
 
 func TestMigrateUp_RejectsUnknownStoresSetting(t *testing.T) {

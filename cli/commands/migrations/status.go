@@ -84,33 +84,35 @@ func (c *StatusCommand) Execute(ctx *core.Context, args []string) error {
 		}
 	}
 
+	// finish prints the framework store status and any verification error.
+	// Every path below ends with it, so the framework tables' version shows
+	// even when the application has no migrations of its own.
+	cmdCtx := context.Background()
+	finish := func() error {
+		renderFrameworkStatus(cmdCtx, ctx.Config, database, out)
+		if verifyCheckErr != nil {
+			fmt.Fprintf(out, "Verification error: %v\n", verifyCheckErr)
+		}
+		return baselineErr
+	}
+
 	// Create migration runner
 	runner, err := db.NewMigrationRunner(database, migrationsPath)
 	if err != nil {
 		fmt.Fprintln(out, "[WARN] Could not create migration runner - showing file listing only")
-		if verifyCheckErr != nil {
-			fmt.Fprintf(out, "Verification error: %v\n", verifyCheckErr)
-		}
-		return baselineErr
+		return finish()
 	}
 	defer runner.Close()
 
 	// Get status
-	cmdCtx := context.Background()
 	status, err := runner.Status(cmdCtx)
 	if err != nil {
 		fmt.Fprintln(out, "[WARN] Could not get database status - showing file listing only")
-		if verifyCheckErr != nil {
-			fmt.Fprintf(out, "Verification error: %v\n", verifyCheckErr)
-		}
-		return baselineErr
+		return finish()
 	}
 	if status == nil {
 		fmt.Fprintln(out, "[WARN] Database returned empty migration status - showing file listing only")
-		if verifyCheckErr != nil {
-			fmt.Fprintf(out, "Verification error: %v\n", verifyCheckErr)
-		}
-		return baselineErr
+		return finish()
 	}
 
 	// Try to get detailed status (if available)
@@ -120,13 +122,7 @@ func (c *StatusCommand) Execute(ctx *core.Context, args []string) error {
 	}
 
 	renderMigrationStatus(out, status, detailedStatus)
-	renderFrameworkStatus(cmdCtx, ctx.Config, database, out)
-
-	if verifyCheckErr != nil {
-		fmt.Fprintf(out, "Verification error: %v\n", verifyCheckErr)
-	}
-
-	return baselineErr
+	return finish()
 }
 
 func renderChecksumBaseline(out io.Writer, report *execute.BaselineReport) {

@@ -65,9 +65,14 @@ func (s *Stores) RateLimiter(name string, limit int, window time.Duration) *Rate
 	return &RateLimiter{stores: s, name: name, limit: limit, window: window}
 }
 
-// Allow implements throttling.Store. If the database cannot be reached the
-// call is allowed and the error is logged, so a database outage does not
-// turn into refused requests.
+// rateLimitTimeout bounds one rate-limit query, so a stalled database or an
+// exhausted pool fails open after this long instead of holding the request.
+const rateLimitTimeout = 2 * time.Second
+
+// Allow implements throttling.Store. If the database cannot be reached
+// within rateLimitTimeout the call is allowed and the error is logged, so a
+// database outage does not turn into refused or hanging requests. Throttles
+// call AllowContext with the request's context instead when they can.
 func (l *RateLimiter) Allow(key string) (bool, time.Duration) {
 	allowed, retryAfter, err := l.AllowContext(context.Background(), key)
 	if err != nil {
@@ -78,11 +83,15 @@ func (l *RateLimiter) Allow(key string) (bool, time.Duration) {
 }
 
 // AllowContext counts one call for key and reports whether it is within
-// the limit and, if not, how long until the window ends.
+// the limit and, if not, how long until the window ends. The query stops
+// when ctx is done or after rateLimitTimeout, whichever comes first. It
+// satisfies throttling.ContextStore.
 func (l *RateLimiter) AllowContext(ctx context.Context, key string) (bool, time.Duration, error) {
 	if l.limit <= 0 {
 		return false, l.window, nil
 	}
+	ctx, cancel := context.WithTimeout(ctx, rateLimitTimeout)
+	defer cancel()
 	hits, resetAt, err := l.stores.hit(ctx, "rate:"+l.name+":"+key, l.window)
 	if err != nil {
 		return false, 0, err

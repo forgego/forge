@@ -291,3 +291,29 @@ func TestNew_RejectsUnsupportedDatabases(t *testing.T) {
 	assert.Error(t, err)
 	assert.False(t, errors.Is(err, stores.ErrNotMigrated))
 }
+
+func TestRateLimiter_FailsOpenWhenTheDatabaseStalls(t *testing.T) {
+	forEachBackend(t, func(t *testing.T, backend storestest.Backend) {
+		database, _ := backend.OpenMigrated(t)
+		s, err := stores.New(database)
+		require.NoError(t, err)
+		limiter := s.RateLimiter("stall", 1, time.Minute)
+
+		// Exhaust the pool: the limiter's query cannot get a connection.
+		database.SetMaxOpenConns(1)
+		held, err := database.Conn(context.Background())
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = held.Close() })
+
+		start := time.Now()
+		ok, retry := limiter.Allow("k")
+		assert.True(t, ok, "an unreachable store allows the request")
+		assert.Zero(t, retry)
+		assert.Less(t, time.Since(start), 10*time.Second, "Allow must not wait for the database forever")
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		_, _, err = limiter.AllowContext(ctx, "k")
+		assert.ErrorIs(t, err, context.Canceled, "a cancelled request stops the query")
+	})
+}

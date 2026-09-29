@@ -135,3 +135,22 @@ func TestNewServer_DatabaseStoresShareAPIThrottling(t *testing.T) {
 		"SELECT hits FROM forge_rate_limits WHERE bucket = $1", "rate:api:anon/2/min:throttle_anon_10.0.0.9").Scan(&hits))
 	assert.Equal(t, 1, hits, "throttles without their own store count in the database")
 }
+
+func TestNewServer_MemoryStoresResetDatabaseThrottling(t *testing.T) {
+	t.Cleanup(func() { throttling.SetDefaultStoreFactory(nil) })
+	database, _ := storestest.Backends()[0].OpenMigrated(t)
+	throttle := throttling.NewAnonRateThrottle("2/min")
+
+	_, err := NewServer(config.NewConfig(), storesSettings("database"), log.NewNopLogger(), WithDatabase(database))
+	require.NoError(t, err)
+	_, err = NewServer(config.NewConfig(), storesSettings("memory"), log.NewNopLogger())
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "10.0.0.9:1234"
+	require.NoError(t, throttling.CheckThrottles(req, nil, []throttling.Throttle{throttle}))
+	var rows int
+	require.NoError(t, database.QueryRowContext(context.Background(),
+		"SELECT count(*) FROM forge_rate_limits").Scan(&rows))
+	assert.Zero(t, rows, "a memory server must not keep counting in an earlier server's database")
+}

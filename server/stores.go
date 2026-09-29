@@ -49,9 +49,17 @@ func sharedStores(settings *config.Settings, opts serverOptions) (*stores.Stores
 	return stores.New(opts.database)
 }
 
-// useSharedThrottling makes throttles without a store of their own count in
-// the database.
+// useSharedThrottling sets where throttles without a store of their own
+// count: in the database when shared is non-nil, in process memory
+// otherwise. The default factory is process-wide, like the trusted proxy
+// list, and the newest server's server.stores setting is its source of
+// truth: a memory server never keeps counting in an earlier server's
+// database.
 func useSharedThrottling(shared *stores.Stores) {
+	if shared == nil {
+		throttling.SetDefaultStoreFactory(nil)
+		return
+	}
 	throttling.SetDefaultStoreFactory(func(name string, limit int, window time.Duration) throttling.Store {
 		return shared.RateLimiter("api:"+name, limit, window)
 	})

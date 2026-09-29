@@ -17,3 +17,19 @@ export function createDefaults(
   }
   return values;
 }
+
+/**
+ * Returns the field as the form should validate it. On create, a field with
+ * a schema default (including a callable one such as time.Now, which has no
+ * `default_value`) is filled by the server when left empty, so the native
+ * `required` check must not block the submit.
+ */
+export function formField<T extends Pick<FieldMetadata, "required" | "has_default">>(
+  field: T,
+  mode: string
+): T {
+  if (mode === "create" && field.required && field.has_default) {
+    return { ...field, required: false };
+  }
+  return field;
+}
