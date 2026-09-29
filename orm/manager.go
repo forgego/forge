@@ -345,6 +345,11 @@ func (m *Manager[T]) BulkCreate(ctx context.Context, instances []*T) error {
 
 	// Build and execute bulk INSERT
 	ph := m.placeholderFunc()
+	if _, _, columns, buildErr := BuildInsertSQLForPK(instancesInterface[0], m.tableName, m.primaryKeyColumn(), ph); buildErr == nil && len(columns) == 0 {
+		// Every column is left to the database: there is no multi-row
+		// statement for default-only rows, so insert them one at a time.
+		return m.bulkCreateDefaultRows(ctx, instances)
+	}
 	sql, args, _, err := BuildBulkInsertSQLForPK(instancesInterface, m.tableName, m.primaryKeyColumn(), ph)
 	if err != nil {
 		return fmt.Errorf("failed to build bulk insert SQL: %w", err)
@@ -778,7 +783,7 @@ func (m *Manager[T]) validateConstraints(instance *T, creating bool) error {
 		}
 	}
 	if s, ok := any(instance).(schema.Schema); ok && schemaConstraintValidator != nil {
-		if err := schemaConstraintValidator(instance, validationFields(instance, s.Fields(), creating)); err != nil {
+		if err := schemaConstraintValidator(instance, ValidationFields(instance, s.Fields(), creating)); err != nil {
 			return fmt.Errorf("schema model validation failed: %w", err)
 		}
 	}
@@ -874,4 +879,29 @@ func (m *Manager[T]) runHooks(ctx context.Context, instance *T, hookType string)
 	}
 
 	return nil
+}
+
+// bulkCreateDefaultRows inserts rows whose columns are all left to the
+// database (identity, database-function defaults), one INSERT per row.
+func (m *Manager[T]) bulkCreateDefaultRows(ctx context.Context, instances []*T) error {
+	dbtx, err := m.db.dbtx()
+	if err != nil {
+		return fmt.Errorf("failed to get database handle: %w", err)
+	}
+	d, _ := m.db.dialect()
+	ph := m.placeholderFunc()
+	for _, instance := range instances {
+		sql, args, _, err := BuildInsertSQLForPK(instance, m.tableName, m.primaryKeyColumn(), ph)
+		if err != nil {
+			return fmt.Errorf("failed to build insert SQL: %w", err)
+		}
+		id, err := ExecuteInsertTx(ctx, dbtx, d, sql, args)
+		if err != nil {
+			return err
+		}
+		if err := m.setID(instance, id); err != nil {
+			return err
+		}
+	}
+	return m.finalizeBulkInstances(ctx, instances)
 }

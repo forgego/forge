@@ -113,13 +113,24 @@ func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}
 		return nil, err
 	}
 
+	// A field left to a database-function default (gen_random_uuid(), now())
+	// is filled by the database, so reload the row to show its value.
+	created := &instance
+	if a.hasDatabaseFunctionDefault() {
+		if id, idErr := toInt64(a.getObjectID(created)); idErr == nil {
+			if reloaded, getErr := a.safeGetObjectByID(ctx, id); getErr == nil && reloaded != nil {
+				created = reloaded
+			}
+		}
+	}
+
 	user, _ := apicore.UserFromContext(ctx)
-	objID := a.getObjectID(&instance)
-	repr := a.getObjectLabel(&instance)
+	objID := a.getObjectID(created)
+	repr := a.getObjectLabel(created)
 	changesJSON, _ := json.Marshal(filtered)
 	_ = a.LogAction(ctx, user, fmt.Sprintf("%v", objID), repr, ActionAdd, string(changesJSON))
 
-	return &instance, nil
+	return created, nil
 }
 
 func (a *Admin[T]) UpdateObject(ctx context.Context, id interface{}, data map[string]interface{}) (interface{}, error) {
@@ -422,4 +433,18 @@ func toInt64(v interface{}) (int64, error) {
 	}
 
 	return 0, fmt.Errorf("cannot convert %T to int64", v)
+}
+
+// hasDatabaseFunctionDefault reports whether a field's Default names a
+// database function, which the database, not Go, evaluates on insert.
+func (a *Admin[T]) hasDatabaseFunctionDefault() bool {
+	if a.schema == nil {
+		return false
+	}
+	for _, field := range a.schema.Fields() {
+		if schema.IsDatabaseFunctionDefault(field.Default) {
+			return true
+		}
+	}
+	return false
 }

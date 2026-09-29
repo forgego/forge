@@ -186,6 +186,8 @@ func TestCreateObject_DatabaseFunctionDefaultIsLeftToTheDatabase(t *testing.T) {
 
 	created, err := admin.CreateObject(context.Background(), map[string]interface{}{"name": "omitted"})
 	require.NoError(t, err)
+	assert.WithinDuration(t, time.Now(), created.(*functionDefaultItem).SeenAt, time.Minute,
+		"the response shows the value the database filled, not a zero time")
 	stored, err := manager.Get(context.Background(), created.(*functionDefaultItem).ID)
 	require.NoError(t, err)
 	assert.WithinDuration(t, time.Now(), stored.SeenAt, time.Minute, "the database filled seen_at")

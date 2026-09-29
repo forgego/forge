@@ -14,11 +14,11 @@ func RegisterSchemaConstraintValidator(validator func(instance interface{}, fiel
 	schemaConstraintValidator = validator
 }
 
-// validationFields returns the fields to validate before a write. On an insert
+// ValidationFields returns the fields to validate before a write. On an insert
 // it leaves out a field that is empty and whose Default names a database
 // function (gen_random_uuid(), now(), ...): the database fills it, so it is
 // not missing. An update writes the value as it is, so it checks every field.
-func validationFields(instance interface{}, fields []schema.Field, creating bool) []schema.Field {
+func ValidationFields(instance interface{}, fields []schema.Field, creating bool) []schema.Field {
 	if !creating {
 		return fields
 	}

@@ -112,6 +112,15 @@ func TestDatabaseFunctionDefaultsInsertADefaultsRow(t *testing.T) {
 			require.NoError(t, manager.Create(ctx, row))
 			assert.NotZero(t, row.ID)
 
+			bulk := []*onlyGeneratedRow{{}, {}, {}}
+			require.NoError(t, manager.BulkCreate(ctx, bulk))
+			ids := map[int64]bool{}
+			for _, created := range bulk {
+				assert.NotZero(t, created.ID)
+				ids[created.ID] = true
+			}
+			assert.Len(t, ids, 3, "each default-only row gets its own id")
+
 			row.UID = ""
 			err = manager.Update(ctx, row)
 			require.Error(t, err, "an update must not write an empty required field")

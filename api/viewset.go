@@ -514,7 +514,7 @@ func (vs *BaseViewSet) Create(w http.ResponseWriter, r *http.Request) {
 	// Validate the populated model before the manager runs business hooks
 	// (BeforeCreate/BeforeSave), so an invalid request fails with 400 without
 	// triggering hook side effects.
-	if err := validateModelInstance(instance); err != nil {
+	if err := validateModelInstance(instance, true); err != nil {
 		vs.handleException(w, r, modelValidationException(err))
 		return
 	}
@@ -756,7 +756,7 @@ func (vs *BaseViewSet) update(w http.ResponseWriter, r *http.Request, action str
 	// Validate the populated model before the manager runs business hooks
 	// (BeforeUpdate/BeforeSave), so an invalid request fails with 400 without
 	// triggering hook side effects.
-	if err := validateModelInstance(instance); err != nil {
+	if err := validateModelInstance(instance, false); err != nil {
 		vs.handleException(w, r, modelValidationException(err))
 		return
 	}
@@ -1392,7 +1392,7 @@ func (e *fieldError) Error() string {
 // validateModelInstance runs the model's own validation (Clean method,
 // schema Clean hook, Validate method) in the same order as orm.Manager, so
 // the API request path can reject invalid payloads before business hooks run.
-func validateModelInstance(instance interface{}) error {
+func validateModelInstance(instance interface{}, creating bool) error {
 	if validatable, ok := instance.(interface{ Clean() error }); ok {
 		if err := validatable.Clean(); err != nil {
 			return fmt.Errorf("validation failed: %w", err)
@@ -1411,7 +1411,7 @@ func validateModelInstance(instance interface{}) error {
 		}
 	}
 	if s, ok := instance.(schema.Schema); ok {
-		if err := validation.ValidateModelWithSchema(validation.NewValidator(), instance, s.Fields()); err != nil {
+		if err := validation.ValidateModelWithSchema(validation.NewValidator(), instance, orm.ValidationFields(instance, s.Fields(), creating)); err != nil {
 			return schemaModelValidationError(instance, s.Fields(), err)
 		}
 	}
