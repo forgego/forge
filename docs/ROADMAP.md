@@ -58,9 +58,10 @@ commit, and pass/fail/skip counts):
 - [ ] Caching: query/instance cache, Redis + in-memory backends.
 - [ ] Query power: window functions, full-text search, raw SQL escape hatch.
 - [ ] Background tasks (queues/workers).
-- [ ] Shared, durable stores for admin tokens, sessions, change history and
-      throttling, so more than one instance can run (today's limits are in
-      the [deployment guide](../docs-site/docs/deployment.md#multiple-instances)).
+- [x] Shared, durable stores for admin tokens, sessions, change history and
+      throttling, so more than one instance can run (`server.stores:
+      database`; see the
+      [deployment guide](../docs-site/docs/deployment.md#multiple-instances)).
 - [ ] Observability: Prometheus metrics, OpenTelemetry health/tracing.
 
 ### Later

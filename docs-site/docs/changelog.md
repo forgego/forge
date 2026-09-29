@@ -215,6 +215,29 @@ the change.
   a PostgreSQL schema lifecycle test, schema DSL fixtures, admin browser
   journeys against PostgreSQL, and an install smoke test from the public
   module proxy on every tag and weekly.
+- Shared stores for running more than one instance (#293). With the new
+  `server.stores: database` setting, sessions (`forge_session`), API
+  throttling counters, admin bearer tokens, the admin login lockout, saved
+  views and admin change history are kept in PostgreSQL or SQLite instead of
+  process memory, so they survive restarts and are shared by every instance
+  on the database. Throttle counts are one atomic upsert per request and
+  expired rows are deleted by the instances without a cron job. The tables
+  are framework migrations embedded in Forge: `forge migrate up` applies
+  them before the application's migrations and tracks them in
+  `forge_framework_migrations` (`stores.Migrate` does the same from Go), and
+  `forge migrate status` shows their version. `forge new` projects set
+  `stores: database` and pass the database to the server and the admin
+  (`server.WithDatabase`, `admin.Site.UseStores`). The library default stays
+  `memory`, so existing projects are unchanged; to switch, add those two
+  calls to `main.go`, set `server.stores: database` and run
+  `forge migrate up`. With database stores, `server.NewServer` and
+  `UseStores` fail at startup until the tables exist. New APIs: package
+  `stores` and `stores/adminstore`, `server.Option`, `Server.SessionManager`,
+  `throttling.SetDefaultStoreFactory`, `rest.TokenStore`,
+  `rest.SavedViewStore`, `rest.LoginAttemptStore` and `Router.SetStores`.
+  The admin API answers 503 instead of 401 when its token or lockout store
+  cannot be reached, and admin history records a logged-in admin by username
+  instead of the printed user map.
 
 ## v0.1.1 (2026-09-28)
 
