@@ -192,21 +192,26 @@ still run the new release.
 **5. Record** the versions, commands, output and results in the release pull
 request.
 
-Findings from rehearsing v0.1.1 to the current `master` (2026-09-28), which
-anyone rehearsing should expect until they are fixed:
+Findings from rehearsing v0.1.1 to the v0.2.0 candidate (2026-09-29), which
+the v0.2.0 upgrade guide covers:
 
-- Projects created by v0.1.0 and v0.1.1 do not compile (`pattern static: no
-  matching files found`); delete the `//go:embed` line, the `staticFiles`
-  variable and the `embed` import from `cmd/server/main.go`.
-- `forge version` in v0.1.1 prints `v0.1.0`, and `forge new` pins `v0.1.0`.
-- Regenerating the example model produced no diff, the checksums verified,
-  and the rows were preserved.
-- `forge makemigrations --auto` with no model changes wrote an empty
-  migration pair in v0.1.1, which `forge migrate up` then rejected with
-  `SQL is empty`. Fixed after v0.1.1; delete any empty pair.
-- Projects created before graceful shutdown was added keep calling
-  `srv.Start()`; they exit on SIGTERM without draining requests until
-  `main.go` is changed to `StartWithGracefulShutdown`.
+- Projects created by v0.1.1 pin `v0.1.0` in `go.mod` and do not compile
+  (`pattern static: no matching files found`) until the `//go:embed` line,
+  the `staticFiles` variable and the `embed` import are deleted from
+  `cmd/server/main.go`.
+- The `forge add app --example` model did not embed `ExampleGenerated`, so
+  the admin listed empty objects. Fixed in v0.2.0; existing apps edit the
+  struct by hand.
+- Regenerating the example model changed only whitespace in `gen.go`; the
+  checksums verified, `makemigrations` reported no changes, and the rows were
+  preserved. The smoke check passed with `app.env: production`, admin
+  create, update and delete worked, and a restored pre-upgrade dump ran
+  under the candidate.
+- Switching to `server.stores: database` failed at startup until
+  `forge migrate up` created the framework tables, then served and stored
+  admin tokens in the database.
+- Development builds report a pseudo-version derived from the retracted
+  v1.0.1 tag (`v1.0.2-0.<date>-<commit>`); tagged installs report the tag.
 
 ## Upgrade guide template
 

@@ -26,8 +26,8 @@ func (c *GenerateCommand) Definition() *cobra.Command {
 		Short: "Generate code from schema definitions",
 		Long:  "Parse schema definitions and generate type-safe models, managers, and querysets",
 	}
-	cmd.Flags().String("models", "./models", "Directory containing schema definitions")
-	cmd.Flags().String("output", "./models", "Output directory for generated code")
+	cmd.Flags().String("models", "", "Directory containing schema definitions (default: ./app if it exists, otherwise ./models)")
+	cmd.Flags().String("output", "", "Output directory for generated code (default: same as --models)")
 	cmd.Flags().Bool("api", false, "Generate REST API ViewSets, Serializers, and routes")
 	cmd.Flags().Bool("strict", false, "Fail when model expressions cannot be evaluated during generation")
 	return cmd

@@ -34,8 +34,10 @@ describe("resolveFieldKind", () => {
     ).toBe("m2m");
   });
 
-  it("maps time types to time inputs and falls back to text otherwise", () => {
-    expect(resolveFieldKind({ type: "Time", widget: "text" })).toBe("time");
+  it("maps a time widget to a time input, Time (a timestamp) to datetime, and falls back to text", () => {
+    expect(resolveFieldKind({ type: "Something", widget: "time" })).toBe("time");
+    expect(resolveFieldKind({ type: "Time", widget: "text" })).toBe("datetime");
+    expect(resolveFieldKind({ type: "Time", widget: "datetime" })).toBe("datetime");
     expect(resolveFieldKind({ type: "SomethingElse", widget: "text" })).toBe("text");
     expect(resolveFieldKind({})).toBe("text");
   });

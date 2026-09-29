@@ -118,9 +118,10 @@ import (
 	"github.com/forgego/forge/schema"
 )
 
-// Example represents an example model
+// Example represents an example model. Its Go fields come from the embedded
+// ExampleGenerated, which ` + "`forge generate`" + ` writes to gen.go from Fields().
 type Example struct {
-	schema.BaseSchema
+	ExampleGenerated
 }
 
 // Fields returns all field definitions for Example

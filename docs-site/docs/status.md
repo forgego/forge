@@ -12,7 +12,7 @@ This page is the canonical statement of what Forge supports. Other pages, the
 README link here instead of repeating it. When this page and another page
 disagree, this page wins, and the other page is a documentation bug.
 
-Forge is pre-1.0. The current release line is **v0.1.x**. See
+Forge is pre-1.0. The current release line is **v0.2.x**. See
 [Stability and breaking changes](#stability-and-breaking-changes) for what that
 means for your code.
 
@@ -79,7 +79,7 @@ The `release-gate` job runs every package serially against PostgreSQL with
 | Migrations on PostgreSQL: generate from model diffs, apply, status, rollback, dirty-state recovery, checksum verification | Supported | See the [migrations guide](/docs/migrations/). `forge migrate squash` is not implemented. | `TestMigrationApplyPostgres`, `TestPostgresSchemaLifecycle` (evolution with seeded data, stable regeneration, failed-apply recovery, tamper detection), `tests/integration/migrate`, `TestCLIApplyMigration`; jobs `integration-tests`, `cli-e2e`, `release-gate` |
 | Migration apply on SQLite | Experimental | See Platforms. | Skipped `TestMigrationApplySQLite` |
 | Generated REST API (`forge generate --api`) | Partially tested | Dispatch, content negotiation, pagination and error mapping are tested with in-memory stores. A freshly scaffolded `forge new` application with related models is generated with `--api --strict`, migrated and exercised over HTTP against PostgreSQL in CI (CRUD, filters, validation, protected fields, authentication and ownership denials, transaction rollback, regeneration after a schema change); the tier moves to Supported after independent review per `docs/REVIEWING.md`. Integer `id` primary keys only. The field contract is in the [API docs](/docs/api/field-contract/). | `TestCLIPostgresAppJourney` in jobs `cli-e2e` and `release-gate`, `tests/integration/api`, `api` tests |
-| Admin UI and admin REST API | Partially tested | Go handlers and the React app have unit tests. Browser journeys run in CI against PostgreSQL under a custom mount prefix: login/logout, list search/filter/sort/pagination, related-object selection, create/update/delete with field validation messages, read-only and auto-managed fields, object permission denials with stored-data checks, mixed-success bulk actions, and the 375px layout. Not covered: file uploads, inline related rows, saved views, export, history, plugins. Known defect: a boolean left unchecked on create stores the column default. Change history, saved views, tokens and the login lockout are kept in the database with `server.stores: database`, in process memory otherwise (see [Deployment](/docs/deployment/#shared-state)). | `admin` tests, `frontend` job, `Admin browser E2E result` job |
+| Admin UI and admin REST API | Partially tested | Go handlers and the React app have unit tests. Browser journeys run in CI against PostgreSQL under a custom mount prefix: login/logout, list search/filter/sort/pagination, related-object selection, create/update/delete with field validation messages, read-only and auto-managed fields, object permission denials with stored-data checks, mixed-success bulk actions, and the 375px layout. Not covered: file uploads, inline related rows, saved views, export, history, plugins. Change history, saved views, tokens and the login lockout are kept in the database with `server.stores: database`, in process memory otherwise (see [Deployment](/docs/deployment/#shared-state)). | `admin` tests, `frontend` job, `Admin browser E2E result` job |
 | Identity: users, password hashing, sessions, tokens, permissions | Supported | PostgreSQL. No OAuth/OIDC, social login or field-level permissions. | `identity/...` in `release-gate` with no skips allowed |
 | API throttling | Partially tested | With `server.stores: database` the default store is a shared PostgreSQL or SQLite counter; otherwise it is in process memory. | `api/throttling`, `stores` tests |
 | Shared stores (`server.stores: database`) | Partially tested | Sessions, throttling counters and the admin's tokens, login lockout, saved views and history in PostgreSQL or SQLite; two instances on one PostgreSQL database are tested end to end. | `stores` tests, `tests/integration/stores` |
@@ -168,14 +168,14 @@ variables, the code `forge generate` writes, the migration file format and the
 - Raising the minimum Go or PostgreSQL version happens only in a minor release
   and is announced in the changelog.
 
-The tags v1.0.0 and v1.0.1 exist but are retracted in `go.mod`; they contain no
-Go packages. `go get github.com/forgego/forge@latest` ignores them. Because a
+The tags v1.0.0 and v1.0.1 exist but are retracted in `go.mod`: v1.0.0
+contains no Go packages and v1.0.1 points at the v0.1.0 commit. `go get github.com/forgego/forge@latest` ignores them. Because a
 published version can never be reused, the first real v1 release will be
 numbered above v1.0.1. The [release process](https://github.com/forgego/forge/blob/master/docs/RELEASING.md)
 defines how releases are cut and verified.
 
 ## Related pages
 
-- [Deployment](/docs/deployment/): running one production instance.
+- [Deployment](/docs/deployment/): running Forge in production, on one or more instances.
 - [Changelog](/docs/changelog/): what changed in each release.
 - [Installation](/docs/installation/).
