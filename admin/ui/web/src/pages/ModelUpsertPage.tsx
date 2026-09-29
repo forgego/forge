@@ -443,7 +443,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
               {FormBody ? (
                 // eslint-disable-next-line react-hooks/static-components -- useUIComponent returns a stable registry ref
                 <FormBody
-                  fields={metadata.fields}
+                  fields={metadata.fields.map((field) => formField(field, mode))}
                   formData={formData}
                   errors={fieldErrors}
                   onChange={handleChange}

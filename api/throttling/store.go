@@ -18,8 +18,9 @@ type Store interface {
 
 // ContextStore is a Store whose check does I/O, such as a database-backed
 // counter. Throttles call AllowContext with the request's context, so a slow
-// backend stops when the client goes away. An error allows the request and
-// is logged: an unreachable store must not refuse traffic.
+// backend stops when the client goes away; such a request is refused. Any
+// other error allows the request and is logged: an unreachable store must
+// not refuse traffic.
 type ContextStore interface {
 	Store
 	AllowContext(ctx context.Context, key string) (allowed bool, retryAfter time.Duration, err error)
@@ -34,6 +35,11 @@ func allow(store Store, r *http.Request, key string) (bool, time.Duration) {
 	}
 	allowed, retryAfter, err := cs.AllowContext(r.Context(), key)
 	if err != nil {
+		if r.Context().Err() != nil {
+			// The client went away: nothing to serve, and nothing worth
+			// logging or letting through uncounted.
+			return false, 0
+		}
 		stdlog.Printf("forge/throttling: store error, allowing request: %v", err)
 		return true, 0
 	}

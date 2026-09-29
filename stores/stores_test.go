@@ -119,9 +119,11 @@ func TestRateLimiter_CountsAtomicallyAcrossInstances(t *testing.T) {
 	forEachBackend(t, func(t *testing.T, backend storestest.Backend) {
 		a, b := twoInstances(t, backend, nil)
 		const limit = 7
+		// 40 concurrent writers queue on SQLite's single writer; this test
+		// is about exact counts, so no call may time out and fail open.
 		limiters := []*stores.RateLimiter{
-			a.RateLimiter("test", limit, time.Minute),
-			b.RateLimiter("test", limit, time.Minute),
+			a.RateLimiter("test", limit, time.Minute).WithTimeout(0),
+			b.RateLimiter("test", limit, time.Minute).WithTimeout(0),
 		}
 		var allowed atomic.Int32
 		var wg sync.WaitGroup
@@ -315,5 +317,9 @@ func TestRateLimiter_FailsOpenWhenTheDatabaseStalls(t *testing.T) {
 		cancel()
 		_, _, err = limiter.AllowContext(ctx, "k")
 		assert.ErrorIs(t, err, context.Canceled, "a canceled request stops the query")
+
+		lockout := s.LoginAttempts(5, time.Minute).WithTimeout(100 * time.Millisecond)
+		_, _, err = lockout.Blocked(context.Background(), "k")
+		assert.ErrorIs(t, err, context.DeadlineExceeded, "a stalled lockout query errors, and the admin answers 503")
 	})
 }

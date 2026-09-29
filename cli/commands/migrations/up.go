@@ -62,7 +62,13 @@ func (c *UpCommand) Execute(ctx *core.Context, args []string) error {
 		// Dry-run mode: show what would be executed
 		fmt.Fprintln(out, "Dry-run mode: Preview of migrations that would be applied:")
 		fmt.Fprintln(out)
-		if enabled, _ := frameworkStoresEnabled(ctx.Config); enabled {
+		// An invalid server.stores fails here as it does in a real run, so
+		// a CI dry run does not approve a config the deploy will reject.
+		enabled, err := frameworkStoresEnabled(ctx.Config)
+		if err != nil {
+			return err
+		}
+		if enabled {
 			fmt.Fprintln(out, "  Framework store tables (server.stores: database) are migrated first if pending")
 			fmt.Fprintln(out)
 		}

@@ -254,6 +254,10 @@ func (a *Admin[T]) decodeData(data map[string]interface{}, result interface{}) e
 		TagName:          "json",
 		WeaklyTypedInput: true,
 		Squash:           true,
+		// The instance already holds the schema defaults: an explicit null
+		// must clear a field and a sent list or map must replace the
+		// default, not merge into it.
+		ZeroFields: true,
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
 			stringToDateTimeHook(),
 		),

@@ -81,9 +81,11 @@ A throttle without a store of its own counts in the default store:
   the `forge_rate_limits` table, so every instance on the database shares one
   count. See [the deployment guide](/docs/deployment/) for setting it up.
 
-If the database cannot be reached, or does not answer within two seconds, the
-request is allowed and the error is logged: a database outage does not turn
-into refused requests. The query is also stopped when the client disconnects.
+If the database cannot be reached, or does not answer within two seconds
+(`stores.DefaultQueryTimeout`), the request is allowed and the error is
+logged: a database outage does not turn into refused requests. When the
+client disconnects during the check, the query stops and the request is
+refused without a log line.
 
 The default store is process-wide, and the most recently created server's
 `server.stores` setting decides it.
@@ -106,8 +108,8 @@ type Store interface {
 
 A store that does I/O should also implement `throttling.ContextStore`.
 Throttles then call `AllowContext` with the request's context, so the check
-stops when the client goes away. An error there allows the request and is
-logged:
+stops when the client goes away; that request is refused. Any other error
+allows the request and is logged:
 
 ```go
 type ContextStore interface {
@@ -117,6 +119,8 @@ type ContextStore interface {
 ```
 
 `*stores.RateLimiter` (from `stores.Stores.RateLimiter`) implements both.
+Its `WithTimeout` changes the two-second bound per check; zero leaves only
+the request's context to bound it.
 
 ---
 
@@ -141,7 +145,8 @@ Retry-After: 42
 }
 ```
 
-The `type` base URL is the `errors.problem_details.type_base_url` setting.
+The `type` base URL defaults to `https://api.example.com/problems`; set yours
+with `errors.SetTypeBaseURL` from `github.com/forgego/forge/api/errors`.
 
 ---
 

@@ -23,6 +23,7 @@ type createDefaultsItem struct {
 	Priority  int32     `db:"priority" json:"priority"`
 	Status    string    `db:"status" json:"status"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	Note      *string   `db:"note" json:"note"`
 }
 
 func (createDefaultsItem) Meta() schema.Meta {
@@ -37,6 +38,7 @@ func (createDefaultsItem) Fields() []schema.Field {
 		schema.Int32Field("priority", schema.Default(5)),
 		schema.StringField("status", schema.Required(), schema.Default("draft")),
 		schema.DateTimeField("created_at", schema.Default(time.Now)),
+		schema.StringField("note", schema.Optional(), schema.Default("none")),
 	}
 }
 
@@ -53,7 +55,8 @@ func setupCreateDefaultsAdmin(t *testing.T) (*Admin[createDefaultsItem], *orm.Ma
 			is_active BOOLEAN NOT NULL DEFAULT 0,
 			priority INTEGER NOT NULL DEFAULT 0,
 			status TEXT NOT NULL DEFAULT '',
-			created_at DATETIME
+			created_at DATETIME,
+			note TEXT
 		);
 	`)
 	require.NoError(t, err)
@@ -126,4 +129,22 @@ func TestBuildFieldsMetadata_DefaultValues(t *testing.T) {
 	// The metadata must stay JSON-encodable even with a callable default.
 	_, err = json.Marshal(fields)
 	require.NoError(t, err)
+}
+
+func TestCreateObject_ExplicitNullOverridesDefault(t *testing.T) {
+	admin, manager := setupCreateDefaultsAdmin(t)
+	ctx := context.Background()
+
+	created, err := admin.CreateObject(ctx, map[string]interface{}{"name": "omitted"})
+	require.NoError(t, err)
+	omitted, err := manager.Get(ctx, created.(*createDefaultsItem).ID)
+	require.NoError(t, err)
+	require.NotNil(t, omitted.Note, "an omitted key gets the schema default")
+	assert.Equal(t, "none", *omitted.Note)
+
+	created, err = admin.CreateObject(ctx, map[string]interface{}{"name": "null", "note": nil})
+	require.NoError(t, err)
+	null, err := manager.Get(ctx, created.(*createDefaultsItem).ID)
+	require.NoError(t, err)
+	assert.Nil(t, null.Note, "an explicit null is stored as NULL, not replaced by the default")
 }

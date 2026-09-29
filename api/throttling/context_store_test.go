@@ -58,3 +58,14 @@ func TestThrottle_ContextStoreErrorAllowsTheRequest(t *testing.T) {
 	assert.True(t, allowed, "an unreachable store must not refuse traffic")
 	assert.Zero(t, retry)
 }
+
+func TestThrottle_ContextStoreRefusesAGoneClient(t *testing.T) {
+	store := &contextStore{err: context.Canceled}
+	throttle := NewAnonRateThrottle("1/min").WithStore(store)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	allowed, _, err := throttle.AllowRequest(httptest.NewRequest(http.MethodGet, "/", nil).WithContext(ctx), nil)
+	require.NoError(t, err)
+	assert.False(t, allowed, "a client that disconnected mid-check is not let through uncounted")
+}

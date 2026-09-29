@@ -238,11 +238,18 @@ the change.
   The admin API answers 503 instead of 401 when its token or lockout store
   cannot be reached, and admin history records a logged-in admin by username
   instead of the printed user map.
-  A database throttle check is bound to the request's context and to two
-  seconds, after which the request is allowed and the error logged, so a
-  stalled database cannot hold requests. A server created with
+  Database throttle and admin lockout queries are bound to the request's
+  context and to `stores.DefaultQueryTimeout` (two seconds, changed with
+  `WithTimeout`), so a stalled database cannot hold requests: a throttle then
+  allows the request and logs the error, and admin login answers 503. A server created with
   `server.stores: memory` resets throttles to process memory even after an
-  earlier server in the process used the database.
+  earlier server in the process used the database, and
+  `Site.UseStores(ctx, "memory")` (or the new `Site.UseMemoryStores`) undoes
+  an earlier `UseDatabaseStores`. `forge migrate up --dry-run` rejects an
+  invalid `server.stores` like the real run does.
+- The admin create endpoint stores an explicit `null` as `NULL` instead of
+  the field's schema `Default`, and a sent list or map replaces the default
+  instead of being merged into it.
 - Admin field metadata carries `has_default`, set for any schema `Default`
   including a callable one such as `time.Now`. The create form no longer
   requires such a field in the browser, since the server fills it.

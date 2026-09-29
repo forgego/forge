@@ -52,25 +52,43 @@ func (s *Stores) current(ctx context.Context, bucket string) (int64, time.Time, 
 // most limit calls per key are allowed in each window. It satisfies
 // throttling.Store.
 type RateLimiter struct {
-	stores *Stores
-	name   string
-	limit  int
-	window time.Duration
+	stores  *Stores
+	name    string
+	limit   int
+	window  time.Duration
+	timeout time.Duration
 }
 
 // RateLimiter returns a limiter allowing limit calls per key per window.
 // name namespaces its keys: limiters with the same name, limit and window
 // on any instance share their counts.
 func (s *Stores) RateLimiter(name string, limit int, window time.Duration) *RateLimiter {
-	return &RateLimiter{stores: s, name: name, limit: limit, window: window}
+	return &RateLimiter{stores: s, name: name, limit: limit, window: window, timeout: DefaultQueryTimeout}
 }
 
-// rateLimitTimeout bounds one rate-limit query, so a stalled database or an
-// exhausted pool fails open after this long instead of holding the request.
-const rateLimitTimeout = 2 * time.Second
+// WithTimeout sets how long one check may wait for the database; zero or
+// less means only the caller's context bounds it. The default is
+// DefaultQueryTimeout.
+func (l *RateLimiter) WithTimeout(d time.Duration) *RateLimiter {
+	l.timeout = d
+	return l
+}
+
+// DefaultQueryTimeout bounds each query of a RateLimiter or LoginAttempts
+// unless WithTimeout changes it, so a stalled database or an exhausted pool
+// answers with an error after this long instead of holding the request.
+const DefaultQueryTimeout = 2 * time.Second
+
+// withTimeout bounds ctx by d; d <= 0 leaves ctx as it is.
+func withTimeout(ctx context.Context, d time.Duration) (context.Context, context.CancelFunc) {
+	if d <= 0 {
+		return ctx, func() {}
+	}
+	return context.WithTimeout(ctx, d)
+}
 
 // Allow implements throttling.Store. If the database cannot be reached
-// within rateLimitTimeout the call is allowed and the error is logged, so a
+// within the limiter's timeout the call is allowed and the error is logged, so a
 // database outage does not turn into refused or hanging requests. Throttles
 // call AllowContext with the request's context instead when they can.
 func (l *RateLimiter) Allow(key string) (bool, time.Duration) {
@@ -84,13 +102,13 @@ func (l *RateLimiter) Allow(key string) (bool, time.Duration) {
 
 // AllowContext counts one call for key and reports whether it is within
 // the limit and, if not, how long until the window ends. The query stops
-// when ctx is done or after rateLimitTimeout, whichever comes first. It
+// when ctx is done or after the limiter's timeout, whichever comes first. It
 // satisfies throttling.ContextStore.
 func (l *RateLimiter) AllowContext(ctx context.Context, key string) (bool, time.Duration, error) {
 	if l.limit <= 0 {
 		return false, l.window, nil
 	}
-	ctx, cancel := context.WithTimeout(ctx, rateLimitTimeout)
+	ctx, cancel := withTimeout(ctx, l.timeout)
 	defer cancel()
 	hits, resetAt, err := l.stores.hit(ctx, "rate:"+l.name+":"+key, l.window)
 	if err != nil {
@@ -110,21 +128,32 @@ func (l *RateLimiter) AllowContext(ctx context.Context, key string) (bool, time.
 // key out once it has max failures in one window. The admin uses it for its
 // login lockout when server.stores is database.
 type LoginAttempts struct {
-	stores *Stores
-	max    int
-	window time.Duration
+	stores  *Stores
+	max     int
+	window  time.Duration
+	timeout time.Duration
 }
 
 // LoginAttempts returns a lockout that blocks a key after max failures
 // within window, until that window ends.
 func (s *Stores) LoginAttempts(max int, window time.Duration) *LoginAttempts {
-	return &LoginAttempts{stores: s, max: max, window: window}
+	return &LoginAttempts{stores: s, max: max, window: window, timeout: DefaultQueryTimeout}
+}
+
+// WithTimeout sets how long each lockout query may wait for the database;
+// zero or less means only the caller's context bounds it. The default is
+// DefaultQueryTimeout. The admin answers 503 when a query fails.
+func (a *LoginAttempts) WithTimeout(d time.Duration) *LoginAttempts {
+	a.timeout = d
+	return a
 }
 
 func loginBucket(key string) string { return "login:" + key }
 
 // Blocked reports whether key is locked out and for how long.
 func (a *LoginAttempts) Blocked(ctx context.Context, key string) (bool, time.Duration, error) {
+	ctx, cancel := withTimeout(ctx, a.timeout)
+	defer cancel()
 	hits, resetAt, err := a.stores.current(ctx, loginBucket(key))
 	if err != nil {
 		return false, 0, err
@@ -137,12 +166,16 @@ func (a *LoginAttempts) Blocked(ctx context.Context, key string) (bool, time.Dur
 
 // Failed records a failed login for key.
 func (a *LoginAttempts) Failed(ctx context.Context, key string) error {
+	ctx, cancel := withTimeout(ctx, a.timeout)
+	defer cancel()
 	_, _, err := a.stores.hit(ctx, loginBucket(key), a.window)
 	return err
 }
 
 // Succeeded clears key's failures.
 func (a *LoginAttempts) Succeeded(ctx context.Context, key string) error {
+	ctx, cancel := withTimeout(ctx, a.timeout)
+	defer cancel()
 	_, err := a.stores.db.ExecContext(ctx, "DELETE FROM forge_rate_limits WHERE bucket = $1", loginBucket(key))
 	return err
 }

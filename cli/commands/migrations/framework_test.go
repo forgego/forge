@@ -102,4 +102,7 @@ func TestMigrateUp_RejectsUnknownStoresSetting(t *testing.T) {
 
 	_, err := runMigrateCommand(t, NewUpCommand().Definition(), "--path", dir)
 	require.ErrorContains(t, err, `invalid server.stores "redis"`)
+
+	_, err = runMigrateCommand(t, NewUpCommand().Definition(), "--path", dir, "--dry-run")
+	require.ErrorContains(t, err, `invalid server.stores "redis"`, "a dry run rejects what the real run rejects")
 }
