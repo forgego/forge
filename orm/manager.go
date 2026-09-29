@@ -266,7 +266,7 @@ func (m *Manager[T]) Create(ctx context.Context, instance *T) error {
 	if err := m.runHooks(ctx, instance, "BeforeSave"); err != nil {
 		return err
 	}
-	if err := m.validateForPersistence(instance, validationCompleted); err != nil {
+	if err := m.validateForPersistence(instance, validationCompleted, true); err != nil {
 		return err
 	}
 
@@ -306,7 +306,7 @@ func (m *Manager[T]) prepareBulkInstances(ctx context.Context, instances []*T) e
 		if err := m.runHooks(ctx, instance, "BeforeSave"); err != nil {
 			return err
 		}
-		if err := m.validate(instance); err != nil {
+		if err := m.validate(instance, true); err != nil {
 			return err
 		}
 	}
@@ -399,7 +399,7 @@ func (m *Manager[T]) Update(ctx context.Context, instance *T) error {
 	// AutoNow fields record the time of every save: set them on the struct,
 	// which BuildUpdateSQL then writes, so the caller sees the stored value.
 	touchAutoNow(instance, time.Now().UTC())
-	if err := m.validateForPersistence(instance, validationCompleted); err != nil {
+	if err := m.validateForPersistence(instance, validationCompleted, false); err != nil {
 		return err
 	}
 
@@ -739,7 +739,10 @@ func setIntField(val reflect.Value, targetName string, id int64) bool {
 	return false
 }
 
-func (m *Manager[T]) validate(instance *T) error {
+// validate runs the model's Clean hooks and constraint checks. creating marks
+// an insert, where the database fills empty fields whose Default is a
+// database function.
+func (m *Manager[T]) validate(instance *T, creating bool) error {
 	// 1. Run interface-based Clean method (defined directly on the struct)
 	if validatable, ok := any(instance).(interface{ Clean() error }); ok {
 		if err := validatable.Clean(); err != nil {
@@ -757,17 +760,17 @@ func (m *Manager[T]) validate(instance *T) error {
 		}
 	}
 
-	return m.validateConstraints(instance)
+	return m.validateConstraints(instance, creating)
 }
 
-func (m *Manager[T]) validateForPersistence(instance *T, validationCompleted bool) error {
+func (m *Manager[T]) validateForPersistence(instance *T, validationCompleted, creating bool) error {
 	if validationCompleted {
-		return m.validateConstraints(instance)
+		return m.validateConstraints(instance, creating)
 	}
-	return m.validate(instance)
+	return m.validate(instance, creating)
 }
 
-func (m *Manager[T]) validateConstraints(instance *T) error {
+func (m *Manager[T]) validateConstraints(instance *T, creating bool) error {
 	// Run Validate() if the model implements it (e.g. from generated code).
 	if validatable, ok := any(instance).(interface{ Validate() error }); ok {
 		if err := validatable.Validate(); err != nil {
@@ -775,7 +778,7 @@ func (m *Manager[T]) validateConstraints(instance *T) error {
 		}
 	}
 	if s, ok := any(instance).(schema.Schema); ok && schemaConstraintValidator != nil {
-		if err := schemaConstraintValidator(instance, s.Fields()); err != nil {
+		if err := schemaConstraintValidator(instance, validationFields(instance, s.Fields(), creating)); err != nil {
 			return fmt.Errorf("schema model validation failed: %w", err)
 		}
 	}

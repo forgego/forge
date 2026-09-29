@@ -74,3 +74,48 @@ func TestDatabaseFunctionDefaultsAreLeftToTheDatabase(t *testing.T) {
 		})
 	}
 }
+
+type onlyGeneratedRow struct {
+	schema.BaseSchema
+	ID  int64  `db:"id" json:"id"`
+	UID string `db:"uid" json:"uid"`
+}
+
+func (onlyGeneratedRow) Meta() schema.Meta { return schema.Meta{TableName: "only_generated_rows"} }
+
+func (onlyGeneratedRow) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.UUIDField("uid", schema.Required(), schema.Default("gen_random_uuid()")),
+	}
+}
+
+// TestDatabaseFunctionDefaultsInsertADefaultsRow: a model whose only columns are
+// left to the database is inserted with DEFAULT VALUES, and a Required field
+// with a database-function default is exempt from the required check on
+// insert only: an update that writes it empty is rejected.
+func TestDatabaseFunctionDefaultsInsertADefaultsRow(t *testing.T) {
+	for _, backend := range storestest.Backends() {
+		t.Run(backend.Name, func(t *testing.T) {
+			ctx := context.Background()
+			database := storestest.Open(t, backend.Driver, backend.NewDSN(t))
+			ddl := `CREATE TABLE only_generated_rows (id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY, uid UUID DEFAULT gen_random_uuid())`
+			if backend.Driver == "sqlite3" {
+				ddl = `CREATE TABLE only_generated_rows (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT DEFAULT (lower(hex(randomblob(16)))))`
+			}
+			_, err := database.ExecContext(ctx, ddl)
+			require.NoError(t, err)
+			manager, err := orm.NewManagerWithDB[onlyGeneratedRow]("only_generated_rows", database)
+			require.NoError(t, err)
+
+			row := &onlyGeneratedRow{}
+			require.NoError(t, manager.Create(ctx, row))
+			assert.NotZero(t, row.ID)
+
+			row.UID = ""
+			err = manager.Update(ctx, row)
+			require.Error(t, err, "an update must not write an empty required field")
+			assert.Contains(t, err.Error(), "required")
+		})
+	}
+}
