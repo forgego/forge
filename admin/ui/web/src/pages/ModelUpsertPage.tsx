@@ -24,6 +24,7 @@ import { FieldRenderer } from "../components/form/FieldRenderer";
 import { InlineRelations } from "../components/form/InlineRelations";
 import { HistorySection } from "../components/form/HistorySection";
 import { changedFields } from "../components/form/changed-fields";
+import { createDefaults } from "../components/form/create-defaults";
 
 interface ModelFormPageProps {
   mode: "create" | "edit";
@@ -147,6 +148,13 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
   if (mode === "edit" && objectData && formSource !== objectData) {
     setFormSource(objectData);
     setFormData(objectData);
+  }
+  // A create form starts from the schema defaults in the metadata, so an
+  // untouched field (such as a checkbox with Default(true)) submits its
+  // default rather than the widget's empty state.
+  if (mode === "create" && metadata && formSource !== metadata) {
+    setFormSource(metadata);
+    setFormData((prev) => ({ ...createDefaults(metadata.fields), ...prev }));
   }
 
   useEffect(() => {

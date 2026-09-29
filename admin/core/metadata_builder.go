@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/forgego/forge/schema"
@@ -65,6 +66,16 @@ func buildMetadata[T any](s schema.Schema, config *Config[T], name string) (*Met
 	return metadata, nil
 }
 
+// staticDefault returns a field's Default for the create form to prefill.
+// A callable default (such as time.Now) is evaluated per instance on the
+// server and cannot be JSON-encoded, so it is reported as no default.
+func staticDefault(def interface{}) interface{} {
+	if def == nil || reflect.ValueOf(def).Kind() == reflect.Func {
+		return nil
+	}
+	return def
+}
+
 // buildFieldsMetadata builds field metadata from schema fields
 func buildFieldsMetadata(s schema.Schema) ([]FieldMetadata, error) {
 	fields := s.Fields()
@@ -79,7 +90,7 @@ func buildFieldsMetadata(s schema.Schema) ([]FieldMetadata, error) {
 			Required:     field.Required && !isAutoManaged(field),
 			ReadOnly:     !field.Editable || isAutoManaged(field), // Auto-managed fields or non-editable fields are read-only
 			Widget:       inferWidget(field),
-			DefaultValue: field.Default,
+			DefaultValue: staticDefault(field.Default),
 		}
 
 		// Add field-specific metadata

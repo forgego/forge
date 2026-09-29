@@ -43,6 +43,13 @@ the change.
   optional fields, zero `DBDefault` fields and `""` on non-text columns (UUID,
   JSON, decimal, date and time, non-text custom `DBType`) are still left to the
   database, so they store `NULL` or the column default as before (#291).
+  (`false`, `0`, `""`) instead of leaving the column out, so a column default
+  no longer replaces them. Code that relied on a `Default` filling a field the
+  struct left at zero must build the instance with `manager.New()` (or call
+  `orm.ApplyDefaults`) first. The admin create endpoint and the public REST
+  API apply the schema `Default` to a field the request omits. Zero foreign
+  keys, `nil` pointers, zero `time.Time` values, zero unique optional fields
+  and zero `DBDefault` fields are still left to the database (#291).
 - `api.Router.Register` and `RegisterRoutes` panic when a viewset's data
   access is misconfigured, naming the resource and each missing operation.
   Before, the route answered 500 per request. Set `ReadOnly` for list and
@@ -79,6 +86,13 @@ the change.
 
 ### Fixed
 
+- The admin create form starts with each field's schema `Default` (from the
+  metadata `default_value`), and the admin create endpoint applies the
+  `Default` of a field the request omits, as the public REST API does. Before,
+  a `Default(true)` checkbox started unchecked and an omitted field stored
+  the zero value. Admin metadata no longer fails to encode for a model with
+  a callable `Default` such as `time.Now`; that field reports no
+  `default_value`.
 - Creating a record with a boolean unchecked, a number set to 0 or a text
   left empty stores that value instead of the column default, in the ORM,
   the admin and the REST API (#291).
