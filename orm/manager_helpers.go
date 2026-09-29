@@ -201,7 +201,13 @@ func BuildInsertSQLForPK(instance interface{}, tableName string, pkColumn string
 		}
 	}
 	if len(insertColumns) == 0 {
-		return "", nil, nil, fmt.Errorf("no fields to insert")
+		if len(schemaFields) == 0 {
+			return "", nil, nil, fmt.Errorf("no fields to insert")
+		}
+		// Every column is left to the database (identity, defaults): insert
+		// a row of defaults instead of an empty column list.
+		return fmt.Sprintf("INSERT INTO %s DEFAULT VALUES RETURNING %s",
+			EscapeIdentifier(tableName), EscapeIdentifier(pkColumn)), nil, nil, nil
 	}
 
 	insertSQL := fmt.Sprintf(

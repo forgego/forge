@@ -436,7 +436,7 @@ Generated endpoints follow the schema:
   `Meta().OrderBy` built only from hidden fields currently leaves the list unordered, and paging
   through it can repeat or skip rows; keep at least one visible field in `Meta().OrderBy`.
 - The request body must be a JSON object; `null` or any other value returns 400.
-- `Time` fields are returned as `15:04:05` and `Date` fields as `2006-01-02`, the layouts requests accept.
+- `Time` and `DateTime` fields are returned as RFC 3339 timestamps (`2006-01-02T15:04:05Z07:00`) and `Date` fields as `2006-01-02`, the layouts requests accept.
 
 Both files are rendered and staged before either is replaced, and the previous contents are
 backed up first. If replacing `api_gen.go` fails, the generator restores `gen.go` on a

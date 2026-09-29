@@ -27,10 +27,11 @@ export function resolveFieldKind(field: any, relation?: any): FieldKind {
   }
   if (w === "number" || INT_TYPES.has(t) || FLOAT_TYPES.has(t)) return "number";
   if (w === "date" || t === "date") return "date";
-  if (w === "datetime" || w === "datetime-local" || ["datetime", "timestamp", "timestamptz"].includes(t)) {
+  if (w === "time") return "time";
+  // A schema TimeField ("Time") is a timestamp, like DateTimeField.
+  if (w === "datetime" || w === "datetime-local" || ["datetime", "timestamp", "timestamptz", "time"].includes(t)) {
     return "datetime";
   }
-  if (w === "time" || t === "time") return "time";
   if (w === "password" || t === "password") return "password";
   if (w === "email" || t === "email") return "email";
   if (w === "url" || t === "url") return "url";

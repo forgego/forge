@@ -2,6 +2,7 @@ package sql
 
 import (
 	"fmt"
+	"github.com/forgego/forge/schema"
 	"strings"
 
 	"github.com/forgego/forge/codegen"
@@ -107,12 +108,8 @@ func formatDefaultValue(value interface{}, goType string, fieldType string, fiel
 	// DBDefault, which the builder renders as is; only these common
 	// current-time and random functions are still recognized in Default.
 	if str, ok := value.(string); ok {
-		sqlFunctions := []string{"now()", "CURRENT_TIMESTAMP", "CURRENT_DATE", "CURRENT_TIME",
-			"uuid_generate_v4()", "gen_random_uuid()", "random()"}
-		for _, fn := range sqlFunctions {
-			if strings.EqualFold(str, fn) {
-				return str // Return unquoted SQL expression
-			}
+		if schema.IsDatabaseFunctionDefault(str) {
+			return str // Return unquoted SQL expression
 		}
 		return fmt.Sprintf("'%s'", strings.ReplaceAll(str, "'", "''"))
 	}

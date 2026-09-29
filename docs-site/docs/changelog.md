@@ -11,8 +11,110 @@ the change.
 
 ## Unreleased
 
+## v0.2.0 (2026-09-29)
+
+v0.2.0 is a minor release because it contains breaking changes. Read
+**Upgrading from v0.1.1** below before you update.
+
+### Upgrading from v0.1.1
+
+**Who is affected:** every project. The changes that most often need action
+are `server.trusted_proxies` behind a reverse proxy, `app.debug` now
+defaulting to `false`, and the foreign keys the next `forge makemigrations`
+adds.
+
+1. Update the CLI and the library:
+   `go install github.com/forgego/forge/cmd/forge@v0.2.0` and
+   `go get github.com/forgego/forge@v0.2.0 && go mod tidy`.
+   Projects created by v0.1.1 pin `v0.1.0` in `go.mod`, so check that the
+   `require` line now says `v0.2.0`.
+2. Regenerate each app: `forge generate --models ./app/<app> --output ./app/<app>`
+   (plus `--api` if you use it). Expected
+   changes in generated code: whitespace in `gen.go`; `api_gen.go` viewsets
+   set `RejectUnknownRequestFields`.
+3. Code changes:
+   - Projects created by v0.1.0 or v0.1.1 do not compile until you delete the
+     `//go:embed static templates` line, the `staticFiles` variable and the
+     `embed` import from `cmd/server/main.go`.
+   - An app created with `forge add app --example` declares
+     `type Example struct { schema.BaseSchema }`, so the ORM and the admin
+     read and write no columns. Change it to
+     `type Example struct { ExampleGenerated }` and run `forge generate`.
+   - Code that relied on a schema `Default` filling a field left at its zero
+     value in `Manager.Create`, `Save` or `BulkCreate` must build the
+     instance with `manager.New()` or call `orm.ApplyDefaults` first. Neither
+     touches a default naming a database function (`now()`,
+     `gen_random_uuid()`, ...): the database fills the column on insert, and a
+     `Required` field with such a default may be left empty.
+   - A `Default("...")` holding an SQL expression other than the known
+     functions (`now()`, `CURRENT_TIMESTAMP`, `gen_random_uuid()`, ...)
+     becomes `DBDefault("...")`.
+   - `PUT` requests must send every required writable field; use `PATCH` for
+     partial updates. Clients of generated viewsets must stop sending unknown
+     keys, which are now a 400.
+   - Clients of the REST API receive and send `TimeField` values as RFC 3339
+     timestamps (`2026-09-19T14:30:05Z`) instead of `14:30:05`; a bare time
+     of day is now a 400.
+   - Anonymous requests that fail a permission answer 401 with a
+     `WWW-Authenticate` challenge when the first authentication class can
+     issue one (token, JWT, basic), instead of 403. Clients that treated 403
+     as "log in" must accept 401.
+   - `api.Router.Register` panics at startup when a viewset's queryset lacks
+     an operation its routes need; set `ReadOnly` or complete the queryset.
+   - The admin API answers 503 instead of 401 when its token or lockout store
+     cannot be reached.
+   - Optional: replace `srv.Start()` with `srv.StartWithGracefulShutdown()`
+     to drain requests on SIGTERM.
+4. Configuration changes:
+   - `server.trusted_proxies` (`FORGE_SERVER_TRUSTED_PROXIES`): list your
+     reverse proxy, or every request appears to come from it and forwarding
+     headers are ignored.
+   - `app.debug` defaults to `false`. Set `FORGE_APP_DEBUG=true` for local
+     development; a production server refuses to start with it on.
+   - `/info` is off unless `server.info_endpoint: true`.
+   - New and optional: `server.stores` (`memory` by default). To share state
+     between instances, set it to `database`, pass
+     `server.WithDatabase(database)` to `server.NewServer`, call
+     `adminSite.UseStores(ctx, settings.Server.Stores)` after `SetDB`, and run
+     `forge migrate up` (see the [deployment guide](/docs/deployment/)).
+5. Migrations: back up first. Then run
+   `forge makemigrations upgrade --auto --models ./app/<app>`: it now emits
+   the foreign keys and `Meta.Constraints` it used to skip, so the migration
+   fails on rows that violate them; delete or fix orphan rows first. A column
+   change it cannot express (on PostgreSQL: adding or removing `Unique`, the
+   primary key, identity, a generated expression or `DBColumn`; on SQLite:
+   any column change) is an error instead of an empty or comment-only
+   migration: write that migration by hand (see the migrations guide). A
+   SQLite project with an earlier comment-only migration for a column change
+   must replace it with a hand-written table rebuild. v0.1.1 could leave an
+   empty migration pair behind after `makemigrations --auto` found no
+   changes; `forge migrate up` rejects a pending up file with `SQL is empty`,
+   so delete each empty pair (both files) before applying. Then run
+   `forge migrate up`.
+   With `server.stores: database`, `forge migrate up` also creates the
+   `forge_*` framework tables.
+6. Verify: `forge migrate status` reports `Status: OK` (a failed migration
+   leaves it dirty; follow `forge migrate recover`), then run the smoke check
+   from the [deployment guide](/docs/deployment/).
+
+**Rolling back:** reinstall and require `v0.1.1`, then regenerate with the
+v0.1.1 CLI, for each app: `forge generate --models ./app/<app> --output
+./app/<app>` (add `--api` for generated API code):
+code generated by v0.2 refers to fields that v0.1.1 does not have. The generated foreign key
+and constraint migrations have down migrations: undo them with
+`forge migrate rollback` (one migration per run) before switching back. The framework tables are not touched by
+`forge migrate rollback`; if you enabled database stores, set
+`server.stores: memory` and drop `forge_sessions`, `forge_rate_limits`,
+`forge_admin_tokens`, `forge_admin_saved_views`, `forge_admin_log` and
+`forge_framework_migrations` by hand. Keep `forge_migration_checksums`: it
+holds the recorded hashes of your applied migrations.
+
 ### Breaking
 
+- The REST API reads and writes `TimeField` as an RFC 3339 timestamp, like
+  `DateTimeField`, and the admin edits it as a date and time. `TimeField` is
+  a timestamp column; the API formatted it as `15:04:05`, so a response sent
+  back as a `PUT` body stored the time with a zero date (#299).
 - `forge makemigrations` fails instead of writing a comment-only migration
   for a SQLite column change, and instead of an empty migration for a
   PostgreSQL column change it cannot express (`Unique`, primary key,
@@ -30,7 +132,7 @@ the change.
   and `X-Real-IP` only from peers listed in `server.trusted_proxies`. Before,
   it trusted the headers from any client, so a request could set its own
   `RemoteAddr`. Behind a reverse proxy, list the proxy there to keep seeing
-  client addresses.
+  client addresses (#298).
 - `Manager.Create`, `Save` and `BulkCreate` write explicit zero values
   (`false`, `0`, `""`) on fields with a schema `Default`, instead of leaving
   the column out, so the column's `DEFAULT` clause no longer replaces them
@@ -80,6 +182,13 @@ the change.
 
 ### Fixed
 
+- A `Default` naming a database function (`now()`, `CURRENT_TIMESTAMP`,
+  `gen_random_uuid()`, ... as the migration writes it unquoted) is left for
+  the database: `Manager.New`, `orm.ApplyDefaults`, the REST API and the
+  admin no longer assign the function name as text (a UUID column stored
+  `gen_random_uuid()`) or fail converting it to `time.Time` (every admin
+  create returned 500), and `Create` leaves such a column out of the INSERT.
+  The new `schema.IsDatabaseFunctionDefault` reports these defaults (#299).
 - A malformed `logging.outputs` value, which `config.LoadSettings` ignores so
   logs go to the console, is reported as a warning when the server starts.
   The new `config.Config.SettingsWarnings` returns it. Before, it was
@@ -103,7 +212,7 @@ the change.
   a `Default(true)` checkbox started unchecked and an omitted field stored
   the zero value. Admin metadata no longer fails to encode for a model with
   a callable `Default` such as `time.Now`; that field reports no
-  `default_value`.
+  `default_value` (#298).
 - Creating a record with a boolean unchecked, a number set to 0 or a text
   left empty stores that value instead of the column default, in the ORM,
   the admin and the REST API (#291).
@@ -138,6 +247,10 @@ the change.
   `forge new` pins that version in the new project's `go.mod` instead of
   `v0.1.0` (#286).
 - `forge generate` warns about struct fields that have no schema entry (#287).
+- `forge add app --example` writes a model that embeds `ExampleGenerated`,
+  so the ORM and the admin see its columns. Before, `Example` declared only
+  `schema.BaseSchema`: lists returned empty objects and creates wrote no
+  columns.
 - Generated ID methods follow Go's promotion rules, and pointer-embedded ID
   holders are rejected at generate time instead of panicking in `Create`
   (#259).
@@ -197,7 +310,8 @@ the change.
   SQLSTATE or SQLite code and constraint name instead of their message,
   which can contain row values (#290).
 - `forge makemigrations` no longer re-proposes a change on every run for
-  cast and operator DB defaults (`DBDefault("'{}'::jsonb")`,
+  cast and operator DB defaults (`DBDefault("'{}'::jsonb")` on a `JSONB`
+  column,
   `DBDefault("'x' || 'y'")`), a changed or added `DBDefault` on PostgreSQL,
   a table dropped and later created again, or a hand-written
   `ALTER TABLE .. RENAME COLUMN` or `RENAME TO` (#296, #292).
@@ -215,7 +329,7 @@ the change.
   a PostgreSQL schema lifecycle test, schema DSL fixtures, admin browser
   journeys against PostgreSQL, and an install smoke test from the public
   module proxy on every tag and weekly.
-- Shared stores for running more than one instance (#293). With the new
+- Shared stores for running more than one instance (#293, #298). With the new
   `server.stores: database` setting, sessions (`forge_session`), API
   throttling counters, admin bearer tokens, the admin login lockout, saved
   views and admin change history are kept in PostgreSQL or SQLite instead of
@@ -255,6 +369,25 @@ the change.
 - Admin field metadata carries `has_default`, set for any schema `Default`
   including a callable one such as `time.Now`. The create form no longer
   requires such a field in the browser, since the server fills it.
+
+### Known issues
+
+- `forge makemigrations` skips `schema.Check(...)` and `schema.UniqueOn(...)`
+  helper calls in `Meta` and prints `No changes detected`; only
+  `forge generate` warns about them. Write constraints as
+  `schema.Constraint{...}` literals.
+- `forge add api <name> --model <Model>` followed by `forge generate --api`
+  declares `<Model>Serializer` twice, so the package does not compile;
+  delete one of the two.
+- `forge add app` does not validate the name as a Go package name.
+- The `forge new` next-step hint prints `forge makemigrations` without the
+  migration name and `--models` argument an `app/` project needs.
+- A schema `Default` given as a Go function (`Default(time.Now)`) is applied by
+  the ORM and the admin but not by the REST API: a `POST` that omits the
+  field answers 400. Send the field, or set the value in a `BeforeCreate` hook.
+- `forge createsuperuser` fails in a fresh project until a `users` table
+  exists.
+- `/info` reports `app.version` (default `0.1.0`), not the Forge version.
 
 ## v0.1.1 (2026-09-28)
 
@@ -331,6 +464,6 @@ repository root, installable with
 ## v1.0.0 and v1.0.1 (retracted)
 
 Tagged by mistake before the module lived at the repository root; v1.0.0
-contains no Go packages. Both are retracted in `go.mod`, and
+contains no Go packages and v1.0.1 points at the v0.1.0 commit. Both are retracted in `go.mod`, and
 `go get github.com/forgego/forge@latest` skips them. They are not
 Forge 1.0.

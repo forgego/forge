@@ -148,3 +148,59 @@ func TestCreateObject_ExplicitNullOverridesDefault(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, null.Note, "an explicit null is stored as NULL, not replaced by the default")
 }
+
+type functionDefaultItem struct {
+	schema.BaseSchema
+	ID     int64     `db:"id" json:"id"`
+	Name   string    `db:"name" json:"name"`
+	SeenAt time.Time `db:"seen_at" json:"seen_at"`
+}
+
+func (functionDefaultItem) Meta() schema.Meta {
+	return schema.Meta{TableName: "function_default_items"}
+}
+
+func (functionDefaultItem) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.StringField("name", schema.Required()),
+		schema.TimeField("seen_at", schema.Default("CURRENT_TIMESTAMP")),
+	}
+}
+
+// TestCreateObject_DatabaseFunctionDefaultIsLeftToTheDatabase: a Default
+// naming a database function is the column DEFAULT, not a Go value. Before,
+// every admin create for such a model failed converting "CURRENT_TIMESTAMP"
+// to time.Time, even with the field sent.
+func TestCreateObject_DatabaseFunctionDefaultIsLeftToTheDatabase(t *testing.T) {
+	database, err := db.NewDB(filepath.Join(t.TempDir(), "function_defaults.sqlite"))
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = database.Close() })
+	_, err = database.Exec(`CREATE TABLE function_default_items (id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL, seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`)
+	require.NoError(t, err)
+	manager, err := orm.NewManagerWithDB[functionDefaultItem]("function_default_items", database)
+	require.NoError(t, err)
+	admin, err := NewAdmin[functionDefaultItem](functionDefaultItem{}, manager, &Config[functionDefaultItem]{})
+	require.NoError(t, err)
+
+	created, err := admin.CreateObject(context.Background(), map[string]interface{}{"name": "omitted"})
+	require.NoError(t, err)
+	assert.WithinDuration(t, time.Now(), created.(*functionDefaultItem).SeenAt, time.Minute,
+		"the response shows the value the database filled, not a zero time")
+	stored, err := manager.Get(context.Background(), created.(*functionDefaultItem).ID)
+	require.NoError(t, err)
+	assert.WithinDuration(t, time.Now(), stored.SeenAt, time.Minute, "the database filled seen_at")
+
+	_, err = admin.CreateObject(context.Background(), map[string]interface{}{"name": "sent", "seen_at": "2026-09-19T14:30:05Z"})
+	require.NoError(t, err)
+
+	fields, err := buildFieldsMetadata(functionDefaultItem{})
+	require.NoError(t, err)
+	for _, f := range fields {
+		if f.Name == "seen_at" {
+			assert.Nil(t, f.DefaultValue, "the form cannot prefill a database function")
+			assert.True(t, f.HasDefault, "but the field is not required on create")
+		}
+	}
+}

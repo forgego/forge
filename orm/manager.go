@@ -266,7 +266,7 @@ func (m *Manager[T]) Create(ctx context.Context, instance *T) error {
 	if err := m.runHooks(ctx, instance, "BeforeSave"); err != nil {
 		return err
 	}
-	if err := m.validateForPersistence(instance, validationCompleted); err != nil {
+	if err := m.validateForPersistence(instance, validationCompleted, true); err != nil {
 		return err
 	}
 
@@ -306,7 +306,7 @@ func (m *Manager[T]) prepareBulkInstances(ctx context.Context, instances []*T) e
 		if err := m.runHooks(ctx, instance, "BeforeSave"); err != nil {
 			return err
 		}
-		if err := m.validate(instance); err != nil {
+		if err := m.validate(instance, true); err != nil {
 			return err
 		}
 	}
@@ -345,6 +345,11 @@ func (m *Manager[T]) BulkCreate(ctx context.Context, instances []*T) error {
 
 	// Build and execute bulk INSERT
 	ph := m.placeholderFunc()
+	if _, _, columns, buildErr := BuildInsertSQLForPK(instancesInterface[0], m.tableName, m.primaryKeyColumn(), ph); buildErr == nil && len(columns) == 0 {
+		// Every column is left to the database: there is no multi-row
+		// statement for default-only rows, so insert them one at a time.
+		return m.bulkCreateDefaultRows(ctx, instances)
+	}
 	sql, args, _, err := BuildBulkInsertSQLForPK(instancesInterface, m.tableName, m.primaryKeyColumn(), ph)
 	if err != nil {
 		return fmt.Errorf("failed to build bulk insert SQL: %w", err)
@@ -399,7 +404,7 @@ func (m *Manager[T]) Update(ctx context.Context, instance *T) error {
 	// AutoNow fields record the time of every save: set them on the struct,
 	// which BuildUpdateSQL then writes, so the caller sees the stored value.
 	touchAutoNow(instance, time.Now().UTC())
-	if err := m.validateForPersistence(instance, validationCompleted); err != nil {
+	if err := m.validateForPersistence(instance, validationCompleted, false); err != nil {
 		return err
 	}
 
@@ -739,7 +744,10 @@ func setIntField(val reflect.Value, targetName string, id int64) bool {
 	return false
 }
 
-func (m *Manager[T]) validate(instance *T) error {
+// validate runs the model's Clean hooks and constraint checks. creating marks
+// an insert, where the database fills empty fields whose Default is a
+// database function.
+func (m *Manager[T]) validate(instance *T, creating bool) error {
 	// 1. Run interface-based Clean method (defined directly on the struct)
 	if validatable, ok := any(instance).(interface{ Clean() error }); ok {
 		if err := validatable.Clean(); err != nil {
@@ -757,17 +765,17 @@ func (m *Manager[T]) validate(instance *T) error {
 		}
 	}
 
-	return m.validateConstraints(instance)
+	return m.validateConstraints(instance, creating)
 }
 
-func (m *Manager[T]) validateForPersistence(instance *T, validationCompleted bool) error {
+func (m *Manager[T]) validateForPersistence(instance *T, validationCompleted, creating bool) error {
 	if validationCompleted {
-		return m.validateConstraints(instance)
+		return m.validateConstraints(instance, creating)
 	}
-	return m.validate(instance)
+	return m.validate(instance, creating)
 }
 
-func (m *Manager[T]) validateConstraints(instance *T) error {
+func (m *Manager[T]) validateConstraints(instance *T, creating bool) error {
 	// Run Validate() if the model implements it (e.g. from generated code).
 	if validatable, ok := any(instance).(interface{ Validate() error }); ok {
 		if err := validatable.Validate(); err != nil {
@@ -775,7 +783,7 @@ func (m *Manager[T]) validateConstraints(instance *T) error {
 		}
 	}
 	if s, ok := any(instance).(schema.Schema); ok && schemaConstraintValidator != nil {
-		if err := schemaConstraintValidator(instance, s.Fields()); err != nil {
+		if err := schemaConstraintValidator(instance, ValidationFields(instance, s.Fields(), creating)); err != nil {
 			return fmt.Errorf("schema model validation failed: %w", err)
 		}
 	}
@@ -871,4 +879,29 @@ func (m *Manager[T]) runHooks(ctx context.Context, instance *T, hookType string)
 	}
 
 	return nil
+}
+
+// bulkCreateDefaultRows inserts rows whose columns are all left to the
+// database (identity, database-function defaults), one INSERT per row.
+func (m *Manager[T]) bulkCreateDefaultRows(ctx context.Context, instances []*T) error {
+	dbtx, err := m.db.dbtx()
+	if err != nil {
+		return fmt.Errorf("failed to get database handle: %w", err)
+	}
+	d, _ := m.db.dialect()
+	ph := m.placeholderFunc()
+	for _, instance := range instances {
+		sql, args, _, err := BuildInsertSQLForPK(instance, m.tableName, m.primaryKeyColumn(), ph)
+		if err != nil {
+			return fmt.Errorf("failed to build insert SQL: %w", err)
+		}
+		id, err := ExecuteInsertTx(ctx, dbtx, d, sql, args)
+		if err != nil {
+			return err
+		}
+		if err := m.setID(instance, id); err != nil {
+			return err
+		}
+	}
+	return m.finalizeBulkInstances(ctx, instances)
 }

@@ -28,7 +28,7 @@ Every field type can be constructed via fluent builder constructors or functiona
 - `schema.UUID("identifier")` / `schema.UUIDField("identifier", ...)`: Universally unique identifier.
 
 ### Temporal Fields
-- `schema.Time("clock")` / `schema.TimeField("clock", ...)`: Time without timezone.
+- `schema.Time("seen_at")` / `schema.TimeField("seen_at", ...)`: a point in time, the same timestamp column as `DateTimeField`.
 - `schema.Date("day")` / `schema.DateField("day", ...)`: Calendar date without time.
 - `schema.DateTime("timestamp")` / `schema.DateTimeField("timestamp", ...)`: Full timestamp with timezone.
 

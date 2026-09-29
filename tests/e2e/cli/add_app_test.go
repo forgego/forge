@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -37,9 +38,14 @@ func TestCLIAddAppExampleCompiles(t *testing.T) {
 	require.NoError(t, err, "forge add app output: %s", stdout)
 
 	stdout, _, err = testhelpers.RunCLI(ctx, projectDir, nil, []string{
-		"generate", "--models", "./app/blog", "--output", "./app/blog",
+		"generate",
 	}, 60*time.Second)
 	require.NoError(t, err, "forge generate output: %s", stdout)
+
+	// The model the ORM and the admin work with must carry the generated
+	// columns, not only the schema methods.
+	check := "package blog\n\nvar _ = Example{}.Name\nvar _ = Example{}.IsActive\nvar _ = ExampleObjects\n"
+	require.NoError(t, os.WriteFile(filepath.Join(projectDir, "app", "blog", "example_fields_check.go"), []byte(check), 0o644))
 
 	// The app package is new since patchGeneratedProject ran, so tidy again
 	// before building it.

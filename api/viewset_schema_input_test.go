@@ -382,17 +382,18 @@ func TestBaseViewSet_Create_AcceptsIntegralByteArray(t *testing.T) {
 	assert.Equal(t, []byte{0, 1, 255}, mgr.last.Payload)
 }
 
+// A TimeField is a timestamp column (TIMESTAMP WITH TIME ZONE): the API
+// reads and writes it with its date, so a response sent back as a PUT body
+// keeps the stored value. A bare time of day is rejected, not stored with a
+// zero date.
 func TestPopulateFromMap_UsesSchemaTemporalFormats(t *testing.T) {
-	for _, value := range []string{"14:30:00", "14:30"} {
-		t.Run(value, func(t *testing.T) {
-			model := &schemaInputModel{}
-			require.NoError(t, populateFromMap(model, map[string]interface{}{"starts_at": value}))
-			assert.Equal(t, 14, model.StartsAt.Hour())
-			assert.Equal(t, 30, model.StartsAt.Minute())
-		})
-	}
-
 	model := &schemaInputModel{}
+	require.NoError(t, populateFromMap(model, map[string]interface{}{"starts_at": "2026-09-17T14:30:00Z"}))
+	assert.Equal(t, 2026, model.StartsAt.Year())
+	assert.Equal(t, 14, model.StartsAt.Hour())
+	assert.Error(t, populateFromMap(&schemaInputModel{}, map[string]interface{}{"starts_at": "14:30:00"}))
+
+	model = &schemaInputModel{}
 	require.NoError(t, populateFromMap(model, map[string]interface{}{"occurred_at": "2026-09-17T14:30:00Z"}))
 	assert.Equal(t, 2026, model.OccurredAt.Year())
 }
@@ -400,13 +401,13 @@ func TestPopulateFromMap_UsesSchemaTemporalFormats(t *testing.T) {
 func TestBaseViewSet_TemporalFieldsRoundTripThroughCreateAndUpdate(t *testing.T) {
 	mgr := &schemaInputManager{}
 	handler := newSchemaInputHandler(mgr)
-	body := `{"starts_at":"14:30:05","date_only":"2026-09-19","occurred_at":"2026-09-19T14:30:05Z"}`
+	body := `{"starts_at":"2026-09-19T14:30:05Z","date_only":"2026-09-19","occurred_at":"2026-09-19T14:30:05Z"}`
 
 	created := performSchemaInputRequest(t, handler, http.MethodPost, "/api/items/", body)
 	require.Equal(t, http.StatusCreated, created.Code, created.Body.String())
 	var response map[string]interface{}
 	require.NoError(t, json.Unmarshal(created.Body.Bytes(), &response))
-	assert.Equal(t, "14:30:05", response["starts_at"])
+	assert.Equal(t, "2026-09-19T14:30:05Z", response["starts_at"])
 	assert.Equal(t, "2026-09-19", response["date_only"])
 
 	updateBody, err := json.Marshal(response)
@@ -414,7 +415,7 @@ func TestBaseViewSet_TemporalFieldsRoundTripThroughCreateAndUpdate(t *testing.T)
 	updated := performSchemaInputRequest(t, handler, http.MethodPut, "/api/items/1", string(updateBody))
 	require.Equal(t, http.StatusOK, updated.Code, updated.Body.String())
 	require.NoError(t, json.Unmarshal(updated.Body.Bytes(), &response))
-	assert.Equal(t, "14:30:05", response["starts_at"])
+	assert.Equal(t, "2026-09-19T14:30:05Z", response["starts_at"])
 	assert.Equal(t, "2026-09-19", response["date_only"])
 }
 
