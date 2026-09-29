@@ -86,6 +86,11 @@ the change.
 
 ### Fixed
 
+- The REST API overview and ViewSets pages use the real API
+  (`api.NewBaseViewSet`, `api.NewRouter`, `Router.Register`, `Router.Action`
+  and `throttling.NewUserRateThrottle`) instead of `api.ModelViewSet[T]`,
+  `api.RegisterViewSet`, `CustomActions` and a `GetQuerySet` override, which
+  do not exist. Detail routes are documented without a trailing slash.
 - The ecommerce example (server and seed script) builds its PostgreSQL
   connection string with the new exported `db.PostgresKeywordDSN`, and the
   test database helper builds an escaped URL, so a password or database name
