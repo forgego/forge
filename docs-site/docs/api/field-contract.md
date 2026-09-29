@@ -89,13 +89,15 @@ Read-only keys that clients echo back from an earlier response, such as `id` and
 
 ### Zero values the database fills on create
 
-On `POST`, the viewset hands the model to the manager's `Create`, which writes the value each field holds, including `false`, `0` and `""`. A key omitted from the body first gets the field's Go-side `Default`. A few fields still reach `Create` at their zero value and are left out of the `INSERT`, whether the client omitted the key or sent the zero explicitly, so the database fills them (see [Defaults, zero values and timestamps](/docs/models/#defaults-zero-values-and-timestamps)):
+On `POST`, the viewset hands the model to the manager's `Create`, which writes the value each field holds, including `false`, `0` and `""` on required fields and fields with a `Default`. A key omitted from the body first gets the field's Go-side `Default`. A few fields still reach `Create` at their zero value and are left out of the `INSERT`, whether the client omitted the key or sent the zero explicitly, so the database fills them (see [Defaults, zero values and timestamps](/docs/models/#defaults-zero-values-and-timestamps)):
 
 | Field | Zero value on create | Stored |
 | :--- | :--- | :--- |
 | Field with a `DBDefault` (required or not) | omitted, or sent as `0`, `""` or `false` | the database default. Use a pointer type such as `*bool` for a field whose zero must be storable. |
 | Optional foreign key (`ForeignKey` / `OneToOne` column) | omitted, or sent as `0` or `""` | `NULL`, not a reference to row 0. Responses show the Go zero value (`0`) for a non-pointer field. |
 | Optional `Unique` field | omitted, or sent as its zero value | `NULL`, so two blank rows do not collide on the unique constraint. |
+| Optional field without a `Default` | omitted, or sent as its zero value | `NULL`: the column is nullable and has no `DEFAULT`. Use a pointer type such as `*string` to store an explicit `""`. |
+| UUID, JSON, decimal, date or time field, or a non-text custom `DBType` | sent as `""` | the column default or `NULL`, since `""` is not a valid value there. |
 | Pointer, slice, map or interface field | omitted, or `null` | `NULL`, or the column default. |
 | Struct value such as `time.Time` | omitted, or the zero time | `NULL`, or the column default. |
 | `AutoNow` / `AutoNowAdd` timestamp, auto-increment primary key, generated column | always database-owned | the database value. |

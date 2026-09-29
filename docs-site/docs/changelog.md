@@ -34,22 +34,16 @@ the change.
 - `Manager.Create`, `Save` and `BulkCreate` write explicit zero values
   (`false`, `0`, `""`) on fields with a schema `Default`, instead of leaving
   the column out, so the column's `DEFAULT` clause no longer replaces them
-  (required fields were already written). Code that relied on a `Default` filling a
-  field the struct left at zero must build the instance with `manager.New()`
-  (or call `orm.ApplyDefaults`) first. The admin create endpoint now stores
-  the zero value for a defaulted field the request omits; the public REST API
-  still applies the schema `Default`. Optional fields without a `Default`,
-  zero foreign keys, `nil` pointers, zero `time.Time` values, zero unique
-  optional fields, zero `DBDefault` fields and `""` on non-text columns (UUID,
-  JSON, decimal, date and time, non-text custom `DBType`) are still left to the
-  database, so they store `NULL` or the column default as before (#291).
-  (`false`, `0`, `""`) instead of leaving the column out, so a column default
-  no longer replaces them. Code that relied on a `Default` filling a field the
-  struct left at zero must build the instance with `manager.New()` (or call
-  `orm.ApplyDefaults`) first. The admin create endpoint and the public REST
-  API apply the schema `Default` to a field the request omits. Zero foreign
-  keys, `nil` pointers, zero `time.Time` values, zero unique optional fields
-  and zero `DBDefault` fields are still left to the database (#291).
+  (required fields were already written). Code that relied on a `Default`
+  filling a field the struct left at zero must build the instance with
+  `manager.New()`
+  (or call `orm.ApplyDefaults`) first. The admin create endpoint and the
+  public REST API apply the schema `Default` to a field the request omits.
+  Optional fields without a `Default`, zero foreign keys, `nil` pointers,
+  zero `time.Time` values, zero unique optional fields, zero `DBDefault`
+  fields and `""` on non-text columns (UUID, JSON, decimal, date and time,
+  non-text custom `DBType`) are still left to the database, so they store
+  `NULL` or the column default as before (#291).
 - `api.Router.Register` and `RegisterRoutes` panic when a viewset's data
   access is misconfigured, naming the resource and each missing operation.
   Before, the route answered 500 per request. Set `ReadOnly` for list and
