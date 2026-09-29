@@ -38,7 +38,7 @@ func TestCLIAddAppExampleCompiles(t *testing.T) {
 	require.NoError(t, err, "forge add app output: %s", stdout)
 
 	stdout, _, err = testhelpers.RunCLI(ctx, projectDir, nil, []string{
-		"generate", "--models", "./app/blog", "--output", "./app/blog",
+		"generate",
 	}, 60*time.Second)
 	require.NoError(t, err, "forge generate output: %s", stdout)
 
