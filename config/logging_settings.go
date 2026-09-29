@@ -9,15 +9,34 @@ type LoggingSettings struct {
 
 // loggingOutputs reads the logging.outputs list. A missing or malformed list
 // yields no outputs, which log.NewLoggerFromSettings treats as the console.
+// LoadSettings cannot return an error, so a malformed list is reported by
+// SettingsWarnings, which the server logs when it starts.
 func loggingOutputs(cfg *Config) []LoggingOutputConfig {
+	outputs, _ := decodeLoggingOutputs(cfg)
+	return outputs
+}
+
+func decodeLoggingOutputs(cfg *Config) ([]LoggingOutputConfig, error) {
 	if cfg == nil || cfg.Viper == nil || !cfg.Viper.IsSet("logging.outputs") {
-		return nil
+		return nil, nil
 	}
 	var outputs []LoggingOutputConfig
 	if err := cfg.Viper.UnmarshalKey("logging.outputs", &outputs); err != nil {
-		return nil
+		return nil, err
 	}
-	return outputs
+	return outputs, nil
+}
+
+// SettingsWarnings returns one warning per setting that LoadSettings could
+// not read and replaced with its default. Like SecretWarnings, loading the
+// config does not print them; the server logs them when it starts.
+func (c *Config) SettingsWarnings() []string {
+	var warnings []string
+	if _, err := decodeLoggingOutputs(c); err != nil {
+		warnings = append(warnings, "logging.outputs is malformed and was ignored, so logs go to the console: "+err.Error()+
+			" (expected a list of outputs such as {type: file, enabled: true, path: logs/app.log})")
+	}
+	return warnings
 }
 
 // LoggingOutputConfig configures a logging output

@@ -86,6 +86,10 @@ the change.
 
 ### Fixed
 
+- A malformed `logging.outputs` value, which `config.LoadSettings` ignores so
+  logs go to the console, is reported as a warning when the server starts.
+  The new `config.Config.SettingsWarnings` returns it. Before, it was
+  silently ignored.
 - The API field contract documents which zero values `POST` still leaves to
   the database: `DBDefault` fields, optional foreign keys and optional unique
   fields, whether the key is omitted or sent as zero.

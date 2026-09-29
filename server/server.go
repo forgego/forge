@@ -157,6 +157,7 @@ func (s *Server) Start() error {
 		return err
 	}
 	s.warnEphemeralSecrets()
+	s.warnIgnoredSettings()
 	if s.logger != nil {
 		s.logger.Info("Starting server",
 			zap.String("address", s.Addr),
@@ -222,11 +223,28 @@ func (s *Server) warnEphemeralSecrets() {
 		return
 	}
 	for _, warning := range s.config.SecretWarnings() {
-		if s.logger != nil {
-			s.logger.Warn(warning)
-		} else {
-			stdlog.Printf("forge/server: WARNING: %s", warning)
-		}
+		s.warn(warning)
+	}
+}
+
+// warnIgnoredSettings reports each setting that config.LoadSettings could
+// not read and replaced with its default, such as a malformed
+// logging.outputs list. LoadSettings cannot return an error, so the server
+// makes the problem visible when it starts.
+func (s *Server) warnIgnoredSettings() {
+	if s == nil || s.config == nil {
+		return
+	}
+	for _, warning := range s.config.SettingsWarnings() {
+		s.warn(warning)
+	}
+}
+
+func (s *Server) warn(message string) {
+	if s.logger != nil {
+		s.logger.Warn(message)
+	} else {
+		stdlog.Printf("forge/server: WARNING: %s", message)
 	}
 }
 

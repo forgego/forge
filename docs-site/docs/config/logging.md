@@ -43,6 +43,13 @@ logging:
 level, format or output type is an error when the logger is built. Without a
 `logging` section the level is `info` and the format `json`.
 
+An `outputs` value that is not a list of outputs, such as `outputs: file` or
+an entry whose `enabled` is not a boolean, cannot be read. `LoadSettings`
+then leaves `settings.Logging.Outputs` empty, so logs go to the console, and
+the server logs a warning naming `logging.outputs` when it starts.
+`config.Config.SettingsWarnings` returns these warnings for code that does
+not start a `server.Server`.
+
 ## Generated projects
 
 The `main.go` written by `forge new` builds its logger with
