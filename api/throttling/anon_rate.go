@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	internalratelimit "github.com/forgego/forge/internal/ratelimit"
 	"github.com/forgego/forge/netutil"
 )
 
@@ -12,23 +11,23 @@ import (
 type AnonRateThrottle struct {
 	Rate     string
 	Scope    string
-	store    Store
+	store    Store // set by WithStore; nil uses the default factory
+	defaults *defaultStore
 	parseErr error
 }
 
 // NewAnonRateThrottle creates a new anonymous rate throttle.
 func NewAnonRateThrottle(rate string) *AnonRateThrottle {
 	limit, window, err := parseRate(rate)
-	var store Store
-	if err == nil {
-		store = internalratelimit.NewFixedWindowCounter(limit, window)
-	}
-	return &AnonRateThrottle{
+	throttle := &AnonRateThrottle{
 		Rate:     rate,
 		Scope:    "anon",
-		store:    store,
 		parseErr: err,
 	}
+	if err == nil {
+		throttle.defaults = &defaultStore{name: "anon/" + rate, limit: limit, window: window}
+	}
+	return throttle
 }
 
 // NewAnonRateThrottleWithStore creates a new anonymous rate throttle with a custom store.
@@ -49,11 +48,15 @@ func (t *AnonRateThrottle) AllowRequest(r *http.Request, view interface{}) (bool
 	if t.parseErr != nil {
 		return true, 0, t.parseErr
 	}
-	if t.store == nil {
+	store := t.store
+	if store == nil && t.defaults != nil {
+		store = t.defaults.get()
+	}
+	if store == nil {
 		return true, 0, nil
 	}
 	key := "throttle_anon_" + t.GetScope(r, view)
-	allowed, retryAfter := t.store.Allow(key)
+	allowed, retryAfter := allow(store, r, key)
 	return allowed, retryAfter, nil
 }
 

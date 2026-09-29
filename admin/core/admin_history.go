@@ -38,6 +38,16 @@ func (a *Admin[T]) resolveUserID(user interface{}) interface{} {
 		return "anonymous"
 	}
 
+	// The admin API's auth middleware stores the user as a map.
+	if m, ok := user.(map[string]interface{}); ok {
+		for _, key := range []string{"id", "username", "name", "email"} {
+			if v, exists := m[key]; exists && v != nil && fmt.Sprintf("%v", v) != "" {
+				return v
+			}
+		}
+		return "anonymous"
+	}
+
 	val := reflect.ValueOf(user)
 	if val.Kind() == reflect.Ptr {
 		val = val.Elem()

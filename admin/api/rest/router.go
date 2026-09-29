@@ -24,11 +24,25 @@ type Router struct {
 	sessions      *adminSessionStore
 	loginLimiter  *loginLimiter
 	authenticator LoginAuthenticator
+
+	// The stores the handlers use. They default to the in-memory stores
+	// above; SetStores replaces them.
+	tokens        TokenStore
+	savedViews    SavedViewStore
+	loginAttempts LoginAttemptStore
+}
+
+// Stores are the stores the admin API keeps its state in. A nil field
+// keeps the in-memory default.
+type Stores struct {
+	Tokens        TokenStore
+	SavedViews    SavedViewStore
+	LoginAttempts LoginAttemptStore
 }
 
 // NewRouter creates a new admin API router
 func NewRouter(registry *core.Registry) *Router {
-	return &Router{
+	r := &Router{
 		registry: registry,
 		prefix:   "/api",
 		// adminPrefix is the public path the admin UI is served from. It is
@@ -38,6 +52,25 @@ func NewRouter(registry *core.Registry) *Router {
 		sessions:     newAdminSessionStore(),
 		loginLimiter: newLoginLimiter(),
 	}
+	r.tokens = r.sessions
+	r.savedViews = r.views
+	r.loginAttempts = r.loginLimiter
+	return r
+}
+
+// SetStores replaces the stores for tokens, saved views and login
+// attempts. Nil fields keep the current store.
+func (r *Router) SetStores(stores Stores) *Router {
+	if stores.Tokens != nil {
+		r.tokens = stores.Tokens
+	}
+	if stores.SavedViews != nil {
+		r.savedViews = stores.SavedViews
+	}
+	if stores.LoginAttempts != nil {
+		r.loginAttempts = stores.LoginAttempts
+	}
+	return r
 }
 
 // WithAdminPrefix sets the public path prefix of the admin UI (default
@@ -119,14 +152,18 @@ func (r *Router) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		session, ok := r.sessions.Validate(token)
+		username, ok, err := r.tokens.ValidateToken(req.Context(), token)
+		if err != nil {
+			respondError(w, http.StatusServiceUnavailable, "token_store_unavailable", "Could not verify the token", nil)
+			return
+		}
 		if !ok {
 			respondError(w, http.StatusUnauthorized, "authentication_required", "Invalid or expired token", nil)
 			return
 		}
 
 		user := map[string]interface{}{
-			"username": session.Username,
+			"username": username,
 			"role":     "superuser",
 		}
 		ctx := apicore.WithUser(req.Context(), user)

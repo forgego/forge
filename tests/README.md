@@ -16,7 +16,8 @@ tests/
 ├── integration/          # Integration tests with real databases
 │   ├── migrate/         # Migration system tests (45+ tests)
 │   ├── orm/             # ORM/Query tests
-│   └── schema/          # Schema builder tests
+│   ├── schema/          # Schema builder tests
+│   └── stores/          # Two instances sharing server.stores: database on PostgreSQL
 ├── e2e/                 # End-to-end CLI tests
 │   └── cli/
 ├── helpers/             # Test assertion helpers

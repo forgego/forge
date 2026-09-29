@@ -43,8 +43,10 @@ code you can read and change.
 - **Migrations from your models.** `forge makemigrations --auto` compares your
   models with the migration history and writes the SQL.
 - **Built-in admin.** A React admin with search, filters, saved views, bulk
-  actions, change history and per-object permission hooks. Saved views and
-  change history are kept in process memory for now.
+  actions, change history and per-object permission hooks. With
+  `server.stores: database` (the `forge new` default) saved views, change
+  history, admin tokens and sessions live in the database, so several
+  instances can share them.
 - **REST API layer.** ViewSets, serializers, pagination, throttling and an
   OpenAPI document, modelled on Django REST Framework.
 - **Secure defaults.** Password hashing, sessions, CSRF protection, secure

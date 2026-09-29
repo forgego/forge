@@ -121,7 +121,7 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 - Advanced filtering sidebar
 - Action menu for bulk operations
 - Export to CSV/JSON
-- Change history tracking (kept in process memory; lost on restart)
+- Change history tracking (in the database with `server.stores: database`; in process memory otherwise)
 - Permission-based access control
 
 ### Customization

@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -13,7 +14,9 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type savedView struct {
+// SavedView is a named list view (filters, ordering, displayed columns) a
+// user saved for a model.
+type SavedView struct {
 	ID        string                 `json:"id"`
 	Name      string                 `json:"name"`
 	Filters   map[string]interface{} `json:"filters"`
@@ -23,41 +26,53 @@ type savedView struct {
 	UpdatedAt time.Time              `json:"updated_at"`
 }
 
-type savedViewRequest struct {
+// SavedViewRequest is the body of a save request.
+type SavedViewRequest struct {
 	Name     string                 `json:"name"`
 	Filters  map[string]interface{} `json:"filters"`
 	Ordering []string               `json:"ordering"`
 	Display  []string               `json:"display"`
 }
 
+// SavedViewStore keeps saved views per user and model. Saving a view under
+// the name (compared case-insensitively) of an existing view of the same
+// user and model replaces its filters, ordering and display. The default
+// keeps views in process memory; stores/adminstore keeps them in the
+// database.
+type SavedViewStore interface {
+	ListSavedViews(ctx context.Context, userKey, model string) ([]SavedView, error)
+	SaveView(ctx context.Context, userKey, model string, request SavedViewRequest) (view SavedView, created bool, err error)
+	DeleteSavedView(ctx context.Context, userKey, model, id string) (bool, error)
+}
+
 type savedViewStore struct {
 	mu    sync.RWMutex
-	views map[string]map[string][]savedView
+	views map[string]map[string][]SavedView
 }
 
 func newSavedViewStore() *savedViewStore {
-	return &savedViewStore{views: make(map[string]map[string][]savedView)}
+	return &savedViewStore{views: make(map[string]map[string][]SavedView)}
 }
 
-func (s *savedViewStore) list(userID, model string) []savedView {
+func (s *savedViewStore) list(userID, model string) []SavedView {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	userViews, ok := s.views[userID]
 	if !ok {
-		return []savedView{}
+		return []SavedView{}
 	}
 	modelViews := userViews[model]
 	if modelViews == nil {
-		return []savedView{}
+		return []SavedView{}
 	}
-	return append([]savedView{}, modelViews...)
+	return append([]SavedView{}, modelViews...)
 }
 
-func (s *savedViewStore) upsert(userID, model string, request savedViewRequest) (savedView, bool) {
+func (s *savedViewStore) upsert(userID, model string, request SavedViewRequest) (SavedView, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.views[userID] == nil {
-		s.views[userID] = make(map[string][]savedView)
+		s.views[userID] = make(map[string][]SavedView)
 	}
 
 	views := s.views[userID][model]
@@ -74,7 +89,7 @@ func (s *savedViewStore) upsert(userID, model string, request savedViewRequest) 
 		}
 	}
 
-	newView := savedView{
+	newView := SavedView{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 		Name:      request.Name,
 		Filters:   request.Filters,
@@ -103,6 +118,22 @@ func (s *savedViewStore) delete(userID, model, id string) bool {
 		}
 	}
 	return false
+}
+
+// ListSavedViews implements SavedViewStore.
+func (s *savedViewStore) ListSavedViews(_ context.Context, userKey, model string) ([]SavedView, error) {
+	return s.list(userKey, model), nil
+}
+
+// SaveView implements SavedViewStore.
+func (s *savedViewStore) SaveView(_ context.Context, userKey, model string, request SavedViewRequest) (SavedView, bool, error) {
+	view, created := s.upsert(userKey, model, request)
+	return view, created, nil
+}
+
+// DeleteSavedView implements SavedViewStore.
+func (s *savedViewStore) DeleteSavedView(_ context.Context, userKey, model, id string) (bool, error) {
+	return s.delete(userKey, model, id), nil
 }
 
 func userKey(user interface{}) string {
@@ -154,7 +185,11 @@ func (r *Router) handleSavedViewsList(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	views := r.views.list(userKey(user), modelName)
+	views, err := r.savedViews.ListSavedViews(ctx, userKey(user), modelName)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "saved_views_unavailable", "Could not load saved views", nil)
+		return
+	}
 	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"views": views,
 	})
@@ -175,7 +210,7 @@ func (r *Router) handleSavedViewSave(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var request savedViewRequest
+	var request SavedViewRequest
 	if err := json.NewDecoder(req.Body).Decode(&request); err != nil {
 		respondError(w, http.StatusBadRequest, "invalid_body", err.Error(), nil)
 		return
@@ -186,7 +221,11 @@ func (r *Router) handleSavedViewSave(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	view, created := r.views.upsert(userKey(user), modelName, request)
+	view, created, err := r.savedViews.SaveView(ctx, userKey(user), modelName, request)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "saved_views_unavailable", "Could not save the view", nil)
+		return
+	}
 	if created {
 		respondJSON(w, http.StatusCreated, view)
 		return
@@ -210,7 +249,12 @@ func (r *Router) handleSavedViewDelete(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	if !r.views.delete(userKey(user), modelName, viewID) {
+	deleted, err := r.savedViews.DeleteSavedView(ctx, userKey(user), modelName, viewID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "saved_views_unavailable", "Could not delete the view", nil)
+		return
+	}
+	if !deleted {
 		respondError(w, http.StatusNotFound, "view_not_found", "Saved view not found", nil)
 		return
 	}

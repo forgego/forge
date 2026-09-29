@@ -11,6 +11,7 @@ import (
 
 	apicore "github.com/forgego/forge/api/core"
 	"github.com/forgego/forge/orm"
+	"github.com/forgego/forge/schema"
 	validation "github.com/forgego/forge/validate"
 	"github.com/go-viper/mapstructure/v2"
 )
@@ -65,7 +66,8 @@ func (a *Admin[T]) validateData(data map[string]interface{}, partial bool) error
 	for _, field := range a.schema.Fields() {
 		value, present := data[field.Name]
 		if !present {
-			if !partial && field.Required {
+			// A create that omits a field with a Default gets the default.
+			if !partial && field.Required && field.Default == nil {
 				errs.Add(field.Name, "is required")
 			}
 			continue
@@ -91,8 +93,16 @@ func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}
 		return nil, err
 	}
 
-	// Create new instance
+	// Create new instance. Schema defaults are applied first, as
+	// Manager.New does, so a field the request omits gets its Default
+	// (matching the public REST API) while an explicit value, including a
+	// zero value such as false, still wins when the request data is decoded.
 	var instance T
+	if _, ok := any(&instance).(schema.Schema); ok {
+		if err := orm.ApplyDefaults(&instance); err != nil {
+			return nil, err
+		}
+	}
 
 	// Map data to instance fields
 	if err := a.decodeData(filtered, &instance); err != nil {
@@ -244,6 +254,10 @@ func (a *Admin[T]) decodeData(data map[string]interface{}, result interface{}) e
 		TagName:          "json",
 		WeaklyTypedInput: true,
 		Squash:           true,
+		// The instance already holds the schema defaults: an explicit null
+		// must clear a field and a sent list or map must replace the
+		// default, not merge into it.
+		ZeroFields: true,
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
 			stringToDateTimeHook(),
 		),
