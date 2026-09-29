@@ -10,7 +10,7 @@ const modulePath = "github.com/forgego/forge"
 
 // fallbackVersion is used when the binary carries no module version, as in a
 // local `go build` from a checkout. Update it when tagging a release.
-const fallbackVersion = "v0.1.1"
+const fallbackVersion = "v0.2.0"
 
 // Version reports the version of the Forge module this binary was built from.
 // `go install github.com/forgego/forge/cmd/forge@vX.Y.Z` records vX.Y.Z (or a

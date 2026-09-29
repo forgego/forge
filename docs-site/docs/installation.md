@@ -68,7 +68,7 @@ forge version
 It prints the module version the binary was installed from, for example:
 
 ```
-Forge v0.1.2
+Forge v0.2.0
 ```
 
 Binaries built from v0.1.1 or earlier print `v0.1.0` whatever their real

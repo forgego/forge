@@ -11,6 +11,74 @@ the change.
 
 ## Unreleased
 
+## v0.2.0 (2026-09-29)
+
+v0.2.0 is a minor release because it contains breaking changes. Read
+**Upgrading from v0.1.1** below before you update.
+
+### Upgrading from v0.1.1
+
+**Who is affected:** every project. The changes that most often need action
+are `server.trusted_proxies` behind a reverse proxy, `app.debug` now
+defaulting to `false`, and the foreign keys the next `forge makemigrations`
+adds.
+
+1. Update the CLI and the library:
+   `go install github.com/forgego/forge/cmd/forge@v0.2.0` and
+   `go get github.com/forgego/forge@v0.2.0 && go mod tidy`.
+   Projects created by v0.1.1 pin `v0.1.0` in `go.mod`, so check that the
+   `require` line now says `v0.2.0`.
+2. Regenerate: `forge generate` (plus `--api` if you use it). Expected
+   changes in generated code: whitespace in `gen.go`; `api_gen.go` viewsets
+   set `RejectUnknownRequestFields`.
+3. Code changes:
+   - Projects created by v0.1.0 or v0.1.1 do not compile until you delete the
+     `//go:embed static templates` line, the `staticFiles` variable and the
+     `embed` import from `cmd/server/main.go`.
+   - An app created with `forge add app --example` declares
+     `type Example struct { schema.BaseSchema }`, so the ORM and the admin
+     read and write no columns. Change it to
+     `type Example struct { ExampleGenerated }` and run `forge generate`.
+   - Code that relied on a schema `Default` filling a field left at its zero
+     value in `Manager.Create`, `Save` or `BulkCreate` must build the
+     instance with `manager.New()` or call `orm.ApplyDefaults` first.
+   - A `Default("...")` holding an SQL expression other than the known
+     functions (`now()`, `CURRENT_TIMESTAMP`, `gen_random_uuid()`, ...)
+     becomes `DBDefault("...")`.
+   - `PUT` requests must send every required writable field; use `PATCH` for
+     partial updates. Clients of generated viewsets must stop sending unknown
+     keys, which are now a 400.
+   - Optional: replace `srv.Start()` with `srv.StartWithGracefulShutdown()`
+     to drain requests on SIGTERM.
+4. Configuration changes:
+   - `server.trusted_proxies` (`FORGE_SERVER_TRUSTED_PROXIES`): list your
+     reverse proxy, or every request appears to come from it and forwarding
+     headers are ignored.
+   - `app.debug` defaults to `false`. Set `FORGE_APP_DEBUG=true` for local
+     development; a production server refuses to start with it on.
+   - `/info` is off unless `server.info_endpoint: true`.
+   - New and optional: `server.stores` (`memory` by default). To share state
+     between instances, set it to `database`, pass
+     `server.WithDatabase(database)` to `server.NewServer`, call
+     `adminSite.UseStores(ctx, settings.Server.Stores)` after `SetDB`, and run
+     `forge migrate up` (see the [deployment guide](/docs/deployment/)).
+5. Migrations: back up first. Then run `forge makemigrations`: it now emits
+   the foreign keys and `Meta.Constraints` it used to skip, so the migration
+   fails on rows that violate them; delete or fix orphan rows first. A
+   SQLite project with a comment-only migration for a column change must
+   replace it with a hand-written table rebuild. Then run `forge migrate up`.
+   With `server.stores: database`, `forge migrate up` also creates the
+   `forge_*` framework tables.
+6. Verify: `forge migrate status` (no `DIRTY`), then the smoke check from the
+   [deployment guide](/docs/deployment/).
+
+**Rolling back:** reinstall and require `v0.1.1`. The generated foreign key
+and constraint migrations have down migrations: undo them with
+`forge migrate rollback` (one migration per run) before switching back. The framework tables are not touched by
+`forge migrate rollback`; if you enabled database stores, set
+`server.stores: memory` and drop the `forge_*` tables and
+`forge_framework_migrations` by hand.
+
 ### Breaking
 
 - `forge makemigrations` fails instead of writing a comment-only migration
@@ -30,7 +98,7 @@ the change.
   and `X-Real-IP` only from peers listed in `server.trusted_proxies`. Before,
   it trusted the headers from any client, so a request could set its own
   `RemoteAddr`. Behind a reverse proxy, list the proxy there to keep seeing
-  client addresses.
+  client addresses (#298).
 - `Manager.Create`, `Save` and `BulkCreate` write explicit zero values
   (`false`, `0`, `""`) on fields with a schema `Default`, instead of leaving
   the column out, so the column's `DEFAULT` clause no longer replaces them
@@ -103,7 +171,7 @@ the change.
   a `Default(true)` checkbox started unchecked and an omitted field stored
   the zero value. Admin metadata no longer fails to encode for a model with
   a callable `Default` such as `time.Now`; that field reports no
-  `default_value`.
+  `default_value` (#298).
 - Creating a record with a boolean unchecked, a number set to 0 or a text
   left empty stores that value instead of the column default, in the ORM,
   the admin and the REST API (#291).
@@ -138,6 +206,10 @@ the change.
   `forge new` pins that version in the new project's `go.mod` instead of
   `v0.1.0` (#286).
 - `forge generate` warns about struct fields that have no schema entry (#287).
+- `forge add app --example` writes a model that embeds `ExampleGenerated`,
+  so the ORM and the admin see its columns. Before, `Example` declared only
+  `schema.BaseSchema`: lists returned empty objects and creates wrote no
+  columns.
 - Generated ID methods follow Go's promotion rules, and pointer-embedded ID
   holders are rejected at generate time instead of panicking in `Create`
   (#259).
@@ -215,7 +287,7 @@ the change.
   a PostgreSQL schema lifecycle test, schema DSL fixtures, admin browser
   journeys against PostgreSQL, and an install smoke test from the public
   module proxy on every tag and weekly.
-- Shared stores for running more than one instance (#293). With the new
+- Shared stores for running more than one instance (#293, #298). With the new
   `server.stores: database` setting, sessions (`forge_session`), API
   throttling counters, admin bearer tokens, the admin login lockout, saved
   views and admin change history are kept in PostgreSQL or SQLite instead of
