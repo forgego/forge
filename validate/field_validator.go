@@ -19,6 +19,12 @@ func NewFieldValidator(v *Validator) *FieldValidator {
 
 // ValidateField validates a field value against its schema definition
 func (fv *FieldValidator) ValidateField(field schema.Field, value interface{}) error {
+	// The database fills an empty value whose default is a database function
+	// (gen_random_uuid(), now()) on insert, so there is nothing to check yet.
+	if (value == nil || isEmpty(value)) && schema.IsDatabaseFunctionDefault(field.Default) {
+		return nil
+	}
+
 	// Check required
 	if field.Required {
 		if value == nil || isEmpty(value) {

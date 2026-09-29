@@ -42,7 +42,10 @@ adds.
      `type Example struct { ExampleGenerated }` and run `forge generate`.
    - Code that relied on a schema `Default` filling a field left at its zero
      value in `Manager.Create`, `Save` or `BulkCreate` must build the
-     instance with `manager.New()` or call `orm.ApplyDefaults` first.
+     instance with `manager.New()` or call `orm.ApplyDefaults` first. Neither
+     touches a default naming a database function (`now()`,
+     `gen_random_uuid()`, ...): the database fills the column on insert, and a
+     `Required` field with such a default may be left empty.
    - A `Default("...")` holding an SQL expression other than the known
      functions (`now()`, `CURRENT_TIMESTAMP`, `gen_random_uuid()`, ...)
      becomes `DBDefault("...")`.
@@ -376,9 +379,9 @@ holds the recorded hashes of your applied migrations.
   declares `<Model>Serializer` twice, so the package does not compile;
   delete one of the two.
 - `forge add app` does not validate the name as a Go package name.
-- The `forge new` next-step hints use `forge generate` and
-  `forge makemigrations` without the `--models` and name arguments an
-  `app/` project needs.
+- A schema `Default` given as a Go function (`Default(time.Now)`) is applied by
+  the ORM and the admin but not by the REST API: a `POST` that omits the
+  field answers 400. Send the field, or set the value in a `BeforeCreate` hook.
 - `forge createsuperuser` fails in a fresh project until a `users` table
   exists.
 - `/info` reports `app.version` (default `0.1.0`), not the Forge version.

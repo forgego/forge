@@ -27,7 +27,7 @@ func (stampedRow) Meta() schema.Meta { return schema.Meta{TableName: "stamped_ro
 func (stampedRow) Fields() []schema.Field {
 	return []schema.Field{
 		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
-		schema.UUIDField("uid", schema.Default("gen_random_uuid()")),
+		schema.UUIDField("uid", schema.Required(), schema.Default("gen_random_uuid()")),
 		schema.TimeField("seen_at", schema.Default("CURRENT_TIMESTAMP")),
 		schema.StringField("label", schema.Default("new")),
 	}
