@@ -1,9 +1,23 @@
 package rest
 
 import (
+	"context"
 	"sync"
 	"time"
 )
+
+// LoginAttemptStore counts failed admin logins per key (the client IP and
+// the username) and locks a key out after too many. The default keeps the
+// counts in process memory; stores.LoginAttempts keeps them in the database
+// so the lockout holds across restarts and instances.
+type LoginAttemptStore interface {
+	// Blocked reports whether key is locked out and for how long.
+	Blocked(ctx context.Context, key string) (bool, time.Duration, error)
+	// Failed records a failed login for key.
+	Failed(ctx context.Context, key string) error
+	// Succeeded clears the failures of key.
+	Succeeded(ctx context.Context, key string) error
+}
 
 type loginLimiter struct {
 	mu          sync.Mutex
@@ -81,4 +95,22 @@ func (l *loginLimiter) success(key string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	delete(l.failures, key)
+}
+
+// Blocked implements LoginAttemptStore.
+func (l *loginLimiter) Blocked(_ context.Context, key string) (bool, time.Duration, error) {
+	blocked, remaining := l.blocked(key)
+	return blocked, remaining, nil
+}
+
+// Failed implements LoginAttemptStore.
+func (l *loginLimiter) Failed(_ context.Context, key string) error {
+	l.fail(key)
+	return nil
+}
+
+// Succeeded implements LoginAttemptStore.
+func (l *loginLimiter) Succeeded(_ context.Context, key string) error {
+	l.success(key)
+	return nil
 }

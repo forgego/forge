@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -9,6 +10,18 @@ import (
 	"sync"
 	"time"
 )
+
+// TokenStore keeps the bearer tokens the admin API issues at login. The
+// default keeps them in process memory; stores.AdminTokens keeps them in the
+// database so they survive a restart and work on every instance.
+type TokenStore interface {
+	// IssueToken returns a new random token for username, valid for ttl.
+	IssueToken(ctx context.Context, username string, ttl time.Duration) (string, error)
+	// ValidateToken returns the username of an unexpired, unrevoked token.
+	ValidateToken(ctx context.Context, token string) (username string, ok bool, err error)
+	// RevokeToken invalidates a token. Unknown tokens are not an error.
+	RevokeToken(ctx context.Context, token string) error
+}
 
 type adminSession struct {
 	Username  string
@@ -113,6 +126,23 @@ func (s *adminSessionStore) Revoke(token string) bool {
 	session.Active = false
 	s.sessions[tokenHash] = session
 	return true
+}
+
+// IssueToken implements TokenStore.
+func (s *adminSessionStore) IssueToken(_ context.Context, username string, ttl time.Duration) (string, error) {
+	return s.Issue(username, ttl)
+}
+
+// ValidateToken implements TokenStore.
+func (s *adminSessionStore) ValidateToken(_ context.Context, token string) (string, bool, error) {
+	session, ok := s.Validate(token)
+	return session.Username, ok, nil
+}
+
+// RevokeToken implements TokenStore.
+func (s *adminSessionStore) RevokeToken(_ context.Context, token string) error {
+	s.Revoke(token)
+	return nil
 }
 
 func bearerToken(authorizationHeader string) (string, error) {

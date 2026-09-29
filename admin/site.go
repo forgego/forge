@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html"
 	"io/fs"
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -18,6 +20,8 @@ import (
 	"github.com/forgego/forge/admin/ui"
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/server"
+	"github.com/forgego/forge/stores"
+	"github.com/forgego/forge/stores/adminstore"
 )
 
 // Site represents an admin site instance
@@ -31,6 +35,9 @@ type Site struct {
 	registry           *core.Registry
 	uiConfig           UIConfig
 	loginAuthenticator rest.LoginAuthenticator
+	// history and apiStores are set by UseDatabaseStores.
+	history   core.HistoryManager
+	apiStores rest.Stores
 }
 
 // SetLoginAuthenticator sets the custom login authenticator for the admin site.
@@ -89,6 +96,69 @@ func (s *Site) SetDB(database *db.DB) *Site {
 		admin.SetDB(database)
 	}
 	return s
+}
+
+// UseDatabaseStores keeps the admin's bearer tokens, login lockout counts,
+// saved views and change history in the database set with SetDB, instead of
+// in process memory, so they survive a restart and are shared by every
+// instance using that database. It is what server.stores: database selects
+// in a project created by forge new. The framework store tables must exist
+// (forge migrate up with server.stores: database, or stores.Migrate);
+// otherwise it returns an error wrapping stores.ErrNotMigrated.
+//
+// Registered models whose config leaves HistoryManager unset, or uses
+// admin.HistoryManager, write their history to the database; a model with
+// its own HistoryManager keeps it. Call it before Handler.
+func (s *Site) UseDatabaseStores(ctx context.Context) error {
+	if s.db == nil {
+		return errors.New("admin: UseDatabaseStores needs a database; call SetDB first")
+	}
+	if err := stores.CheckMigrated(ctx, s.db); err != nil {
+		return err
+	}
+	shared, err := stores.New(s.db)
+	if err != nil {
+		return err
+	}
+	s.history = adminstore.NewHistory(shared)
+	s.apiStores = rest.Stores{
+		Tokens:        shared.AdminTokens(),
+		SavedViews:    adminstore.NewSavedViews(shared),
+		LoginAttempts: shared.LoginAttempts(adminLoginMaxFailures, adminLoginWindow),
+	}
+	for _, registered := range s.registry.GetAll() {
+		useSiteHistory(registered, s.history)
+	}
+	return nil
+}
+
+// UseStores applies a server.stores value: "database" calls
+// UseDatabaseStores, "memory" (or empty) keeps the in-memory stores.
+func (s *Site) UseStores(ctx context.Context, kind string) error {
+	parsed, err := stores.ParseKind(kind)
+	if err != nil {
+		return err
+	}
+	if parsed != stores.KindDatabase {
+		return nil
+	}
+	return s.UseDatabaseStores(ctx)
+}
+
+// The admin login lockout policy, the same as the in-memory default: five
+// failed logins per client IP or username lock it out for 15 minutes.
+const (
+	adminLoginMaxFailures = 5
+	adminLoginWindow      = 15 * time.Minute
+)
+
+func useSiteHistory(registered core.AdminInterface, hm core.HistoryManager) {
+	if hm == nil {
+		return
+	}
+	if user, ok := registered.(interface{ UseSiteHistory(core.HistoryManager) }); ok {
+		user.UseSiteHistory(hm)
+	}
 }
 
 // GetUIConfig returns the current UI configuration
@@ -158,6 +228,7 @@ func (s *Site) Handler() http.Handler {
 	if s.loginAuthenticator != nil {
 		apiRouter.SetLoginAuthenticator(s.loginAuthenticator)
 	}
+	apiRouter.SetStores(s.apiStores)
 	apiRouter.WithAdminPrefix(s.uiConfig.Prefix)
 	apiRouter.RegisterRoutes(r)
 
