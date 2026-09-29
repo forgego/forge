@@ -86,6 +86,11 @@ the change.
 
 ### Fixed
 
+- The ecommerce example (server and seed script) builds its PostgreSQL
+  connection string with the new exported `db.PostgresKeywordDSN`, and the
+  test database helper builds an escaped URL, so a password or database name
+  with spaces or quotes connects. Before, both formatted unquoted
+  keyword/value strings.
 - The admin create form starts with each field's schema `Default` (from the
   metadata `default_value`), and the admin create endpoint applies the
   `Default` of a field the request omits, as the public REST API does. Before,

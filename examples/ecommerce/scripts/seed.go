@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"path/filepath"
 
@@ -29,8 +28,7 @@ func main() {
 		dbPassword := cfg.GetString("database.password", "")
 		dbSSLMode := cfg.GetString("database.sslmode", "disable")
 		dbName := cfg.GetString("database.name", "forge_ecommerce")
-		dsn = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-			dbHost, dbPort, dbUser, dbPassword, dbName, dbSSLMode)
+		dsn = db.PostgresKeywordDSN(dbHost, dbPort, dbUser, dbPassword, dbName, dbSSLMode)
 	} else {
 		dsn = sqlitePath
 	}

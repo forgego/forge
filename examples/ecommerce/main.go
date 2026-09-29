@@ -56,8 +56,7 @@ func main() {
 	// Initialize Database. If postgres is unavailable, fall back to sqlite.
 	driver := cfg.GetDriver()
 	sqlitePath := cfg.GetString("database.sqlite_path", filepath.Join(".", "ecommerce.sqlite"))
-	defaultDSN := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=%s",
-		dbHost, dbPort, dbUser, dbPassword, dbSSLMode)
+	defaultDSN := db.PostgresKeywordDSN(dbHost, dbPort, dbUser, dbPassword, "postgres", dbSSLMode)
 	if driver == "postgres" || driver == "postgresql" {
 		if defaultDB, err := sql.Open("postgres", defaultDSN); err == nil && defaultDB.Ping() == nil {
 			defer defaultDB.Close()
@@ -87,8 +86,7 @@ func main() {
 			dsn += "?_journal=WAL&_busy_timeout=5000"
 		}
 	} else {
-		dsn = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-			dbHost, dbPort, dbUser, dbPassword, dbName, dbSSLMode)
+		dsn = db.PostgresKeywordDSN(dbHost, dbPort, dbUser, dbPassword, dbName, dbSSLMode)
 	}
 	database, err := db.NewDB(dsn)
 	if err != nil {
