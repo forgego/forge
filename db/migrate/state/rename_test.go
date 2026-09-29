@@ -60,3 +60,23 @@ ALTER TABLE volumes RENAME CONSTRAINT fk_books_author_id TO fk_volumes_writer_id
 		t.Errorf("check constraint %+v, want condition %s", check, want)
 	}
 }
+
+// A generated column's expression follows a renamed column it computes from,
+// as it does in the database.
+func TestRenameColumnRewritesGeneratedExpressions(t *testing.T) {
+	dir := writeMigrations(t, map[string]string{
+		"000001_a.up.sql": `CREATE TABLE items ("id" BIGINT PRIMARY KEY, "price" INTEGER, "double_price" INTEGER GENERATED ALWAYS AS (price * 2) STORED);`,
+		"000002_b.up.sql": `ALTER TABLE items RENAME COLUMN price TO unit_price;`,
+	})
+	state, err := LoadStateFromFiles(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	col := state.Tables["items"].Columns["double_price"]
+	if col == nil {
+		t.Fatalf("columns %v", state.Tables["items"].Columns)
+	}
+	if expr := col.Options["generated_expr"]; expr != "unit_price * 2" {
+		t.Errorf("generated_expr %q, want %q", expr, "unit_price * 2")
+	}
+}

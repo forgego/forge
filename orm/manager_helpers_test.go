@@ -10,8 +10,9 @@ import (
 )
 
 func TestBuildInsertSQL_WritesExplicitZeroValues(t *testing.T) {
-	// #291: false, 0 and "" are written, so a column default such as
-	// available DEFAULT true cannot replace them.
+	// #291: zeros on fields with a schema Default are written, so a column
+	// default such as available DEFAULT true cannot replace them. The
+	// optional email has no Default, so it stays NULL.
 	instance := testModel{
 		Name: "Widget",
 	}
@@ -19,9 +20,9 @@ func TestBuildInsertSQL_WritesExplicitZeroValues(t *testing.T) {
 	sql, values, columns, err := BuildInsertSQLForPK(instance, "test_table", "id")
 	require.NoError(t, err)
 
-	assert.Equal(t, `INSERT INTO "test_table" ("name", "email", "price", "available") VALUES ($1, $2, $3, $4) RETURNING "id"`, sql)
-	assert.Equal(t, []interface{}{"Widget", "", 0.0, false}, values)
-	assert.Equal(t, []string{"name", "email", "price", "available"}, columns)
+	assert.Equal(t, `INSERT INTO "test_table" ("name", "price", "available") VALUES ($1, $2, $3) RETURNING "id"`, sql)
+	assert.Equal(t, []interface{}{"Widget", 0.0, false}, values)
+	assert.Equal(t, []string{"name", "price", "available"}, columns)
 }
 
 func TestBuildInsertSQL_RequiredFieldIncludedEvenWhenZeroValue(t *testing.T) {
@@ -61,9 +62,9 @@ func TestBuildBulkInsertSQL_ConsistentColumns(t *testing.T) {
 	sql, values, columns, err := BuildBulkInsertSQLForPK(instances, "test_table", "id")
 	require.NoError(t, err)
 
-	assert.Equal(t, `INSERT INTO "test_table" ("name", "email", "price", "available") VALUES ($1, $2, $3, $4), ($5, $6, $7, $8) RETURNING "id"`, sql)
-	assert.Equal(t, []interface{}{"A", "", 0.0, false, "B", "", 0.0, true}, values)
-	assert.Equal(t, []string{"name", "email", "price", "available"}, columns)
+	assert.Equal(t, `INSERT INTO "test_table" ("name", "price", "available") VALUES ($1, $2, $3), ($4, $5, $6) RETURNING "id"`, sql)
+	assert.Equal(t, []interface{}{"A", 0.0, false, "B", 0.0, true}, values)
+	assert.Equal(t, []string{"name", "price", "available"}, columns)
 }
 
 func TestBuildBulkInsertSQL_RejectsInconsistentColumns(t *testing.T) {
@@ -167,7 +168,7 @@ func (insertRulesModel) Meta() schema.Meta { return schema.Meta{TableName: "inse
 func TestBuildInsertSQL_ZeroValueColumnRules(t *testing.T) {
 	_, values, columns, err := BuildInsertSQLForPK(insertRulesModel{Name: "a"}, "insert_rules", "id")
 	require.NoError(t, err)
-	// Written: required name and the scalar zeros, whatever their schema
+	// Written: required name and the scalar zeros of fields with a schema
 	// Default. Omitted: the auto PK, DBDefault, nil pointer and slice, zero
 	// time, zero foreign keys, zero unique optional, generated column and
 	// zero AutoNow/AutoNowAdd timestamps.
@@ -239,4 +240,66 @@ func TestApplyDefaults_FormatsNumbersForStringFields(t *testing.T) {
 	assert.Equal(t, "0", m.Balance)
 	require.NotNil(t, m.Code)
 	assert.Equal(t, "65", *m.Code)
+}
+
+type pointerDefaultModel struct {
+	schema.BaseSchema
+	Note  *string `db:"note"`
+	Level *int64  `db:"level"`
+}
+
+var sharedNoteDefault = "shared"
+
+func (pointerDefaultModel) Fields() []schema.Field {
+	return []schema.Field{
+		schema.StringField("note", schema.Default(&sharedNoteDefault)),
+		schema.Int64Field("level", schema.Default(func() *int64 { v := int64(3); return &v })),
+	}
+}
+
+func TestApplyDefaults_AcceptsPointerDefaultsForPointerFields(t *testing.T) {
+	m := &pointerDefaultModel{}
+	require.NoError(t, ApplyDefaults(m))
+	require.NotNil(t, m.Note)
+	assert.Equal(t, "shared", *m.Note)
+	assert.NotSame(t, &sharedNoteDefault, m.Note, "instances must not share the default's pointee")
+	require.NotNil(t, m.Level)
+	assert.Equal(t, int64(3), *m.Level)
+}
+
+type nullableZeroModel struct {
+	schema.BaseSchema
+	ID       int64  `db:"id"`
+	ReviewID int64  `db:"review_id"`
+	IP       string `db:"ip_address"`
+	Ref      string `db:"ref"`
+	RefDef   string `db:"ref_def"`
+	Amount   string `db:"amount"`
+	Payload  string `db:"payload"`
+	Title    string `db:"title"`
+}
+
+func (nullableZeroModel) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.Int64Field("review_id", schema.Required()),
+		schema.StringField("ip_address"),
+		schema.UUIDField("ref"),
+		schema.UUIDField("ref_def", schema.Default("00000000-0000-0000-0000-000000000000")),
+		schema.DecimalField("amount", schema.Default(0)),
+		schema.JSONField("payload", schema.Default("{}")),
+		schema.StringField("title", schema.Default("t")),
+	}
+}
+
+func (nullableZeroModel) Meta() schema.Meta { return schema.Meta{TableName: "nullable_zero"} }
+
+// Review of #291: optional fields without a Default stay NULL (so blank rows
+// don't collide on a multi-column unique constraint), and "" is never written
+// to a non-text column such as UUID, decimal or JSON.
+func TestBuildInsertSQL_OptionalZeroWithoutDefaultStaysNull(t *testing.T) {
+	_, values, columns, err := BuildInsertSQLForPK(nullableZeroModel{ReviewID: 1}, "nullable_zero", "id")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"review_id", "title"}, columns)
+	assert.Equal(t, []interface{}{int64(1), ""}, values)
 }

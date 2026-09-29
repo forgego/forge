@@ -220,7 +220,8 @@ schema.String("status").Default("pending").Build()
 
 `Default` applies when an instance is constructed (`manager.New()`, or the
 API for keys a request omits), not at INSERT: `Create` writes the struct's
-`false`, `0` or `""` as is. Use `DBDefault` for a database-owned default.
+`false`, `0` or `""` as is on a field with a `Default` (an optional field
+without one stays NULL). Use `DBDefault` for a database-owned default.
 
 ### MaxLength
 

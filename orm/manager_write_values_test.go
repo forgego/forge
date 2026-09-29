@@ -189,3 +189,71 @@ func TestManagerUpdate_RefreshesAutoNow(t *testing.T) {
 		assert.True(t, explicit.Equal(stored.UpdatedAt), "stored updated_at = %v", stored.UpdatedAt)
 	})
 }
+
+// blankVoteModel is the review of #291: optional fields without a Default
+// must still store NULL. ip_address takes part in a two-column unique
+// constraint, where "" would collide and NULL does not; ref is a UUID column,
+// where "" is not a valid value.
+type blankVoteModel struct {
+	schema.BaseSchema
+	ID       int64  `db:"id"`
+	ReviewID int64  `db:"review_id"`
+	IP       string `db:"ip_address"`
+	Ref      string `db:"ref"`
+}
+
+func (blankVoteModel) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.Int64Field("review_id", schema.Required()),
+		schema.StringField("ip_address"),
+		schema.UUIDField("ref"),
+	}
+}
+
+func (blankVoteModel) Meta() schema.Meta { return schema.Meta{TableName: "blank_votes"} }
+
+func TestManagerCreate_OptionalZeroWithoutDefaultStoresNull(t *testing.T) {
+	run := func(t *testing.T, database *db.DB, table, ddl string) {
+		_, err := database.Exec(fmt.Sprintf(ddl, EscapeIdentifier(table)))
+		require.NoError(t, err)
+		t.Cleanup(func() { _, _ = database.Exec(`DROP TABLE IF EXISTS ` + EscapeIdentifier(table)) })
+
+		ctx := context.Background()
+		manager, err := NewManagerWithDB[blankVoteModel](table, database)
+		require.NoError(t, err)
+		require.NoError(t, manager.Create(ctx, &blankVoteModel{ReviewID: 1}))
+		require.NoError(t, manager.Create(ctx, &blankVoteModel{ReviewID: 1}), "two blank votes must not collide")
+
+		var nulls int
+		require.NoError(t, database.QueryRow(fmt.Sprintf(
+			`SELECT COUNT(*) FROM %s WHERE ip_address IS NULL AND ref IS NULL`, EscapeIdentifier(table),
+		)).Scan(&nulls))
+		assert.Equal(t, 2, nulls)
+	}
+
+	t.Run("sqlite", func(t *testing.T) {
+		sqliteDB, err := db.NewDB(filepath.Join(t.TempDir(), "blank-votes.sqlite"))
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = sqliteDB.Close() })
+		run(t, sqliteDB, "blank_votes", `CREATE TABLE %s (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			review_id INTEGER NOT NULL,
+			ip_address TEXT,
+			ref TEXT,
+			UNIQUE (review_id, ip_address)
+		)`)
+	})
+
+	t.Run("postgres", func(t *testing.T) {
+		sqlDB := testutils.SetupTestDB(t)
+		t.Cleanup(func() { _ = sqlDB.Close() })
+		run(t, &db.DB{DB: sqlDB, Driver: "postgres"}, fmt.Sprintf("blank_votes_%d", time.Now().UnixNano()), `CREATE TABLE %s (
+			id SERIAL PRIMARY KEY,
+			review_id BIGINT NOT NULL,
+			ip_address TEXT,
+			ref UUID,
+			UNIQUE (review_id, ip_address)
+		)`)
+	})
+}

@@ -62,6 +62,12 @@ func (s *InMemoryState) applyRenameColumn(c *core.RenameColumn) {
 		constraint.Fields = renameField(constraint.Fields, c.OldName, c.NewName)
 		constraint.Condition = renameIdentifier(constraint.Condition, c.OldName, c.NewName)
 	}
+	// Generated columns that compute from it follow it too.
+	for _, other := range table.Columns {
+		if expr, ok := other.Options["generated_expr"].(string); ok && expr != "" {
+			other.Options["generated_expr"] = renameIdentifier(expr, c.OldName, c.NewName)
+		}
+	}
 	for name, fk := range table.ForeignKeys {
 		if fk.Column != c.OldName {
 			continue

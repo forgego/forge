@@ -28,8 +28,13 @@ func TestNewProjectLoggerReadsLoggingSettings(t *testing.T) {
 			cfg.SetConfigFile(filepath.Join(projectPath, "config", "config.yaml"))
 			require.NoError(t, cfg.ReadInConfig())
 			settings := config.LoadSettings(cfg)
-			assert.Equal(t, "debug", settings.Logging.Level)
-			assert.Equal(t, "console", settings.Logging.Format)
+			// The committed config carries production logging; the local
+			// .env switches to debug console output.
+			assert.Equal(t, "info", settings.Logging.Level)
+			assert.Equal(t, "json", settings.Logging.Format)
+			env := readDotEnv(t, filepath.Join(projectPath, ".env"))
+			assert.Equal(t, "debug", env["FORGE_LOGGING_LEVEL"])
+			assert.Equal(t, "console", env["FORGE_LOGGING_FORMAT"])
 		})
 	}
 }

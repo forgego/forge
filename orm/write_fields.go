@@ -29,9 +29,17 @@ import (
 //     time.Time (NULL, or the column default);
 //   - a zero foreign key (NULL rather than a reference to row 0);
 //   - a zero value on a unique, optional field (NULL, so two blank rows do not
-//     collide on the unique constraint).
+//     collide on the unique constraint);
+//   - a zero value on an optional field without a schema Default: the column
+//     is nullable and has no DEFAULT clause, so it stores NULL, as before
+//     #291 (and NULLs never collide on a multi-column unique constraint);
+//   - an empty string on a field whose column is not text (UUID, JSON,
+//     decimal, date and time, or a custom DBType), where "" is not a valid
+//     value; the column default or NULL is stored instead.
 //
-// Every other column is written, including false, 0 and "".
+// Every other column is written: required fields always, and false, 0 and ""
+// on an optional field with a schema Default, so the column's DEFAULT clause
+// cannot replace an explicit zero (#291).
 
 // insertOmitsZeroValue reports whether Create leaves column out of the
 // INSERT, following the rules above. value is the field's current value.
@@ -58,7 +66,22 @@ func insertOmitsZeroValue(field schema.Field, value interface{}, fkColumns map[s
 	if fkColumns[strings.ToLower(writeColumnName(field))] || field.Type == schema.TypeForeignKey || field.Type == schema.TypeOneToOne {
 		return true
 	}
-	return field.Unique
+	if field.Unique || field.Default == nil {
+		return true
+	}
+	return rv.Kind() == reflect.String && !textColumn(field)
+}
+
+// textColumn reports whether "" is a valid value for field's column.
+func textColumn(field schema.Field) bool {
+	if field.DBType != "" {
+		return false
+	}
+	switch field.Type {
+	case schema.TypeString, schema.TypeText, schema.TypeEmail, schema.TypeURL:
+		return true
+	}
+	return false
 }
 
 // writeColumnName returns the database column a schema field writes to.
@@ -201,6 +224,14 @@ func assignDefault(fv reflect.Value, def interface{}) error {
 	}
 	target := fv.Type()
 	if target.Kind() == reflect.Pointer {
+		// A pointer-valued default (Default(&x), or a func returning *T) is
+		// dereferenced and copied, so instances never share the pointee.
+		for dv.IsValid() && dv.Kind() == reflect.Pointer {
+			if dv.IsNil() {
+				return nil
+			}
+			dv = dv.Elem()
+		}
 		converted, err := convertDefault(dv, target.Elem())
 		if err != nil {
 			return err

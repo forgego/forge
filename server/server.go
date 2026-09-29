@@ -40,12 +40,11 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 	}
 
 	// Client IP resolution (rate limiting, admin login lockout) honors
-	// forwarding headers only from these peers. An empty setting leaves any
-	// list set programmatically through netutil.SetTrustedProxies in place.
-	if len(settings.Server.TrustedProxies) > 0 {
-		if err := netutil.SetTrustedProxies(settings.Server.TrustedProxies); err != nil {
-			return nil, fmt.Errorf("invalid server.trusted_proxies: %w", err)
-		}
+	// forwarding headers only from these peers. The list is process-wide and
+	// the setting is its source of truth: an empty setting trusts no proxy,
+	// even if an earlier server in this process configured some.
+	if err := netutil.SetTrustedProxies(settings.Server.TrustedProxies); err != nil {
+		return nil, fmt.Errorf("invalid server.trusted_proxies: %w", err)
 	}
 
 	// Create router
@@ -277,8 +276,8 @@ func (s *Server) validateProductionSecrets() error {
 	if len(missing) > 0 {
 		problems = append(problems, "production requires explicit "+strings.Join(missing, ", "))
 	}
-	// Debug mode selects the development logger and enables profiling
-	// routes, so it is rejected in production like a missing secret.
+	// Debug mode enables the profiling routes (with server.enable_profiling),
+	// so it is rejected in production like a missing secret.
 	if s.settings.App.Debug {
 		problems = append(problems, "production requires app.debug=false")
 	}

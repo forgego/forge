@@ -119,6 +119,11 @@ var columnConstraintKeywords = map[string]bool{
 func readExpression(s string) string {
 	depth := 0
 	end := 0
+	// caseDepth counts open CASE ... END blocks, inside which NULL and NOT are
+	// operands (THEN NULL), not column constraints. prev and prev2 are the
+	// previous two words, so IS NULL and IS NOT NULL continue the expression.
+	caseDepth := 0
+	prev, prev2 := "", ""
 	for i := 0; i < len(s); {
 		c := s[i]
 		switch {
@@ -140,11 +145,20 @@ func readExpression(s string) string {
 			for j < len(s) && isIdentifierByte(s[j]) {
 				j++
 			}
+			word := strings.ToUpper(s[i:j])
 			// The expression's first word is never a keyword that ends it,
 			// so DEFAULT NULL reads as NULL.
-			if end > 0 && endsExpression(strings.ToUpper(s[i:j]), s[j:]) {
+			if end > 0 && caseDepth == 0 && !continuesOperand(word, prev, prev2, s[:i]) &&
+				endsExpression(word, s[j:]) {
 				return s[:end]
 			}
+			switch {
+			case word == "CASE":
+				caseDepth++
+			case word == "END" && caseDepth > 0:
+				caseDepth--
+			}
+			prev2, prev = prev, word
 			i = j
 			end = i
 			continue
@@ -155,6 +169,24 @@ func readExpression(s string) string {
 		}
 	}
 	return s[:end]
+}
+
+// continuesOperand reports whether NULL or NOT at this point is part of the
+// expression: after IS (x IS NULL, x IS NOT NULL), after IS NOT, or right
+// after an operator such as = or ||.
+func continuesOperand(word, prev, prev2, before string) bool {
+	if word != "NULL" && word != "NOT" {
+		return false
+	}
+	if prev == "IS" || (word == "NULL" && prev == "NOT" && prev2 == "IS") {
+		return true
+	}
+	trimmed := strings.TrimRight(before, " \t\r\n\f\v")
+	if trimmed == "" {
+		return false
+	}
+	last := trimmed[len(trimmed)-1]
+	return !isIdentifierByte(last) && !isQuote(last) && last != ')'
 }
 
 // endsExpression reports whether word, followed by rest, starts a column

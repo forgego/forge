@@ -76,7 +76,9 @@ manager; never ship the `.env` file that `forge new` generates for local use.
 | Variable | Production value | Why |
 | --- | --- | --- |
 | `FORGE_APP_ENV` | `production` | Turns on secret validation and `Secure` cookies. Case-insensitive. |
-| `FORGE_APP_DEBUG` | `false` (the default) | `true` selects the debug logger and is rejected in production. `forge new` sets it to `true` only in the local `.env`. |
+| `FORGE_APP_DEBUG` | `false` (the default) | `true` allows the profiling routes (with `server.enable_profiling`) and is rejected in production; log level and format come from `logging.*`. `forge new` sets it to `true` only in the local `.env`. |
+| `FORGE_LOGGING_LEVEL` | `info` | The `config.yaml` from `forge new` sets `info`; its local `.env` sets `debug`. |
+| `FORGE_LOGGING_FORMAT` | `json` | The `config.yaml` from `forge new` sets `json`; its local `.env` sets `console`. |
 | `FORGE_SERVER_HOST` | `0.0.0.0` or the proxy-facing address | The default `localhost` is unreachable from outside a container. |
 | `FORGE_SERVER_PORT` | your port | Default `8000`. |
 | `FORGE_SERVER_TRUSTED_PROXIES` | your proxy's address or CIDR | Forwarding headers are honored only from these peers, for rate limiting and the admin login lockout. Empty by default: the TCP peer address is used. |

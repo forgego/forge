@@ -397,6 +397,13 @@ func TestNewServer_TrustedProxiesSetting(t *testing.T) {
 	req.Header.Set("X-Forwarded-For", "203.0.113.9")
 	assert.Equal(t, "203.0.113.9", netutil.ClientIP(req, netutil.TrustedProxies()))
 
+	// A later server with the default empty setting trusts no proxy.
+	empty := config.NewConfig()
+	_, err = NewServer(empty, config.LoadSettings(empty), nil)
+	require.NoError(t, err)
+	assert.Empty(t, netutil.TrustedProxies())
+	assert.Equal(t, "10.1.2.3", netutil.ClientIP(req, netutil.TrustedProxies()))
+
 	bad := config.NewConfig()
 	bad.Set("server.trusted_proxies", []string{"not-an-ip"})
 	_, err = NewServer(bad, config.LoadSettings(bad), nil)

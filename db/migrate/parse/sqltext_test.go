@@ -26,6 +26,11 @@ func TestDefaultExpression(t *testing.T) {
 		{column: ` TEXT DEFAULT 'it''s' CHECK (length(c) > 0)`, want: "it's"},
 		{column: ` TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL`, raw: "CURRENT_TIMESTAMP"},
 		{column: ` TEXT DEFAULT ('x' || 'y') CONSTRAINT c_ok CHECK (c <> '')`, raw: "('x' || 'y')"},
+		{column: ` TEXT DEFAULT CASE WHEN random() > 0.5 THEN NULL ELSE 'x' END NOT NULL`, raw: "CASE WHEN random() > 0.5 THEN NULL ELSE 'x' END"},
+		{column: ` BOOLEAN DEFAULT current_setting('a', true) IS NOT NULL NOT NULL`, raw: "current_setting('a', true) IS NOT NULL"},
+		{column: ` BOOLEAN DEFAULT current_setting('a', true) IS NULL UNIQUE`, raw: "current_setting('a', true) IS NULL"},
+		{column: ` TEXT DEFAULT CASE WHEN true THEN CASE WHEN false THEN NULL END END NULL`, raw: "CASE WHEN true THEN CASE WHEN false THEN NULL END END"},
+		{column: ` TEXT DEFAULT 'x' NULL`, want: "x"},
 	} {
 		field, err := NewTableParser().parseColumnDefinition(`"c"` + tc.column)
 		if err != nil {

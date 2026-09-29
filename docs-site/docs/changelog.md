@@ -13,15 +13,31 @@ the change.
 
 ### Breaking
 
+- `forge makemigrations` fails instead of writing a comment-only migration
+  for a SQLite column change, and instead of an empty migration for a
+  PostgreSQL column change it cannot express (`Unique`, primary key,
+  identity, generated expression, `DBColumn`). A SQLite project whose history
+  already holds such a comment-only migration must hand-write the table
+  rebuild before `makemigrations` succeeds again; the migrations guide covers
+  renames and hand-written SQLite table rebuilds (#296).
+- A `Default` string is quoted as a literal unless it is one of the known
+  SQL functions (`now()`, `CURRENT_TIMESTAMP`, `gen_random_uuid()` and the
+  like). A model with an expression default such as
+  `Default("uuid_generate_v7()")` must switch to `DBDefault(...)` before the
+  next `makemigrations`, which would otherwise propose changing the column
+  default to the quoted text (#296).
 - `Manager.Create`, `Save` and `BulkCreate` write explicit zero values
-  (`false`, `0`, `""`) instead of leaving the column out, so a column default
-  no longer replaces them. Code that relied on a `Default` filling a field the
-  struct left at zero must build the instance with `manager.New()` (or call
-  `orm.ApplyDefaults`) first. The admin create endpoint now stores the zero
-  value for a field the request omits; the public REST API still applies the
-  schema `Default`. Zero foreign keys, `nil` pointers, zero `time.Time`
-  values, zero unique optional fields and zero `DBDefault` fields are still
-  left to the database (#291).
+  (`false`, `0`, `""`) on required fields and on fields with a schema
+  `Default`, instead of leaving the column out, so the column's `DEFAULT`
+  clause no longer replaces them. Code that relied on a `Default` filling a
+  field the struct left at zero must build the instance with `manager.New()`
+  (or call `orm.ApplyDefaults`) first. The admin create endpoint now stores
+  the zero value for a defaulted field the request omits; the public REST API
+  still applies the schema `Default`. Optional fields without a `Default`,
+  zero foreign keys, `nil` pointers, zero `time.Time` values, zero unique
+  optional fields, zero `DBDefault` fields and `""` on non-text columns (UUID,
+  JSON, decimal, date and time, custom `DBType`) are still left to the
+  database, so they store `NULL` or the column default as before (#291).
 - `api.Router.Register` and `RegisterRoutes` panic when a viewset's data
   access is misconfigured, naming the resource and each missing operation.
   Before, the route answered 500 per request. Set `ReadOnly` for list and
@@ -155,14 +171,9 @@ the change.
   `DBDefault("'x' || 'y'")`), a changed or added `DBDefault` on PostgreSQL,
   a table dropped and later created again, or a hand-written
   `ALTER TABLE .. RENAME COLUMN` or `RENAME TO` (#296, #292).
-- `forge makemigrations` writes no migration when the changes render no SQL,
-  and fails instead of writing a comment for a SQLite column change or an
-  empty migration for a PostgreSQL column change it cannot express. The
-  migrations guide covers renames and hand-written SQLite table rebuilds
-  (#296).
-- Migrations: a `Default` string with parentheses, such as
-  `Default("x(1)")`, is quoted, and the down migration of a foreign key whose
-  target table changed restores the old target (#296).
+- `forge makemigrations` writes no migration when the changes render no SQL.
+  The down migration of a foreign key whose target table changed restores
+  the old target (#296).
 
 ### Added
 

@@ -262,9 +262,10 @@ admin:
   path: /admin
 
 logging:
-  # Read by log.NewLoggerFromSettings in main.go. Use format: json in production.
-  level: debug
-  format: console
+  # Read by log.NewLoggerFromSettings in main.go. These are the production
+  # values; the local .env switches to debug level and console output.
+  level: info
+  format: json
 
 security:
   # Secrets are NOT stored here. They are generated into .env (local use
@@ -286,6 +287,8 @@ security:
 # In production, supply secrets from the environment or a secrets manager
 # instead, and leave app.debug off (it is rejected in production).
 FORGE_APP_DEBUG=true
+FORGE_LOGGING_LEVEL=debug
+FORGE_LOGGING_FORMAT=console
 FORGE_SECURITY_SECRET_KEY=%s
 FORGE_SECURITY_SESSION_SECRET=%s
 FORGE_SECURITY_CSRF_SECRET_KEY=%s
