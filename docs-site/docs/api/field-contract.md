@@ -82,10 +82,25 @@ Read-only keys that clients echo back from an earlier response, such as `id` and
 | Request value | Effect |
 | :--- | :--- |
 | key omitted | The field keeps its stored value. On create, it gets its schema default, or the Go zero value if there is none. |
-| explicit zero (`0`, `""`, `false`) | The zero value is written. |
+| explicit zero (`0`, `""`, `false`) | The zero value is written, except on create for the fields in [Zero values the database fills on create](#zero-values-the-database-fills-on-create). |
 | `null` on a pointer, slice, map or interface field | The field is cleared to nil. |
 | `null` on any other field, such as `string`, `int64` or `bool` | The value is ignored, so the field keeps its current value. It is not set to zero. |
 | `null` on a `TypeJSON` field | JSON `null` is written: the bytes `null` for a `[]byte` field, otherwise the zero value. |
+
+### Zero values the database fills on create
+
+On `POST`, the viewset hands the model to the manager's `Create`, which writes the value each field holds, including `false`, `0` and `""`. A key omitted from the body first gets the field's Go-side `Default`. A few fields still reach `Create` at their zero value and are left out of the `INSERT`, whether the client omitted the key or sent the zero explicitly, so the database fills them (see [Defaults, zero values and timestamps](/docs/models/#defaults-zero-values-and-timestamps)):
+
+| Field | Zero value on create | Stored |
+| :--- | :--- | :--- |
+| Field with a `DBDefault` (required or not) | omitted, or sent as `0`, `""` or `false` | the database default. Use a pointer type such as `*bool` for a field whose zero must be storable. |
+| Optional foreign key (`ForeignKey` / `OneToOne` column) | omitted, or sent as `0` or `""` | `NULL`, not a reference to row 0. Responses show the Go zero value (`0`) for a non-pointer field. |
+| Optional `Unique` field | omitted, or sent as its zero value | `NULL`, so two blank rows do not collide on the unique constraint. |
+| Pointer, slice, map or interface field | omitted, or `null` | `NULL`, or the column default. |
+| Struct value such as `time.Time` | omitted, or the zero time | `NULL`, or the column default. |
+| `AutoNow` / `AutoNowAdd` timestamp, auto-increment primary key, generated column | always database-owned | the database value. |
+
+A required foreign key or required unique field is written as sent, never turned into `NULL`: a zero foreign key fails its foreign key constraint (`400`), and a second row with the same blank value fails the unique constraint (`409`). Updates (`PUT`, `PATCH`) write the zero value to these fields as sent.
 
 ### PUT and PATCH
 

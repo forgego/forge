@@ -86,6 +86,9 @@ the change.
 
 ### Fixed
 
+- The API field contract documents which zero values `POST` still leaves to
+  the database: `DBDefault` fields, optional foreign keys and optional unique
+  fields, whether the key is omitted or sent as zero.
 - The REST API overview and ViewSets pages use the real API
   (`api.NewBaseViewSet`, `api.NewRouter`, `Router.Register`, `Router.Action`
   and `throttling.NewUserRateThrottle`) instead of `api.ModelViewSet[T]`,
