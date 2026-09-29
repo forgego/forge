@@ -168,8 +168,8 @@ variables, the code `forge generate` writes, the migration file format and the
 - Raising the minimum Go or PostgreSQL version happens only in a minor release
   and is announced in the changelog.
 
-The tags v1.0.0 and v1.0.1 exist but are retracted in `go.mod`; they contain no
-Go packages. `go get github.com/forgego/forge@latest` ignores them. Because a
+The tags v1.0.0 and v1.0.1 exist but are retracted in `go.mod`: v1.0.0
+contains no Go packages and v1.0.1 points at the v0.1.0 commit. `go get github.com/forgego/forge@latest` ignores them. Because a
 published version can never be reused, the first real v1 release will be
 numbered above v1.0.1. The [release process](https://github.com/forgego/forge/blob/master/docs/RELEASING.md)
 defines how releases are cut and verified.

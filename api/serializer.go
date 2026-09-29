@@ -255,8 +255,6 @@ func modelToMapWithTypes(model interface{}, fieldTypes map[string]schema.FieldTy
 
 func formatSchemaTime(value time.Time, fieldType schema.FieldType) string {
 	switch fieldType {
-	case schema.TypeTime:
-		return value.Format("15:04:05")
 	case schema.TypeDate:
 		return value.Format("2006-01-02")
 	default:
@@ -287,7 +285,7 @@ func schemaFieldTypes(model interface{}) map[string]schema.FieldType {
 
 	out := make(map[string]schema.FieldType)
 	for _, field := range s.Fields() {
-		if field.Type != schema.TypeJSON && field.Type != schema.TypeTime && field.Type != schema.TypeDate {
+		if field.Type != schema.TypeJSON && field.Type != schema.TypeDate {
 			continue
 		}
 		if resolved, ok := schema.ResolveField(model, field); ok {

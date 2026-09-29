@@ -1610,7 +1610,8 @@ func applySchemaDefaults(model interface{}, data map[string]interface{}) {
 		return
 	}
 	for _, field := range modelSchema.Fields() {
-		if field.Default == nil {
+		// A database function default is left for the database to fill.
+		if field.Default == nil || schema.IsDatabaseFunctionDefault(field.Default) {
 			continue
 		}
 		resolved, _ := schema.ResolveField(model, field)
@@ -2468,8 +2469,6 @@ func setTimeField(field reflect.Value, value interface{}, schemaField *schema.Fi
 	layouts := []string{time.RFC3339, "2006-01-02"}
 	if schemaField != nil {
 		switch schemaField.Type {
-		case schema.TypeTime:
-			layouts = []string{"15:04:05", "15:04", time.RFC3339, "2006-01-02"}
 		case schema.TypeDate:
 			layouts = []string{"2006-01-02"}
 		case schema.TypeDateTime:
