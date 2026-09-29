@@ -81,11 +81,15 @@ func TestCLIPostgresAppJourney(t *testing.T) {
 	api := &journeyClient{t: t, base: fmt.Sprintf("http://127.0.0.1:%s/api/v1", port)}
 
 	// Unauthenticated and unknown-token requests are rejected and write nothing.
+	// Token authentication can issue a challenge, so missing credentials answer
+	// 401 with WWW-Authenticate: Token, as in Django REST framework.
 	status, body := api.do(http.MethodGet, "/projects/", "", nil)
-	assert.Equal(t, http.StatusForbidden, status, "no credentials: %s", body)
+	assert.Equal(t, http.StatusUnauthorized, status, "no credentials: %s", body)
 	assert.Equal(t, "Authentication credentials were not provided", body["detail"])
+	assert.Equal(t, "Token", api.lastHeader.Get("WWW-Authenticate"), "no credentials challenge")
 	status, body = api.do(http.MethodPost, "/projects/", "", map[string]any{"name": "Anonymous"})
-	assert.Equal(t, http.StatusForbidden, status, "anonymous create: %s", body)
+	assert.Equal(t, http.StatusUnauthorized, status, "anonymous create: %s", body)
+	assert.Equal(t, "Token", api.lastHeader.Get("WWW-Authenticate"), "anonymous create challenge")
 	status, body = api.do(http.MethodPost, "/projects/", "not-a-token", map[string]any{"name": "Forged"})
 	assert.Equal(t, http.StatusUnauthorized, status, "unknown token: %s", body)
 	assert.Zero(t, app.count(`SELECT count(*) FROM projects`), "rejected creates must not write")
@@ -427,6 +431,8 @@ func (a *journeyApp) taskTitle(id int64) string {
 type journeyClient struct {
 	t    *testing.T
 	base string
+	// lastHeader holds the response headers of the most recent request.
+	lastHeader http.Header
 }
 
 func (c *journeyClient) do(method, path, token string, body map[string]any) (int, map[string]any) {
@@ -458,6 +464,7 @@ func (c *journeyClient) doRaw(method, path, token string, payload []byte) (int, 
 	resp, err := (&http.Client{Timeout: 10 * time.Second}).Do(req)
 	require.NoError(c.t, err)
 	defer resp.Body.Close()
+	c.lastHeader = resp.Header
 	raw, err := io.ReadAll(resp.Body)
 	require.NoError(c.t, err)
 	decoded := map[string]any{}

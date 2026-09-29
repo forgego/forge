@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
+	"time"
 
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/db/dialect"
@@ -394,6 +396,9 @@ func (m *Manager[T]) Update(ctx context.Context, instance *T) error {
 	if err := m.runHooks(ctx, instance, "BeforeSave"); err != nil {
 		return err
 	}
+	// AutoNow fields record the time of every save: set them on the struct,
+	// which BuildUpdateSQL then writes, so the caller sees the stored value.
+	touchAutoNow(instance, time.Now().UTC())
 	if err := m.validateForPersistence(instance, validationCompleted); err != nil {
 		return err
 	}
@@ -513,9 +518,64 @@ func (m *Manager[T]) UpdateFields(ctx context.Context, id int64, updates UpdateM
 	for fieldName, value := range updates {
 		ub.updates[fieldName] = value
 	}
+	// UpdateFields saves part of one instance (the admin edit path), so it
+	// refreshes AutoNow fields the caller did not set, like Update does.
+	// QuerySet.Update stays a plain bulk UPDATE and leaves them alone.
+	now := time.Now().UTC()
+	for _, name := range m.autoNowFieldNames() {
+		if !updateMapSetsField(m.schema, updates, name) {
+			ub.updates[name] = now
+		}
+	}
 
 	_, err = ub.Execute(ctx)
 	return err
+}
+
+// New returns a new instance with every schema Default applied, the Go
+// counterpart of constructing a Django model. Create writes the values an
+// instance holds, including false, 0 and "", so build instances with New
+// when a field's default should apply unless the caller changes it.
+func (m *Manager[T]) New() (*T, error) {
+	instance := new(T)
+	if _, ok := any(instance).(schema.Schema); !ok {
+		return instance, nil
+	}
+	if err := ApplyDefaults(instance); err != nil {
+		return nil, err
+	}
+	return instance, nil
+}
+
+// autoNowFieldNames returns the schema names of T's AutoNow fields.
+func (m *Manager[T]) autoNowFieldNames() []string {
+	var zero T
+	schemaInstance, ok := any(&zero).(schema.Schema)
+	if !ok {
+		return nil
+	}
+	var names []string
+	for _, field := range schemaInstance.Fields() {
+		if field.AutoNow {
+			names = append(names, field.Name)
+		}
+	}
+	return names
+}
+
+// updateMapSetsField reports whether updates already names the schema field
+// fieldName, by field name, column or alias.
+func updateMapSetsField(ms *ModelSchema, updates UpdateMap, fieldName string) bool {
+	target := ms.GetField(fieldName)
+	for key := range updates {
+		if strings.EqualFold(key, fieldName) {
+			return true
+		}
+		if target != nil && ms.GetField(key) == target {
+			return true
+		}
+	}
+	return false
 }
 
 // primaryKeyColumn returns the database column name for the primary key.

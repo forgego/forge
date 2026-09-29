@@ -36,8 +36,9 @@ func TestLoadSettings_AppSettings(t *testing.T) {
 		})
 	}
 
-	if settings.App.Debug != true {
-		t.Errorf("App.Debug = %v, want true", settings.App.Debug)
+	// Regression for #290: debug is opt-in.
+	if settings.App.Debug != false {
+		t.Errorf("App.Debug = %v, want false", settings.App.Debug)
 	}
 }
 
@@ -217,6 +218,28 @@ func TestLoadSettings_LoggingSettings(t *testing.T) {
 	}
 	if settings.Logging.Format != "json" {
 		t.Errorf("Logging.Format = %q, want 'json'", settings.Logging.Format)
+	}
+}
+
+func TestLoadSettings_LoggingOutputs(t *testing.T) {
+	cfg := NewConfig()
+	cfg.Set("logging.outputs", []map[string]interface{}{
+		{"type": "console", "enabled": true},
+		{"type": "file", "enabled": true, "level": "warn", "path": "logs/app.log"},
+	})
+	settings := LoadSettings(cfg)
+
+	want := []LoggingOutputConfig{
+		{Type: "console", Enabled: true},
+		{Type: "file", Enabled: true, Level: "warn", Path: "logs/app.log"},
+	}
+	if len(settings.Logging.Outputs) != len(want) {
+		t.Fatalf("Logging.Outputs = %+v, want %+v", settings.Logging.Outputs, want)
+	}
+	for i := range want {
+		if settings.Logging.Outputs[i] != want[i] {
+			t.Errorf("Logging.Outputs[%d] = %+v, want %+v", i, settings.Logging.Outputs[i], want[i])
+		}
 	}
 }
 
@@ -400,5 +423,25 @@ func TestAdminSettings_Struct(t *testing.T) {
 
 	if !admin.Enabled {
 		t.Error("Enabled should be true")
+	}
+}
+
+func TestLoadSettings_TrustedProxiesFromEnv(t *testing.T) {
+	t.Setenv("FORGE_SERVER_TRUSTED_PROXIES", "10.0.0.0/8, 127.0.0.1")
+	settings := LoadSettings(NewConfig())
+	want := []string{"10.0.0.0/8", "127.0.0.1"}
+	if len(settings.Server.TrustedProxies) != len(want) {
+		t.Fatalf("TrustedProxies = %q, want %q", settings.Server.TrustedProxies, want)
+	}
+	for i := range want {
+		if settings.Server.TrustedProxies[i] != want[i] {
+			t.Fatalf("TrustedProxies = %q, want %q", settings.Server.TrustedProxies, want)
+		}
+	}
+}
+
+func TestLoadSettings_TrustedProxiesDefaultEmpty(t *testing.T) {
+	if got := LoadSettings(NewConfig()).Server.TrustedProxies; len(got) != 0 {
+		t.Fatalf("TrustedProxies default = %q, want empty", got)
 	}
 }

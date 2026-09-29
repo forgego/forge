@@ -70,7 +70,7 @@ func (p *SQLParser) ClearErrors() {
 // ParseUpSQL parses up migration SQL and extracts changes
 // Uses lexer-based statement splitting and limited DDL parsing
 // Returns UnknownChange for unparseable statements (fail-soft)
-// Uses two-pass parsing: first CREATE TABLE, then constraints/indexes
+// Changes are returned in statement order, the order the database runs them.
 func (p *SQLParser) ParseUpSQL(sql string) ([]core.Change, error) {
 	// 1. Split SQL into statements using lexer
 	statements, err := p.lexer.Scan(sql)
@@ -89,10 +89,8 @@ func (p *SQLParser) ParseUpSQL(sql string) ([]core.Change, error) {
 		return []core.Change{&core.UnknownChange{SQL: sql}}, nil
 	}
 
-	// 2. Two-pass parsing: first CREATE TABLE, then constraints/indexes
-	// First pass: collect CREATE TABLE statements and track table context
-	var createTableChanges []core.Change
-	var otherChanges []core.Change
+	// 2. Parse each statement, tracking table context for index parsing
+	var changes []core.Change
 	var tableContexts = make(map[string]string) // Track table names for index parsing
 
 	for _, stmt := range statements {
@@ -117,23 +115,11 @@ func (p *SQLParser) ParseUpSQL(sql string) ([]core.Change, error) {
 					Message: fmt.Sprintf("parse error: %v", err),
 				})
 			}
-			changes := []core.Change{&core.UnknownChange{SQL: stmt.Text}}
-			otherChanges = append(otherChanges, changes...)
+			changes = append(changes, &core.UnknownChange{SQL: stmt.Text})
 			continue
 		}
-
-		// Separate CREATE TABLE from other changes
-		for _, change := range parsed {
-			if _, ok := change.(*core.CreateTable); ok {
-				createTableChanges = append(createTableChanges, change)
-			} else {
-				otherChanges = append(otherChanges, change)
-			}
-		}
+		changes = append(changes, parsed...)
 	}
-
-	// Combine: CREATE TABLE first, then everything else
-	changes := append(createTableChanges, otherChanges...)
 
 	return changes, nil
 }

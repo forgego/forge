@@ -65,38 +65,13 @@ func (b *baseBuilder) BuildColumnDefinition(field generator.FieldDefinition) (st
 	}
 
 	// Handle default values
-	// Check for AutoNowAdd or AutoNow options first (these imply the current
-	// time as default)
-	currentTime := "now()"
-	if b.isSQLite {
-		// SQLite accepts no function call as a column default without
-		// parentheses; CURRENT_TIMESTAMP is its current-time default.
-		currentTime = "CURRENT_TIMESTAMP"
-	}
 	if !isGenerated {
-		if dbDefault, ok := field.Options["db_default"].(string); ok && dbDefault != "" {
-			parts = append(parts, fmt.Sprintf("DEFAULT %s", dbDefault))
-		} else if autoNowAdd, ok := field.Options["auto_now_add"].(bool); ok && autoNowAdd {
-			parts = append(parts, "DEFAULT "+currentTime)
-			// Make created_at NOT NULL when AutoNowAdd is set
-			if !field.Required && !field.PrimaryKey {
-				// Check if NOT NULL is already in parts
-				hasNotNull := false
-				for _, part := range parts {
-					if part == "NOT NULL" {
-						hasNotNull = true
-						break
-					}
-				}
-				if !hasNotNull {
-					parts = append(parts, "NOT NULL")
-				}
-			}
-		} else if autoNow, ok := field.Options["auto_now"].(bool); ok && autoNow {
-			parts = append(parts, "DEFAULT "+currentTime)
-		} else if field.Default != nil {
-			defaultVal := formatDefaultValue(field.Default, field.GoType, field.Type, field.Options, b.isSQLite)
-			parts = append(parts, fmt.Sprintf("DEFAULT %s", defaultVal))
+		if defaultExpr := b.columnDefault(field); defaultExpr != "" {
+			parts = append(parts, "DEFAULT "+defaultExpr)
+		}
+		// Make created_at NOT NULL when AutoNowAdd is set
+		if impliesNotNull(field) && !field.Required {
+			parts = append(parts, "NOT NULL")
 		}
 	}
 
@@ -106,6 +81,109 @@ func (b *baseBuilder) BuildColumnDefinition(field generator.FieldDefinition) (st
 	}
 
 	return strings.Join(parts, " "), nil
+}
+
+// columnDefault returns the SQL expression of a column's DEFAULT clause, or ""
+// when it has none: a DB default expression verbatim, the current time for
+// AutoNowAdd and AutoNow, or the formatted Default value. A generated column
+// has no default.
+func (b *baseBuilder) columnDefault(field generator.FieldDefinition) string {
+	if generated, ok := field.Options["generated"].(bool); ok && generated {
+		if expr, ok := field.Options["generated_expr"].(string); ok && expr != "" {
+			return ""
+		}
+	}
+	// SQLite accepts no function call as a column default without
+	// parentheses; CURRENT_TIMESTAMP is its current-time default.
+	currentTime := "now()"
+	if b.isSQLite {
+		currentTime = "CURRENT_TIMESTAMP"
+	}
+	if dbDefault, ok := field.Options["db_default"].(string); ok && dbDefault != "" {
+		return dbDefault
+	}
+	if autoNowAdd, ok := field.Options["auto_now_add"].(bool); ok && autoNowAdd {
+		return currentTime
+	}
+	if autoNow, ok := field.Options["auto_now"].(bool); ok && autoNow {
+		return currentTime
+	}
+	if field.Default != nil {
+		return formatDefaultValue(field.Default, field.GoType, field.Type, field.Options, b.isSQLite)
+	}
+	return ""
+}
+
+// impliesNotNull reports whether a column that is not a primary key is NOT
+// NULL although not declared Required: an AutoNowAdd column without a DB
+// default, which is always set on insert.
+func impliesNotNull(field generator.FieldDefinition) bool {
+	if field.PrimaryKey {
+		return false
+	}
+	if dbDefault, ok := field.Options["db_default"].(string); ok && dbDefault != "" {
+		return false
+	}
+	autoNowAdd, ok := field.Options["auto_now_add"].(bool)
+	return ok && autoNowAdd
+}
+
+// unalterableColumnChange returns the first part of a column's definition that
+// differs between old and new and that ALTER COLUMN cannot change here, or ""
+// when there is none: its name, primary key, identity, UNIQUE or generated
+// expression. The builder fails on such a change rather than render no SQL,
+// which would hide it.
+func unalterableColumnChange(old, new generator.FieldDefinition) string {
+	switch {
+	case columnName(old) != columnName(new):
+		return "column name (db_column)"
+	case old.PrimaryKey != new.PrimaryKey:
+		return "PRIMARY KEY"
+	case old.AutoIncrement != new.AutoIncrement:
+		return "identity (AutoIncrement)"
+	case optionBool(old, "unique") != optionBool(new, "unique"):
+		return "UNIQUE"
+	case generatedExpr(old) != generatedExpr(new):
+		return "generated expression"
+	}
+	return ""
+}
+
+func columnName(field generator.FieldDefinition) string {
+	if dbColumn, ok := field.Options["db_column"].(string); ok && dbColumn != "" {
+		return dbColumn
+	}
+	return field.Name
+}
+
+func optionBool(field generator.FieldDefinition, key string) bool {
+	value, _ := field.Options[key].(bool)
+	return value
+}
+
+// generatedExpr returns a generated column's expression and storage, or ""
+// for an ordinary column.
+func generatedExpr(field generator.FieldDefinition) string {
+	if !optionBool(field, "generated") {
+		return ""
+	}
+	expr, _ := field.Options["generated_expr"].(string)
+	if expr == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s stored=%t", expr, optionBool(field, "generated_stored"))
+}
+
+// unalterableColumnError reports a column change that makemigrations cannot
+// express as ALTER COLUMN.
+func unalterableColumnError(table string, column generator.FieldDefinition, part string) error {
+	return core.NewMigrationError(
+		core.ErrInvalidChange,
+		fmt.Sprintf("changing the %s of existing column %s.%s is not supported by makemigrations; "+
+			"revert the model change, or see \"Changes makemigrations cannot generate\" in the migrations guide",
+			part, table, column.Name),
+		nil,
+	)
 }
 
 // BuildCreateTable generates CREATE TABLE statement

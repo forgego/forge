@@ -98,7 +98,7 @@ func TestNewConfig_Defaults(t *testing.T) {
 	}{
 		{"app.name", "app.name", "forge"},
 		{"app.env", "app.env", "development"},
-		{"app.debug", "app.debug", true},
+		{"app.debug", "app.debug", false},
 		{"app.version", "app.version", "0.1.0"},
 		{"server.host", "server.host", "localhost"},
 		{"server.port", "server.port", "8000"},
@@ -173,10 +173,10 @@ func TestConfig_GetInt(t *testing.T) {
 func TestConfig_GetBool(t *testing.T) {
 	cfg := NewConfig()
 
-	// Test existing key
-	result := cfg.GetBool("app.debug", false)
-	if result != true {
-		t.Errorf("GetBool('app.debug') = %v, want true", result)
+	// Test existing key: the default (false) wins over the fallback
+	result := cfg.GetBool("app.debug", true)
+	if result != false {
+		t.Errorf("GetBool('app.debug') = %v, want false", result)
 	}
 
 	// Test non-existing key with default

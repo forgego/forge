@@ -5,13 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/forgego/forge/internal/dberrors"
 	validation "github.com/forgego/forge/validate"
-	"github.com/lib/pq"
-	"github.com/mattn/go-sqlite3"
 )
 
 // respondWriteError reports a failed single-object create or update.
@@ -72,57 +70,25 @@ type constraintViolation struct {
 	message string
 }
 
-// pqKeyColumns extracts the column list from a PostgreSQL constraint detail
-// such as `Key (slug)=(shoes) already exists.`
-var pqKeyColumns = regexp.MustCompile(`^Key \(([^)]+)\)=`)
-
 // classifyConstraintViolation recognizes PostgreSQL and SQLite integrity
 // errors and describes them without echoing the driver message.
 func classifyConstraintViolation(err error) (constraintViolation, bool) {
-	var pgErr *pq.Error
-	if errors.As(err, &pgErr) {
-		field := pgErr.Column
-		if m := pqKeyColumns.FindStringSubmatch(pgErr.Detail); m != nil {
-			field = m[1]
-		}
-		switch string(pgErr.Code) {
-		case "23505":
-			return uniqueViolation(field), true
-		case "23503":
-			return foreignKeyViolation(field), true
-		case "23502":
-			return notNullViolation(field), true
-		case "23514":
-			return checkViolation(), true
-		}
-		// Class 22 is "data exception": a value the column type cannot hold
-		// (22001 too long, 22007 bad timestamp, 22P02 bad integer, ...).
-		// The driver message quotes the rejected input, so it is replaced.
-		if pgErr.Code.Class() == "22" {
-			return dataException(field), true
-		}
+	v, ok := dberrors.Classify(err)
+	if !ok {
 		return constraintViolation{}, false
 	}
-
-	var liteErr sqlite3.Error
-	if errors.As(err, &liteErr) && liteErr.Code == sqlite3.ErrConstraint {
-		// SQLite reports e.g. "UNIQUE constraint failed: categories.slug".
-		field := ""
-		if _, cols, ok := strings.Cut(liteErr.Error(), "constraint failed: "); ok && !strings.Contains(cols, ",") {
-			if _, col, ok := strings.Cut(cols, "."); ok {
-				field = col
-			}
-		}
-		switch liteErr.ExtendedCode {
-		case sqlite3.ErrConstraintUnique, sqlite3.ErrConstraintPrimaryKey:
-			return uniqueViolation(field), true
-		case sqlite3.ErrConstraintForeignKey:
-			return foreignKeyViolation(field), true
-		case sqlite3.ErrConstraintNotNull:
-			return notNullViolation(field), true
-		default:
-			return checkViolation(), true
-		}
+	switch v.Kind {
+	case dberrors.Unique:
+		return uniqueViolation(v.Field), true
+	case dberrors.ForeignKey:
+		return foreignKeyViolation(v.Field), true
+	case dberrors.NotNull:
+		return notNullViolation(v.Field), true
+	case dberrors.Check:
+		return checkViolation(), true
+	case dberrors.DataException:
+		// The driver message quotes the rejected input, so it is replaced.
+		return dataException(v.Field), true
 	}
 	return constraintViolation{}, false
 }
@@ -131,12 +97,7 @@ func classifyConstraintViolation(err error) (constraintViolation, bool) {
 // Driver messages quote SQL, identifiers and rejected input, so the keyword
 // fallback in isValidationError must never echo them.
 func isDriverError(err error) bool {
-	var pgErr *pq.Error
-	if errors.As(err, &pgErr) {
-		return true
-	}
-	var liteErr sqlite3.Error
-	return errors.As(err, &liteErr)
+	return dberrors.IsDriverError(err)
 }
 
 func singleField(field string) string {

@@ -13,6 +13,31 @@ the change.
 
 ### Breaking
 
+- `forge makemigrations` fails instead of writing a comment-only migration
+  for a SQLite column change, and instead of an empty migration for a
+  PostgreSQL column change it cannot express (`Unique`, primary key,
+  identity, generated expression, `DBColumn`). A SQLite project whose history
+  already holds such a comment-only migration must hand-write the table
+  rebuild before `makemigrations` succeeds again; the migrations guide covers
+  renames and hand-written SQLite table rebuilds (#296).
+- A `Default` string is quoted as a literal unless it is one of the known
+  SQL functions (`now()`, `CURRENT_TIMESTAMP`, `gen_random_uuid()` and the
+  like). A model with an expression default such as
+  `Default("uuid_generate_v7()")` must switch to `DBDefault(...)` before the
+  next `makemigrations`, which would otherwise propose changing the column
+  default to the quoted text (#296).
+- `Manager.Create`, `Save` and `BulkCreate` write explicit zero values
+  (`false`, `0`, `""`) on fields with a schema `Default`, instead of leaving
+  the column out, so the column's `DEFAULT` clause no longer replaces them
+  (required fields were already written). Code that relied on a `Default` filling a
+  field the struct left at zero must build the instance with `manager.New()`
+  (or call `orm.ApplyDefaults`) first. The admin create endpoint now stores
+  the zero value for a defaulted field the request omits; the public REST API
+  still applies the schema `Default`. Optional fields without a `Default`,
+  zero foreign keys, `nil` pointers, zero `time.Time` values, zero unique
+  optional fields, zero `DBDefault` fields and `""` on non-text columns (UUID,
+  JSON, decimal, date and time, non-text custom `DBType`) are still left to the
+  database, so they store `NULL` or the column default as before (#291).
 - `api.Router.Register` and `RegisterRoutes` panic when a viewset's data
   access is misconfigured, naming the resource and each missing operation.
   Before, the route answered 500 per request. Set `ReadOnly` for list and
@@ -34,9 +59,51 @@ the change.
   `schema.ForeignKeyField` and `Meta.Constraints`, which it silently skipped.
   In an existing project the next migration adds them and fails if rows
   violate them; clean orphan rows first.
+- `/info` is no longer registered by default. Set `server.info_endpoint:
+  true` to expose it (#290).
+- `app.debug` defaults to `false`, and `Server.Start` refuses to listen with
+  `app.debug` true when `app.env` is production. Projects from `forge new`
+  turn it on in the local `.env`; older projects that relied on the default
+  set `FORGE_APP_DEBUG=true` for development (#290).
+- An unauthenticated request that fails a permission answers 401 Not
+  Authenticated with a `WWW-Authenticate` challenge when the first
+  authentication class can issue one (`Token` for `TokenAuthentication`,
+  `Bearer` for JWT, `Basic realm="api"` for basic auth), as in Django REST
+  framework. With session or API key authentication first, or none, it stays
+  403. Authenticated requests that fail a permission stay 403 (#294).
 
 ### Fixed
 
+- Creating a record with a boolean unchecked, a number set to 0 or a text
+  left empty stores that value instead of the column default, in the ORM,
+  the admin and the REST API (#291).
+- `AutoNow` fields such as `updated_at` are refreshed on every
+  `Manager.Update`, `Save` and `UpdateFields` (including admin edits), in the
+  database and on the struct. Updates no longer write generated columns or
+  clear a zero `AutoNowAdd` timestamp (#291).
+- The warnings about generated ephemeral secrets are printed when the server
+  starts, not by every CLI command (`forge generate`, `forge version`, ...)
+  that loads the config. `config.Config.SecretWarnings` returns them (#294).
+- The `forge new` scaffold builds its logger from the `logging.*` keys with
+  the new `log.NewLoggerFromSettings`, and its `config.yaml` has a `logging`
+  section (`level: debug`, `format: console`). `config.LoadSettings` now reads
+  `logging.outputs`. Before, `main.go` ignored every `logging.*` key (#294).
+- The ecommerce example shuts down gracefully with
+  `StartWithGracefulShutdown`, draining in-flight requests on SIGINT or
+  SIGTERM and closing its database, instead of `log.Fatal(ListenAndServe())`
+  (#294).
+- The API docs describe only what exists: list responses use page-number
+  pagination (there is no limit/offset or cursor pagination), and the
+  OpenAPI document has the `info` block only, with no Swagger UI and no
+  `forge routes` command (#294).
+- `forge add api blog-posts` emits `RegisterBlogPostsAPI` instead of the
+  invalid `RegisterBlog-PostsAPI`; the URL segment stays `blog-posts`. Names
+  that cannot form a Go identifier are rejected (#294).
+- `api.Router.Register` also checks the types a queryset's `Filter`,
+  `OrderBy`, `Offset` and `Limit` return, so a chain result without the
+  `Count` or `All` that `list` calls on it fails at startup. A result declared
+  as an interface is checked per request: a mismatch answers 500 and logs the
+  resource and the problem instead of panicking in reflection (#294).
 - `forge version` prints the version the binary was installed from, and
   `forge new` pins that version in the new project's `go.mod` instead of
   `v0.1.0` (#286).
@@ -87,6 +154,26 @@ the change.
   partially applied bulk actions list each skipped record; the foreign-key
   picker is labelled; fonts load under a custom mount prefix.
 - ORM: `Filter(Or(a, b)).Filter(c)` keeps the OR group intact.
+- `/health` and `/health/ready` report a failing check as `unhealthy` or
+  `not ready` without its error text; the cause is logged instead (#290).
+- The admin login lockout keys on the client IP resolved through the new
+  `server.trusted_proxies` setting, so clients behind a trusted reverse proxy
+  no longer share one lockout; forwarding headers from other peers are
+  ignored (#290).
+- `db.NewDBFromConfig` quotes the PostgreSQL connection values, so a
+  password with spaces, quotes or backslashes connects, and an empty
+  password no longer swallows the database name (#290).
+- The API error handler logs PostgreSQL and SQLite driver errors by type,
+  SQLSTATE or SQLite code and constraint name instead of their message,
+  which can contain row values (#290).
+- `forge makemigrations` no longer re-proposes a change on every run for
+  cast and operator DB defaults (`DBDefault("'{}'::jsonb")`,
+  `DBDefault("'x' || 'y'")`), a changed or added `DBDefault` on PostgreSQL,
+  a table dropped and later created again, or a hand-written
+  `ALTER TABLE .. RENAME COLUMN` or `RENAME TO` (#296, #292).
+- `forge makemigrations` writes no migration when the changes render no SQL.
+  The down migration of a foreign key whose target table changed restores
+  the old target (#296).
 
 ### Added
 

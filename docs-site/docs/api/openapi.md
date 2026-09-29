@@ -1,62 +1,44 @@
 ---
 sidebar_position: 11
-description: Automatic OpenAPI 3.0 specification generation, Swagger UI, and schema export.
+description: The OpenAPI document skeleton in api/docs and what it does not generate yet.
 image: /social-card.png
 ---
 
-# OpenAPI 3.0 & Swagger UI
+# OpenAPI
 
-Forge automatically generates OpenAPI 3.0 specifications by introspecting your registered `ViewSets`, `ModelSerializers`, and router endpoints.
+Forge does not generate an OpenAPI description of your API yet. The
+`github.com/forgego/forge/api/docs` package serves an OpenAPI 3.0 document that
+carries only the `info` block: `paths` and `components.schemas` are empty,
+because viewsets, serializers and routes are not introspected. There is no
+Swagger UI and no CLI command that exports a specification.
 
----
-
-## Enabling OpenAPI
-
-Mount the OpenAPI generator onto your Chi router:
+## Serving the document
 
 ```go
-package main
+import "github.com/forgego/forge/api/docs"
 
-import (
-    "github.com/go-chi/chi/v5"
-    "github.com/forgego/forge/api"
-)
+generator := docs.NewOpenAPIGenerator("Shop API", "1.0.0")
+generator.Description = "Catalog and orders"
+router.Get("/api/openapi.json", generator.Handler())
+```
 
-func RegisterAPIDocumentation(r chi.Router) {
-    generator := api.NewOpenAPIGenerator(api.DocConfig{
-        Title:       "Forge Ecommerce API",
-        Version:     "1.0.0",
-        Description: "Type-safe high-performance Go REST API powered by Forge.",
-        ContactEmail: "dev@forgego.dev",
-        License:     "MIT",
-    })
+`GET /api/openapi.json` then returns:
 
-    // Serves OpenAPI 3.0 JSON specification
-    r.Get("/api/openapi.json", generator.ServeSpec)
-
-    // Mount interactive Swagger UI explorer
-    r.Get("/api/docs/*", generator.ServeSwaggerUI("/api/openapi.json"))
+```json
+{
+  "openapi": "3.0.0",
+  "info": {"title": "Shop API", "version": "1.0.0", "description": "Catalog and orders"},
+  "paths": {},
+  "components": {}
 }
 ```
 
-Navigate to `http://localhost:8000/api/docs/` to explore your interactive API documentation.
-
----
-
-## Schema Generation Features
-
-1. **Auto-Generated Schemas**: Serializer fields and validation rules (e.g. `MaxLength`, `Required`, `Choices`) are translated directly into JSON Schema types (`string`, `integer`, `minimum`, `maximum`, `enum`).
-2. **Standard HTTP Responses**: Status codes `200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `404 Not Found`, and `422 Unprocessable Entity` are documented with concrete response models.
-3. **Query Parameter Descriptors**: ViewSet pagination parameters (`limit`, `offset`, `page`, `cursor`) and FilterSet query arguments are automatically indexed in the `parameters` section.
-4. **Export Specification via CLI**:
-   ```bash
-   forge routes --openapi > openapi.json
-   ```
-
----
+`generator.Generate()` returns the same document as an `*docs.OpenAPISpec`.
+To publish a complete description today, fill `Paths` and
+`Components.Schemas` on that value yourself, or maintain an OpenAPI file by
+hand and serve it as a static file.
 
 ## Next Steps
 
 - **[Platform Security](/docs/server/security/)**: Protecting endpoints with CSRF, CORS, and session cookies.
 - **[Full Framework Features](/docs/features/)**: Complete capability matrix.
-

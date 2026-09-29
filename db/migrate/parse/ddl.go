@@ -116,6 +116,11 @@ func (p *DDLParser) parseAlterTable(sql string) ([]core.Change, error) {
 		return []core.Change{change}, nil
 	}
 
+	// ALTER TABLE RENAME [COLUMN] a TO b | RENAME TO new_name
+	if change := parseRename(sql); change != nil {
+		return []core.Change{change}, nil
+	}
+
 	// ALTER TABLE ADD COLUMN
 	// Check for "ADD COLUMN" specifically to avoid matching "ADD CONSTRAINT"
 	if strings.Contains(upper, "ADD COLUMN") {
@@ -220,7 +225,7 @@ func parseAlterColumn(sql string) *core.AlterColumn {
 		change.DropDefault = true
 	case alterColumnSetDefaultRegex.MatchString(action):
 		change.SetDefault = true
-		change.Default = parseDefaultValue(readExpression(alterColumnSetDefaultRegex.FindStringSubmatch(action)[1]))
+		change.Default, change.DBDefault = parseDefault(readExpression(alterColumnSetDefaultRegex.FindStringSubmatch(action)[1]))
 	case alterColumnTypeRegex.MatchString(action):
 		typeMatch := columnTypeRegex.FindStringSubmatch(alterColumnTypeRegex.FindStringSubmatch(action)[1])
 		if typeMatch == nil {
@@ -232,6 +237,30 @@ func parseAlterColumn(sql string) *core.AlterColumn {
 		return nil
 	}
 	return change
+}
+
+var (
+	// renameTableRegex matches ALTER TABLE t RENAME TO new_name.
+	renameTableRegex = regexp.MustCompile(`(?is)^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?["']?(\w+)["']?\s+RENAME\s+TO\s+["']?(\w+)["']?\s*;?\s*$`)
+	// renameColumnRegex matches ALTER TABLE t RENAME [COLUMN] a TO b. A
+	// RENAME CONSTRAINT does not match, because CONSTRAINT is not followed
+	// by TO.
+	renameColumnRegex = regexp.MustCompile(`(?is)^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?["']?(\w+)["']?\s+RENAME\s+(?:COLUMN\s+)?["']?(\w+)["']?\s+TO\s+["']?(\w+)["']?\s*;?\s*$`)
+)
+
+// parseRename parses a hand-written ALTER TABLE .. RENAME TO or RENAME
+// [COLUMN] .. TO, which makemigrations does not generate, so the renamed
+// table or column is read back into schema state. It returns nil for any
+// other statement.
+func parseRename(sql string) core.Change {
+	sql = strings.TrimSpace(sql)
+	if matches := renameTableRegex.FindStringSubmatch(sql); matches != nil {
+		return &core.RenameTable{OldName: matches[1], NewName: matches[2]}
+	}
+	if matches := renameColumnRegex.FindStringSubmatch(sql); matches != nil && !strings.EqualFold(matches[2], "CONSTRAINT") {
+		return &core.RenameColumn{Table: matches[1], OldName: matches[2], NewName: matches[3]}
+	}
+	return nil
 }
 
 // parseAddColumn parses ALTER TABLE ADD COLUMN statements
@@ -252,9 +281,9 @@ func (p *DDLParser) parseAddColumn(sql string) *core.AddColumn {
 	typeStr := typeMatch[1] // Keep type as opaque string
 
 	// Parse basic constraints from remaining SQL, matching keywords outside
-	// quoted literals
+	// quoted literals and the default expression
 	remaining := sql[matches[1]+len(typeMatch[0]):]
-	masked := maskQuoted(remaining)
+	masked, defaultExpr, hasDefault := maskedClauses(remaining)
 	required := strings.Contains(strings.ToUpper(masked), "NOT NULL")
 
 	field := generator.FieldDefinition{
@@ -270,8 +299,8 @@ func (p *DDLParser) parseAddColumn(sql string) *core.AddColumn {
 		field.Options["unique"] = true
 	}
 
-	if expr, ok := defaultExpression(remaining); ok {
-		field.Default = parseDefaultValue(expr)
+	if hasDefault {
+		setDefault(&field, defaultExpr)
 	}
 
 	return &core.AddColumn{

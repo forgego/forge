@@ -68,6 +68,20 @@ test.describe('@core create, update and delete', () => {
     });
   });
 
+  test('stores an unchecked boolean as false, not the column default (#291)', async ({ adminPage: page, api, tag }) => {
+    // Category.is_active defaults to true; the form shows it unchecked.
+    await page.goto(adminURL('/categories/create'));
+    await page.locator('#name').fill(`${tag} Hidden`);
+    await page.locator('#slug').fill(`${tag}-hidden`);
+    await expect(page.locator('#is_active')).not.toBeChecked();
+    await page.getByTestId('submit-button').click();
+    await expect(page).toHaveURL(new RegExp(`${adminURL('/categories')}$`));
+
+    const { results } = await api.list('categories', { search: `${tag}-hidden` });
+    expect(results).toHaveLength(1);
+    expect(results[0].is_active).toBe(false);
+  });
+
   test('explains a duplicate value next to the field and stores nothing', async ({ adminPage: page, api, tag }) => {
     await api.createCategory(tag, { name: `${tag} Original`, slug: `${tag}-taken` });
 

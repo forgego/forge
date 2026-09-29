@@ -146,16 +146,18 @@ func BuildInsertSQLForPK(instance interface{}, tableName string, pkColumn string
 	columnIndex := 1
 
 	if len(schemaFields) > 0 {
+		fkColumns := foreignKeyColumns(schemaInstance)
 		for _, schemaField := range schemaFields {
-			if schemaField.PrimaryKey && schemaField.AutoIncrement {
+			if (schemaField.PrimaryKey && schemaField.AutoIncrement) || schemaField.Generated {
 				continue
 			}
 			fieldValue, err := getSchemaFieldValue(instance, schemaField)
 			if err != nil {
 				continue
 			}
-			fieldValueReflect := reflect.ValueOf(fieldValue)
-			if !schemaField.Required && fieldValueReflect.IsZero() {
+			// Explicit zero values (false, 0, "") are written; see
+			// insertOmitsZeroValue for the columns left to the database.
+			if insertOmitsZeroValue(schemaField, fieldValue, fkColumns) {
 				continue
 			}
 			columnName := schemaField.DBColumn
@@ -309,8 +311,8 @@ func BuildUpdateSQL(instance interface{}, tableName, idField string, placeholder
 			continue
 		}
 
-		// Skip primary key
-		if schemaField.PrimaryKey {
+		// Skip primary key and database-computed columns.
+		if schemaField.PrimaryKey || schemaField.Generated {
 			continue
 		}
 
@@ -318,6 +320,12 @@ func BuildUpdateSQL(instance interface{}, tableName, idField string, placeholder
 		fieldValue, err := getSchemaFieldValue(instance, schemaField)
 		if err != nil {
 			// Field not found or not accessible - skip it
+			continue
+		}
+
+		// AutoNowAdd is set once, on insert. An instance built without it
+		// (zero value) must not overwrite the stored creation time.
+		if schemaField.AutoNowAdd && reflect.ValueOf(fieldValue).IsZero() {
 			continue
 		}
 

@@ -1,6 +1,7 @@
 package generate_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -489,4 +490,218 @@ func TestChangedStringDefaultCaseIsDetected(t *testing.T) {
 	up, down := regenerateWith(t, core.DriverPostgreSQL, source, "lower_status")
 	assertContainsAll(t, "up", up, `ALTER TABLE authors ALTER COLUMN "status" SET DEFAULT 'active';`)
 	assertContainsAll(t, "down", down, `ALTER TABLE authors ALTER COLUMN "status" SET DEFAULT 'Active';`)
+}
+
+// withBookColumns adds column declarations after the isbn column of
+// functionalModels.
+func withBookColumns(t *testing.T, columns ...string) string {
+	t.Helper()
+	isbn := "\t\tschema.StringField(\"isbn\"),\n"
+	added := isbn
+	for _, column := range columns {
+		added += "\t\t" + column + ",\n"
+	}
+	return mustReplace(t, functionalModels, isbn, added)
+}
+
+// TestCastAndOperatorDBDefaultsAreReadBack covers DB defaults with a cast or
+// an operator, which the parser cut at the first space and unquoted, so every
+// run dropped the default and the down migration restored an invalid one.
+func TestCastAndOperatorDBDefaultsAreReadBack(t *testing.T) {
+	source := withBookColumns(t,
+		`schema.StringField("meta", schema.DBType("JSONB"), schema.DBDefault("'{}'::jsonb"), schema.Required())`,
+		`schema.StringField("joined", schema.DBDefault("'x' || 'y'"))`,
+		`schema.StringField("label", schema.DBDefault("'Mixed Case'::text"), schema.Unique())`)
+	columns := []string{
+		`ALTER TABLE books ADD COLUMN "meta" JSONB NOT NULL DEFAULT '{}'::jsonb;`,
+		`ALTER TABLE books ADD COLUMN "joined" TEXT DEFAULT 'x' || 'y';`,
+		`ALTER TABLE books ADD COLUMN "label" TEXT DEFAULT 'Mixed Case'::text UNIQUE;`,
+	}
+	up, _ := regenerateWith(t, core.DriverPostgreSQL, source, "add_db_defaults")
+	assertContainsAll(t, "up", up, columns...)
+
+	// Dropping the columns restores their defaults whole on down.
+	_, down := regenerateFrom(t, core.DriverPostgreSQL, source, functionalModels, "drop_db_defaults")
+	assertContainsAll(t, "down", down, columns...)
+
+	// SQLite requires an expression default to be parenthesized.
+	source = withBookColumns(t, `schema.StringField("joined", schema.DBDefault("('x' || 'y')"), schema.Required())`)
+	up, _ = regenerateWith(t, core.DriverSQLite, source, "add_db_defaults")
+	assertContainsAll(t, "up", up, `ALTER TABLE books ADD COLUMN "joined" TEXT NOT NULL DEFAULT ('x' || 'y');`)
+}
+
+// TestChangedForeignKeyTargetIsRestoredOnDown covers a foreign key whose
+// target table changes: the down migration used to re-add the old foreign key
+// against the new target.
+func TestChangedForeignKeyTargetIsRestoredOnDown(t *testing.T) {
+	source := mustReplace(t, functionalModels, `schema.ForeignKeyField("editor_id", "Author", schema.OnDelete(schema.CascadeSET_NULL))`,
+		`schema.ForeignKeyField("editor_id", "Book", schema.OnDelete(schema.CascadeSET_NULL))`)
+	up, down := regenerateWith(t, core.DriverPostgreSQL, source, "retarget_editor")
+	assertContainsAll(t, "up", up,
+		`ALTER TABLE books DROP CONSTRAINT IF EXISTS fk_books_editor_id;`,
+		`ADD CONSTRAINT fk_books_editor_id FOREIGN KEY ("editor_id") REFERENCES books (id) ON DELETE SET NULL`)
+	assertContainsAll(t, "down", down,
+		`ALTER TABLE books DROP CONSTRAINT IF EXISTS fk_books_editor_id;`,
+		`ADD CONSTRAINT fk_books_editor_id FOREIGN KEY ("editor_id") REFERENCES authors (id) ON DELETE SET NULL`)
+}
+
+// TestStringDefaultWithParenthesesIsQuoted covers Default values that look
+// like a function call, which were rendered unquoted and produced invalid
+// SQL. Only DBDefault is an expression.
+func TestStringDefaultWithParenthesesIsQuoted(t *testing.T) {
+	source := withBookColumns(t, `schema.StringField("note", schema.Default("x(1)"))`, `schema.StringField("aside", schema.Default("(see below)"))`)
+	for _, driver := range []core.Driver{core.DriverPostgreSQL, core.DriverSQLite} {
+		up, _ := regenerateWith(t, driver, source, "add_notes")
+		assertContainsAll(t, string(driver)+" up", up,
+			`ALTER TABLE books ADD COLUMN "note" TEXT DEFAULT 'x(1)';`,
+			`ALTER TABLE books ADD COLUMN "aside" TEXT DEFAULT '(see below)';`)
+	}
+}
+
+// TestDroppedAndRecreatedTableIsReadBack covers a table that one migration
+// drops and a later one creates again. The state loader applied every CREATE
+// TABLE before any other change, so the drop came last and the table was
+// created again on every run.
+func TestDroppedAndRecreatedTableIsReadBack(t *testing.T) {
+	book := functionalModels[strings.Index(functionalModels, "type Book struct"):]
+	authorsOnly := functionalModels[:strings.Index(functionalModels, "type Book struct")]
+	recreated := authorsOnly + mustReplace(t, book, "\t\tschema.StringField(\"isbn\"),\n",
+		"\t\tschema.StringField(\"isbn\"),\n\t\tschema.StringField(\"title\"),\n")
+	for _, driver := range []core.Driver{core.DriverPostgreSQL, core.DriverSQLite} {
+		t.Run(string(driver), func(t *testing.T) {
+			modelsDir := t.TempDir()
+			migrationsDir := t.TempDir()
+			file := filepath.Join(modelsDir, "models.go")
+			for i, source := range []string{functionalModels, authorsOnly, recreated} {
+				if err := os.WriteFile(file, []byte(source), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				generateMigration(t, modelsDir, migrationsDir, driver, fmt.Sprintf("step%d", i+1))
+				if got := migrationFiles(t, migrationsDir); len(got) != 2*(i+1) {
+					t.Fatalf("step %d wrote %v", i+1, got)
+				}
+			}
+			generateMigration(t, modelsDir, migrationsDir, driver, "again")
+			if got := migrationFiles(t, migrationsDir); len(got) != 6 {
+				extra, _ := os.ReadFile(filepath.Join(migrationsDir, got[len(got)-1]))
+				t.Fatalf("regenerating after re-creating books wrote %v:\n%s", got, extra)
+			}
+			applyMigrations(t, driver, migrationsDir)
+		})
+	}
+}
+
+// TestHandWrittenRenamesAreReadBack covers renames, which makemigrations does
+// not detect: a hand-written ALTER TABLE .. RENAME COLUMN or RENAME TO must be
+// read back, with the indexes, constraints and foreign keys that refer to the
+// renamed column or table, so the next run writes nothing.
+func TestHandWrittenRenamesAreReadBack(t *testing.T) {
+	renamed := mustReplace(t, functionalModels, `schema.Meta{TableName: "authors"}`, `schema.Meta{TableName: "writers"}`)
+	renamed = mustReplace(t, renamed, `schema.StringField("isbn")`, `schema.StringField("code")`)
+	renamed = mustReplace(t, renamed, `Indexes:   []schema.Index{{Name: "books_isbn_idx", Fields: []string{"isbn"}}}`,
+		`Indexes:   []schema.Index{{Name: "books_isbn_idx", Fields: []string{"code"}}}`)
+	renamed = mustReplace(t, renamed, `{Name: "books_isbn_key", Type: "UNIQUE", Fields: []string{"isbn"}}`,
+		`{Name: "books_isbn_key", Type: "UNIQUE", Fields: []string{"code"}}`)
+	renamed = mustReplace(t, renamed, `schema.Int32Field("pages", schema.Default(1))`, `schema.Int32Field("page_count", schema.Default(1))`)
+	renamed = mustReplace(t, renamed, `Condition: "pages > 0"`, `Condition: "page_count > 0"`)
+	up := "ALTER TABLE books RENAME COLUMN isbn TO code;\nALTER TABLE books RENAME pages TO page_count;\nALTER TABLE authors RENAME TO writers;\n"
+	down := "ALTER TABLE writers RENAME TO authors;\nALTER TABLE books RENAME COLUMN page_count TO pages;\nALTER TABLE books RENAME COLUMN code TO isbn;\n"
+	for _, driver := range []core.Driver{core.DriverPostgreSQL, core.DriverSQLite} {
+		t.Run(string(driver), func(t *testing.T) {
+			modelsDir := t.TempDir()
+			migrationsDir := t.TempDir()
+			file := filepath.Join(modelsDir, "models.go")
+			if err := os.WriteFile(file, []byte(functionalModels), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			generateMigration(t, modelsDir, migrationsDir, driver, "initial")
+			for name, content := range map[string]string{"000002_renames.up.sql": up, "000002_renames.down.sql": down} {
+				if err := os.WriteFile(filepath.Join(migrationsDir, name), []byte(content), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.WriteFile(file, []byte(renamed), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			generateMigration(t, modelsDir, migrationsDir, driver, "again")
+			if got := migrationFiles(t, migrationsDir); len(got) != 4 {
+				extra, _ := os.ReadFile(filepath.Join(migrationsDir, got[len(got)-1]))
+				t.Fatalf("regenerating after hand-written renames wrote %v:\n%s", got, extra)
+			}
+			applyMigrations(t, driver, migrationsDir)
+
+			// A later change to the renamed table is generated against its
+			// new name.
+			changed := mustReplace(t, renamed, "\t\tschema.StringField(\"code\"),\n", "\t\tschema.StringField(\"code\"),\n\t\tschema.StringField(\"title\"),\n")
+			changed = mustReplace(t, changed, `schema.Float32Field("ratio"),`, `schema.Float32Field("ratio"), schema.StringField("bio"),`)
+			if err := os.WriteFile(file, []byte(changed), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			generateMigration(t, modelsDir, migrationsDir, driver, "add_columns")
+			added, err := os.ReadFile(filepath.Join(migrationsDir, "000003_add_columns.up.sql"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertContainsAll(t, "up", string(added), `ALTER TABLE books ADD COLUMN "title" TEXT;`, `ALTER TABLE writers ADD COLUMN "bio" TEXT;`)
+			if statements := strings.Count(string(added), ";"); statements != 2 {
+				t.Errorf("up has %d statements, want 2:\n%s", statements, added)
+			}
+			applyMigrations(t, driver, migrationsDir)
+		})
+	}
+}
+
+// TestSQLiteColumnChangeFails covers SQLite, which cannot alter a column
+// without rebuilding its table: makemigrations used to write only a comment,
+// so the change was proposed again on every run. It now fails and writes
+// nothing.
+func TestSQLiteColumnChangeFails(t *testing.T) {
+	modelsDir := t.TempDir()
+	migrationsDir := t.TempDir()
+	file := filepath.Join(modelsDir, "models.go")
+	if err := os.WriteFile(file, []byte(functionalModels), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	generateMigration(t, modelsDir, migrationsDir, core.DriverSQLite, "initial")
+	changed := mustReplace(t, functionalModels, `schema.Int32Field("visits", schema.Default(0))`, `schema.Int32Field("visits", schema.Default(5))`)
+	if err := os.WriteFile(file, []byte(changed), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	gen, err := generate.NewMigrationGeneratorForDriver(modelsDir, migrationsDir, core.DriverSQLite)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = gen.GenerateMigrations("change_visits")
+	if err == nil || !strings.Contains(err.Error(), "modify column authors.visits is not supported on SQLite") {
+		t.Fatalf("SQLite column change: got error %v", err)
+	}
+	if got := migrationFiles(t, migrationsDir); len(got) != 2 {
+		t.Fatalf("a failed generation wrote %v", got)
+	}
+}
+
+// TestChangedDBDefaultIsModified covers PostgreSQL ALTER COLUMN for DB
+// defaults, which the builder ignored: a changed expression was dropped, and
+// a DB default added to an existing column wrote an empty migration.
+func TestChangedDBDefaultIsModified(t *testing.T) {
+	source := mustReplace(t, functionalModels, `schema.DBDefault("(1 + 2)")`, `schema.DBDefault("(2 + 3)")`)
+	source = mustReplace(t, source, `schema.StringField("isbn")`, `schema.StringField("isbn", schema.DBDefault("'none'::text"))`)
+	source = mustReplace(t, source, `schema.Int32Field("visits", schema.Default(0))`, `schema.Int32Field("visits", schema.DBDefault("(0 + 1)"))`)
+	source = mustReplace(t, source, `schema.DateField("born_on")`, `schema.DateField("born_on", schema.AutoNowAdd())`)
+	up, down := regenerateWith(t, core.DriverPostgreSQL, source, "change_db_defaults")
+	assertContainsAll(t, "up", up,
+		`ALTER TABLE authors ALTER COLUMN "rank" SET DEFAULT (2 + 3);`,
+		`ALTER TABLE books ALTER COLUMN "isbn" SET DEFAULT 'none'::text;`,
+		`ALTER TABLE authors ALTER COLUMN "visits" SET DEFAULT (0 + 1);`,
+		`ALTER TABLE authors ALTER COLUMN "born_on" SET NOT NULL;`,
+		`ALTER TABLE authors ALTER COLUMN "born_on" SET DEFAULT now();`)
+	assertContainsAll(t, "down", down,
+		`ALTER TABLE authors ALTER COLUMN "rank" SET DEFAULT (1 + 2);`,
+		`ALTER TABLE books ALTER COLUMN "isbn" DROP DEFAULT;`,
+		`ALTER TABLE authors ALTER COLUMN "visits" SET DEFAULT 0;`,
+		`ALTER TABLE authors ALTER COLUMN "born_on" DROP NOT NULL;`,
+		`ALTER TABLE authors ALTER COLUMN "born_on" DROP DEFAULT;`)
+	if strings.Contains(up, "DROP DEFAULT") {
+		t.Errorf("up drops a default:\n%s", up)
+	}
 }

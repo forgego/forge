@@ -7,9 +7,8 @@ import (
 	apierrors "github.com/forgego/forge/api/errors"
 	"github.com/forgego/forge/api/exceptions"
 	forgeerrors "github.com/forgego/forge/errors"
+	"github.com/forgego/forge/internal/dberrors"
 	"github.com/forgego/forge/validate"
-	"github.com/lib/pq"
-	"github.com/mattn/go-sqlite3"
 )
 
 // persistenceException maps manager persistence failures to API exceptions
@@ -123,27 +122,19 @@ func persistenceException(err error) error {
 	return err
 }
 
+// constraintViolationStatus maps a recognized integrity error to 409 for a
+// unique or primary key violation and 400 for other constraint violations.
+// Data exceptions (PostgreSQL class 22) are not mapped here and stay a 500.
 func constraintViolationStatus(err error) (int, bool) {
-	var postgresErr *pq.Error
-	if errors.As(err, &postgresErr) {
-		switch string(postgresErr.Code) {
-		case "23505":
-			return http.StatusConflict, true
-		case "23502", "23503", "23514":
-			return http.StatusBadRequest, true
-		}
+	v, ok := dberrors.Classify(err)
+	if !ok {
+		return 0, false
 	}
-
-	var sqliteErr sqlite3.Error
-	if errors.As(err, &sqliteErr) && sqliteErr.Code == sqlite3.ErrConstraint {
-		switch sqliteErr.ExtendedCode {
-		case sqlite3.ErrConstraintPrimaryKey, sqlite3.ErrConstraintUnique:
-			return http.StatusConflict, true
-		case sqlite3.ErrConstraintCheck, sqlite3.ErrConstraintForeignKey, sqlite3.ErrConstraintNotNull:
-			return http.StatusBadRequest, true
-		default:
-			return http.StatusBadRequest, true
-		}
+	switch v.Kind {
+	case dberrors.Unique:
+		return http.StatusConflict, true
+	case dberrors.ForeignKey, dberrors.NotNull, dberrors.Check:
+		return http.StatusBadRequest, true
 	}
 	return 0, false
 }
