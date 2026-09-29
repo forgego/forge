@@ -235,12 +235,24 @@ func TestChecksumBaseline_CleanRollbackErrorReconciles(t *testing.T) {
 	// Database is clean at version 1, but checksums have versions 1, 2, 3.
 	_, err := database.Exec("UPDATE schema_migrations SET version = 1, dirty = 0")
 	require.NoError(t, err)
-	// Making version 1's down migration unreadable makes Steps(-1) fail without making state dirty.
+	// Making version 1's down migration unopenable makes Steps(-1) fail
+	// before it runs any SQL, so the state stays clean. A symbolic link to
+	// itself fails to open with ELOOP for every user; chmod 000 does not stop
+	// root, which made this test fail when run as root.
 	downFile := filepath.Join(runner.migrationsPath, "1_create_rollback.down.sql")
-	require.NoError(t, os.Chmod(downFile, 0000))
-	t.Cleanup(func() { _ = os.Chmod(downFile, 0600) })
+	require.NoError(t, os.Remove(downFile))
+	if err := os.Symlink(filepath.Base(downFile), downFile); err != nil {
+		t.Skipf("symbolic links unavailable: %v", err)
+	}
+	_, openErr := os.Open(downFile)
+	require.Error(t, openErr, "the down migration must be unopenable")
+	require.NotErrorIs(t, openErr, os.ErrNotExist, "a missing down file is treated as an empty migration")
 	err = runner.rollbackChecksumStep(context.Background(), database)
 	require.Error(t, err)
+	version, dirty, verr := runner.migrate.Version()
+	require.NoError(t, verr)
+	require.False(t, dirty, "the failed step must not run SQL")
+	require.Equal(t, uint(1), version)
 	// Reconcile must still run and remove rows above the clean version (1).
 	var count int
 	require.NoError(t, database.QueryRow("SELECT count(*) FROM forge_migration_checksums WHERE version > 1").Scan(&count))

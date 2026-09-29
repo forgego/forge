@@ -8,6 +8,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/forgego/forge/cli/core"
+	"github.com/forgego/forge/cli/templates"
 	"github.com/spf13/cobra"
 )
 
@@ -38,6 +39,13 @@ func (c *AddAPICommand) Definition() *cobra.Command {
 // Execute runs the command logic
 func (c *AddAPICommand) Execute(ctx *core.Context, args []string) error {
 	resourceName := args[0]
+	// The resource name becomes part of Go identifiers (Register<Name>API and
+	// the default model name), so it must convert to one; the URL path keeps
+	// the name as given.
+	resourceIdent, err := templates.GoIdentifier(resourceName)
+	if err != nil {
+		return fmt.Errorf("invalid resource name: %w", err)
+	}
 
 	// Detect project root and app
 	projectRoot, err := detectProjectRoot()
@@ -55,8 +63,7 @@ func (c *AddAPICommand) Execute(ctx *core.Context, args []string) error {
 	if modelName == "" {
 		if err := survey.AskOne(&survey.Input{
 			Message: "Model name:",
-			//lint:ignore SA1019 strings.Title is deprecated but golang.org/x/text/cases is not a drop-in replacement
-			Default: strings.Title(resourceName),
+			Default: resourceIdent,
 		}, &modelName); err != nil {
 			return err
 		}
@@ -88,7 +95,10 @@ func (c *AddAPICommand) Execute(ctx *core.Context, args []string) error {
 	apiPath := filepath.Join(appPath, "api.go")
 
 	// Generate API code
-	apiCode := generateAPICode(appName, modelName, resourceName, resourcePath, graphql)
+	apiCode, err := generateAPICode(appName, modelName, resourceName, resourcePath, graphql)
+	if err != nil {
+		return err
+	}
 
 	// Append to api.go
 	file, err := os.OpenFile(apiPath, os.O_APPEND|os.O_WRONLY, 0644)
@@ -115,13 +125,17 @@ func (c *AddAPICommand) Execute(ctx *core.Context, args []string) error {
 }
 
 // generateAPICode generates the API code
-func generateAPICode(appName, modelName, resourceName, resourcePath string, graphql bool) string {
+// The resource name is converted to a CamelCase Go identifier for the
+// Register<Name>API function; resourcePath is used verbatim as the URL segment.
+func generateAPICode(appName, modelName, resourceName, resourcePath string, graphql bool) (string, error) {
+	resourceIdent, err := templates.GoIdentifier(resourceName)
+	if err != nil {
+		return "", fmt.Errorf("invalid resource name: %w", err)
+	}
 	var sb strings.Builder
 
-	//lint:ignore SA1019 strings.Title is deprecated but golang.org/x/text/cases is not a drop-in replacement
-	sb.WriteString(fmt.Sprintf("\n// Register%sAPI registers the %s API endpoints\n", strings.Title(resourceName), resourceName))
-	//lint:ignore SA1019 strings.Title is deprecated but golang.org/x/text/cases is not a drop-in replacement
-	sb.WriteString(fmt.Sprintf("func Register%sAPI(router *httplib.Router) {\n", strings.Title(resourceName)))
+	sb.WriteString(fmt.Sprintf("\n// Register%sAPI registers the %s API endpoints\n", resourceIdent, resourceName))
+	sb.WriteString(fmt.Sprintf("func Register%sAPI(router *httplib.Router) {\n", resourceIdent))
 	sb.WriteString(fmt.Sprintf("\t// %sObjects is the manager `forge generate` writes for %s.\n", modelName, modelName))
 	sb.WriteString("\tviewset := api.NewBaseViewSet(\n")
 	sb.WriteString(fmt.Sprintf("\t\tNew%sSerializer,\n", modelName))
@@ -158,5 +172,5 @@ func generateAPICode(appName, modelName, resourceName, resourcePath string, grap
 		sb.WriteString("\n// GraphQL resolver would go here\n")
 	}
 
-	return sb.String()
+	return sb.String(), nil
 }

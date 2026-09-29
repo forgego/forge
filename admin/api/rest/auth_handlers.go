@@ -7,12 +7,13 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
-	"net"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/forgego/forge/netutil"
 )
 
 func decodeLoginPayload(req *http.Request) (string, string, error) {
@@ -28,11 +29,12 @@ func decodeLoginPayload(req *http.Request) (string, string, error) {
 	return strings.TrimSpace(payload.Username), payload.Password, nil
 }
 
-func loginKeys(remoteAddr, username string) (string, string) {
-	ip, _, err := net.SplitHostPort(remoteAddr)
-	if err != nil {
-		ip = remoteAddr
-	}
+// loginKeys returns the limiter keys for a login attempt. The client IP
+// honors X-Forwarded-For / X-Real-IP only when the TCP peer is a configured
+// trusted proxy (server.trusted_proxies); otherwise it is the peer address.
+// Without that, every client behind a reverse proxy would share one key.
+func loginKeys(req *http.Request, username string) (string, string) {
+	ip := netutil.ClientIP(req, netutil.TrustedProxies())
 	return "ip:" + ip, "user:" + strings.ToLower(username)
 }
 
@@ -107,7 +109,7 @@ func (r *Router) handleLogin(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	ipKey, userKey := loginKeys(req.RemoteAddr, username)
+	ipKey, userKey := loginKeys(req, username)
 	if !r.checkLoginRateLimit(w, ipKey, userKey) {
 		return
 	}

@@ -111,5 +111,5 @@ type OrderSerializer struct {
 
 - **[ViewSets](/docs/api/viewsets/)**: Hook serializers into HTTP endpoints.
 - **[Pagination](/docs/api/pagination/)**: Paginate list responses.
-- **[OpenAPI 3.0](/docs/api/openapi/)**: Generate schemas from serializers.
+- **[OpenAPI](/docs/api/openapi/)**: What the OpenAPI document contains today.
 

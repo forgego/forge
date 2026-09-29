@@ -60,9 +60,10 @@ a development starting point.
   `database.max_idle_conns` (10), `database.conn_max_lifetime` (5m),
   `database.conn_max_idle_time` (2m). Keep `max_open_conns` below the
   server's `max_connections`, minus what migrations and administration need.
-- Forge builds a `key=value` connection string without quoting values. A
-  password containing spaces, quotes or backslashes breaks the connection;
-  generate passwords from letters and digits until that is fixed.
+- Forge builds a `key=value` connection string with every value quoted, so a
+  password may contain spaces, quotes and backslashes. An empty
+  `database.password` is left out, so `PGPASSWORD` or a pgpass file can
+  supply it.
 - There is no `DATABASE_URL` setting.
 
 ## Settings and secrets
@@ -75,9 +76,12 @@ manager; never ship the `.env` file that `forge new` generates for local use.
 | Variable | Production value | Why |
 | --- | --- | --- |
 | `FORGE_APP_ENV` | `production` | Turns on secret validation and `Secure` cookies. Case-insensitive. |
-| `FORGE_APP_DEBUG` | `false` | The default is `true`, which selects the debug logger. It is not rejected in production, so set it. |
+| `FORGE_APP_DEBUG` | `false` (the default) | `true` allows the profiling routes (with `server.enable_profiling`) and is rejected in production; log level and format come from `logging.*`. `forge new` sets it to `true` only in the local `.env`. |
+| `FORGE_LOGGING_LEVEL` | `info` | The `config.yaml` from `forge new` sets `info`; its local `.env` sets `debug`. |
+| `FORGE_LOGGING_FORMAT` | `json` | The `config.yaml` from `forge new` sets `json`; its local `.env` sets `console`. |
 | `FORGE_SERVER_HOST` | `0.0.0.0` or the proxy-facing address | The default `localhost` is unreachable from outside a container. |
 | `FORGE_SERVER_PORT` | your port | Default `8000`. |
+| `FORGE_SERVER_TRUSTED_PROXIES` | your proxy's address or CIDR | Forwarding headers are honored only from these peers, for rate limiting and the admin login lockout. Empty by default: the TCP peer address is used. |
 | `FORGE_DATABASE_HOST`, `_PORT`, `_NAME`, `_USER`, `_PASSWORD`, `_SSLMODE` | your database | |
 | `FORGE_SECURITY_SECRET_KEY`, `FORGE_SECURITY_SESSION_SECRET`, `FORGE_SECURITY_CSRF_SECRET_KEY` | three independent random values, for example `openssl rand -hex 32` | Required in production. Rotating the session or CSRF secret invalidates existing session and CSRF cookies. |
 | `FORGE_ADMIN_USERNAME`, `FORGE_ADMIN_PASSWORD` | only if you use environment-based admin login | Without them, and without a login authenticator, admin login answers `503 admin_login_disabled`. |
@@ -91,8 +95,10 @@ manager; never ship the `.env` file that `forge new` generates for local use.
   listen unless all three secrets are set explicitly (not empty, not a
   placeholder such as `change-me`, not generated at startup) and the process
   exits with status 1.
+- Debug mode: with `app.env` set to production, `Server.Start` also refuses to
+  listen while `app.debug` is true.
 
-**What is not checked**: `app.debug`, `server.host`, `database.sslmode`, admin
+**What is not checked**: `server.host`, `database.sslmode`, admin
 credentials, and whether TLS is in front of the server. The server speaks
 plain HTTP only; terminate TLS at the proxy. `Secure` cookies are only useful
 if clients reach the proxy over HTTPS.
@@ -107,7 +113,7 @@ The server registers these routes (`server.health_check_path` defaults to
 | `/health` | Runs every registered check. 200 if all pass, 503 otherwise. |
 | `/health/ready` | Same checks, reported as readiness. |
 | `/health/live` | Always 200 while the process is serving. |
-| `/info` | Public: app name, version, environment, debug flag, uptime. Block it at the proxy if you do not want that exposed. |
+| `/info` | Only when `server.info_endpoint` is true (default false). Public: app name, version, environment, debug flag, uptime. |
 
 **No check is registered by default**, so `/health` and `/health/ready` return
 200 even when the database is down. Register one in `main.go` after connecting:
@@ -115,14 +121,14 @@ The server registers these routes (`server.health_check_path` defaults to
 ```go
 server.RegisterHealthCheckFunc("database", func(ctx context.Context) error {
 	if err := database.PingContext(ctx); err != nil {
-		return errors.New("unreachable") // the message is returned in the response body
+		return err
 	}
 	return nil
 })
 ```
 
-A failing check's error message appears in the public response, so return a
-fixed message as above rather than the driver error.
+A failing check is reported publicly only as `unhealthy` or `not ready`; the
+error text goes to the server log (standard `log` output), quoted.
 
 ## Database loss
 
@@ -164,13 +170,15 @@ client address, user agent and request ID.
   `password`, `secret`, `signature`, `session`, `session_key`.
 - Request and response headers, cookies and bodies are not logged.
 - Configuration warnings name missing secrets but never print values.
+- The API error handler logs a PostgreSQL or SQLite driver error, returned
+  or panicked, by its Go type, SQLSTATE (or SQLite result code) and the
+  constraint, table and column it names; the driver message and detail,
+  which can contain row values, are left out.
 - **Not redacted**: URL paths are logged verbatim, so keep secrets out of
-  paths. Error logs include the internal error text, which for a database
-  error can contain row values (for example the duplicate value in a
-  unique-constraint violation). Panic values are logged as-is. Treat logs as
-  containing personal data.
-- The `main.go` from `forge new` builds its logger with
-  `log.NewLogger(settings.App.Debug)` and ignores the `logging.*` keys; see
+  paths. Other error text is logged as-is, and non-error panic values are
+  logged as-is. Treat logs as containing personal data.
+- The `main.go` from `forge new` builds its logger from the `logging.*` keys
+  with `log.NewLoggerFromSettings(settings.Logging)`; see
   [logging](/docs/config/logging/).
 
 ## State kept in process memory
@@ -181,7 +189,7 @@ A restart loses the following, and each instance has its own copy:
 | --- | --- | --- |
 | Server sessions (`forge_session` cookie) | In-memory `scs` store | All sessions end. |
 | Admin bearer tokens (24 h lifetime) | In-memory token store | Every admin user is signed out. |
-| Admin login attempt limiter | In memory, keyed by the TCP peer address | Counters reset. Behind a proxy every client shares the proxy's address, so failed logins from one client can lock out everyone. |
+| Admin login attempt limiter | In memory, keyed by client IP and by username | Counters reset. Behind a proxy, list it in `server.trusted_proxies` (`FORGE_SERVER_TRUSTED_PROXIES`); otherwise every client shares the proxy's address and failed logins from one client can lock out everyone. |
 | Admin saved views | In memory | Lost. |
 | Admin change history | In memory, last 1000 entries per registered model | Lost. See below. |
 | API throttling counters | Default store is in memory | Reset; limits are per instance. |

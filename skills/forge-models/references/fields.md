@@ -218,6 +218,11 @@ schema.Bool("is_active").Default(true).Build()
 schema.String("status").Default("pending").Build()
 ```
 
+`Default` applies when an instance is constructed (`manager.New()`, or the
+API for keys a request omits), not at INSERT: `Create` writes the struct's
+`false`, `0` or `""` as is on a field with a `Default` (an optional field
+without one stays NULL). Use `DBDefault` for a database-owned default.
+
 ### MaxLength
 
 Maximum length (strings):
@@ -314,7 +319,9 @@ schema.Time("created_at").
 
 ### AutoNow
 
-Set on save:
+Set on save: `Update`, `Save` and `UpdateFields` write the current time and
+set it on the struct. `QuerySet.Update` does not touch it. Supported Go types:
+`time.Time`, `*time.Time`, `string`.
 
 ```go
 schema.Time("updated_at").AutoNow().Build()

@@ -187,8 +187,7 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 - Accept header handling
 
 ### OpenAPI
-- Auto-generated OpenAPI document
-- Schema definitions
+- OpenAPI 3.0 document with the `info` block (paths and schemas are not generated yet)
 
 ## Identity & Auth
 

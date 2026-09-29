@@ -40,6 +40,11 @@ type ServerSettings struct {
 	GracefulTimeout int    // graceful shutdown timeout in seconds
 	MaxRequestSize  int64  // maximum request body size in bytes
 	EnableProfiling bool   // enable profiling (dev mode only)
+	InfoEndpoint    bool   // expose /info (name, version, env, debug, uptime); off by default
+	// TrustedProxies lists proxy IPs or CIDRs whose X-Forwarded-For /
+	// X-Real-IP headers are honored when resolving the client IP. Empty
+	// trusts no proxy.
+	TrustedProxies []string
 }
 
 // DatabaseSettings contains database connection settings
@@ -80,7 +85,7 @@ func LoadSettings(cfg *Config) *Settings {
 		App: AppSettings{
 			Name:    cfg.GetString("app.name", "forge"),
 			Env:     cfg.GetString("app.env", "development"),
-			Debug:   cfg.GetBool("app.debug", true),
+			Debug:   cfg.GetBool("app.debug", false),
 			Version: cfg.GetString("app.version", "0.1.0"),
 		},
 		Server: ServerSettings{
@@ -98,6 +103,8 @@ func LoadSettings(cfg *Config) *Settings {
 			GracefulTimeout: cfg.GetInt("server.graceful_timeout", 30),
 			MaxRequestSize:  cfg.GetInt64("server.max_request_size", 10*1024*1024), // 10MB default
 			EnableProfiling: cfg.GetBool("server.enable_profiling", false),
+			InfoEndpoint:    cfg.GetBool("server.info_endpoint", false),
+			TrustedProxies:  splitList(cfg.GetStringSlice("server.trusted_proxies", nil)),
 		},
 		Database: DatabaseSettings{
 			Driver:          cfg.GetString("database.driver", "postgres"),
@@ -126,9 +133,9 @@ func LoadSettings(cfg *Config) *Settings {
 			SiteName:    cfg.GetString("admin.site_name", "forge"),
 		},
 		Logging: LoggingSettings{
-			Level:  cfg.GetString("logging.level", "info"),
-			Format: cfg.GetString("logging.format", "json"),
-			// Outputs will be loaded from config if needed
+			Level:   cfg.GetString("logging.level", "info"),
+			Format:  cfg.GetString("logging.format", "json"),
+			Outputs: loggingOutputs(cfg),
 		},
 		Errors: ErrorSettings{
 			ProblemDetails: ProblemDetailsSettings{
@@ -160,6 +167,20 @@ func LoadSettings(cfg *Config) *Settings {
 			},
 		},
 	}
+}
+
+// splitList flattens comma-separated entries so a list can come from an
+// environment variable ("10.0.0.0/8,127.0.0.1") as well as a YAML sequence.
+func splitList(values []string) []string {
+	var out []string
+	for _, v := range values {
+		for _, part := range strings.Split(v, ",") {
+			if part = strings.TrimSpace(part); part != "" {
+				out = append(out, part)
+			}
+		}
+	}
+	return out
 }
 
 func normalizePathPrefix(input string) string {

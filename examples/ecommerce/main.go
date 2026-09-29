@@ -121,29 +121,43 @@ func main() {
 	r := buildEcommerceRouter(ctx, cfg, database)
 
 	adminPath := normalizePath(cfg.GetString("admin.path", "/admin"), "/admin")
-	serverHost := cfg.GetString("server.host", "localhost")
-	serverPort := cfg.GetString("server.port", "8020")
-	listenAddr := fmt.Sprintf("%s:%s", serverHost, serverPort)
-	readTimeout := time.Duration(cfg.GetInt("server.read_timeout", 30)) * time.Second
-	writeTimeout := time.Duration(cfg.GetInt("server.write_timeout", 30)) * time.Second
-	idleTimeout := time.Duration(cfg.GetInt("server.idle_timeout", 120)) * time.Second
-	maxHeaderBytes := cfg.GetInt("server.max_header_bytes", 1048576)
+	srv, err := newEcommerceServer(cfg, r)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	fmt.Printf("\nForge Ecommerce is alive\n")
 	fmt.Printf("------------------------------\n")
-	fmt.Printf("Homepage: http://%s\n", listenAddr)
-	fmt.Printf("Admin: http://%s%s/\n", listenAddr, adminPath)
+	fmt.Printf("Homepage: http://%s\n", srv.Addr)
+	fmt.Printf("Admin: http://%s%s/\n", srv.Addr, adminPath)
 	fmt.Printf("------------------------------\n\n")
 
-	httpServer := &http.Server{
-		Addr:           listenAddr,
-		Handler:        r,
-		ReadTimeout:    readTimeout,
-		WriteTimeout:   writeTimeout,
-		IdleTimeout:    idleTimeout,
-		MaxHeaderBytes: maxHeaderBytes,
+	// On SIGINT or SIGTERM, stop accepting connections and wait up to
+	// server.graceful_timeout seconds for in-flight requests before the
+	// deferred database close runs.
+	if err := srv.StartWithGracefulShutdown(); err != nil {
+		log.Printf("server stopped: %v", err)
 	}
-	log.Fatal(httpServer.ListenAndServe())
+}
+
+// newEcommerceServer wraps handler in a Forge server configured from cfg, so
+// the example gets StartWithGracefulShutdown. The example builds its own
+// router and middleware stack, so it replaces the server's default handler.
+func newEcommerceServer(cfg *config.Config, handler http.Handler) (*server.Server, error) {
+	settings := config.LoadSettings(cfg)
+	settings.Server.Host = cfg.GetString("server.host", "localhost")
+	settings.Server.Port = cfg.GetString("server.port", "8020")
+	srv, err := server.NewServer(cfg, settings, nil)
+	if err != nil {
+		return nil, err
+	}
+	srv.Addr = fmt.Sprintf("%s:%s", settings.Server.Host, settings.Server.Port)
+	srv.Handler = handler
+	srv.ReadTimeout = time.Duration(cfg.GetInt("server.read_timeout", 30)) * time.Second
+	srv.WriteTimeout = time.Duration(cfg.GetInt("server.write_timeout", 30)) * time.Second
+	srv.IdleTimeout = time.Duration(cfg.GetInt("server.idle_timeout", 120)) * time.Second
+	srv.MaxHeaderBytes = cfg.GetInt("server.max_header_bytes", 1048576)
+	return srv, nil
 }
 
 func buildEcommerceRouter(ctx context.Context, cfg *config.Config, database *db.DB) *server.Router {

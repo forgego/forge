@@ -191,10 +191,11 @@ func (b *PostgreSQLBuilder) buildChangeDownSQL(change core.Change) (string, erro
 	case *core.ModifyForeignKey:
 		// Reverse the modification
 		reversed := &core.ModifyForeignKey{
-			Table:       c.Table,
-			OldFK:       c.NewFK,
-			NewFK:       c.OldFK,
-			TargetTable: c.TargetTable,
+			Table:          c.Table,
+			OldFK:          c.NewFK,
+			NewFK:          c.OldFK,
+			TargetTable:    c.PreviousTargetTable(),
+			OldTargetTable: c.TargetTable,
 		}
 		return b.BuildModifyForeignKey(reversed)
 	case *core.AddConstraint:
@@ -246,6 +247,9 @@ func (b *PostgreSQLBuilder) buildChangeDownSQL(change core.Change) (string, erro
 
 // BuildModifyColumn generates ALTER TABLE ALTER COLUMN statement for PostgreSQL
 func (b *PostgreSQLBuilder) BuildModifyColumn(c *core.ModifyColumn) (string, error) {
+	if part := unalterableColumnChange(c.OldColumn, c.NewColumn); part != "" {
+		return "", unalterableColumnError(c.Table, c.NewColumn, part)
+	}
 	newType := mapFieldTypeToSQL(c.NewColumn, false, true)
 	oldType := mapFieldTypeToSQL(c.OldColumn, false, true)
 
@@ -257,21 +261,25 @@ func (b *PostgreSQLBuilder) BuildModifyColumn(c *core.ModifyColumn) (string, err
 			c.Table, c.NewColumn.Name, newType, c.NewColumn.Name, newType))
 	}
 
-	// Change NOT NULL
-	if c.NewColumn.Required && !c.OldColumn.Required {
+	// Change NOT NULL, which AutoNowAdd implies
+	newNotNull := c.NewColumn.Required || impliesNotNull(c.NewColumn)
+	oldNotNull := c.OldColumn.Required || impliesNotNull(c.OldColumn)
+	if newNotNull && !oldNotNull {
 		statements = append(statements, fmt.Sprintf("ALTER TABLE %s ALTER COLUMN \"%s\" SET NOT NULL;",
 			c.Table, c.NewColumn.Name))
-	} else if !c.NewColumn.Required && c.OldColumn.Required && !c.NewColumn.PrimaryKey && !c.NewColumn.AutoIncrement {
+	} else if !newNotNull && oldNotNull && !c.NewColumn.PrimaryKey && !c.NewColumn.AutoIncrement {
 		statements = append(statements, fmt.Sprintf("ALTER TABLE %s ALTER COLUMN \"%s\" DROP NOT NULL;",
 			c.Table, c.NewColumn.Name))
 	}
 
-	// Change default
-	if c.NewColumn.Default != nil && c.NewColumn.Default != c.OldColumn.Default {
-		defaultVal := formatDefaultValue(c.NewColumn.Default, c.NewColumn.GoType, c.NewColumn.Type, c.NewColumn.Options, false)
+	// Change default, compared as the DEFAULT clause each column renders, so
+	// a DB default expression or an auto timestamp is set like a value
+	newDefault := b.columnDefault(c.NewColumn)
+	oldDefault := b.columnDefault(c.OldColumn)
+	if newDefault != "" && newDefault != oldDefault {
 		statements = append(statements, fmt.Sprintf("ALTER TABLE %s ALTER COLUMN \"%s\" SET DEFAULT %s;",
-			c.Table, c.NewColumn.Name, defaultVal))
-	} else if c.NewColumn.Default == nil && c.OldColumn.Default != nil {
+			c.Table, c.NewColumn.Name, newDefault))
+	} else if newDefault == "" && oldDefault != "" {
 		statements = append(statements, fmt.Sprintf("ALTER TABLE %s ALTER COLUMN \"%s\" DROP DEFAULT;",
 			c.Table, c.NewColumn.Name))
 	}

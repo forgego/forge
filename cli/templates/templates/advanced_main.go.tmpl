@@ -20,7 +20,7 @@ func main() {
 	settings := config.LoadSettings(cfg)
 
 	// Create logger
-	logger, err := forgelog.NewLogger(settings.App.Debug)
+	logger, err := forgelog.NewLoggerFromSettings(settings.Logging)
 	if err != nil {
 		stdlog.Fatal(err)
 	}

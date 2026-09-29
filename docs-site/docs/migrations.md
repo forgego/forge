@@ -55,13 +55,9 @@ forge migrate recover --clean --version <version>
 Generated migrations are proposals, and an operator should review each one before it
 reaches a database with data in it.
 
-- **Renames are not detected.** Renaming a field or a table produces a `DROP` of the old
-  name and an `ADD` of the new one, which loses the data. Rename in steps instead:
-  1. Add the new field and generate a migration.
-  2. Copy the data in a hand-written migration, for example
-     `forge makemigrations copy_title --empty` with `UPDATE posts SET headline = title;`.
-  3. Deploy code that uses the new field.
-  4. Remove the old field and generate the migration that drops it.
+- **Renames are not detected.** Renaming a field or a table in a model produces a `DROP`
+  of the old name and an `ADD` of the new one, which loses the data. Write the rename by
+  hand instead (see [Renaming a column or table](#renaming-a-column-or-table)).
 - **Destructive statements.** Treat `DROP TABLE`, `DROP COLUMN`, and type changes
   (`ALTER COLUMN ... TYPE`) as data loss until proven otherwise. `forge migrate lint` flags
   `DROP TABLE` and `TRUNCATE`, but not `DROP COLUMN`, so read the SQL yourself.
@@ -85,6 +81,114 @@ reaches a database with data in it.
   are restored with the data, so `forge migrate status` shows the version the backup was
   taken at, and `forge migrate recover --verify` checks the files you have against it.
   Run `forge migrate up` to apply the migrations that came after the backup.
+
+### Renaming a column or table
+
+`makemigrations` reads a hand-written `ALTER TABLE .. RENAME COLUMN` and
+`ALTER TABLE .. RENAME TO` back from the migration files. The indexes, constraints, and
+foreign keys that refer to the renamed column or table follow it, as they do in the
+database. Rename in one migration, and change the model to match before you generate
+again:
+
+1. Create an empty migration: `forge makemigrations rename_isbn --empty`.
+2. Write the rename in the up file and its reverse in the down file:
+
+   ```sql
+   -- 000004_rename_isbn.up.sql
+   ALTER TABLE books RENAME COLUMN isbn TO code;
+   ALTER TABLE authors RENAME TO writers;
+   ```
+
+   ```sql
+   -- 000004_rename_isbn.down.sql
+   ALTER TABLE writers RENAME TO authors;
+   ALTER TABLE books RENAME COLUMN code TO isbn;
+   ```
+
+3. Update the model: the field name, `Meta.TableName`, and the fields and conditions of any
+   `Meta.Indexes` and `Meta.Constraints` that name the column. Index and constraint names
+   do not change.
+4. Run `forge makemigrations check --auto`. It prints `No changes detected`.
+
+On PostgreSQL, a foreign key constraint keeps its name when its table or column is
+renamed, but Forge names it `fk_<table>_<column>` from the current names, and drops it by
+that name later. When the renamed table or column has its own foreign key, rename the
+constraint in the same migration, for example
+`ALTER TABLE books RENAME CONSTRAINT fk_books_author_id TO fk_books_writer_id;`. SQLite
+(3.25 or later) runs the same `RENAME` statements; its foreign keys have no name.
+
+For a rolling deploy, where old and new code run side by side, rename in steps instead:
+add the new field, copy the data in a hand-written migration (for example
+`UPDATE posts SET headline = title;`), deploy code that uses the new field, then remove
+the old field.
+
+### Changes makemigrations cannot generate
+
+`makemigrations` stops with an error, and writes nothing, when a model change has no
+generated SQL. It does not write an empty or comment-only migration that would be proposed
+again on every run.
+
+- **PostgreSQL column changes.** A column's type, `NOT NULL`, and default (`Default`,
+  `DBDefault`, `AutoNow`, `AutoNowAdd`) are changed with `ALTER COLUMN`. A change to an
+  existing column's `Unique()`, primary key, `AutoIncrement`, generated expression, or
+  `DBColumn` name is not generated. For uniqueness on an existing table, declare a
+  `UNIQUE` constraint in `Meta.Constraints` instead of adding `Unique()` to the field.
+  Otherwise, revert the model change.
+- **SQLite column, foreign key, and constraint changes.** SQLite's `ALTER TABLE` can add,
+  drop, and rename a column, and rename a table, but it cannot change a column or add or
+  drop a foreign key or constraint of an existing table. That takes a table rebuild, which
+  `makemigrations` does not generate: it fails with
+  `modify column <table>.<column> is not supported on SQLite without rebuilding the table`
+  (or `add constraint`, `add foreign key`, and so on). Write the rebuild by hand, as
+  described below. This is also the way forward for an existing SQLite project whose models
+  declare `Meta.Constraints` or foreign keys that older Forge versions skipped without an
+  error.
+
+### Rebuilding a SQLite table by hand
+
+A hand-written rebuild follows the steps of the
+[SQLite documentation](https://www.sqlite.org/lang_altertable.html#otheralter): create the
+new table under a temporary name, copy the rows, drop the old table, rename the new one,
+and re-create the old table's indexes. `makemigrations` reads the rebuild back from the
+migration file, so write the new table exactly as the model now declares it, and the next
+run writes nothing.
+
+1. Create an empty migration: `forge makemigrations rebuild_books --empty`.
+2. In the up file, rebuild the table with its new definition. Start from the
+   `CREATE TABLE` in the migration that created the table, and add the new column
+   definition, foreign key, or constraint:
+
+   ```sql
+   CREATE TABLE books_new (
+       "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+       "author_id" INTEGER NOT NULL,
+       "pages" INTEGER DEFAULT 1,
+       "isbn" TEXT,
+       FOREIGN KEY (author_id) REFERENCES authors (id) ON DELETE CASCADE ON UPDATE NO ACTION,
+       CONSTRAINT books_pages_positive CHECK (pages > 0)
+   );
+   INSERT INTO books_new ("id", "author_id", "pages", "isbn")
+       SELECT "id", "author_id", "pages", "isbn" FROM books;
+   DROP TABLE books;
+   ALTER TABLE books_new RENAME TO books;
+   CREATE INDEX IF NOT EXISTS books_isbn_idx ON books ("isbn");
+   ```
+
+3. In the down file, rebuild the table the same way with its previous definition.
+4. Run `forge makemigrations check --auto`. It prints `No changes detected`.
+
+Check the data before you apply the rebuild: the copy fails if an existing row violates
+a new `NOT NULL`, `CHECK`, or `UNIQUE` constraint.
+
+:::warning Foreign keys during a rebuild
+`forge migrate` runs each SQLite migration in a transaction, and SQLite ignores
+`PRAGMA foreign_keys` inside a transaction. If your SQLite DSN turns foreign keys on (for
+example `?_foreign_keys=on`), dropping a table that other tables reference runs their
+`ON DELETE` actions, so `CASCADE` deletes and `SET NULL` clears the referencing rows. Apply
+a migration that rebuilds a referenced table with a DSN that leaves foreign keys off,
+then run `PRAGMA foreign_key_check;` to confirm that every reference still resolves.
+Rebuilding a table that no other table references, such as `books` above, is not affected.
+:::
 
 ---
 
@@ -166,8 +270,9 @@ Applying migrations to SQLite is experimental, and the release gate does not cov
 table's foreign keys and `Meta.Constraints` are declared inside its `CREATE TABLE` and read
 back from there, so regenerating unchanged models writes nothing. SQLite cannot add, drop
 or change a foreign key or constraint of an existing table without rebuilding it, and
-`makemigrations` does not write that rebuild: it stops with an error instead. A changed
-column is written only as a comment.
+`makemigrations` does not write that rebuild: it stops with an error instead. The same
+applies to a changed column, because SQLite has no `ALTER COLUMN`. See
+[Changes makemigrations cannot generate](#changes-makemigrations-cannot-generate).
 :::
 
 ---

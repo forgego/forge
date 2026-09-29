@@ -12,6 +12,7 @@ import (
 
 	"github.com/forgego/forge/config"
 	"github.com/forgego/forge/log"
+	"github.com/forgego/forge/netutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -36,6 +37,7 @@ func TestNewServer_Initialization(t *testing.T) {
 			HealthCheckPath: "/health",
 			MetricsEnabled:  true,
 			MetricsPath:     "/metrics",
+			InfoEndpoint:    true,
 		},
 		Security: config.SecuritySettings{
 			SessionSecret: "test-session-secret-key-that-is-long-enough",
@@ -343,4 +345,68 @@ func TestIsCSRFExemptPath(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+// Regression for #290: /info is opt-in, so a server built from default
+// settings does not expose version, environment and debug flag publicly.
+func TestNewServer_InfoEndpointOptIn(t *testing.T) {
+	get := func(t *testing.T, settings *config.Settings) int {
+		t.Helper()
+		srv, err := NewServer(config.NewConfig(), settings, nil)
+		require.NoError(t, err)
+		w := httptest.NewRecorder()
+		srv.Handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/info", nil))
+		return w.Code
+	}
+
+	t.Run("default settings do not register /info", func(t *testing.T) {
+		cfg := config.NewConfig()
+		settings := config.LoadSettings(cfg)
+		assert.False(t, settings.Server.InfoEndpoint)
+		assert.Equal(t, http.StatusNotFound, get(t, settings))
+	})
+
+	t.Run("server.info_endpoint enables it", func(t *testing.T) {
+		cfg := config.NewConfig()
+		cfg.Set("server.info_endpoint", true)
+		settings := config.LoadSettings(cfg)
+		assert.Equal(t, http.StatusOK, get(t, settings))
+	})
+}
+
+// server.trusted_proxies configures the client-IP resolution shared by the
+// rate limiters and the admin login lockout (#290).
+func TestNewServer_TrustedProxiesSetting(t *testing.T) {
+	prev := netutil.TrustedProxies()
+	t.Cleanup(func() {
+		entries := make([]string, 0, len(prev))
+		for _, p := range prev {
+			entries = append(entries, p.String())
+		}
+		require.NoError(t, netutil.SetTrustedProxies(entries))
+	})
+
+	cfg := config.NewConfig()
+	cfg.Set("server.trusted_proxies", []string{"10.0.0.0/8", "127.0.0.1"})
+	settings := config.LoadSettings(cfg)
+	_, err := NewServer(cfg, settings, nil)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "10.1.2.3:5555"
+	req.Header.Set("X-Forwarded-For", "203.0.113.9")
+	assert.Equal(t, "203.0.113.9", netutil.ClientIP(req, netutil.TrustedProxies()))
+
+	// A later server with the default empty setting trusts no proxy.
+	empty := config.NewConfig()
+	_, err = NewServer(empty, config.LoadSettings(empty), nil)
+	require.NoError(t, err)
+	assert.Empty(t, netutil.TrustedProxies())
+	assert.Equal(t, "10.1.2.3", netutil.ClientIP(req, netutil.TrustedProxies()))
+
+	bad := config.NewConfig()
+	bad.Set("server.trusted_proxies", []string{"not-an-ip"})
+	_, err = NewServer(bad, config.LoadSettings(bad), nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "server.trusted_proxies")
 }

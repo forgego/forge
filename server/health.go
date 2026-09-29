@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -68,6 +70,12 @@ func GetUptime() time.Duration {
 	return time.Since(globalRegistry.startTime)
 }
 
+// logCheckFailure records why a check failed. Values are quoted so a
+// check error cannot inject extra log lines.
+func logCheckFailure(kind, name string, err error) {
+	log.Printf("server: %s check %s failed: %s", kind, strconv.Quote(name), strconv.Quote(err.Error()))
+}
+
 // HealthHandler returns a handler for the health check endpoint
 func HealthHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -91,7 +99,11 @@ func HealthHandler() http.HandlerFunc {
 		allHealthy := true
 		for name, checker := range checkers {
 			if err := checker.CheckHealth(ctx); err != nil {
-				status.Checks[name] = "unhealthy: " + err.Error()
+				// The response is public: report a fixed status and keep
+				// the cause, which may name hosts or driver details, in
+				// the server log only.
+				logCheckFailure("health", name, err)
+				status.Checks[name] = "unhealthy"
 				allHealthy = false
 			} else {
 				status.Checks[name] = "healthy"
@@ -141,7 +153,8 @@ func ReadinessHandler() http.HandlerFunc {
 		allReady := true
 		for name, checker := range checkers {
 			if err := checker.CheckHealth(ctx); err != nil {
-				status.Checks[name] = "not ready: " + err.Error()
+				logCheckFailure("readiness", name, err)
+				status.Checks[name] = "not ready"
 				allReady = false
 			} else {
 				status.Checks[name] = "ready"

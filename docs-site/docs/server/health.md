@@ -14,6 +14,7 @@ The server can expose health, readiness, liveness, metrics, and profiling endpoi
 - `<health path>/ready`: the same checks, reported as readiness
 - `<health path>/live`: always 200 while the process serves requests
 - `/metrics` when `server.metrics_enabled` is true: reports uptime only
+- `/info` when `server.info_endpoint` is true (default false): app name, version, environment, debug flag and uptime
 - `/debug` profiling, only when both `server.enable_profiling` and `app.debug` are true
 
 No check is registered by default, so `/health` and `/ready` return 200 even

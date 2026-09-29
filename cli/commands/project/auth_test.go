@@ -254,7 +254,9 @@ func TestGeneratedUsersAPIRejectsAnonymousList(t *testing.T) {
 	store := &secureScaffoldUserStore{items: []*secureScaffoldUser{{ID: 1, Username: "admin", Password: "hashed", IsStaff: true}}}
 	handler := newSecureScaffoldRouter(store)
 	resp := serveSecureScaffold(handler, http.MethodGet, "/api/v1/users/", "", "")
-	require.Equal(t, http.StatusForbidden, resp.Code)
+	// JWT authentication issues a Bearer challenge, so anonymous callers get 401.
+	require.Equal(t, http.StatusUnauthorized, resp.Code)
+	require.Equal(t, "Bearer", resp.Header().Get("WWW-Authenticate"))
 }
 
 func TestGeneratedUsersAPICreateUpdateDeleteRequireStaff(t *testing.T) {
@@ -262,14 +264,14 @@ func TestGeneratedUsersAPICreateUpdateDeleteRequireStaff(t *testing.T) {
 	handler := newSecureScaffoldRouter(store)
 
 	resp := serveSecureScaffold(handler, http.MethodPost, "/api/v1/users/", `{"username":"mallory","password":"pw","is_staff":true}`, "")
-	require.Equal(t, http.StatusForbidden, resp.Code)
+	require.Equal(t, http.StatusUnauthorized, resp.Code)
 	require.Empty(t, store.items, "anonymous POST must not create a user")
 
 	resp = serveSecureScaffold(handler, http.MethodPut, "/api/v1/users/1", `{"username":"x"}`, "")
-	require.Equal(t, http.StatusForbidden, resp.Code)
+	require.Equal(t, http.StatusUnauthorized, resp.Code)
 
 	resp = serveSecureScaffold(handler, http.MethodDelete, "/api/v1/users/1", "", "")
-	require.Equal(t, http.StatusForbidden, resp.Code)
+	require.Equal(t, http.StatusUnauthorized, resp.Code)
 
 	// Authenticated but non-staff callers are rejected as well.
 	nonStaff := &secureScaffoldUser{ID: 2, Username: "user"}

@@ -1,8 +1,38 @@
 package db
 
 import (
+	"strconv"
 	"strings"
 )
+
+// dsnValueEscaper escapes the two characters that are special inside a
+// single-quoted libpq keyword/value connection string.
+var dsnValueEscaper = strings.NewReplacer(`\`, `\\`, `'`, `\'`)
+
+// quoteDSNValue quotes v for a libpq keyword/value connection string, so a
+// value containing spaces, quotes or backslashes stays one value.
+func quoteDSNValue(v string) string {
+	return "'" + dsnValueEscaper.Replace(v) + "'"
+}
+
+// postgresKeywordDSN builds a libpq keyword/value connection string from
+// the database.* settings. Every value is quoted and escaped. An empty
+// password is omitted so PGPASSWORD or a pgpass file can supply it.
+func postgresKeywordDSN(host string, port int, user, password, name, sslmode string) string {
+	parts := []string{
+		"host=" + quoteDSNValue(host),
+		"port=" + quoteDSNValue(strconv.Itoa(port)),
+		"user=" + quoteDSNValue(user),
+	}
+	if password != "" {
+		parts = append(parts, "password="+quoteDSNValue(password))
+	}
+	parts = append(parts,
+		"dbname="+quoteDSNValue(name),
+		"sslmode="+quoteDSNValue(sslmode),
+	)
+	return strings.Join(parts, " ")
+}
 
 // DetectDriverFromDSN returns "postgres" or "sqlite3".
 // Rules, applied in order:

@@ -76,7 +76,7 @@ func (v *ProductViewSet) GetQuerySet(r *http.Request) *orm.QuerySet[models.Produ
 
 ## Next Steps
 
-- **[Pagination](/docs/api/pagination/)**: Configure pagination strategies.
+- **[Pagination](/docs/api/pagination/)**: Page-number pagination and page size settings.
 - **[Throttling](/docs/api/throttling/)**: Prevent API abuse with rate limits.
 - **[OpenAPI Documentation](/docs/api/openapi/)**: Interactive API docs.
 

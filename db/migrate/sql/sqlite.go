@@ -253,10 +253,11 @@ func (b *SQLiteBuilder) buildChangeDownSQL(change core.Change) (string, error) {
 	case *core.ModifyForeignKey:
 		// Reverse the modification
 		reversed := &core.ModifyForeignKey{
-			Table:       c.Table,
-			OldFK:       c.NewFK,
-			NewFK:       c.OldFK,
-			TargetTable: c.TargetTable,
+			Table:          c.Table,
+			OldFK:          c.NewFK,
+			NewFK:          c.OldFK,
+			TargetTable:    c.PreviousTargetTable(),
+			OldTargetTable: c.TargetTable,
 		}
 		return b.BuildModifyForeignKey(reversed)
 	case *core.AddConstraint:
@@ -298,16 +299,13 @@ func (b *SQLiteBuilder) buildChangeDownSQL(change core.Change) (string, error) {
 	}
 }
 
-// BuildModifyColumn generates ALTER TABLE ALTER COLUMN statement for SQLite
-// SQLite has very limited ALTER TABLE support, so this generates a comment
+// BuildModifyColumn returns an error because SQLite has no ALTER COLUMN: a
+// column changes only by rebuilding its table, which makemigrations does not
+// generate (see "Changes makemigrations cannot generate" in the migrations
+// guide). A comment-only migration would leave the change pending, so it
+// would be proposed again on every run.
 func (b *SQLiteBuilder) BuildModifyColumn(c *core.ModifyColumn) (string, error) {
-	newType := mapFieldTypeToSQL(c.NewColumn, true, false)
-	oldType := mapFieldTypeToSQL(c.OldColumn, true, false)
-
-	// SQLite has limited ALTER TABLE support
-	// This would require table recreation in practice
-	return fmt.Sprintf("-- SQLite does not support ALTER COLUMN directly\n-- Column %s.%s type changed from %s to %s\n-- This requires table recreation in practice",
-		c.Table, c.NewColumn.Name, oldType, newType), nil
+	return "", unsupportedSQLiteError(fmt.Sprintf("modify column %s.%s", c.Table, c.NewColumn.Name))
 }
 
 // buildModifyColumnDown generates the reverse of ModifyColumn
