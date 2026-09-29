@@ -25,7 +25,9 @@ func runProjectCommand(t *testing.T, cmd interface {
 // TestAddAPIScaffoldCompilesAndRegisters follows `forge add app --example`,
 // `forge generate` and `forge add api`: the scaffolded viewset must compile
 // and pass Router.Register's configuration check. The api.go.tmpl template
-// gets the same treatment in a second app.
+// gets the same treatment in a second app. The resource name has a dash, so
+// the Register function name must be converted to a valid identifier while the
+// URL keeps the dash (#294).
 func TestAddAPIScaffoldCompilesAndRegisters(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds a scaffolded project")
@@ -57,16 +59,16 @@ func TestAddAPIScaffoldCompilesAndRegisters(t *testing.T) {
 	// forge add api appends a viewset to app/blog/api.go.
 	runProjectCommand(t, addAPI, func() *core.Context {
 		return &core.Context{Cmd: addAPI.Definition()}
-	}, []string{"--app", "blog", "--model", "Example"}, []string{"examples"})
+	}, []string{"--app", "blog", "--model", "Example"}, []string{"blog-posts"})
 
 	// The embedded api.go.tmpl renders a viewset into app/catalog.
 	rendered, err := templates.RenderTemplate("api.go.tmpl", templates.TemplateData{
-		AppName: "catalog", ModelName: "Example", ResourceName: "examples",
+		AppName: "catalog", ModelName: "Example", ResourceName: "blog-posts",
 	})
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(projectPath, "app", "catalog", "api_examples.go"), rendered, 0o644))
 
-	for app, register := range map[string]string{"blog": "RegisterExamplesAPI", "catalog": "RegisterexamplesAPI"} {
+	for app, register := range map[string]string{"blog": "RegisterBlogPostsAPI", "catalog": "RegisterBlogPostsAPI"} {
 		require.NoError(t, os.WriteFile(filepath.Join(projectPath, "app", app, "api_scaffold_test.go"), []byte(`package `+app+`
 
 import (
@@ -82,7 +84,7 @@ func TestScaffoldedAPIRegisters(t *testing.T) {
 	router := server.NewRouter()
 	`+register+`(router)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/examples/", strings.NewReader(`+"`"+`{"name":"x","bogus":"typo"}`+"`"+`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/blog-posts/", strings.NewReader(`+"`"+`{"name":"x","bogus":"typo"}`+"`"+`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)

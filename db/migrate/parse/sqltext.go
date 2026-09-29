@@ -56,12 +56,35 @@ func isSpace(c byte) bool {
 // defaultExpression returns the expression after the DEFAULT keyword of a
 // column definition, or false when it has none.
 func defaultExpression(s string) (string, bool) {
+	start, end, ok := defaultSpan(s)
+	if !ok {
+		return "", false
+	}
+	return s[start:end], true
+}
+
+// maskedClauses returns the clauses of a column definition after its type
+// with quoted text and the default expression blanked out, so keyword checks
+// match neither a literal such as 'NOT NULL' nor an expression default, and
+// the default expression, if any.
+func maskedClauses(s string) (masked string, defaultExpr string, hasDefault bool) {
+	masked = maskQuoted(s)
+	start, end, ok := defaultSpan(s)
+	if !ok {
+		return masked, "", false
+	}
+	return masked[:start] + strings.Repeat(" ", end-start) + masked[end:], s[start:end], true
+}
+
+// defaultSpan returns the byte range of the expression after the DEFAULT
+// keyword of a column definition, or false when it has none.
+func defaultSpan(s string) (int, int, bool) {
 	masked := maskQuoted(s)
 	upper := strings.ToUpper(masked)
 	for from := 0; ; {
 		idx := strings.Index(upper[from:], "DEFAULT")
 		if idx < 0 {
-			return "", false
+			return 0, 0, false
 		}
 		start := from + idx
 		end := start + len("DEFAULT")
@@ -72,35 +95,107 @@ func defaultExpression(s string) (string, bool) {
 		if end >= len(s) || !isSpace(s[end]) {
 			continue
 		}
-		return readExpression(strings.TrimLeft(s[end:], " \t\r\n\f\v")), true
+		for end < len(s) && isSpace(s[end]) {
+			end++
+		}
+		return end, end + len(readExpression(s[end:])), true
 	}
 }
 
-// readExpression returns the SQL expression at the start of s: a quoted
-// literal, a parenthesized expression or a token such as now() or 1.5, with
-// any suffix up to the next space, comma or semicolon outside quotes and
-// parentheses.
+// columnConstraintKeywords end a column default: they start the next clause
+// of a column definition. NOT ends it only when NULL follows.
+var columnConstraintKeywords = map[string]bool{
+	"NULL": true, "UNIQUE": true, "PRIMARY": true, "CHECK": true, "REFERENCES": true,
+	"GENERATED": true, "COLLATE": true, "CONSTRAINT": true,
+}
+
+// readExpression returns the SQL expression at the start of s, such as a
+// quoted literal, a function call, a cast ('{}'::jsonb) or an operator
+// expression ('x' || 'y'). It ends before a comma, a semicolon or an
+// unbalanced closing parenthesis, or before a column-constraint keyword (NOT
+// NULL, NULL, UNIQUE, PRIMARY, CHECK, REFERENCES, GENERATED, COLLATE,
+// CONSTRAINT), outside quotes and parentheses. Trailing spaces are not part of
+// it.
 func readExpression(s string) string {
 	depth := 0
+	end := 0
+	// caseDepth counts open CASE ... END blocks, inside which NULL and NOT are
+	// operands (THEN NULL), not column constraints. prev and prev2 are the
+	// previous two words, so IS NULL and IS NOT NULL continue the expression.
+	caseDepth := 0
+	prev, prev2 := "", ""
 	for i := 0; i < len(s); {
 		c := s[i]
 		switch {
 		case isQuote(c):
 			i = skipQuoted(s, i)
+			end = i
 			continue
 		case c == '(':
 			depth++
 		case c == ')':
 			if depth == 0 {
-				return s[:i]
+				return s[:end]
 			}
 			depth--
-		case depth == 0 && (c == ',' || c == ';' || isSpace(c)):
-			return s[:i]
+		case depth == 0 && (c == ',' || c == ';'):
+			return s[:end]
+		case depth == 0 && isIdentifierByte(c) && (i == 0 || !isIdentifierByte(s[i-1])):
+			j := i
+			for j < len(s) && isIdentifierByte(s[j]) {
+				j++
+			}
+			word := strings.ToUpper(s[i:j])
+			// The expression's first word is never a keyword that ends it,
+			// so DEFAULT NULL reads as NULL.
+			if end > 0 && caseDepth == 0 && !continuesOperand(word, prev, prev2, s[:i]) &&
+				endsExpression(word, s[j:]) {
+				return s[:end]
+			}
+			switch {
+			case word == "CASE":
+				caseDepth++
+			case word == "END" && caseDepth > 0:
+				caseDepth--
+			}
+			prev2, prev = prev, word
+			i = j
+			end = i
+			continue
 		}
 		i++
+		if !isSpace(c) {
+			end = i
+		}
 	}
-	return s
+	return s[:end]
+}
+
+// continuesOperand reports whether NULL or NOT at this point is part of the
+// expression: after IS (x IS NULL, x IS NOT NULL), after IS NOT, or right
+// after an operator such as = or ||.
+func continuesOperand(word, prev, prev2, before string) bool {
+	if word != "NULL" && word != "NOT" {
+		return false
+	}
+	if prev == "IS" || (word == "NULL" && prev == "NOT" && prev2 == "IS") {
+		return true
+	}
+	trimmed := strings.TrimRight(before, " \t\r\n\f\v")
+	if trimmed == "" {
+		return false
+	}
+	return strings.ContainsRune("=<>!+-*/%|&^~(,", rune(trimmed[len(trimmed)-1]))
+}
+
+// endsExpression reports whether word, followed by rest, starts a column
+// constraint rather than continuing an expression.
+func endsExpression(word, rest string) bool {
+	if word == "NOT" {
+		next := strings.TrimLeft(rest, " \t\r\n\f\v")
+		return len(next) >= 4 && strings.EqualFold(next[:4], "NULL") && (len(next) == 4 || !isIdentifierByte(next[4]))
+	}
+	return columnConstraintKeywords[word]
 }
 
 // unquoteLiteral returns the value of a single-quoted SQL string literal, or

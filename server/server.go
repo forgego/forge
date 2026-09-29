@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	stdlog "log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/forgego/forge/config"
 	"github.com/forgego/forge/log"
+	"github.com/forgego/forge/netutil"
 	"github.com/gorilla/csrf"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
@@ -35,6 +37,14 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 	}
 	if settings == nil {
 		return nil, fmt.Errorf("server settings are nil")
+	}
+
+	// Client IP resolution (rate limiting, admin login lockout) honors
+	// forwarding headers only from these peers. The list is process-wide and
+	// the setting is its source of truth: an empty setting trusts no proxy,
+	// even if an earlier server in this process configured some.
+	if err := netutil.SetTrustedProxies(settings.Server.TrustedProxies); err != nil {
+		return nil, fmt.Errorf("invalid server.trusted_proxies: %w", err)
 	}
 
 	// Create router
@@ -102,8 +112,11 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 		router.Get(settings.Server.MetricsPath, MetricsHandler())
 	}
 
-	// Register server info endpoint
-	router.Get("/info", ServerInfoHandler(settings))
+	// The info endpoint discloses version, environment and the debug flag,
+	// so it is opt-in (server.info_endpoint).
+	if settings.Server.InfoEndpoint {
+		router.Get("/info", ServerInfoHandler(settings))
+	}
 
 	// Serve static files if configured
 	if settings.Server.StaticFilesPath != "" {
@@ -143,6 +156,7 @@ func (s *Server) Start() error {
 	if err := s.validateProductionSecrets(); err != nil {
 		return err
 	}
+	s.warnEphemeralSecrets()
 	if s.logger != nil {
 		s.logger.Info("Starting server",
 			zap.String("address", s.Addr),
@@ -200,6 +214,22 @@ func (s *Server) serveUntil(ctx context.Context, onDone func()) error {
 	return <-serverErr
 }
 
+// warnEphemeralSecrets reports each security setting that holds a generated
+// ephemeral value. It runs when the server starts rather than when the config
+// loads, so CLI commands such as forge generate do not print it.
+func (s *Server) warnEphemeralSecrets() {
+	if s == nil || s.config == nil {
+		return
+	}
+	for _, warning := range s.config.SecretWarnings() {
+		if s.logger != nil {
+			s.logger.Warn(warning)
+		} else {
+			stdlog.Printf("forge/server: WARNING: %s", warning)
+		}
+	}
+}
+
 // isProductionEnv reports whether app.env names production. Secure cookies
 // and production secret validation must agree on this, so both use it.
 func isProductionEnv(settings *config.Settings) bool {
@@ -242,10 +272,19 @@ func (s *Server) validateProductionSecrets() error {
 			missing = append(missing, key)
 		}
 	}
-	if len(missing) == 0 {
+	var problems []string
+	if len(missing) > 0 {
+		problems = append(problems, "production requires explicit "+strings.Join(missing, ", "))
+	}
+	// Debug mode enables the profiling routes (with server.enable_profiling),
+	// so it is rejected in production like a missing secret.
+	if s.settings.App.Debug {
+		problems = append(problems, "production requires app.debug=false")
+	}
+	if len(problems) == 0 {
 		return nil
 	}
-	return fmt.Errorf("production requires explicit %s", strings.Join(missing, ", "))
+	return errors.New(strings.Join(problems, "; "))
 }
 
 // Shutdown gracefully shuts down the server

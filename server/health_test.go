@@ -1,11 +1,15 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	stdlog "log"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -77,7 +81,7 @@ func TestHealthHandlers(t *testing.T) {
 
 		checks, ok := resp["checks"].(map[string]interface{})
 		assert.True(t, ok)
-		assert.Equal(t, "unhealthy: connection failed", checks["fail_test"])
+		assert.Equal(t, "unhealthy", checks["fail_test"])
 	})
 
 	t.Run("ReadinessHandler with passing checker", func(t *testing.T) {
@@ -184,4 +188,63 @@ func TestCheckHealthMethod(t *testing.T) {
 	err := fn.CheckHealth(context.Background())
 	assert.NoError(t, err)
 	assert.True(t, called)
+}
+
+// Regression for #290: a failing check's error text (which may carry DSNs,
+// hosts or driver details) must not reach the public health responses, but
+// must still be logged for operators.
+func TestHealthResponsesDoNotLeakCheckErrors(t *testing.T) {
+	globalRegistry.mu.Lock()
+	saved := globalRegistry.checkers
+	globalRegistry.checkers = make(map[string]HealthChecker)
+	globalRegistry.mu.Unlock()
+	t.Cleanup(func() {
+		globalRegistry.mu.Lock()
+		globalRegistry.checkers = saved
+		globalRegistry.mu.Unlock()
+	})
+
+	const secret = "dial tcp 10.1.2.3:5432: password=hunter2"
+	RegisterHealthCheckFunc("database", func(ctx context.Context) error {
+		return errors.New(secret)
+	})
+
+	var logBuf bytes.Buffer
+	prevOut, prevFlags := stdlog.Writer(), stdlog.Flags()
+	stdlog.SetOutput(&logBuf)
+	stdlog.SetFlags(0)
+	t.Cleanup(func() {
+		stdlog.SetOutput(prevOut)
+		stdlog.SetFlags(prevFlags)
+	})
+
+	cases := []struct {
+		path, status string
+		handler      http.HandlerFunc
+	}{
+		{"/health", "unhealthy", HealthHandler()},
+		{"/health/ready", "not ready", ReadinessHandler()},
+	}
+	for _, tc := range cases {
+		t.Run(tc.path, func(t *testing.T) {
+			logBuf.Reset()
+			w := httptest.NewRecorder()
+			tc.handler(w, httptest.NewRequest(http.MethodGet, tc.path, nil))
+
+			assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+			assert.NotContains(t, w.Body.String(), "hunter2")
+			assert.NotContains(t, w.Body.String(), "10.1.2.3")
+
+			var resp struct {
+				Status string            `json:"status"`
+				Checks map[string]string `json:"checks"`
+			}
+			assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+			assert.Equal(t, tc.status, resp.Status)
+			assert.Equal(t, tc.status, resp.Checks["database"])
+
+			assert.Contains(t, logBuf.String(), `"database"`)
+			assert.Contains(t, logBuf.String(), strconv.Quote(secret))
+		})
+	}
 }

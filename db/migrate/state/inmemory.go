@@ -37,17 +37,7 @@ func (s *InMemoryState) Apply(changes []core.Change) error {
 		case *core.DropTable:
 			delete(s.state.Tables, c.Table)
 		case *core.RenameTable:
-			if table, exists := s.state.Tables[c.OldName]; exists {
-				// If new name already exists, delete it first (rename overwrites)
-				if c.OldName != c.NewName {
-					delete(s.state.Tables, c.NewName)
-				}
-				table.Name = c.NewName
-				s.state.Tables[c.NewName] = table
-				if c.OldName != c.NewName {
-					delete(s.state.Tables, c.OldName)
-				}
-			}
+			s.applyRenameTable(c)
 		case *core.AddColumn:
 			if err := s.applyAddColumn(c); err != nil {
 				return err
@@ -65,13 +55,7 @@ func (s *InMemoryState) Apply(changes []core.Change) error {
 				return err
 			}
 		case *core.RenameColumn:
-			if table, exists := s.state.Tables[c.Table]; exists {
-				if col, exists := table.Columns[c.OldName]; exists {
-					col.Name = c.NewName
-					table.Columns[c.NewName] = col
-					delete(table.Columns, c.OldName)
-				}
-			}
+			s.applyRenameColumn(c)
 		case *core.AddIndex:
 			if err := s.applyAddIndex(c); err != nil {
 				return err
@@ -220,6 +204,10 @@ func (s *InMemoryState) applyModifyColumn(c *core.ModifyColumn) error {
 // TYPE clause replaces.
 var typeOptionKeys = []string{core.SQLTypeOption, "db_type", "max_length", "max_digits", "decimal_places"}
 
+// defaultOptionKeys are the column options that render its default, which a
+// SET DEFAULT or DROP DEFAULT clause replaces.
+var defaultOptionKeys = []string{"db_default", "auto_now", "auto_now_add"}
+
 func (s *InMemoryState) applyAlterColumn(c *core.AlterColumn) error {
 	table, exists := s.state.Tables[c.Table]
 	if !exists {
@@ -243,15 +231,23 @@ func (s *InMemoryState) applyAlterColumn(c *core.AlterColumn) error {
 			options[key] = value
 		}
 	}
-	col.Options = options
-	if c.NotNull != nil {
-		col.Required = *c.NotNull
+	if c.SetDefault || c.DropDefault {
+		// A default replaces whatever set the previous one, literal,
+		// expression or auto timestamp.
+		for _, key := range defaultOptionKeys {
+			delete(options, key)
+		}
+		col.Default = nil
 	}
 	if c.SetDefault {
 		col.Default = c.Default
+		if c.DBDefault != "" {
+			options["db_default"] = c.DBDefault
+		}
 	}
-	if c.DropDefault {
-		col.Default = nil
+	col.Options = options
+	if c.NotNull != nil {
+		col.Required = *c.NotNull
 	}
 	return nil
 }

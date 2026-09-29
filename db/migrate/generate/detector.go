@@ -498,10 +498,11 @@ func (d *Detector) detectForeignKeyChanges(tableName string, current, previous [
 					continue
 				}
 				changes = append(changes, &core.ModifyForeignKey{
-					Table:       tableName,
-					OldFK:       prevRel,
-					NewFK:       rel,
-					TargetTable: targetTable,
+					Table:          tableName,
+					OldFK:          prevRel,
+					NewFK:          rel,
+					TargetTable:    targetTable,
+					OldTargetTable: resolveTargetTable(prevRel.To, allDefs),
 				})
 			}
 		}

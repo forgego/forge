@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/forgego/forge/admin/core"
+	"github.com/forgego/forge/netutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -273,4 +274,72 @@ func TestHandleLogin_RemoteAddrFallback(t *testing.T) {
 	rec := httptest.NewRecorder()
 	router.handleLogin(rec, req)
 	require.Equal(t, http.StatusTooManyRequests, rec.Code)
+}
+
+// Regression for #290: behind a trusted reverse proxy the IP lockout key is
+// the forwarded client address, so one client's failures do not lock out
+// every other client sharing the proxy. Forwarding headers from an untrusted
+// peer are ignored, so they cannot be used to dodge the lockout.
+func TestHandleLogin_LockoutUsesTrustedProxyClientIP(t *testing.T) {
+	t.Setenv("FORGE_ADMIN_USERNAME", "admin")
+	t.Setenv("FORGE_ADMIN_PASSWORD", "secret")
+	prev := netutil.TrustedProxies()
+	require.NoError(t, netutil.SetTrustedProxies([]string{"10.0.0.0/8"}))
+	t.Cleanup(func() {
+		entries := make([]string, 0, len(prev))
+		for _, p := range prev {
+			entries = append(entries, p.String())
+		}
+		require.NoError(t, netutil.SetTrustedProxies(entries))
+	})
+
+	login := func(router *Router, peer, xff, user, pass string) int {
+		req := httptest.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString(
+			fmt.Sprintf(`{"username":%q,"password":%q}`, user, pass)))
+		req.RemoteAddr = peer
+		if xff != "" {
+			req.Header.Set("X-Forwarded-For", xff)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		router.handleLogin(rec, req)
+		return rec.Code
+	}
+
+	t.Run("trusted proxy: other clients are not locked out", func(t *testing.T) {
+		router := NewRouter(core.NewRegistry())
+		// One attacker behind the proxy exhausts its IP budget with
+		// different usernames so only the IP key accumulates.
+		for i := 0; i < 5; i++ {
+			code := login(router, "10.0.0.5:4000", "203.0.113.7", fmt.Sprintf("guess%d", i), "wrong")
+			require.Equal(t, http.StatusUnauthorized, code)
+		}
+		assert.Equal(t, http.StatusTooManyRequests,
+			login(router, "10.0.0.5:4000", "203.0.113.7", "guess9", "wrong"),
+			"the attacking client is locked out")
+		assert.Equal(t, http.StatusOK,
+			login(router, "10.0.0.5:4001", "198.51.100.9", "admin", "secret"),
+			"a different client behind the same proxy must not share the lockout")
+	})
+
+	t.Run("untrusted peer: spoofed header is ignored", func(t *testing.T) {
+		router := NewRouter(core.NewRegistry())
+		for i := 0; i < 5; i++ {
+			code := login(router, "203.0.113.50:4000", fmt.Sprintf("192.0.2.%d", i+1), fmt.Sprintf("guess%d", i), "wrong")
+			require.Equal(t, http.StatusUnauthorized, code)
+		}
+		assert.Equal(t, http.StatusTooManyRequests,
+			login(router, "203.0.113.50:4000", "192.0.2.99", "admin", "secret"),
+			"rotating X-Forwarded-For from an untrusted peer must not reset the IP key")
+	})
+
+	t.Run("per-user key still applies across clients", func(t *testing.T) {
+		router := NewRouter(core.NewRegistry())
+		for i := 0; i < 5; i++ {
+			code := login(router, "10.0.0.5:4000", fmt.Sprintf("198.51.100.%d", i+1), "admin", "wrong")
+			require.Equal(t, http.StatusUnauthorized, code)
+		}
+		assert.Equal(t, http.StatusTooManyRequests,
+			login(router, "10.0.0.5:4000", "198.51.100.200", "admin", "secret"))
+	})
 }

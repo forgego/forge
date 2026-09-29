@@ -142,3 +142,42 @@ func TestProductionEnvSecureCookiesIgnoreCase(t *testing.T) {
 		})
 	}
 }
+
+// Regression for #290: app.debug=true is rejected in production the same way
+// missing secrets are, and is still allowed outside production.
+func TestProductionRejectsDebug(t *testing.T) {
+	withCleanSecretEnv(t)
+	cfg := config.NewConfig()
+
+	settings := productionSettingsWith(secureTestSecurity())
+	settings.App.Debug = true
+	srv, err := NewServer(cfg, settings, nil)
+	require.NoError(t, err)
+	err = srv.validateProductionSecrets()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "app.debug")
+	require.Error(t, srv.Start(), "Start must refuse to listen with debug in production")
+
+	settings.App.Debug = false
+	srv, err = NewServer(cfg, settings, nil)
+	require.NoError(t, err)
+	require.NoError(t, srv.validateProductionSecrets())
+
+	dev := &config.Settings{App: config.AppSettings{Env: "development", Debug: true}}
+	srv, err = NewServer(cfg, dev, nil)
+	require.NoError(t, err)
+	require.NoError(t, srv.validateProductionSecrets())
+}
+
+// Both problems are reported together so an operator fixes them in one pass.
+func TestProductionReportsSecretsAndDebugTogether(t *testing.T) {
+	withCleanSecretEnv(t)
+	settings := productionSettingsWith(config.SecuritySettings{})
+	settings.App.Debug = true
+	srv, err := NewServer(config.NewConfig(), settings, nil)
+	require.NoError(t, err)
+	err = srv.validateProductionSecrets()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "security.secret_key")
+	require.Contains(t, err.Error(), "app.debug")
+}

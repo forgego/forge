@@ -254,56 +254,171 @@ func listSourceType(qsType reflect.Type) reflect.Type {
 	return out[0]
 }
 
+// List-chain method requirements. Count and All are required on the types
+// List calls them on; the chain methods are optional, but when present they
+// must be callable the way List calls them.
+const (
+	countWant   = "Count(context.Context) (int64, error)"
+	allWant     = "All(context.Context) ([]T, error)"
+	filterWant  = "Filter(orm.Expression) T"
+	orderByWant = "OrderBy(...string) T"
+)
+
+// listMethodError reports whether t's method name can be called the way List
+// calls it. Count and All are required; Offset, Limit, Filter and OrderBy are
+// optional and only checked when present.
+func listMethodError(t reflect.Type, name string) error {
+	in, out, variadic, ok := methodSignature(t, name)
+	switch name {
+	case "Count":
+		if !ok {
+			return fmt.Errorf("missing %s, needed by list", countWant)
+		}
+		if len(in) != 1 || variadic || !acceptsContext(in[0]) || len(out) != 2 ||
+			(out[0] != int64Type && out[0].Kind() != reflect.Interface) || !isErrorResult(out[1]) {
+			return methodMismatch("Count", countWant, "list", in, out, variadic)
+		}
+	case "All":
+		if !ok {
+			return fmt.Errorf("missing %s, needed by list", allWant)
+		}
+		if len(in) != 1 || variadic || !acceptsContext(in[0]) || len(out) != 2 ||
+			(out[0].Kind() != reflect.Slice && out[0].Kind() != reflect.Interface) || !isErrorResult(out[1]) {
+			return methodMismatch("All", allWant, "list", in, out, variadic)
+		}
+	case "Offset", "Limit":
+		if ok && (len(in) != 1 || variadic || !intType.AssignableTo(in[0]) || len(out) == 0) {
+			return methodMismatch(name, name+"(int) T", "list pagination", in, out, variadic)
+		}
+	case "Filter":
+		if ok && (len(in) != 1 || variadic || in[0].Kind() != reflect.Interface ||
+			!expressionInterfaceType.Implements(in[0]) || len(out) == 0) {
+			return methodMismatch("Filter", filterWant, "list filtering", in, out, variadic)
+		}
+	case "OrderBy":
+		if ok && (len(in) != 1 || !variadic || !stringType.AssignableTo(in[0].Elem()) || len(out) == 0) {
+			return methodMismatch("OrderBy", orderByWant, "list ordering", in, out, variadic)
+		}
+	}
+	return nil
+}
+
+// isDynamicType reports whether values of t only reveal their methods at run
+// time: an interface type whose method set does not include the list methods.
+func isDynamicType(t reflect.Type) bool {
+	return t.Kind() == reflect.Interface
+}
+
+// listChainNode is a type List may call methods on, and how it was reached.
+type listChainNode struct {
+	t   reflect.Type
+	via string // e.g. "QuerySet().Filter()"; empty for the queryset itself
+}
+
+func (n listChainNode) label() string {
+	if n.via == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s result %s: ", n.via, n.t)
+}
+
+// chainStep returns the node a present, callable chain method name leads to.
+// It reports false when the method is absent or invalid (reported elsewhere),
+// or when its result type is only known per request.
+func chainStep(n listChainNode, name string) (listChainNode, bool) {
+	_, out, _, ok := methodSignature(n.t, name)
+	if !ok || listMethodError(n.t, name) != nil || isDynamicType(out[0]) {
+		return listChainNode{}, false
+	}
+	via := name + "()"
+	if n.via != "" {
+		via = n.via + "." + via
+	}
+	return listChainNode{t: out[0], via: via}, true
+}
+
+// checkListSource follows the calls List makes: Filter (repeatedly), then
+// OrderBy, then Count, then Offset and Limit, then All. Each call may return a
+// different type, so every type reachable with a static result type is
+// checked for the methods List calls on it. A result declared as an interface
+// is resolved per request, where a mismatch answers 500 (see
+// BaseViewSet.listConfigurationError) instead of panicking.
 func checkListSource(qsType reflect.Type) error {
 	source := listSourceType(qsType)
-	if source.Kind() == reflect.Interface && source.NumMethod() == 0 {
+	if isDynamicType(source) && source.NumMethod() == 0 {
 		// An untyped QuerySet() result can only be checked per request.
 		return nil
 	}
-	label := ""
+	root := listChainNode{t: source}
 	if source != qsType {
-		label = fmt.Sprintf("QuerySet() result %s: ", source)
+		root.via = "QuerySet()"
 	}
+
 	var problems []string
-	add := func(err error) {
-		if err != nil {
-			problems = append(problems, label+err.Error())
+	reported := map[string]bool{}
+	add := func(n listChainNode, err error) {
+		if err == nil {
+			return
+		}
+		message := n.label() + err.Error()
+		if !reported[message] {
+			reported[message] = true
+			problems = append(problems, message)
+		}
+	}
+	checkedChain := map[reflect.Type]bool{}
+	checkChainMethods := func(n listChainNode) {
+		if checkedChain[n.t] {
+			return
+		}
+		checkedChain[n.t] = true
+		for _, name := range []string{"Offset", "Limit", "Filter", "OrderBy"} {
+			add(n, listMethodError(n.t, name))
 		}
 	}
 
-	const countWant = "Count(context.Context) (int64, error)"
-	if in, out, variadic, ok := methodSignature(source, "Count"); !ok {
-		add(fmt.Errorf("missing %s, needed by list", countWant))
-	} else if len(in) != 1 || variadic || !acceptsContext(in[0]) || len(out) != 2 ||
-		(out[0] != int64Type && out[0].Kind() != reflect.Interface) || !isErrorResult(out[1]) {
-		add(methodMismatch("Count", countWant, "list", in, out, variadic))
+	// Filter is applied once per query parameter, each time to the previous result.
+	filtered := []listChainNode{root}
+	seen := map[reflect.Type]bool{root.t: true}
+	for i := 0; i < len(filtered); i++ {
+		checkChainMethods(filtered[i])
+		if next, ok := chainStep(filtered[i], "Filter"); ok && !seen[next.t] {
+			seen[next.t] = true
+			filtered = append(filtered, next)
+		}
 	}
-
-	const allWant = "All(context.Context) ([]T, error)"
-	if in, out, variadic, ok := methodSignature(source, "All"); !ok {
-		add(fmt.Errorf("missing %s, needed by list", allWant))
-	} else if len(in) != 1 || variadic || !acceptsContext(in[0]) || len(out) != 2 ||
-		(out[0].Kind() != reflect.Slice && out[0].Kind() != reflect.Interface) || !isErrorResult(out[1]) {
-		add(methodMismatch("All", allWant, "list", in, out, variadic))
+	// OrderBy is applied at most once, after filtering.
+	counted := append([]listChainNode(nil), filtered...)
+	for _, n := range filtered {
+		if next, ok := chainStep(n, "OrderBy"); ok && !seen[next.t] {
+			seen[next.t] = true
+			counted = append(counted, next)
+		}
 	}
-
-	// Optional chain methods: absent is fine, present must be callable.
-	for _, name := range []string{"Offset", "Limit"} {
-		if in, out, variadic, ok := methodSignature(source, name); ok {
-			if len(in) != 1 || variadic || !intType.AssignableTo(in[0]) || len(out) == 0 {
-				add(methodMismatch(name, name+"(int) T", "list pagination", in, out, variadic))
+	allChecked := map[reflect.Type]bool{}
+	for _, n := range counted {
+		checkChainMethods(n)
+		add(n, listMethodError(n.t, "Count"))
+		paged := n
+		if _, _, _, ok := methodSignature(paged.t, "Offset"); ok {
+			next, static := chainStep(paged, "Offset")
+			if !static {
+				continue
 			}
+			paged = next
+			checkChainMethods(paged)
 		}
-	}
-	if in, out, variadic, ok := methodSignature(source, "Filter"); ok {
-		if len(in) != 1 || variadic || in[0].Kind() != reflect.Interface ||
-			!expressionInterfaceType.Implements(in[0]) || len(out) == 0 {
-			add(methodMismatch("Filter", "Filter(orm.Expression) T", "list filtering", in, out, variadic))
+		if _, _, _, ok := methodSignature(paged.t, "Limit"); ok {
+			next, static := chainStep(paged, "Limit")
+			if !static {
+				continue
+			}
+			paged = next
+			checkChainMethods(paged)
 		}
-	}
-	if in, out, variadic, ok := methodSignature(source, "OrderBy"); ok {
-		if len(in) != 1 || !variadic || !stringType.AssignableTo(in[0].Elem()) || len(out) == 0 {
-			add(methodMismatch("OrderBy", "OrderBy(...string) T", "list ordering", in, out, variadic))
+		if !allChecked[paged.t] {
+			allChecked[paged.t] = true
+			add(paged, listMethodError(paged.t, "All"))
 		}
 	}
 	if len(problems) == 0 {

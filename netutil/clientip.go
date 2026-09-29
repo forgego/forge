@@ -17,6 +17,8 @@ func init() {
 
 // SetTrustedProxies configures which peers may supply X-Forwarded-For / X-Real-IP.
 // Accepts CIDRs ("10.0.0.0/8") or bare IPs ("127.0.0.1"). Empty = trust no one (default).
+// server.NewServer replaces the list with the server.trusted_proxies setting,
+// so configure proxies through that setting rather than calling this directly.
 func SetTrustedProxies(entries []string) error {
 	prefixes := make([]netip.Prefix, 0, len(entries))
 	for _, entry := range entries {

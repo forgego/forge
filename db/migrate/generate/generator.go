@@ -163,6 +163,14 @@ func (g *MigrationGenerator) GenerateMigrations(name string) error {
 		)
 	}
 
+	// A change set that renders no SQL at all is no change to the database,
+	// so no migration pair is written and the CLI reports "No changes
+	// detected". Builders fail on a change they cannot express instead of
+	// rendering nothing, so this does not hide a real change.
+	if strings.TrimSpace(upSQL) == "" && strings.TrimSpace(downSQL) == "" {
+		return nil
+	}
+
 	// Get next version
 	version, err := getNextVersion(g.migrationsDir)
 	if err != nil {
