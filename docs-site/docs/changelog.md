@@ -247,9 +247,11 @@ the change.
   `Site.UseStores(ctx, "memory")` (or the new `Site.UseMemoryStores`) undoes
   an earlier `UseDatabaseStores`. `forge migrate up --dry-run` rejects an
   invalid `server.stores` like the real run does.
-- The admin create endpoint stores an explicit `null` as `NULL` instead of
-  the field's schema `Default`, and a sent list or map replaces the default
-  instead of being merged into it.
+- The admin create endpoint no longer replaces an explicit `null` with the
+  field's schema `Default`: a nullable (pointer) field stores `NULL`, and a
+  non-pointer field stores its zero value (`false`, `0`, `""`), as it did
+  before defaults were applied on create. A sent list or map replaces the
+  default instead of being merged into it.
 - Admin field metadata carries `has_default`, set for any schema `Default`
   including a callable one such as `time.Now`. The create form no longer
   requires such a field in the browser, since the server fills it.

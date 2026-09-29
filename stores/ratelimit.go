@@ -67,7 +67,8 @@ func (s *Stores) RateLimiter(name string, limit int, window time.Duration) *Rate
 }
 
 // WithTimeout sets how long one check may wait for the database; zero or
-// less means only the caller's context bounds it. The default is
+// less means only the caller's context bounds it, so Allow, which has no
+// caller context, may then wait indefinitely. The default is
 // DefaultQueryTimeout.
 func (l *RateLimiter) WithTimeout(d time.Duration) *RateLimiter {
 	l.timeout = d
