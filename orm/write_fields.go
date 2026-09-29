@@ -34,7 +34,7 @@ import (
 //     is nullable and has no DEFAULT clause, so it stores NULL, as before
 //     #291 (and NULLs never collide on a multi-column unique constraint);
 //   - an empty string on a field whose column is not text (UUID, JSON,
-//     decimal, date and time, or a custom DBType), where "" is not a valid
+//     decimal, date and time, or a non-text custom DBType), where "" is not a valid
 //     value; the column default or NULL is stored instead.
 //
 // Every other column is written: required fields always, and false, 0 and ""
@@ -75,6 +75,12 @@ func insertOmitsZeroValue(field schema.Field, value interface{}, fkColumns map[s
 // textColumn reports whether "" is a valid value for field's column.
 func textColumn(field schema.Field) bool {
 	if field.DBType != "" {
+		dbType := strings.ToUpper(strings.TrimSpace(field.DBType))
+		for _, prefix := range []string{"TEXT", "VARCHAR", "CHAR", "CITEXT"} {
+			if strings.HasPrefix(dbType, prefix) {
+				return true
+			}
+		}
 		return false
 	}
 	switch field.Type {

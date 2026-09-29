@@ -80,3 +80,20 @@ func TestRenameColumnRewritesGeneratedExpressions(t *testing.T) {
 		t.Errorf("generated_expr %q, want %q", expr, "unit_price * 2")
 	}
 }
+
+// Type casts, function names and EXTRACT fields that share a renamed
+// column's name are not column references and stay as they are.
+func TestRenameIdentifierSkipsTypesFunctionsAndExtractFields(t *testing.T) {
+	for _, tc := range []struct{ expr, old, new, want string }{
+		{"ts::date", "date", "event_date", "ts::date"},
+		{"date + 1", "date", "event_date", "event_date + 1"},
+		{"EXTRACT(year FROM ts)", "year", "yr", "EXTRACT(year FROM ts)"},
+		{"extract ( year from ts ) + year", "year", "yr", "extract ( year from ts ) + yr"},
+		{"lower(name) || name", "lower", "lc", "lower(name) || name"},
+		{"coalesce(price, 0) * 2", "price", "unit_price", "coalesce(unit_price, 0) * 2"},
+	} {
+		if got := renameIdentifier(tc.expr, tc.old, tc.new); got != tc.want {
+			t.Errorf("renameIdentifier(%q, %q, %q) = %q, want %q", tc.expr, tc.old, tc.new, got, tc.want)
+		}
+	}
+}

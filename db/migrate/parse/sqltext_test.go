@@ -31,6 +31,8 @@ func TestDefaultExpression(t *testing.T) {
 		{column: ` BOOLEAN DEFAULT current_setting('a', true) IS NULL UNIQUE`, raw: "current_setting('a', true) IS NULL"},
 		{column: ` TEXT DEFAULT CASE WHEN true THEN CASE WHEN false THEN NULL END END NULL`, raw: "CASE WHEN true THEN CASE WHEN false THEN NULL END END"},
 		{column: ` TEXT DEFAULT 'x' NULL`, want: "x"},
+		{column: ` TEXT[] DEFAULT '{}'::text[] NOT NULL`, raw: "'{}'::text[]"},
+		{column: ` TEXT[] DEFAULT ARRAY[]::text[] NULL`, raw: "ARRAY[]::text[]"},
 	} {
 		field, err := NewTableParser().parseColumnDefinition(`"c"` + tc.column)
 		if err != nil {

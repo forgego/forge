@@ -185,8 +185,7 @@ func continuesOperand(word, prev, prev2, before string) bool {
 	if trimmed == "" {
 		return false
 	}
-	last := trimmed[len(trimmed)-1]
-	return !isIdentifierByte(last) && !isQuote(last) && last != ')'
+	return strings.ContainsRune("=<>!+-*/%|&^~(,", rune(trimmed[len(trimmed)-1]))
 }
 
 // endsExpression reports whether word, followed by rest, starts a column

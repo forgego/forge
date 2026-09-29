@@ -215,13 +215,19 @@ when:
 | Foreign key column | it is `0` or `""` (`NULL` instead of a reference to row 0) |
 | Unique, optional field | it is the zero value (`NULL`, so two blank rows do not collide) |
 | Optional field without a `Default` | it is the zero value (`NULL`, as the column is nullable and has no `DEFAULT`) |
-| UUID, JSON, decimal, date or time field, or one with a custom `DBType` | it is `""`, which is not a valid value for the column |
+| UUID, JSON, decimal, date or time field, or one with a non-text custom `DBType` | it is `""`, which is not a valid value for the column |
 
 Apart from the first three rows, a required field is always written, even when zero.
 So the explicit `false`, `0` or `""` that `Create` writes is the value of a
 required field or of a field with a `Default`, where omitting it would let the
 column default replace it. Use a pointer field such as `*string` to store an
 explicit `""` in an optional field without a `Default`.
+
+`BulkCreate` builds one `INSERT` for all rows, so every row must write the
+same columns: rows where one has a value and another leaves the same optional
+field at its zero value fail with "bulk insert requires consistent columns".
+Give such fields a pointer type or a `Default`, or insert those rows
+separately.
 
 `AutoNow` fields are set to the current time on every `Update`, `Save` and
 `UpdateFields`, both in the database and on the struct (`time.Time`,

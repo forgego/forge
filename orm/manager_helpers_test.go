@@ -303,3 +303,25 @@ func TestBuildInsertSQL_OptionalZeroWithoutDefaultStaysNull(t *testing.T) {
 	assert.Equal(t, []string{"review_id", "title"}, columns)
 	assert.Equal(t, []interface{}{int64(1), ""}, values)
 }
+
+type textDBTypeModel struct {
+	schema.BaseSchema
+	Code string `db:"code"`
+	Ref  string `db:"ref"`
+}
+
+func (textDBTypeModel) Fields() []schema.Field {
+	return []schema.Field{
+		schema.StringField("code", schema.DBType("CITEXT"), schema.Default("x")),
+		schema.StringField("ref", schema.DBType("inet"), schema.Default("127.0.0.1")),
+	}
+}
+
+// An explicit "" is written to a text-like custom DBType, but not to a
+// non-text one where it is not a valid value.
+func TestBuildInsertSQL_TextCustomDBTypeWritesEmptyString(t *testing.T) {
+	_, values, columns, err := BuildInsertSQL(textDBTypeModel{}, "text_dbtype")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"code"}, columns)
+	assert.Equal(t, []interface{}{""}, values)
+}

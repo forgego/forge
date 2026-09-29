@@ -140,7 +140,7 @@ func renameIdentifier(expr, old, new string) string {
 			for end < len(expr) && isIdentifierByte(expr[end]) {
 				end++
 			}
-			if expr[i:end] == old {
+			if expr[i:end] == old && !notColumnReference(expr, i, end) {
 				b.WriteString(new)
 			} else {
 				b.WriteString(expr[i:end])
@@ -152,6 +152,26 @@ func renameIdentifier(expr, old, new string) string {
 		}
 	}
 	return b.String()
+}
+
+// notColumnReference reports whether the word expr[start:end] is not a
+// column name: a type after ::, a function name before (, or the field of
+// EXTRACT(field FROM ...).
+func notColumnReference(expr string, start, end int) bool {
+	before := strings.TrimRight(expr[:start], " \t\r\n")
+	if strings.HasSuffix(before, "::") {
+		return true
+	}
+	after := strings.TrimLeft(expr[end:], " \t\r\n")
+	if strings.HasPrefix(after, "(") {
+		return true
+	}
+	if strings.HasSuffix(before, "(") && len(after) >= 4 && strings.EqualFold(after[:4], "FROM") &&
+		(len(after) == 4 || !isIdentifierByte(after[4])) {
+		fn := strings.TrimRight(before[:len(before)-1], " \t\r\n")
+		return len(fn) >= 7 && strings.EqualFold(fn[len(fn)-7:], "EXTRACT")
+	}
+	return false
 }
 
 func isIdentifierByte(c byte) bool {

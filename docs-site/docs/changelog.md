@@ -27,16 +27,16 @@ the change.
   next `makemigrations`, which would otherwise propose changing the column
   default to the quoted text (#296).
 - `Manager.Create`, `Save` and `BulkCreate` write explicit zero values
-  (`false`, `0`, `""`) on required fields and on fields with a schema
-  `Default`, instead of leaving the column out, so the column's `DEFAULT`
-  clause no longer replaces them. Code that relied on a `Default` filling a
+  (`false`, `0`, `""`) on fields with a schema `Default`, instead of leaving
+  the column out, so the column's `DEFAULT` clause no longer replaces them
+  (required fields were already written). Code that relied on a `Default` filling a
   field the struct left at zero must build the instance with `manager.New()`
   (or call `orm.ApplyDefaults`) first. The admin create endpoint now stores
   the zero value for a defaulted field the request omits; the public REST API
   still applies the schema `Default`. Optional fields without a `Default`,
   zero foreign keys, `nil` pointers, zero `time.Time` values, zero unique
   optional fields, zero `DBDefault` fields and `""` on non-text columns (UUID,
-  JSON, decimal, date and time, custom `DBType`) are still left to the
+  JSON, decimal, date and time, non-text custom `DBType`) are still left to the
   database, so they store `NULL` or the column default as before (#291).
 - `api.Router.Register` and `RegisterRoutes` panic when a viewset's data
   access is misconfigured, naming the resource and each missing operation.
