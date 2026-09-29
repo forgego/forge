@@ -120,6 +120,7 @@ func (c *StatusCommand) Execute(ctx *core.Context, args []string) error {
 	}
 
 	renderMigrationStatus(out, status, detailedStatus)
+	renderFrameworkStatus(cmdCtx, ctx.Config, database, out)
 
 	if verifyCheckErr != nil {
 		fmt.Fprintf(out, "Verification error: %v\n", verifyCheckErr)
