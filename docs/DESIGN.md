@@ -488,8 +488,10 @@ Design requirement: history must be opt-in and storage-agnostic.
 Current implementation: the interface (`core.HistoryManager`) is
 storage-agnostic, but history is not opt-in. An admin registered without a
 `HistoryManager` gets an in-memory one (`admin/core/admin.go`) that keeps the
-last 1000 entries per admin and loses them on restart. No durable
-implementation ships with Forge.
+last 1000 entries per admin and loses them on restart, unless the site uses
+database stores (`Site.UseDatabaseStores`, selected by `server.stores:
+database`): then it writes to `forge_admin_log` through
+`stores/adminstore.History`.
 
 ## 13. API framework design
 
@@ -626,7 +628,8 @@ those sources were deleted. They document behavior the code implements.
   missing, and enforces object-level `HasChange`/`HasDeletePermission`.
 - `ExecuteAction` enforces per-object `HasChangePermission` with skip
   reporting in `BulkActionResponse.Errors`.
-- Auth is bearer-token via an in-memory expiring session store;
+- Auth is bearer-token via an expiring token store (`rest.TokenStore`): in
+  memory by default, `forge_admin_tokens` with database stores;
   `/api/login` is public; credentials come from `FORGE_ADMIN_USERNAME` /
   `FORGE_ADMIN_PASSWORD` with constant-time compare and `401
   invalid_credentials` on failure.

@@ -68,11 +68,29 @@ test.describe('@core create, update and delete', () => {
     });
   });
 
+  test('prefills the create form with schema defaults and stores them untouched', async ({ adminPage: page, api, tag }) => {
+    // Category.is_active has Default(true) and sort_order Default(0).
+    await page.goto(adminURL('/categories/create'));
+    await expect(page.locator('#is_active')).toBeChecked();
+    await expect(page.locator('#sort_order')).toHaveValue('0');
+    await page.locator('#name').fill(`${tag} Shown`);
+    await page.locator('#slug').fill(`${tag}-shown`);
+    await page.getByTestId('submit-button').click();
+    await expect(page).toHaveURL(new RegExp(`${adminURL('/categories')}$`));
+
+    const { results } = await api.list('categories', { search: `${tag}-shown` });
+    expect(results).toHaveLength(1);
+    expect(results[0].is_active).toBe(true);
+  });
+
   test('stores an unchecked boolean as false, not the column default (#291)', async ({ adminPage: page, api, tag }) => {
-    // Category.is_active defaults to true; the form shows it unchecked.
+    // Category.is_active defaults to true, so the form starts checked; the
+    // operator unchecks it and false must be stored.
     await page.goto(adminURL('/categories/create'));
     await page.locator('#name').fill(`${tag} Hidden`);
     await page.locator('#slug').fill(`${tag}-hidden`);
+    await expect(page.locator('#is_active')).toBeChecked();
+    await page.locator('#is_active').uncheck();
     await expect(page.locator('#is_active')).not.toBeChecked();
     await page.getByTestId('submit-button').click();
     await expect(page).toHaveURL(new RegExp(`${adminURL('/categories')}$`));

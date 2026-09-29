@@ -24,6 +24,9 @@ type Admin[T any] struct {
 
 	// Internal
 	name string
+	// defaultHistory is true when the config left HistoryManager unset, so
+	// the site's shared history may replace the in-memory default.
+	defaultHistory bool
 }
 
 // NewAdmin creates a new Admin instance
@@ -56,6 +59,7 @@ func NewAdmin[T any](
 	if config == nil {
 		config = &Config[T]{}
 	}
+	defaultHistory := config.HistoryManager == nil
 	applyConfigDefaults(config, schemaInstance)
 
 	admin := &Admin[T]{
@@ -65,6 +69,7 @@ func NewAdmin[T any](
 		config:      config,
 		name:        name,
 	}
+	admin.defaultHistory = defaultHistory
 
 	return admin, nil
 }

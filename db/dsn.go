@@ -15,10 +15,12 @@ func quoteDSNValue(v string) string {
 	return "'" + dsnValueEscaper.Replace(v) + "'"
 }
 
-// postgresKeywordDSN builds a libpq keyword/value connection string from
-// the database.* settings. Every value is quoted and escaped. An empty
-// password is omitted so PGPASSWORD or a pgpass file can supply it.
-func postgresKeywordDSN(host string, port int, user, password, name, sslmode string) string {
+// PostgresKeywordDSN builds a libpq keyword/value connection string, as
+// NewDBFromConfig does from the database.* settings. Every value is quoted
+// and escaped, so a password or database name with spaces, quotes or
+// backslashes stays one value. An empty password is omitted so PGPASSWORD
+// or a pgpass file can supply it.
+func PostgresKeywordDSN(host string, port int, user, password, name, sslmode string) string {
 	parts := []string{
 		"host=" + quoteDSNValue(host),
 		"port=" + quoteDSNValue(strconv.Itoa(port)),

@@ -45,6 +45,11 @@ type ServerSettings struct {
 	// X-Real-IP headers are honored when resolving the client IP. Empty
 	// trusts no proxy.
 	TrustedProxies []string
+	// Stores selects where sessions, API throttling counters and the
+	// admin's tokens, login lockout, saved views and change history live:
+	// "memory" (the default, per process) or "database" (shared by every
+	// instance on the same database; see server.WithDatabase).
+	Stores string
 }
 
 // DatabaseSettings contains database connection settings
@@ -105,6 +110,7 @@ func LoadSettings(cfg *Config) *Settings {
 			EnableProfiling: cfg.GetBool("server.enable_profiling", false),
 			InfoEndpoint:    cfg.GetBool("server.info_endpoint", false),
 			TrustedProxies:  splitList(cfg.GetStringSlice("server.trusted_proxies", nil)),
+			Stores:          cfg.GetString("server.stores", "memory"),
 		},
 		Database: DatabaseSettings{
 			Driver:          cfg.GetString("database.driver", "postgres"),

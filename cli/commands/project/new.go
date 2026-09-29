@@ -256,6 +256,11 @@ server:
   port: 8000
   read_timeout: 30
   write_timeout: 30
+  # Sessions, API throttling counters and the admin's tokens, login
+  # lockout, saved views and change history live in the database, so they
+  # survive restarts and are shared by every instance. "forge migrate up"
+  # creates their tables. Use "memory" to keep them in each process.
+  stores: database
 
 admin:
   enabled: true

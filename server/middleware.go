@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/forgego/forge/netutil"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 )
@@ -32,10 +33,25 @@ func RequestID(next http.Handler) http.Handler {
 	return chimw.RequestID(next)
 }
 
-// RealIP sets the client IP from X-Forwarded-For or X-Real-IP headers
+// RealIP rewrites r.RemoteAddr to the client IP taken from X-Forwarded-For or
+// X-Real-IP, but only when the direct peer is a trusted proxy
+// (server.trusted_proxies, see netutil.SetTrustedProxies). Requests from any
+// other peer keep their RemoteAddr, so clients cannot spoof their address by
+// sending forwarding headers.
 func RealIP(next http.Handler) http.Handler {
-	//lint:ignore SA1019 Retain the existing behavior until trusted-proxy configuration is available.
-	return chimw.RealIP(next)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		trusted := netutil.TrustedProxies()
+		if len(trusted) > 0 {
+			// ClientIP returns the normalized peer address when the peer is
+			// untrusted or sent no usable header; compare against that form
+			// so RemoteAddr (and its port) is only replaced by a forwarded IP.
+			peer := netutil.ClientIP(&http.Request{RemoteAddr: r.RemoteAddr, Header: http.Header{}}, nil)
+			if ip := netutil.ClientIP(r, trusted); ip != "" && ip != peer {
+				r.RemoteAddr = ip
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // Recoverer recovers from panics and returns a 500 error

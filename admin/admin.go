@@ -59,6 +59,7 @@ func RegisterWithSite[T any](s *Site, config *core.Config[T]) (*core.Admin[T], e
 	if err := s.registry.Register(admin); err != nil {
 		return nil, err
 	}
+	useSiteHistory(admin, s.history)
 
 	return admin, nil
 }
