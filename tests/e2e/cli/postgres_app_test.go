@@ -39,23 +39,9 @@ func TestCLIPostgresAppJourney(t *testing.T) {
 	defer cancel()
 
 	database, dbEnv := requireJourneyPostgres(t, ctx)
-
-	workdir, cleanup := testhelpers.TempWorkdir(t, "forge-e2e-postgres-app-")
-	defer cleanup()
-	projectDir := filepath.Join(workdir, "tracker")
-	app := &journeyApp{t: t, ctx: ctx, dir: projectDir, env: dbEnv, db: database}
-
-	// Scaffold a PostgreSQL project and an app, then add the developer's code.
-	app.forgeIn(workdir, "new", "tracker", "--path", projectDir,
-		"--template", "simple", "--database", "postgres", "--docker=false")
-	require.NoError(t, patchGeneratedProject(projectDir))
-	app.forge("add", "app", "work")
-	app.writeModels("")
-	testhelpers.WriteFileString(t, filepath.Join(projectDir, "app", "work", "routes.go"), trackerRoutes)
-	testhelpers.WriteFileString(t, filepath.Join(projectDir, "cmd", "txcheck", "main.go"), trackerTxCommand)
-	registerAppInMain(t, filepath.Join(projectDir, "cmd", "server", "main.go"))
-	port := randomPort(t)
-	updateServerPort(t, filepath.Join(projectDir, "config", "config.yaml"), port)
+	app, port := newTrackerJourney(t, ctx, "postgres", dbEnv)
+	app.db = database
+	projectDir := app.dir
 
 	// Generate, compile and migrate.
 	app.generate()
@@ -235,6 +221,27 @@ func TestCLIPostgresAppJourney(t *testing.T) {
 	status, body = api.do(http.MethodPost, "/projects/", "token-alice", map[string]any{"name": "Artemis"})
 	require.Equal(t, http.StatusCreated, status, "create after migration: %s", body)
 	assert.Equal(t, 1, app.count(`SELECT count(*) FROM projects WHERE name = 'Artemis' AND created_at IS NOT NULL`))
+}
+
+// newTrackerJourney performs the developer steps shared by the PostgreSQL and
+// SQLite release journeys. Each test owns its migration and HTTP assertions.
+func newTrackerJourney(t *testing.T, ctx context.Context, engine string, env map[string]string) (*journeyApp, string) {
+	t.Helper()
+	workdir, cleanup := testhelpers.TempWorkdir(t, "forge-e2e-"+engine+"-app-")
+	t.Cleanup(cleanup)
+	projectDir := filepath.Join(workdir, "tracker")
+	app := &journeyApp{t: t, ctx: ctx, dir: projectDir, env: env}
+	app.forgeIn(workdir, "new", "tracker", "--path", projectDir,
+		"--template", "simple", "--database", engine, "--docker=false")
+	require.NoError(t, patchGeneratedProject(projectDir))
+	app.forge("add", "app", "work")
+	app.writeModels("")
+	testhelpers.WriteFileString(t, filepath.Join(projectDir, "app", "work", "routes.go"), trackerRoutes)
+	testhelpers.WriteFileString(t, filepath.Join(projectDir, "cmd", "txcheck", "main.go"), trackerTxCommand)
+	registerAppInMain(t, filepath.Join(projectDir, "cmd", "server", "main.go"))
+	port := randomPort(t)
+	updateServerPort(t, filepath.Join(projectDir, "config", "config.yaml"), port)
+	return app, port
 }
 
 // requireJourneyPostgres creates a database for the journey on the
@@ -444,6 +451,8 @@ func (a *journeyApp) taskTitle(id int64) string {
 type journeyClient struct {
 	t    *testing.T
 	base string
+	// authScheme defaults to Token for generated API routes.
+	authScheme string
 	// lastHeader holds the response headers of the most recent request.
 	lastHeader http.Header
 }
@@ -472,7 +481,11 @@ func (c *journeyClient) doRaw(method, path, token string, payload []byte) (int, 
 		req.Header.Set("Content-Type", "application/json")
 	}
 	if token != "" {
-		req.Header.Set("Authorization", "Token "+token)
+		scheme := c.authScheme
+		if scheme == "" {
+			scheme = "Token"
+		}
+		req.Header.Set("Authorization", scheme+" "+token)
 	}
 	resp, err := (&http.Client{Timeout: 10 * time.Second}).Do(req)
 	require.NoError(c.t, err)

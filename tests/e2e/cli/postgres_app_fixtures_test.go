@@ -97,6 +97,7 @@ import (
 	"github.com/forgego/forge/api"
 	"github.com/forgego/forge/api/authentication"
 	"github.com/forgego/forge/api/permissions"
+	"github.com/forgego/forge/admin"
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/server"
 )
@@ -104,6 +105,7 @@ import (
 // Register binds the generated managers to the database and serves the
 // project and task APIs under /api/v1.
 func Register(router *server.Router, database *db.DB) {
+	if _, err := admin.Register[Project](&admin.Config[Project]{}); err != nil { panic(err) }
 	MemberObjects.SetDB(database)
 	ProjectObjects.SetDB(database)
 	TaskObjects.SetDB(database)
