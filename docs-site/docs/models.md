@@ -12,7 +12,7 @@ From these schema definitions, Forge automatically generates:
 - Strongly typed model structs
 - Compile-time checked QuerySet expression trees (`orm.Q`)
 - Deterministic database migrations
-- Instant React 19 Admin UI configuration
+- Schema metadata that the Admin UI uses after a model is registered (model generation does not emit admin configuration; the older claim that it does is removed)
 - REST API serializers and ViewSets (model generation does not emit OpenAPI paths or schemas)
 
 ---

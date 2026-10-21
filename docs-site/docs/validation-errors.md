@@ -12,7 +12,7 @@ Validation and errors are handled consistently across schema, API, and server la
 
 - Field and schema validation with typed validators
 - API errors with problem details
-- Idempotency handling for safe retries
+- Idempotency key hashing and response stores for applications implementing safe retries (Forge does not automatically replay HTTP requests)
 - Sanitization and request ID support
 
 ## Validator example

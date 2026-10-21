@@ -117,6 +117,11 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 		})
 	}
 
+	// chi requires middleware to be registered before the first route.
+	if settings.Server.EnableProfiling && settings.App.Debug {
+		router.Use(Profiler("/debug", true))
+	}
+
 	// Register health check endpoints
 	if settings.Server.HealthCheckPath != "" {
 		router.Get(settings.Server.HealthCheckPath, HealthHandler())
@@ -138,11 +143,6 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 	// Serve static files if configured
 	if settings.Server.StaticFilesPath != "" {
 		router.Mount("/static", StaticFiles("/static", settings.Server.StaticFilesPath))
-	}
-
-	// Enable profiling if configured (dev mode only)
-	if settings.Server.EnableProfiling && settings.App.Debug {
-		router.Use(Profiler("/debug", true))
 	}
 
 	// Create server

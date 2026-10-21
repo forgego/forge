@@ -78,6 +78,22 @@ func (Product) Hooks() *schema.ModelHooks {
 	assert.Contains(t, string(apiBytes), "RegisterAPIRoutes(router *forgehttp.Router)")
 }
 
+func TestModelGenerationEmitsSchemaMetadataForAdminRegistration(t *testing.T) {
+	tmpDir := t.TempDir()
+	modelSrc := `package testmodels
+import "github.com/forgego/forge/schema"
+type Product struct { schema.BaseSchema; ID int64 }
+func (Product) Fields() []schema.Field { return []schema.Field{schema.Int64("id").Primary().AutoIncrement().Build()} }
+func (Product) Meta() schema.Meta { return schema.Meta{TableName: "products", VerboseName: "Product"} }
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "models.go"), []byte(modelSrc), 0644))
+	require.NoError(t, NewGenerator(tmpDir, tmpDir).Generate())
+	generated, err := os.ReadFile(filepath.Join(tmpDir, "gen.go"))
+	require.NoError(t, err)
+	assert.Contains(t, string(generated), `MustNewManager[Product]("products")`)
+	assert.NotContains(t, string(generated), "AdminConfig")
+}
+
 func TestGeneratorPreservesHandwrittenSerializerOwnership(t *testing.T) {
 	for _, apiOnly := range []bool{false, true} {
 		t.Run(map[bool]string{false: "generate", true: "api_only"}[apiOnly], func(t *testing.T) {
