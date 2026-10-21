@@ -117,33 +117,29 @@ func (c *ShowCommand) Execute(ctx *core.Context, args []string) error {
 	// Get verbose flag
 	verbose, _ := ctx.Cmd.Flags().GetBool("verbose")
 
-	// Load previous state
+	// Load previous state. In verbose mode, retain parser diagnostics even if
+	// the state loader returns an error.
+	if verbose {
+		loader := dbstate.NewFileStateLoaderWithOptions(migrationsPath, dbstate.LoaderOptions{Verbose: true})
+		_, _ = loader.Load()
+		if fileLoader, ok := loader.(*dbstate.FileStateLoader); ok {
+			parseErrors := fileLoader.GetParseErrors()
+			if len(parseErrors) > 0 {
+				fmt.Println("Parse warnings:")
+				for _, perr := range parseErrors {
+					fmt.Printf("  %s", perr.File)
+					if perr.Line > 0 {
+						fmt.Printf(":%d", perr.Line)
+					}
+					fmt.Printf(": %s\n", perr.Message)
+				}
+				fmt.Println()
+			}
+		}
+	}
 	state, err := migrate.LoadState(migrationsPath)
 	if err != nil {
 		return fmt.Errorf("failed to load state: %w", err)
-	}
-
-	// If verbose, also show parse errors from state loader
-	if verbose {
-		loader := dbstate.NewFileStateLoaderWithOptions(migrationsPath, dbstate.LoaderOptions{Verbose: true})
-		_, loadErr := loader.Load()
-		if loadErr == nil {
-			// Show parse errors if any
-			if fileLoader, ok := loader.(*dbstate.FileStateLoader); ok {
-				parseErrors := fileLoader.GetParseErrors()
-				if len(parseErrors) > 0 {
-					fmt.Println("Parse warnings:")
-					for _, perr := range parseErrors {
-						fmt.Printf("  %s", perr.File)
-						if perr.Line > 0 {
-							fmt.Printf(":%d", perr.Line)
-						}
-						fmt.Printf(": %s\n", perr.Message)
-					}
-					fmt.Println()
-				}
-			}
-		}
 	}
 
 	// Convert state to model definitions
