@@ -458,3 +458,55 @@ func (ProductVariant) Fields() []schema.Field {
 	assert.Contains(t, string(contents), `apiRouter.Register("product-variants", NewProductVariantViewSet())`)
 	assert.NotContains(t, string(contents), "product_variants")
 }
+
+// Generation writes typed managers for models
+func TestGenerationWritesTypedManagersForModels(t *testing.T) {
+	tmpDir := t.TempDir()
+	modelSrc := `package testmodels
+import "github.com/forgego/forge/schema"
+type Article struct { schema.BaseSchema; ID int64 }
+func (Article) Fields() []schema.Field {
+	return []schema.Field{schema.Int64Field("id", schema.Primary(), schema.AutoIncrement())}
+}
+func (Article) Meta() schema.Meta {
+	return schema.Meta{TableName: "articles"}
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "models.go"), []byte(modelSrc), 0644))
+	require.NoError(t, NewGenerator(tmpDir, tmpDir).Generate())
+
+	genFile := filepath.Join(tmpDir, "gen.go")
+	contents, err := os.ReadFile(genFile)
+	require.NoError(t, err)
+	assert.Contains(t, string(contents), `var ArticleObjects = orm.MustNewManager[Article]("articles")`)
+}
+
+// Generated expressions provide compile-time query validation
+func TestGeneratedExpressionsProvideCompileTimeQueryValidation(t *testing.T) {
+	tmpDir := t.TempDir()
+	modelSrc := `package testmodels
+import "github.com/forgego/forge/schema"
+type Customer struct { schema.BaseSchema; ID int64 }
+func (Customer) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.StringField("email"),
+	}
+}
+func (Customer) Meta() schema.Meta {
+	return schema.Meta{TableName: "customers"}
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "models.go"), []byte(modelSrc), 0644))
+	require.NoError(t, NewGenerator(tmpDir, tmpDir).Generate())
+
+	genFile := filepath.Join(tmpDir, "gen.go")
+	contents, err := os.ReadFile(genFile)
+	require.NoError(t, err)
+	assert.Contains(t, string(contents), "type CustomerFields struct")
+	assert.Contains(t, string(contents), "Id orm.Field[int64]")
+	assert.Contains(t, string(contents), "Email orm.Field[string]")
+	assert.Contains(t, string(contents), "var CustomerFieldsInstance = CustomerFields{")
+	assert.Contains(t, string(contents), `Id: orm.NewField[int64]("id", "customers")`)
+	assert.Contains(t, string(contents), `Email: orm.NewField[string]("email", "customers")`)
+}

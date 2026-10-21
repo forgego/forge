@@ -12,7 +12,7 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 
 ### Schema System
 - Define models with fields, relations, metadata, and lifecycle hooks
-- **Dual Syntax**: Fluent builder constructors (`schema.String("name")`) and functional options (`schema.StringField("name", ...)`)
+- **Field Constructors**: Functional options constructors (`schema.StringField("name", ...)`)
 - **Field types**: integers (Int64, Int32), strings, text, booleans, dates, times, timestamps, floats (Float64, Float32), fixed-point decimals, email, URL, UUID, JSON/JSONB, and binary bytes
 - **Generated Columns**: First-class support for SQL computed columns (`schema.GeneratedColumn("expr", stored)`)
 - **Database options**: custom column names (`DBColumn`), SQL default expressions (`DBDefault`), collation (`DBCollation`), column comments (`DBComment`), tablespace (`DBTablespace`), and index flags (`DBIndex`)

@@ -270,3 +270,58 @@ func (testModel) Relations() []schema.Relation {
 func (testModel) Hooks() *schema.ModelHooks {
 	return nil
 }
+
+// Typed query expressions prevent SQL injection
+func TestTypedQueryExpressionsPreventSQLInjection(t *testing.T) {
+	qs, err := NewQuerySet[testModel]("test_table")
+	require.NoError(t, err)
+
+	nameField := NewField[string]("name", "test_table")
+	maliciousInput := "' OR '1'='1'; DROP TABLE test_table; --"
+
+	filtered := qs.Filter(nameField.Eq(maliciousInput))
+	baseQS, ok := filtered.(*BaseQuerySet[testModel])
+	require.True(t, ok)
+
+	sql, args, err := baseQS.buildSQL()
+	require.NoError(t, err)
+
+	// Verify the malicious string is never embedded in the raw SQL statement
+	assert.NotContains(t, sql, maliciousInput)
+	assert.NotContains(t, sql, "DROP TABLE")
+
+	// Verify the value was safely passed as a bound parameter
+	require.Len(t, args, 1)
+	assert.Equal(t, maliciousInput, args[0])
+}
+
+// QuerySets execute lazily
+func TestQuerySetsExecuteLazily(t *testing.T) {
+	// qs has no database connection set
+	qs, err := NewQuerySet[testModel]("test_table")
+	require.NoError(t, err)
+
+	priceField := NewField[float64]("price", "test_table")
+	nameField := NewField[string]("name", "test_table")
+
+	// Chaining filters, order, limit, and offset performs no execution
+	// and returns a new unexecuted QuerySet instance without contacting any DB
+	filtered := qs.
+		Filter(priceField.Gt(5.0)).
+		Exclude(nameField.Eq("inactive")).
+		OrderBy(Asc("name")).
+		Limit(20).
+		Offset(10)
+
+	assert.NotNil(t, filtered)
+	assert.NotSame(t, qs, filtered)
+
+	baseQS, ok := filtered.(*BaseQuerySet[testModel])
+	require.True(t, ok)
+	assert.Len(t, baseQS.conditions, 1)
+	assert.Len(t, baseQS.excludes, 1)
+	require.NotNil(t, baseQS.limitVal)
+	assert.Equal(t, 20, *baseQS.limitVal)
+	require.NotNil(t, baseQS.offsetVal)
+	assert.Equal(t, 10, *baseQS.offsetVal)
+}

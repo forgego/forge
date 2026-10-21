@@ -1,9 +1,14 @@
 package generate_test
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/forgego/forge/db/migrate/generate"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestNewMigrationGeneratorBackwardsCompatibility ensures the original 5-arg signature still works
@@ -54,4 +59,57 @@ func TestNewMigrationGeneratorWithDriverIsAvailable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewMigrationGeneratorWithDriver failed: %v", err)
 	}
+}
+
+// Migrations inspect model AST for diffs
+func TestMigrationsInspectModelASTForDiffs(t *testing.T) {
+	tmpDir := t.TempDir()
+	modelsDir := filepath.Join(tmpDir, "models")
+	migrationsDir := filepath.Join(tmpDir, "migrations")
+	require.NoError(t, os.MkdirAll(modelsDir, 0755))
+	require.NoError(t, os.MkdirAll(migrationsDir, 0755))
+
+	modelSrc := `package models
+
+import "github.com/forgego/forge/schema"
+
+type Note struct {
+	schema.BaseSchema
+	ID int64
+}
+
+func (Note) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.StringField("title"),
+	}
+}
+
+func (Note) Meta() schema.Meta {
+	return schema.Meta{TableName: "notes"}
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(modelsDir, "note.go"), []byte(modelSrc), 0644))
+
+	gen, err := generate.NewMigrationGeneratorForDriver(modelsDir, migrationsDir, "sqlite")
+	require.NoError(t, err)
+
+	err = gen.GenerateMigrations("create_notes")
+	require.NoError(t, err)
+
+	entries, err := os.ReadDir(migrationsDir)
+	require.NoError(t, err)
+	require.NotEmpty(t, entries)
+
+	var foundUpSQL bool
+	for _, entry := range entries {
+		if strings.HasSuffix(entry.Name(), ".up.sql") {
+			foundUpSQL = true
+			content, readErr := os.ReadFile(filepath.Join(migrationsDir, entry.Name()))
+			require.NoError(t, readErr)
+			assert.Contains(t, string(content), "CREATE TABLE")
+			assert.Contains(t, string(content), "notes")
+		}
+	}
+	assert.True(t, foundUpSQL, "expected .up.sql migration file generated from model AST diff")
 }

@@ -136,3 +136,28 @@ func TestRebindPlaceholders_SQLiteBackslashBeforeQuote(t *testing.T) {
 		t.Fatalf("RebindPlaceholders() = %q, want %q", got, want)
 	}
 }
+
+// PostgreSQL uses connection pooling
+func TestDatabaseConnectionPoolingOptions(t *testing.T) {
+	database, err := NewDBWithDriver("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open in-memory db: %v", err)
+	}
+	defer database.Close()
+
+	customPool := PoolConfig{
+		MaxOpenConns:    40,
+		MaxIdleConns:    20,
+		ConnMaxLifetime: 10 * time.Minute,
+		ConnMaxIdleTime: 4 * time.Minute,
+	}
+	customPool.Apply(database)
+
+	stats := database.PoolStats()
+	if stats == nil {
+		t.Fatal("expected non-nil PoolStats")
+	}
+	if stats.MaxOpenConnections != 40 {
+		t.Fatalf("expected MaxOpenConnections=40, got %d", stats.MaxOpenConnections)
+	}
+}
