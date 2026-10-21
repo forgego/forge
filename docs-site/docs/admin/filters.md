@@ -18,3 +18,5 @@ _, err := admin.RegisterWithSite(site, &admin.Config[models.Order]{
 ```
 
 The UI builds filters from the registered model metadata. Saved views can store a user's search, filter, and sorting choices. The server exposes `GET/POST /admin/api/saved-views/{model}` and `DELETE /admin/api/saved-views/{model}/{id}` when mounted under `/admin`.
+
+Boolean filters offer All, Yes, and No. Date and datetime filters use From and To date inputs; there are no date-range presets. Numeric filters use Min and Max inputs. Choice filters show the configured choices without per-choice matching counts. Relation filters currently use a plain text input on the list page; that input does not offer debounced related-object search.

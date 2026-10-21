@@ -12,7 +12,7 @@ The Forge Admin frontend is a standalone React 19 Single Page Application that c
 
 ## Dashboard Layout
 
-The main dashboard uses a server-driven component tree. Configure it with `core.SetDashboard`. The layout is global; model-specific widget pinning and `Site.AddWidget` are not available.
+By default, the dashboard shows model and record counts, plugins, and a model catalog; it does not include an analytics chart. To show Recharts analytics charts, configure a server-driven dashboard with `core.SetDashboard` and `components.Chart`. That layout is global; model-specific widget pinning and `Site.AddWidget` are not available.
 
 ```go
 package main

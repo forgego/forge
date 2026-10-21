@@ -35,3 +35,7 @@ action := admin.Action[models.Order]{
 | `Permissions` | `[]string` | Permissions checked before calling the handler |
 
 `admin.NewAction[T](name, label, handler)` is a shorthand. Its `WithPermissions` and `WithConfirmation` methods set the corresponding fields. The API reports records it skipped because they were missing or denied.
+
+On the list page, row selections remain selected when you move between pages. Select all applies to the current page; clear selection removes all selected rows. Delete shows the current selection count in its confirmation dialog. While a bulk action runs, its button is disabled and shows a spinner. A successful action shows a success toast and clears the selection. A failed request shows an error toast and keeps the selected rows for retry.
+
+The CSV and JSON export controls export rows matching the current search, filters, and ordering. They do not export only the selected rows. CSV uses the model's configured list columns, excluding server-hidden fields; client-side column visibility does not change the export. The server fetches all matching pages before writing the CSV response, so the response is not streamed row by row.
