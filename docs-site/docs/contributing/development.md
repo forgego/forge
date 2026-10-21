@@ -17,7 +17,7 @@ Use the Common Commands in CONTRIBUTING Quick Reference
 (build, test, lint, frontend, docs) and keep docs links
 and the docs-site build green after moves.
 
-Use Go 1.26.9 or newer; CI tests 1.26.9 and 1.27.3. For frontend checks,
+Use Go 1.26.10 or newer; CI tests 1.26.10 and 1.27.3. For frontend checks,
 use Node 26.8.1 as CI does. Older Node releases must satisfy the installed
 dependencies' engine requirements, not only Docusaurus's minimum.
 

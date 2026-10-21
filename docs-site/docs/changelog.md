@@ -61,7 +61,7 @@ the change.
 - Schema tags emitted by `validation.GenerateValidationTag` use `schema_required`
   with Forge's `validation.NewValidator` to accept required numeric zero/false
   while rejecting missing values. Explicit application tags retain their rules.
-- Update build toolchains to Go 1.26.9 or a patched Go 1.27 release (CI uses
+- Update build toolchains to Go 1.26.10 or a patched Go 1.27 release (CI uses
   1.27.3), including generated projects and Docker builders. Dependency updates
   remove the admin npm audit findings and docs-site critical findings.
 - Before rolling out the identity UTC fix, use UTC for every database session

@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/forgego/forge/cli/core"
 	"github.com/forgego/forge/db/migrate"
 	migratecore "github.com/forgego/forge/db/migrate/core"
+	"github.com/forgego/forge/db/migrate/parse"
 	"github.com/spf13/cobra"
 )
 
@@ -150,6 +152,22 @@ func (c *MakeMigrationsCommand) Execute(ctx *core.Context, args []string) error 
 		fmt.Fprintf(out, "✓ Generated migration files with SQL from models:\n")
 		for _, path := range written {
 			fmt.Fprintf(out, "  %s\n", path)
+		}
+		for _, path := range written {
+			if !strings.HasSuffix(path, ".up.sql") {
+				continue
+			}
+			content, err := os.ReadFile(path)
+			if err != nil {
+				return fmt.Errorf("failed to read generated migration %s: %w", path, err)
+			}
+			operations, err := parse.DestructiveOperations(string(content))
+			if err != nil {
+				return fmt.Errorf("failed to inspect generated migration %s: %w", path, err)
+			}
+			for _, operation := range operations {
+				fmt.Fprintf(out, "Warning: %s contains destructive operation %s\n", filepath.Base(path), operation)
+			}
 		}
 	} else if empty {
 		// Create empty migration files

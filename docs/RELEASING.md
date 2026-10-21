@@ -101,7 +101,7 @@ Record in the release pull request:
 | --- | --- |
 | Commit SHA and workflow run URLs | The Tests run for the release commit |
 | Totals and every skip from `forge-report.txt` and `tests-report.txt` | `release-test-reports` artifact |
-| Unit tests on Go 1.26.9 and 1.27.3, lint, build, frontend, CLI E2E, govulncheck | Tests workflow jobs |
+| Unit tests on Go 1.26.10 and 1.27.3, lint, build, frontend, CLI E2E, govulncheck | Tests workflow jobs |
 | Ecommerce example build and tests | Ecommerce Sample workflow (example evidence, not framework evidence) |
 | CodeQL | CodeQL workflow |
 | Upgrade rehearsal log | Below |

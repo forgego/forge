@@ -1,6 +1,6 @@
 module github.com/forgego/forge
 
-go 1.26.9
+go 1.26.10
 
 retract (
 	v1.0.1 // Contains only the retraction of v1.0.0.

@@ -3,8 +3,8 @@
 Use this as the authoritative "everything must happen" list. Run the checks that match your changes.
 
 ## Versions and Tooling
-- Go versions in CI: 1.26.9 and 1.27.3 for unit tests; other Go jobs use 1.27.3.
-- The framework and generated projects require Go 1.26.9 or newer for standard-library security fixes.
+- Go versions in CI: 1.26.10 and 1.27.3 for unit tests; other Go jobs use 1.27.3.
+- The framework and generated projects require Go 1.26.10 or newer for standard-library security fixes.
 - Node version in CI: 26.8.1 for docs site and admin UI.
 - Docs site requires Node >= 20 (see `docs-site/package.json`).
 
