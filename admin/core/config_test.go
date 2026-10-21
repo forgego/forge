@@ -1,8 +1,18 @@
 package core
 
 import (
+	"reflect"
 	"testing"
 )
+
+func TestModelConfigDoesNotPinDashboardWidgets(t *testing.T) {
+	if _, ok := reflect.TypeOf(Config[struct{}]{}).FieldByName("Widgets"); ok {
+		t.Fatal("model config unexpectedly has dashboard widgets; update dashboard documentation")
+	}
+	if _, ok := reflect.TypeOf(DashboardConfig{}).FieldByName("Layout"); !ok {
+		t.Fatal("dashboard config must expose its independent layout")
+	}
+}
 
 func TestConfig_ListDisplay(t *testing.T) {
 	tests := []struct {

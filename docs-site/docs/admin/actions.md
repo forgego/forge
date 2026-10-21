@@ -84,5 +84,5 @@ When an administrator triggers an action from the UI:
 ## Next Steps
 
 - **[Admin Filters](/docs/admin/filters/)**: Faceted filtering and saved views.
-- **[Admin UI & Widgets](/docs/admin/ui/)**: Pinned KPI widgets and custom plugins.
+- **[Admin UI & Dashboard](/docs/admin/ui/)**: Dashboard layout and custom plugins.
 

@@ -27,7 +27,8 @@ func (Article) Fields() []schema.Field {
 	fields := []schema.Field{
 		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
 		titleField(), // want: helper call titleField
-		schema.StringField("slug", lengthOption()), // want: helper call lengthOption
+		schema.StringField("slug", lengthOption()),                                           // want: helper call lengthOption
+		schema.StringField("status", schema.ChoicesOpts(schema.NewChoice("draft", "Draft"))), // want: helper call ChoicesOpts
 	}
 	for _, locale := range []string{"en", "fr"} { // want: loops cannot be evaluated
 		fields = append(fields, schema.StringField("title_"+locale))

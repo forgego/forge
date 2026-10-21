@@ -13,7 +13,7 @@ Forge includes a production-grade, auto-generated **React 19 Single Page Applica
 ## Architectural Highlights
 
 - **React 19 & TanStack Router**: Ultra-fast client-side navigation with deep linking, stateful search parameters, and optimistic UI updates.
-- **Declarative Go Registration**: Register any model with search fields, list filters, custom actions, and dashboard widgets in a single Go statement.
+- **Declarative Go Registration**: Register models with search fields, list filters, and custom actions in a single Go statement.
 - **Enterprise Security & Auth**: Session token cookies with SHA-256 hashing, protection against session fixation, and granular Role-Based Access Control (RBAC).
 - **Modern Design**: Built with Tailwind CSS, Radix UI primitives, Lucide icons, full dark/light theme switching, and keyboard command palette (`Cmd+K` / `Ctrl+K`).
 - **Extensible Plugin System**: Embed custom React dashboards, analytics reports, and external workflows directly inside the admin navigation.
@@ -119,7 +119,7 @@ If a user lacks permission, actions and mutation buttons are automatically hidde
 3. **Saved Views**: Bookmark frequently used filter and search configurations as named views for quick access.
 4. **Change History & Audit Logs**: Inspect detailed timelines of who modified each record and what fields were changed.
 5. **Data Export**: One-click export of filtered datasets to CSV or JSON formats.
-6. **Dashboard Widgets**: Embed Recharts analytics charts, KPI metric cards, and low-stock alerts.
+6. **Dashboard Layout**: Configure summary cards and Recharts line, bar, or area charts with server-driven components.
 7. **Custom Plugins**: Extend the sidebar navigation with custom React pages and reports.
 
 ---

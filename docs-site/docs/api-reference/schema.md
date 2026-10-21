@@ -39,17 +39,11 @@ func (BaseSchema) Hooks() *ModelHooks    { return nil }
 
 ---
 
-## Schema Registry
+## Model Discovery
 
-Forge maintains a package-level registry of declared models used by the code generator and migration engine:
+The code generator and migration generator parse model declarations from the configured models directory. They do not use a runtime model registry: `schema.Register` and `schema.GetRegisteredModels` are not package APIs. Declare models as Go structs implementing `schema.Schema` and pass their source directory to generation commands.
 
-```go
-// Register a model definition
-schema.Register(&Product{})
-
-// Retrieve registered models
-models := schema.GetRegisteredModels()
-```
+The registry in the `schema` package is for custom **field types**. Use `schema.RegisterFieldType` to add a field factory and `schema.ListRegisteredFieldTypes` to list those field type names.
 
 ---
 

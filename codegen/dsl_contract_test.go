@@ -107,6 +107,9 @@ func TestSupportedDSLGenerationIsDeterministic(t *testing.T) {
 	third := readGenerated(t, other)
 
 	for name, data := range first {
+		if bytes.Contains(bytes.ToLower(data), []byte("openapi")) {
+			t.Errorf("%s unexpectedly advertises OpenAPI generation", name)
+		}
 		if !bytes.Equal(data, second[name]) {
 			t.Errorf("%s changed when regenerated from identical input", name)
 		}
@@ -274,6 +277,26 @@ func TestSupportedDSLCompiles(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(pkg, "models.go"), data, 0o644); err != nil {
 		t.Fatal(err)
 	}
+	// Compile the first model example in the guide as published.
+	guide, err := os.ReadFile(filepath.Join(root, "docs-site", "docs", "models.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, example, ok := strings.Cut(string(guide), "```go\n")
+	if !ok {
+		t.Fatal("models guide has no Go example")
+	}
+	example, _, ok = strings.Cut(example, "\n```")
+	if !ok {
+		t.Fatal("models guide has an unterminated Go example")
+	}
+	guidePkg := filepath.Join(module, "models")
+	if err := os.MkdirAll(guidePkg, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(guidePkg, "models.go"), []byte(example+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	generateFixture(t, pkg)
 	goMod := fmt.Sprintf("module example.com/dslfixture\n\ngo 1.26.0\n\nrequire github.com/forgego/forge v0.0.0\n\nreplace github.com/forgego/forge => %s\n", root)
 	if err := os.WriteFile(filepath.Join(module, "go.mod"), []byte(goMod), 0o644); err != nil {
@@ -318,16 +341,14 @@ func makeFixtureMigrations(t *testing.T, driver migratecore.Driver) (string, str
 // fixture declares appear in the migration makemigrations writes for it, that
 // the output is deterministic, and that regenerating writes nothing new.
 //
-// Column types are pinned to what the builder emits today for the functional
-// constructors (see docs-site/docs/models.md). Changing one alters the DDL of
-// existing projects and must ship with an upgrade note.
+// Functional constructors must use their declared schema type for SQL.
 func TestSupportedDSLMigrationSQLMatchesSchema(t *testing.T) {
 	dir, up := makeFixtureMigrations(t, migratecore.DriverPostgreSQL)
 
 	wantColumns := map[string][]string{
 		"blog_authors": {
 			`"id" BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY`,
-			`"username" TEXT NOT NULL UNIQUE`,
+			`"username" VARCHAR(150) NOT NULL UNIQUE`,
 			`"email" TEXT NOT NULL UNIQUE`,
 			`"website" TEXT,`,
 			`"external_ref" TEXT,`,
@@ -336,25 +357,25 @@ func TestSupportedDSLMigrationSQLMatchesSchema(t *testing.T) {
 			`"login_count" INTEGER DEFAULT 0`,
 			`"reputation" DOUBLE PRECISION DEFAULT 1.500000`,
 			`"ratio" REAL,`,
-			`"balance" DOUBLE PRECISION DEFAULT 0`,
-			`"settings" BYTEA,`,
+			`"balance" NUMERIC(12,2) DEFAULT 0`,
+			`"settings" JSONB,`,
 			`"avatar" BYTEA,`,
-			`"birth_date" TIMESTAMP,`,
+			`"birth_date" DATE,`,
 			`"created_at" TIMESTAMP DEFAULT now() NOT NULL`,
 			`"updated_at" TIMESTAMP DEFAULT now()`,
 		},
 		"blog_posts": {
 			`"id" BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY`,
-			`"title" TEXT NOT NULL,`,
-			`"slug" TEXT NOT NULL,`,
-			`"status" TEXT NOT NULL DEFAULT 'draft'`,
+			`"title" VARCHAR(200) NOT NULL,`,
+			`"slug" VARCHAR(200) NOT NULL,`,
+			`"status" VARCHAR(20) NOT NULL DEFAULT 'draft'`,
 			`"author_id" BIGINT NOT NULL,`,
 			`"word_count" INTEGER DEFAULT 0`,
 		},
 		"blog_profiles": {
 			`"id" BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY`,
 			`"author_id" BIGINT NOT NULL UNIQUE`,
-			`"display_name" TEXT`,
+			`"display_name" VARCHAR(100)`,
 		},
 	}
 	for table, columns := range wantColumns {
@@ -384,6 +405,11 @@ func TestSupportedDSLMigrationSQLMatchesSchema(t *testing.T) {
 			t.Errorf("migration lacks %s", statement)
 		}
 	}
+	// Field-level DBIndex and ManyToMany metadata are accepted by generation,
+	// but migrations currently need Meta.Indexes and an explicit through table.
+	if strings.Count(up, "CREATE INDEX") != 1 || strings.Contains(up, "blog_post_editors") {
+		t.Errorf("migration unexpectedly emits field DBIndex or ManyToMany through table:\n%s", up)
+	}
 
 	for i := 0; i < 5; i++ {
 		if _, again := makeFixtureMigrations(t, migratecore.DriverPostgreSQL); again != up {
@@ -407,6 +433,7 @@ func TestSupportedDSLMigrationSQLMatchesSchema(t *testing.T) {
 		for _, entry := range entries {
 			names = append(names, entry.Name())
 		}
-		t.Fatalf("regenerating an unchanged model wrote a migration: %v", names)
+		content, _ := os.ReadFile(filepath.Join(dir, "000002_noop.up.sql"))
+		t.Fatalf("regenerating an unchanged model wrote a migration: %v\n%s", names, content)
 	}
 }

@@ -99,7 +99,8 @@ func RegisterProductAdmin(site *admin.Site) {
 | `ListPerPage` | `int` | Number of items per page (defaults to 25). |
 | `ReadonlyFields` | `[]string` | Fields visible but non-editable in the detail/edit modal. |
 | `Actions` | `[]admin.Action` | Custom batch actions shown when items are checked. |
-| `Widgets` | `[]admin.Widget` | Dashboard widgets pinned to this model or main dashboard. |
+
+Dashboard layout is configured separately with `core.SetDashboard`; `ModelConfig` does not have a `Widgets` field.
 
 ---
 
@@ -107,5 +108,5 @@ func RegisterProductAdmin(site *admin.Site) {
 
 - **[Custom Actions](/docs/admin/actions/)**: Build batch processing actions.
 - **[Faceted Filters](/docs/admin/filters/)**: Configure smart filter chips and saved views.
-- **[Dashboard Widgets](/docs/admin/ui/)**: Attach charts and KPI metrics to models.
+- **[Dashboard Layout](/docs/admin/ui/)**: Configure the main dashboard with server-driven components.
 

@@ -1,72 +1,54 @@
 ---
 sidebar_position: 5
-description: UI architecture, dashboard widgets, Recharts visualizations, custom plugin pages, and theming.
+description: UI architecture, dashboard layout, charts, custom plugin pages, and theming.
 image: /social-card.png
 ---
 
-# Admin UI, Widgets & Custom Plugins
+# Admin UI, Dashboard & Custom Plugins
 
 The Forge Admin frontend is a standalone React 19 Single Page Application that communicates with your Go backend over a type-safe JSON API.
 
 ---
 
-## Dashboard Widgets
+## Dashboard Layout
 
-Embed analytics metrics, charts, and summary cards on the admin home page or model-specific headers using `admin.Widget`:
+The main dashboard uses a server-driven component tree. Configure it with `core.SetDashboard`. The layout is global; model-specific widget pinning and `Site.AddWidget` are not available.
 
 ```go
 package main
 
 import (
-    "context"
-    "github.com/forgego/forge/admin"
+    "github.com/forgego/forge/admin/components"
+    "github.com/forgego/forge/admin/core"
 )
 
-func SetupDashboard(site *admin.Site) {
-    site.AddWidget(admin.Widget{
-        ID:    "total_revenue",
-        Title: "Total Revenue (30d)",
-        Type:  admin.WidgetMetric,
-        Width: admin.WidthHalf,
-        DataHandler: func(ctx context.Context) (any, error) {
-            revenue, _ := models.OrderManager.
-                Filter(models.OrderExpr.Status.Eq("delivered")).
-                Aggregate(ctx, orm.Sum("total_amount"))
-            return admin.MetricData{
-                Value:  fmt.Sprintf("$%.2f", revenue["sum"]),
-                Change: "+14.2%",
-                Trend:  "up",
-            }, nil
-        },
-    })
-
-    site.AddWidget(admin.Widget{
-        ID:    "order_volume_chart",
-        Title: "Orders by Status",
-        Type:  admin.WidgetChartDonut,
-        Width: admin.WidthHalf,
-        DataHandler: func(ctx context.Context) (any, error) {
-            return []admin.ChartPoint{
-                {Label: "Delivered", Value: 340},
-                {Label: "Processing", Value: 85},
-                {Label: "Pending", Value: 24},
-            }, nil
-        },
+func SetupDashboard() {
+    points := []map[string]any{
+        {"name": "Mon", "orders": 4},
+        {"name": "Tue", "orders": 7},
+    }
+    core.SetDashboard(core.DashboardConfig{
+        Title: "Sales",
+        Layout: components.Grid(12).WithChildren(
+            components.Stats("Orders", "11", "+3").WithColSpan(4),
+            components.Chart("Orders by day", "line", points).WithColSpan(8),
+        ),
     })
 }
 ```
 
 ---
 
-## Supported Widget Types
+## Dashboard Components
 
-| Widget Type | Visualization | Common Use Case |
+| Component | Rendering | Common Use Case |
 | :--- | :--- | :--- |
-| `WidgetMetric` | KPI summary card with trend percentage and badge. | Revenue, active users, total orders. |
-| `WidgetChartLine` | Recharts responsive line chart with time series tooltips. | Sales trends over 30/90 days. |
-| `WidgetChartBar` | Recharts categorical bar chart. | Sales by product category. |
-| `WidgetChartDonut` | Recharts donut chart with interactive hover segments. | Order status distribution, customer tiers. |
-| `WidgetTable` | Compact recent activity list table. | Latest 5 orders, low-stock inventory alerts. |
+| `components.Stats(label, value, change)` | Summary card with a value and optional change text. | Revenue or order totals. |
+| `components.Chart(title, "line", data)` | Recharts line chart with tooltips. | Time series. |
+| `components.Chart(title, "bar", data)` | Recharts bar chart with tooltips. | Category comparisons. |
+| `components.Chart(title, "area", data)` | Recharts area chart with tooltips. | Trends. |
+
+The dashboard renderer does not currently register a table component. Use the model list pages for tabular records.
 
 ---
 

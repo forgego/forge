@@ -60,14 +60,14 @@ Forge generates expression helpers for each model during `forge generate`. For e
 | `Field.IContains(str)`| `ILIKE '%str%'` | Case-insensitive substring match |
 | `Field.StartsWith(s)` | `LIKE 's%'` | Prefix match |
 | `Field.EndsWith(s)` | `LIKE '%s'` | Suffix match |
-| `Field.IsNull(bool)` | `IS NULL` / `IS NOT NULL` | Nullability check |
+| `Field.IsNull()` / `Field.IsNotNull()` | `IS NULL` / `IS NOT NULL` | Nullability check |
 
 ```go
 // Example of expressive lookups
 products, err := ProductManager.
     Filter(ProductExpr.Title.IContains("mechanical keyboard")).
     Filter(ProductExpr.Price.Lte(150.00)).
-    Filter(ProductExpr.DeletedAt.IsNull(true)).
+    Filter(ProductExpr.DeletedAt.IsNull()).
     All(ctx)
 ```
 
@@ -137,12 +137,11 @@ products, err := ProductManager.
 
 ## Aggregations & Grouping
 
-Execute database-level aggregates with `Aggregate()`:
+Execute database-level aggregates with `AggregateValues(ctx, queryset, ...)`:
 
 ```go
-stats, err := ProductManager.
-    Filter(ProductExpr.InStock.Eq(true)).
-    Aggregate(ctx,
+stats, err := orm.AggregateValues(ctx,
+    ProductManager.Filter(ProductExpr.InStock.Eq(true)),
         orm.Count("id"),
         orm.Avg("price"),
         orm.Max("price"),
@@ -170,17 +169,18 @@ Supported aggregate functions:
 
 ```go
 // Create
-product, err := ProductManager.Create(ctx, &Product{
+product := &Product{
     Name:  "Wireless Mouse",
     Price: 29.99,
-})
+}
+err := ProductManager.Create(ctx, product)
 
 // Update
 product.Price = 24.99
 err = ProductManager.Update(ctx, product)
 
 // Delete
-err = ProductManager.Delete(ctx, product.ID)
+err = ProductManager.Delete(ctx, product)
 ```
 
 `Create` writes `false`, `0` and `""` on required fields and fields with a
@@ -198,7 +198,7 @@ newItems := []*Product{
     {Name: "Item A", Price: 10.0},
     {Name: "Item B", Price: 20.0},
 }
-err := ProductManager.BulkCreate(ctx, newItems, 500) // batch size 500
+err := ProductManager.BulkCreate(ctx, newItems)
 
 // QuerySet-level Update (Single SQL UPDATE statement)
 rowsAffected, err := ProductManager.

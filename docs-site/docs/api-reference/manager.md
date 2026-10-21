@@ -49,12 +49,12 @@ err := ProductManager.Delete(ctx, 42)
 
 A Manager provides convenient shortcut methods that spawn a new `QuerySet[T]`:
 
-- `Manager.All() *QuerySet[T]`: Starts a query selecting all rows.
-- `Manager.Filter(conditions ...any) *QuerySet[T]`: Starts a query with initial `WHERE` filters.
-- `Manager.Exclude(conditions ...any) *QuerySet[T]`: Starts a query excluding matching rows.
-- `Manager.OrderBy(fields ...string) *QuerySet[T]`: Starts a query with ordering.
-- `Manager.SelectRelated(fields ...string) *QuerySet[T]`: Starts a query with eager-loaded relations.
-- `Manager.QuerySet() *QuerySet[T]`: Spawns a clean, unconstrained `QuerySet[T]`.
+- `Manager.All(ctx context.Context) ([]*T, error)`: Executes a query selecting all rows.
+- `Manager.Filter(expr Expression) (QuerySet[T], error)`: Starts a query with one `WHERE` expression.
+- `Manager.Exclude(expr Expression) QuerySet[T]`: Starts a query excluding matching rows.
+- `Manager.OrderBy(fields ...any) QuerySet[T]`: Starts a query with ordering.
+- `Manager.SelectRelated(relations ...any) QuerySet[T]`: Starts a query with eager-loaded relations.
+- `Manager.QuerySet() QuerySet[T]`: Spawns a clean, unconstrained queryset.
 
 ---
 

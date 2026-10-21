@@ -61,6 +61,6 @@ server (`GET/POST /admin/api/saved-views/{model}`):
 
 ## Next Steps
 
-- **[UI Customization & Widgets](/docs/admin/ui/)**: Attach KPI charts and cards.
+- **[Admin UI & Dashboard](/docs/admin/ui/)**: Configure summary cards and charts on the main dashboard.
 - **[Admin Actions](/docs/admin/actions/)**: Execute batch operations on filtered datasets.
 
