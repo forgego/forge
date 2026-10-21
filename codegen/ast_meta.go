@@ -90,6 +90,10 @@ func (p *ASTParser) extractIndexesFromExpr(expr ast.Expr) []IndexDefinition {
 	var indexes []IndexDefinition
 	if sliceLit, ok := expr.(*ast.CompositeLit); ok {
 		for _, elt := range sliceLit.Elts {
+			if index, ok := p.extractIndexHelper(elt); ok {
+				indexes = append(indexes, index)
+				continue
+			}
 			if compLit, ok := elt.(*ast.CompositeLit); ok {
 				idx := IndexDefinition{}
 				for _, kv := range compLit.Elts {
@@ -160,4 +164,33 @@ func (p *ASTParser) extractUniqueTogetherFromExpr(expr ast.Expr) [][]string {
 		}
 	}
 	return result
+}
+
+// extractIndexHelper recognizes only schema's named index constructors with
+// literal string arguments. It never executes arbitrary helper code.
+func (p *ASTParser) extractIndexHelper(expr ast.Expr) (IndexDefinition, bool) {
+	call, ok := expr.(*ast.CallExpr)
+	if !ok || call.Ellipsis.IsValid() || len(call.Args) < 2 {
+		return IndexDefinition{}, false
+	}
+	selector, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return IndexDefinition{}, false
+	}
+	qualifier, ok := selector.X.(*ast.Ident)
+	if !ok || !p.schemaAliases[qualifier.Name] {
+		return IndexDefinition{}, false
+	}
+	if selector.Sel.Name != "IndexOn" && selector.Sel.Name != "UniqueIndexOn" {
+		return IndexDefinition{}, false
+	}
+	values := make([]string, 0, len(call.Args))
+	for _, arg := range call.Args {
+		literal, ok := arg.(*ast.BasicLit)
+		if !ok || literal.Kind != token.STRING {
+			return IndexDefinition{}, false
+		}
+		values = append(values, p.extractStringFromExpr(literal))
+	}
+	return IndexDefinition{Name: values[0], Fields: values[1:], Unique: selector.Sel.Name == "UniqueIndexOn"}, true
 }

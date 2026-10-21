@@ -35,8 +35,8 @@ The `release-gate` job runs every package serially against PostgreSQL with
 
 | Component | Tier | What is tested | Evidence |
 | --- | --- | --- | --- |
-| Go 1.26.x and 1.27.x | Supported | `go.mod` declares `go 1.26.0`. Unit tests run on Go 1.26.8 and 1.27.1. The other jobs use 1.27.1. | `unit-tests` matrix, all other jobs |
-| Go older than 1.26 | Not supported | `go` refuses to build the module. | [`go.mod`](https://github.com/forgego/forge/blob/master/go.mod) |
+| Go 1.26.9+ and 1.27.3+ | Supported | `go.mod` requires Go 1.26.9 or newer, including standard-library security fixes. Unit tests run on Go 1.26.9 and 1.27.3. The other jobs use 1.27.3. | `unit-tests` matrix, all other jobs |
+| Go older than 1.26.9 | Not supported | `go` requires a newer toolchain to build the module. Go 1.27.0–1.27.2 are also outside the tested matrix; use 1.27.3 or newer for current security fixes. | [`go.mod`](https://github.com/forgego/forge/blob/master/go.mod) |
 | PostgreSQL 15 | Supported | The CI service image is `postgres:15` (major tag only). | `integration-tests`, `cli-e2e`, `release-gate`, `ecommerce-sample` |
 | PostgreSQL 16 and later | Partially tested | Nothing in Forge is known to depend on 15. The admin browser journeys run against `postgres:16` (on pushes to master, and on pull requests that touch the admin or the ecommerce example); the ORM, migration and CLI suites do not run against 16, and no job runs 17 or later. | `Admin browser E2E result` job |
 | PostgreSQL 14 and earlier | Not supported | Not tested. | None |

@@ -343,15 +343,18 @@ Supported forms:
   and `RelatedName`. Also declare the key column (for example `author_id`) in `Fields()`,
   or no foreign key is created.
 - **Meta:** literal `TableName`, `VerboseName`, `VerboseNamePlural`, `OrderBy`, `Indexes`
-  as `schema.Index{...}` literals, and `Constraints` as `schema.Constraint{...}` literals,
+  as `schema.Index{...}` literals or `schema.IndexOn` / `schema.UniqueIndexOn` with
+  literal name/field arguments, and `Constraints` as `schema.Constraint{...}` literals,
   either `CHECK` with a `Condition` or `UNIQUE` with `Fields`.
 - **Hooks:** `schema.NewModelHooks().With...(...)`.
 
 Generation reads the following forms without warning, but `makemigrations` does not
 apply them yet: `DBIndex()` (use `Meta.Indexes`), `UniqueTogether` (use a `UNIQUE`
 constraint), and `ManyToManyField` (no join table is created). `MaxLength` validates
-input but does not change the column type. `schema.ChoicesOpts(...)` and
-`schema.IndexOn(...)` are helper calls, so generation reports them.
+input but does not change the column type. `schema.ChoicesOpts(...)` is still an
+unsupported helper call and produces a diagnostic. Arbitrary metadata expressions
+also produce diagnostics; automatic migration generation refuses any reported
+unsupported expression rather than diffing a partial schema.
 
 Today the functional constructors map to PostgreSQL columns by their Go type. For
 example, `StringField` becomes `TEXT`, `DecimalField` becomes `DOUBLE PRECISION`,

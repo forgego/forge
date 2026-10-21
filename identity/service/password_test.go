@@ -263,7 +263,7 @@ func TestPasswordService_ResetPassword(t *testing.T) {
 		require.NoError(t, err)
 
 		err = service.ResetPassword(ctx, rawToken, "NewPassword123!")
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "expired")
 	})
 

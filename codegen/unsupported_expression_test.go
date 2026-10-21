@@ -149,3 +149,27 @@ func sourceLine(source, text string) int {
 	}
 	return 0
 }
+
+func TestMetaBinaryValueProducesDiagnostic(t *testing.T) {
+	source := `package models
+import "github.com/forgego/forge/schema"
+type Item struct{schema.BaseSchema}
+func(Item)Fields()[]schema.Field{return []schema.Field{schema.Int64Field("id",schema.Primary())}}
+func(Item)Meta()schema.Meta{return schema.Meta{TableName:"prefix_"+"items"}}
+`
+	path := filepath.Join(t.TempDir(), "models.go")
+	if err := os.WriteFile(path, []byte(source), 0600); err != nil {
+		t.Fatal(err)
+	}
+	parser := NewASTParser()
+	if _, err := parser.ParseFile(path); err != nil {
+		t.Fatal(err)
+	}
+	diagnostics := parser.Diagnostics()
+	if len(diagnostics) != 1 {
+		t.Fatalf("expected unsupported expression diagnostic, got %v", diagnostics)
+	}
+	if diagnostics[0].Method != "Meta" || diagnostics[0].Line != 5 {
+		t.Fatalf("wrong source location: %v", diagnostics[0])
+	}
+}

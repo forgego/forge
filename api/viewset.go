@@ -504,6 +504,10 @@ func (vs *BaseViewSet) Create(w http.ResponseWriter, r *http.Request) {
 	var ignoredKeys []string
 	ignoredKeys = append(ignoredKeys, vs.ReadOnlyRequestFields...)
 	ignoredKeys = append(ignoredKeys, serializerReadOnly(serializer)...)
+	if missing := missingRequiredFields(instance, data, ignoredKeys, true); len(missing) > 0 {
+		vs.handleException(w, r, exceptions.NewValidationError(missing))
+		return
+	}
 
 	// Populate instance from data
 	if err := populateFromMap(instance, data, ignoredKeys...); err != nil {
@@ -738,7 +742,7 @@ func (vs *BaseViewSet) update(w http.ResponseWriter, r *http.Request, action str
 	// PUT replaces the record, so it must carry every required writable
 	// field; otherwise the stored value would silently survive, as in PATCH.
 	if action == "update" {
-		if missing := missingRequiredFields(instance, data, ignoredKeys); len(missing) > 0 {
+		if missing := missingRequiredFields(instance, data, ignoredKeys, false); len(missing) > 0 {
 			vs.handleException(w, r, exceptions.NewValidationError(missing))
 			return
 		}
@@ -1317,8 +1321,10 @@ func applyOrdering(qs reflect.Value, r *http.Request, model interface{}, default
 		}
 		args = append(args, reflect.ValueOf(field))
 	}
-	if len(args) <= 1 { // Only receiver, no fields
-		return qs, nil
+	if len(args) <= 1 { // No fields survived visibility filtering.
+		// Internal pagination order may use a hidden key, but never the
+		// direction requested for a hidden field. This does not serialize it.
+		args = append(args, reflect.ValueOf(primaryKeyOrdering(model)))
 	}
 	results := orderByMethod.Func.Call(args)
 	if len(results) > 0 {
@@ -1338,20 +1344,28 @@ func defaultOrdering(model interface{}) []string {
 	if ordering := s.Meta().OrderBy; len(ordering) > 0 {
 		return append([]string(nil), ordering...)
 	}
+	return []string{primaryKeyOrdering(model)}
+}
+
+func primaryKeyOrdering(model interface{}) string {
+	s, ok := model.(schema.Schema)
+	if !ok {
+		return "id"
+	}
 	for _, field := range s.Fields() {
 		if field.PrimaryKey {
 			if field.DBColumn != "" {
-				return []string{field.DBColumn}
+				return field.DBColumn
 			}
 			if resolved, ok := schema.ResolveField(model, field); ok && resolved.DBTag != "" && resolved.DBTag != "-" {
-				return []string{resolved.DBTag}
+				return resolved.DBTag
 			}
 			if field.Name != "" {
-				return []string{field.Name}
+				return field.Name
 			}
 		}
 	}
-	return []string{"id"}
+	return "id"
 }
 
 func resolveQueryField(model interface{}, name string) (string, schema.Field, bool) {
@@ -1564,8 +1578,9 @@ func schemaFieldsByRequestName(instance interface{}) map[string]*schema.Field {
 // populateFromMap would write but data does not supply. It uses the same
 // rules as populateFromMap: a field needs a struct field that request input
 // may write (see requestField.writable), a field named by ignoredKeys
-// (case-insensitively) is not writable, and data keys match exactly.
-func missingRequiredFields(instance interface{}, data map[string]interface{}, ignoredKeys []string) map[string][]string {
+// (case-insensitively) is not writable, and data keys match exactly. On create,
+// null does not satisfy a required value; PUT retains scalar-null semantics.
+func missingRequiredFields(instance interface{}, data map[string]interface{}, ignoredKeys []string, creating bool) map[string][]string {
 	ignored := make(map[string]bool, len(ignoredKeys))
 	for _, key := range ignoredKeys {
 		ignored[strings.ToLower(key)] = true
@@ -1577,10 +1592,15 @@ func missingRequiredFields(instance interface{}, data map[string]interface{}, ig
 		if f == nil || !f.Required || !f.Editable || f.Default != nil || isRequestReadOnly(*f) {
 			return
 		}
+		// INSERT can defer a required DBDefault to the database; an existing
+		// row on PUT must still receive every required writable field.
+		if creating && f.DBDefault != "" {
+			return
+		}
 		if !field.writable() || field.ignoredBy(instance, ignored) {
 			return
 		}
-		if _, _, ok := field.lookup(instance, data); ok {
+		if _, value, ok := field.lookup(instance, data); ok && (!creating || value != nil) {
 			return
 		}
 		requestName := field.key

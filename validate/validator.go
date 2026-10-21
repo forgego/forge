@@ -34,6 +34,9 @@ func NewValidator() *Validator {
 
 // registerCustomValidators registers all custom validation functions
 func (v *Validator) registerCustomValidators() {
+	// Schema Required means a present value, not a nonzero number or true boolean.
+	v.RegisterCustomValidator(TagSchemaRequired, validateSchemaRequired)
+
 	// Slug validator
 	v.RegisterCustomValidator("slug", validateSlug)
 
@@ -49,6 +52,11 @@ func (v *Validator) registerCustomValidators() {
 
 	// Unique validator (recognized for struct tags; full DB uniqueness is verified by ORM/storage layer)
 	v.RegisterCustomValidator("unique", validateUnique)
+}
+
+func validateSchemaRequired(fl validator.FieldLevel) bool {
+	value := fl.Field()
+	return value.IsValid() && value.CanInterface() && !isEmpty(value.Interface())
 }
 
 // validateUnique recognizes the unique tag so struct validation succeeds without unknown tag errors.
@@ -207,6 +215,7 @@ func getErrorMessage(fe validator.FieldError) string {
 
 var validationMessages = map[string]func(string, string) string{
 	"required":           constantValidationMessage("is required"),
+	TagSchemaRequired:    constantValidationMessage("is required"),
 	"email":              constantValidationMessage("must be a valid email address"),
 	"url":                constantValidationMessage("must be a valid URL"),
 	"uuid":               constantValidationMessage("must be a valid UUID"),

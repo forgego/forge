@@ -2,7 +2,9 @@ package serializers
 
 import (
 	"fmt"
+	"github.com/forgego/forge/schema"
 	"reflect"
+	"strings"
 
 	"github.com/forgego/forge/api/serializers/fields"
 )
@@ -92,6 +94,10 @@ func (s *EnhancedSerializer) GetErrors() map[string][]string {
 // ToRepresentation converts data to representation
 func (s *EnhancedSerializer) ToRepresentation(data interface{}) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
+	hidden := make(map[string]bool)
+	for _, name := range schema.NonSerializableFieldNames(data) {
+		hidden[name] = true
+	}
 
 	// Use reflection to get field values
 	v := reflect.ValueOf(data)
@@ -112,12 +118,15 @@ func (s *EnhancedSerializer) ToRepresentation(data interface{}) (map[string]inte
 			continue
 		}
 
-		jsonTag := field.Tag.Get("json")
+		jsonTag, _, _ := strings.Cut(field.Tag.Get("json"), ",")
 		if jsonTag == "" || jsonTag == "-" {
 			continue
 		}
 
 		fieldName := jsonTag
+		if hidden[fieldName] || hidden[field.Name] {
+			continue
+		}
 		if serializerField, ok := s.Fields[fieldName]; ok {
 			if serializerField.IsWriteOnly() {
 				continue

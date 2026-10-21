@@ -276,6 +276,18 @@ func (p *ASTParser) reportUnsupportedMetaValues(comp *ast.CompositeLit, assigned
 		if !ok {
 			continue
 		}
+		// Named index constructors are index values, not arbitrary Meta
+		// expressions (for example they cannot supply a table-name string).
+		if key, ok := kv.Key.(*ast.Ident); ok && key.Name == "Indexes" {
+			if list, ok := kv.Value.(*ast.CompositeLit); ok {
+				for _, index := range list.Elts {
+					if _, ok := p.extractIndexHelper(index); !ok {
+						p.reportUnsupportedMetaValue(index, assigned, model, methodName, seenCalls)
+					}
+				}
+				continue
+			}
+		}
 		p.reportUnsupportedMetaValue(kv.Value, assigned, model, methodName, seenCalls)
 	}
 }
@@ -306,20 +318,28 @@ func (p *ASTParser) reportUnsupportedMetaValue(expr ast.Expr, assigned map[strin
 		}
 		return
 	case *ast.SelectorExpr:
-		// Qualified constants such as schema.Cascade are not evaluated for
+		if _, ok := p.schemaConstantString(value); ok {
+			return
+		}
+		// Other qualified constants are not evaluated for
 		// Meta string fields; literals are the only supported form. Leaf
 		// selector values are reported as computed to avoid silent drops.
 		// Unary and other wrappers are handled by the default branch below.
 		p.reportDiagnostic(expr.Pos(), model, methodName, fmt.Sprintf("value of %s is computed at run time and cannot be evaluated during generation", expressionName(expr)))
 		return
 	default:
+		hasHelper := false
 		ast.Inspect(resolved, func(n ast.Node) bool {
 			if call, ok := n.(*ast.CallExpr); ok {
+				hasHelper = true
 				p.reportHelperCallOnce(call, model, methodName, seenCalls)
 				return false
 			}
 			return true
 		})
+		if !hasHelper {
+			p.reportDiagnostic(expr.Pos(), model, methodName, "Meta expression cannot be evaluated during generation; use a supported literal")
+		}
 	}
 }
 
@@ -341,7 +361,7 @@ func (p *ASTParser) reportNestedConstructorHelpers(call *ast.CallExpr, assigned 
 			return
 		}
 		visited[callExpr] = true
-		method, isSchemaPkg := chainMethod(callExpr)
+		method, isSchemaPkg := p.chainMethod(callExpr)
 		start := 0
 		if isSchemaPkg && p.isFieldBuilder(method) {
 			if len(callExpr.Args) > 0 {
@@ -404,9 +424,9 @@ func (p *ASTParser) reportConstructorArg(arg ast.Expr, assigned map[string]ast.E
 	p.reportHelperCallOnce(call, model, methodName, seenCalls)
 }
 
-func chainMethod(call *ast.CallExpr) (string, bool) {
+func (p *ASTParser) chainMethod(call *ast.CallExpr) (string, bool) {
 	if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
-		if ident, ok := sel.X.(*ast.Ident); ok && ident.Name == "schema" {
+		if ident, ok := sel.X.(*ast.Ident); ok && p.isSchemaQualifier(ident.Name) {
 			return sel.Sel.Name, true
 		}
 		return sel.Sel.Name, false
@@ -423,7 +443,7 @@ func (p *ASTParser) isSupportedOptionCall(methodName string, call *ast.CallExpr)
 		return false
 	}
 	pkg, ok := sel.X.(*ast.Ident)
-	if !ok || pkg.Name != "schema" {
+	if !ok || !p.isSchemaQualifier(pkg.Name) {
 		return false
 	}
 	name := sel.Sel.Name

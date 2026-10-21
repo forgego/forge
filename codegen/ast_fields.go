@@ -500,8 +500,13 @@ func (p *ASTParser) buildValidationTag(fieldType string, options map[string]inte
 	if schema.IsDatabaseFunctionDefault(options["default"]) {
 		tags = append(tags, "omitempty")
 	} else if required, ok := options["required"].(bool); ok && required {
-		// Check if Required() was called
-		tags = append(tags, "required")
+		// Numeric zero and false are valid scalar values. HTTP input
+		// presence is checked before model validation; go-playground's
+		// required rule would conflate these values with missing input.
+		goType := p.mapFieldTypeToGoType(fieldType)
+		if goType != "bool" && !strings.HasPrefix(goType, "int") && !strings.HasPrefix(goType, "float") {
+			tags = append(tags, "required")
+		}
 	}
 
 	// Unique

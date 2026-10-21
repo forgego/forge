@@ -46,7 +46,7 @@ func (r *Router) handleCreate(admin core.AdminInterface) http.HandlerFunc {
 			return
 		}
 
-		respondJSON(w, http.StatusCreated, obj)
+		respondAdminObject(w, http.StatusCreated, admin, obj)
 	}
 }
 
@@ -93,7 +93,7 @@ func (r *Router) handleUpdate(admin core.AdminInterface) http.HandlerFunc {
 			return
 		}
 
-		respondJSON(w, http.StatusOK, obj)
+		respondAdminObject(w, http.StatusOK, admin, obj)
 	}
 }
 
@@ -143,7 +143,7 @@ func (r *Router) handleReplace(admin core.AdminInterface) http.HandlerFunc {
 			return
 		}
 
-		respondJSON(w, http.StatusOK, obj)
+		respondAdminObject(w, http.StatusOK, admin, obj)
 	}
 }
 
@@ -341,7 +341,12 @@ func (r *Router) handleBulkCreate(admin core.AdminInterface) http.HandlerFunc {
 				})
 				continue
 			}
-			objects = append(objects, obj)
+			safe, err := safeAdminObject(admin, obj)
+			if err != nil {
+				respondError(w, http.StatusInternalServerError, "serialization_failed", "Unable to serialize object", nil)
+				return
+			}
+			objects = append(objects, safe)
 		}
 
 		if len(objects) == 0 {
@@ -437,7 +442,12 @@ func (r *Router) handleBulkUpdate(admin core.AdminInterface) http.HandlerFunc {
 				})
 				continue
 			}
-			objects = append(objects, obj)
+			safe, err := safeAdminObject(admin, obj)
+			if err != nil {
+				respondError(w, http.StatusInternalServerError, "serialization_failed", "Unable to serialize object", nil)
+				return
+			}
+			objects = append(objects, safe)
 		}
 
 		if len(objects) == 0 {

@@ -90,6 +90,13 @@ func (g *MigrationGenerator) GenerateMigrations(name string) error {
 		)
 	}
 
+	// A partial AST model must never become an authoritative schema diff.
+	// Unsupported table/field expressions could otherwise generate DROP SQL.
+	if diagnostics := parser.Diagnostics(); len(diagnostics) > 0 {
+		return core.NewMigrationError(core.ErrParseFailed,
+			fmt.Sprintf("cannot safely generate migrations from unsupported model expressions: %s", diagnostics[0]), nil)
+	}
+
 	if len(currentDefs) == 0 {
 		return core.NewMigrationError(
 			core.ErrInvalidChange,

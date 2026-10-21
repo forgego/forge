@@ -1,68 +1,36 @@
 package validation
 
 import (
+	"fmt"
+
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
 )
 
-// FromSchema creates a typed validator from a schema definition
-// This automatically generates validators based on schema field constraints
+// FromSchema creates a typed validator using the schema's constraints and the
+// concrete struct fields behind its names. No interface-typed accessor is
+// required: schema fields normally have concrete Go types.
 func FromSchema[T any](schemaInstance schema.Schema) *TypedValidator[T] {
 	builder := For[T]()
-
-	// Get model schema from ORM (for future use)
-	_, err := orm.GetModelSchema[T]()
-	if err != nil {
-		// Return empty validator if schema not found
+	if schemaInstance == nil {
+		builder.err = fmt.Errorf("schema is nil")
 		return builder.Build()
 	}
-
-	// Get field accessor
-	accessor, err := orm.NewFieldAccessor[T]()
-	if err != nil {
-		return builder.Build()
-	}
-
-	// Map schema fields to validators
-	fields := schemaInstance.Fields()
-	for _, field := range fields {
-		// Skip unexported fields
+	for _, field := range schemaInstance.Fields() {
 		if field.Name == "" {
 			continue
 		}
-
-		// Create field expression
-		fieldExpr, err := orm.FieldFor[T, interface{}](accessor, field.Name)
-		if err != nil {
-			// Skip fields that can't be accessed
-			continue
+		resolved, ok := schema.ResolveField(new(T), field)
+		if !ok {
+			builder.err = fmt.Errorf("schema field %s has no exported model field", field.Name)
+			return builder.Build()
 		}
-
-		// Build field validator using FieldFor helper
-		fieldBuilder := FieldFor[T, interface{}](builder, fieldExpr)
-
-		// Apply schema constraints
-		if field.Required {
-			fieldBuilder.WithRequired()
-		}
-
-		if field.MinLength != nil {
-			fieldBuilder.WithMinLength(*field.MinLength)
-		}
-
-		if field.MaxLength != nil {
-			fieldBuilder.WithMaxLength(*field.MaxLength)
-		}
-
-		if field.MinValue != nil {
-			fieldBuilder.Min(*field.MinValue)
-		}
-
-		if field.MaxValue != nil {
-			fieldBuilder.Max(*field.MaxValue)
-		}
-
-		// Type-specific validators
+		fieldBuilder := FieldFor[T, any](builder, orm.NewField[any](field.Name, ""))
+		definition := field
+		fieldBuilder.schemaField = &definition
+		fieldBuilder.fieldIndex = resolved.StructField.Index
+		// FieldValidator applies presence, range, choices and custom validators.
+		// Formats are tags in this API, so retain the existing type validators.
 		switch field.Type {
 		case schema.TypeEmail:
 			fieldBuilder.Email()
@@ -71,21 +39,6 @@ func FromSchema[T any](schemaInstance schema.Schema) *TypedValidator[T] {
 		case schema.TypeUUID:
 			fieldBuilder.UUID()
 		}
-
-		// Unique constraint
-		if field.Unique {
-			fieldBuilder.WithUnique()
-		}
-
-		// Choices
-		if len(field.Choices) > 0 {
-			choices := make([]interface{}, len(field.Choices))
-			for i, choice := range field.Choices {
-				choices[i] = choice.Value
-			}
-			fieldBuilder.WithChoices(choices...)
-		}
 	}
-
 	return builder.Build()
 }

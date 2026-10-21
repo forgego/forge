@@ -32,6 +32,17 @@ func (r *Router) handleExport(admin core.AdminInterface) http.HandlerFunc {
 		}
 
 		listFields, labelMap := exportListFields(meta)
+		hidden := make(map[string]bool)
+		for _, name := range hiddenResponseFields(admin) {
+			hidden[name] = true
+		}
+		visibleFields := make([]string, 0, len(listFields))
+		for _, name := range listFields {
+			if !hidden[name] {
+				visibleFields = append(visibleFields, name)
+			}
+		}
+		listFields = visibleFields
 		if len(listFields) == 0 {
 			respondError(w, http.StatusBadRequest, "export_failed", "No fields available for export", nil)
 			return
@@ -135,7 +146,9 @@ func objectToMap(obj interface{}) map[string]interface{} {
 		return map[string]interface{}{}
 	}
 	var result map[string]interface{}
-	if err := json.Unmarshal(data, &result); err != nil {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	if err := decoder.Decode(&result); err != nil {
 		return map[string]interface{}{}
 	}
 	return result

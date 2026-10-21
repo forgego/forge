@@ -30,7 +30,7 @@ func (r *tokenRepository) CreateEmailVerificationToken(ctx context.Context, toke
 		RETURNING id
 	`
 
-	now := time.Now()
+	now := time.Now().UTC()
 	if token.CreatedAt.IsZero() {
 		token.CreatedAt = now
 	}
@@ -39,8 +39,8 @@ func (r *tokenRepository) CreateEmailVerificationToken(ctx context.Context, toke
 		token.UserID,
 		token.Token,
 		token.Email,
-		token.CreatedAt,
-		token.ExpiresAt,
+		token.CreatedAt.UTC(),
+		token.ExpiresAt.UTC(),
 	).Scan(&token.ID)
 
 	if err != nil {
@@ -88,10 +88,10 @@ func (r *tokenRepository) getEmailVerificationTokenByHash(ctx context.Context, t
 		SELECT id, user_id, token, email, created_at, expires_at, verified_at
 		FROM email_verification_tokens
 		WHERE verified_at IS NULL
-		  AND expires_at > NOW()
+		  AND expires_at > $1
 	`
 
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.QueryContext(ctx, query, time.Now().UTC())
 	if err != nil {
 		return nil, fmt.Errorf("failed to query email verification tokens: %w", err)
 	}
@@ -148,7 +148,7 @@ func (r *tokenRepository) DeleteEmailVerificationToken(ctx context.Context, toke
 func (r *tokenRepository) MarkEmailVerificationTokenUsed(ctx context.Context, tokenID int64) error {
 	query := `UPDATE email_verification_tokens SET verified_at = $1 WHERE id = $2`
 
-	now := time.Now()
+	now := time.Now().UTC()
 	result, err := r.db.ExecContext(ctx, query, now, tokenID)
 	if err != nil {
 		return fmt.Errorf("failed to mark email verification token as used: %w", err)
@@ -175,7 +175,7 @@ func (r *tokenRepository) CreatePasswordResetToken(ctx context.Context, token *m
 		RETURNING id
 	`
 
-	now := time.Now()
+	now := time.Now().UTC()
 	if token.CreatedAt.IsZero() {
 		token.CreatedAt = now
 	}
@@ -183,8 +183,8 @@ func (r *tokenRepository) CreatePasswordResetToken(ctx context.Context, token *m
 	err := r.db.QueryRowContext(ctx, query,
 		token.UserID,
 		token.Token,
-		token.CreatedAt,
-		token.ExpiresAt,
+		token.CreatedAt.UTC(),
+		token.ExpiresAt.UTC(),
 	).Scan(&token.ID)
 
 	if err != nil {
@@ -230,10 +230,10 @@ func (r *tokenRepository) getPasswordResetTokenByHash(ctx context.Context, token
 		SELECT id, user_id, token, created_at, expires_at, used_at
 		FROM password_reset_tokens
 		WHERE used_at IS NULL
-		  AND expires_at > NOW()
+		  AND expires_at > $1
 	`
 
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.QueryContext(ctx, query, time.Now().UTC())
 	if err != nil {
 		return nil, fmt.Errorf("failed to query password reset tokens: %w", err)
 	}
@@ -288,15 +288,16 @@ func (r *tokenRepository) DeletePasswordResetToken(ctx context.Context, token st
 // DeleteExpiredTokens deletes all expired tokens
 func (r *tokenRepository) DeleteExpiredTokens(ctx context.Context) error {
 	// Delete expired email verification tokens
-	query1 := `DELETE FROM email_verification_tokens WHERE expires_at < NOW() AND verified_at IS NULL`
-	_, err := r.db.ExecContext(ctx, query1)
+	now := time.Now().UTC()
+	query1 := `DELETE FROM email_verification_tokens WHERE expires_at < $1 AND verified_at IS NULL`
+	_, err := r.db.ExecContext(ctx, query1, now)
 	if err != nil {
 		return fmt.Errorf("failed to delete expired email verification tokens: %w", err)
 	}
 
 	// Delete expired password reset tokens
-	query2 := `DELETE FROM password_reset_tokens WHERE expires_at < NOW() AND used_at IS NULL`
-	_, err = r.db.ExecContext(ctx, query2)
+	query2 := `DELETE FROM password_reset_tokens WHERE expires_at < $1 AND used_at IS NULL`
+	_, err = r.db.ExecContext(ctx, query2, now)
 	if err != nil {
 		return fmt.Errorf("failed to delete expired password reset tokens: %w", err)
 	}

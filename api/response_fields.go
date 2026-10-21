@@ -11,43 +11,7 @@ import (
 // and every concrete Go, JSON, and database alias are returned. It returns
 // nil when model does not implement schema.Schema.
 func NonSerializableFields(model interface{}) []string {
-	if model == nil {
-		return nil
-	}
-	if s, ok := model.(schema.Schema); ok {
-		return nonSerializableFromFields(model, s.Fields())
-	}
-	// Handle a non-pointer model whose pointer implements schema.Schema.
-	v := reflect.ValueOf(model)
-	if v.IsValid() && v.Kind() != reflect.Ptr {
-		ptr := reflect.New(v.Type())
-		ptr.Elem().Set(v)
-		if s, ok := ptr.Interface().(schema.Schema); ok {
-			return nonSerializableFromFields(ptr.Interface(), s.Fields())
-		}
-	}
-	return nil
-}
-
-func nonSerializableFromFields(model interface{}, fields []schema.Field) []string {
-	var out []string
-	seen := make(map[string]bool)
-	appendUnique := func(name string) {
-		if name == "" || name == "-" || seen[name] {
-			return
-		}
-		seen[name] = true
-		out = append(out, name)
-	}
-	for _, f := range fields {
-		if f.Serialize {
-			continue
-		}
-		for _, name := range resolvedFieldNames(model, f) {
-			appendUnique(name)
-		}
-	}
-	return out
+	return schema.NonSerializableFieldNames(model)
 }
 
 // NonEditableFields returns the names of fields on model that must not be

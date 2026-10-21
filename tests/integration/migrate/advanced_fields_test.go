@@ -261,11 +261,11 @@ type Employee struct {
 
 func (Employee) Fields() []schema.Field {
 	return []schema.Field{
-		schema.Int64("id").Primary().AutoIncrement().Build(),
-		schema.String("email").Required().MaxLength(255).Unique().Build(),
-		schema.String("employee_id").Required().MaxLength(50).Unique().Build(),
-		schema.Int32("age").MinValue(18).MaxValue(120).Build(),
-		schema.Decimal("salary").MinValue(0).MaxDigits(12).DecimalPlaces(2).Build(),
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.StringField("email", schema.Required(), schema.MaxLength(255), schema.Unique()),
+		schema.StringField("employee_id", schema.Required(), schema.MaxLength(50), schema.Unique()),
+		schema.Int32Field("age", schema.MinValue(18), schema.MaxValue(120)),
+		schema.DecimalField("salary", schema.MinValue(0), schema.MaxDigits(12), schema.DecimalPlaces(2)),
 	}
 }
 
@@ -273,7 +273,7 @@ func (Employee) Meta() schema.Meta {
 	return schema.Meta{
 		TableName: "employees",
 		Indexes: []schema.Index{
-			schema.Index("email", "employee_id").Unique().Build(),
+			{Name: "idx_employees_email_employee_id", Fields: []string{"email", "employee_id"}, Unique: true},
 		},
 	}
 }
@@ -307,6 +307,13 @@ func (Employee) Relations() []schema.Relation {
 	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "employees", "employee_id")
 	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "employees", "age")
 	testhelpers.AssertColumnExists(ctx, t, postgresDB, "postgres", "employees", "salary")
+
+	// This fixture previously used a removed builder and the parser silently
+	// dropped it. Verify the requested composite unique index really exists.
+	var indexDefinition string
+	require.NoError(t, postgresDB.QueryRowContext(ctx, `SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='idx_employees_email_employee_id'`).Scan(&indexDefinition))
+	require.Contains(t, indexDefinition, "UNIQUE")
+	require.Contains(t, indexDefinition, "(email, employee_id)")
 
 	// Test unique constraint on email
 	_, err = postgresDB.ExecContext(ctx, `

@@ -27,6 +27,21 @@ func (r *Router) handleHistory(admin core.AdminInterface) http.HandlerFunc {
 			return
 		}
 
+		id, err := normalizePathID(idStr)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "invalid_id", "Invalid ID format", nil)
+			return
+		}
+		obj, err := admin.GetObject(ctx, id)
+		if err != nil {
+			respondError(w, http.StatusNotFound, "not_found", "Object not found", nil)
+			return
+		}
+		if !admin.HasViewPermission(ctx, user, obj) {
+			respondError(w, http.StatusForbidden, "permission_denied", "You don't have permission to view this object", nil)
+			return
+		}
+
 		history, err := admin.GetHistory(ctx, idStr)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, "history_failed", err.Error(), nil)
@@ -61,6 +76,10 @@ func (r *Router) handleList(admin core.AdminInterface) http.HandlerFunc {
 			return
 		}
 
+		if err := filterAdminList(admin, response); err != nil {
+			respondError(w, http.StatusInternalServerError, "serialization_failed", "Unable to serialize objects", nil)
+			return
+		}
 		r.attachDisplayLabels(ctx, admin, user, response)
 
 		respondJSON(w, http.StatusOK, response)
@@ -93,7 +112,11 @@ func (r *Router) handleDetail(admin core.AdminInterface) http.HandlerFunc {
 			return
 		}
 
-		respondJSON(w, http.StatusOK, obj)
+		if !admin.HasViewPermission(ctx, user, obj) {
+			respondError(w, http.StatusForbidden, "permission_denied", "You don't have permission to view this object", nil)
+			return
+		}
+		respondAdminObject(w, http.StatusOK, admin, obj)
 	}
 }
 

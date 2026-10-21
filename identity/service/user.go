@@ -112,9 +112,10 @@ func (s *userService) UpdateUser(ctx context.Context, id int64, req *UpdateUserR
 
 	// Update fields if provided
 	if req.Email != nil {
-		// Check if new email already exists
-		if *req.Email != user.Email {
-			exists, err := s.userRepo.Exists(ctx, *req.Email)
+		email := strings.ToLower(strings.TrimSpace(*req.Email))
+		// Match repository canonicalization before checking uniqueness/proof.
+		if email != user.Email {
+			exists, err := s.userRepo.Exists(ctx, email)
 			if err != nil {
 				return nil, fmt.Errorf("failed to check email: %w", err)
 			}
@@ -122,7 +123,11 @@ func (s *userService) UpdateUser(ctx context.Context, id int64, req *UpdateUserR
 				return nil, ErrEmailExists
 			}
 		}
-		user.Email = *req.Email
+		if email != user.Email {
+			user.EmailVerified = false
+			user.EmailVerifiedAt = nil
+		}
+		user.Email = email
 	}
 
 	if req.FirstName != nil {
@@ -269,6 +274,11 @@ func (s *userService) VerifyEmail(ctx context.Context, token string) error {
 	user, err := s.userRepo.GetByID(ctx, verificationToken.UserID)
 	if err != nil {
 		return ErrUserNotFound
+	}
+
+	// A proof sent to a previous address cannot verify the current address.
+	if !strings.EqualFold(strings.TrimSpace(verificationToken.Email), strings.TrimSpace(user.Email)) {
+		return ErrInvalidToken
 	}
 
 	// 5. Check if email is already verified

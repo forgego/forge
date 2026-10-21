@@ -89,6 +89,8 @@ Read-only keys that clients echo back from an earlier response, such as `id` and
 
 ### Zero values the database fills on create
 
+On `POST`, a required editable field without a Go-side or database default must be supplied with a non-null value. Explicit numeric zero and boolean false are valid values; string length and other field validators still apply.
+
 On `POST`, the viewset hands the model to the manager's `Create`, which writes the value each field holds, including `false`, `0` and `""` on required fields and fields with a `Default`. A key omitted from the body first gets the field's Go-side `Default`. A few fields still reach `Create` at their zero value and are left out of the `INSERT`, whether the client omitted the key or sent the zero explicitly, so the database fills them (see [Defaults, zero values and timestamps](/docs/models/#defaults-zero-values-and-timestamps)):
 
 | Field | Zero value on create | Stored |
