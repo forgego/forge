@@ -10,12 +10,36 @@ import (
 
 type privateHistoryModel struct {
 	schema.BaseSchema
+	ID     int64
 	Name   string
 	Secret string `db:"private_value" json:"credential"`
 }
 
 func (privateHistoryModel) Fields() []schema.Field {
 	return []schema.Field{schema.StringField("name"), schema.StringField("private_value", schema.WriteOnly())}
+}
+
+type privateLabelModel struct {
+	schema.BaseSchema
+	ID   int64
+	Name string
+}
+
+func (privateLabelModel) Fields() []schema.Field {
+	return []schema.Field{schema.Int64Field("id", schema.Primary()), schema.StringField("name", schema.WriteOnly())}
+}
+
+func TestObjectLabelAndAuditReprExcludeWriteOnlyName(t *testing.T) {
+	history := NewMemoryHistoryManager()
+	admin, err := NewAdmin[privateLabelModel](privateLabelModel{}, nil, &Config[privateLabelModel]{HistoryManager: history})
+	require.NoError(t, err)
+	obj := &privateLabelModel{ID: 7, Name: "synthetic-secret"}
+	assert.Equal(t, "privateLabelModel #7", admin.getObjectLabel(obj))
+	require.NoError(t, admin.LogAction(context.Background(), nil, "7", admin.getObjectLabel(obj), ActionChange, "{}"))
+	entries, err := history.GetHistory(context.Background(), admin.ModelName(), "7")
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "privateLabelModel #7", entries[0].ObjectRepr)
 }
 func TestHistoryNeverStoresWriteOnlyChanges(t *testing.T) {
 	history := NewMemoryHistoryManager()

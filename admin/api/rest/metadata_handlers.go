@@ -148,7 +148,7 @@ func (r *Router) attachDisplayLabels(ctx context.Context, admin core.AdminInterf
 		return
 	}
 	for _, relation := range meta.Relations {
-		r.attachRelationLabels(ctx, response, rows, relation)
+		r.attachRelationLabels(ctx, user, response, rows, relation)
 	}
 }
 
@@ -164,7 +164,7 @@ func displayRows(results interface{}) ([]map[string]interface{}, bool) {
 	return rows, true
 }
 
-func (r *Router) attachRelationLabels(ctx context.Context, response *core.PaginatedResponse, rows []map[string]interface{}, relation core.RelationMetadata) {
+func (r *Router) attachRelationLabels(ctx context.Context, user interface{}, response *core.PaginatedResponse, rows []map[string]interface{}, relation core.RelationMetadata) {
 	if !isFKOrOneToOne(relation.Type) {
 		return
 	}
@@ -172,24 +172,44 @@ func (r *Router) attachRelationLabels(ctx context.Context, response *core.Pagina
 	if len(ids) == 0 {
 		return
 	}
-	labels := r.loadRelationLabels(ctx, relation.RelatedModel, ids)
+	labels := r.loadRelationLabels(ctx, user, relation.RelatedModel, ids)
 	applyRelationLabels(response, relation.Name, labels)
 }
 
-func (r *Router) loadRelationLabels(ctx context.Context, relatedModel string, ids []interface{}) map[string]string {
+func (r *Router) loadRelationLabels(ctx context.Context, user interface{}, relatedModel string, ids []interface{}) map[string]string {
 	related, err := r.registry.Get(relatedModel)
 	if err != nil || related == nil {
+		return nil
+	}
+	if !related.HasViewPermission(ctx, user, nil) {
 		return nil
 	}
 	resolver, ok := related.(core.LabelResolver)
 	if !ok {
 		return nil
 	}
-	labels, err := resolver.ObjectLabels(ctx, ids)
+	allowed := make([]interface{}, 0, len(ids))
+	for _, id := range ids {
+		obj, err := related.GetObject(ctx, id)
+		if err == nil && obj != nil && related.HasViewPermission(ctx, user, obj) {
+			allowed = append(allowed, id)
+		}
+	}
+	if len(allowed) == 0 {
+		return nil
+	}
+	labels, err := resolver.ObjectLabels(ctx, allowed)
 	if err != nil || len(labels) == 0 {
 		return nil
 	}
-	return labels
+	visible := make(map[string]string, len(allowed))
+	for _, id := range allowed {
+		key := fmt.Sprint(id)
+		if label, ok := labels[key]; ok {
+			visible[key] = label
+		}
+	}
+	return visible
 }
 
 func applyRelationLabels(response *core.PaginatedResponse, relationName string, labels map[string]string) {

@@ -2,6 +2,7 @@ package rest
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"reflect"
@@ -73,4 +74,17 @@ func filterAdminList(admin core.AdminInterface, response *core.PaginatedResponse
 	}
 	response.Results = results
 	return nil
+}
+
+// visibleAdminRows applies the same object check used by detail and history
+// before a row can reach a list response or export.
+func visibleAdminRows(ctx context.Context, admin core.AdminInterface, user any, results any) []any {
+	items := interfaceSlice(results)
+	visible := make([]any, 0, len(items))
+	for _, item := range items {
+		if item != nil && admin.HasViewPermission(ctx, user, item) {
+			visible = append(visible, item)
+		}
+	}
+	return visible
 }

@@ -75,6 +75,7 @@ func (r *Router) handleList(admin core.AdminInterface) http.HandlerFunc {
 			respondError(w, http.StatusInternalServerError, "list_failed", err.Error(), nil)
 			return
 		}
+		response.Results = visibleAdminRows(ctx, admin, user, response.Results)
 
 		if err := filterAdminList(admin, response); err != nil {
 			respondError(w, http.StatusInternalServerError, "serialization_failed", "Unable to serialize objects", nil)

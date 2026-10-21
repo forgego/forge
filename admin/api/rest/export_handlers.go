@@ -69,7 +69,7 @@ func (r *Router) handleExport(admin core.AdminInterface) http.HandlerFunc {
 				break
 			}
 
-			for _, item := range items {
+			for _, item := range visibleAdminRows(ctx, admin, user, items) {
 				rowMap := make(map[string]interface{}, len(listFields))
 				itemMap := objectToMap(item)
 				for _, field := range listFields {
@@ -78,7 +78,7 @@ func (r *Router) handleExport(admin core.AdminInterface) http.HandlerFunc {
 				results = append(results, rowMap)
 			}
 
-			if int64(len(results)) >= response.Count || len(items) < params.PageSize {
+			if int64(params.Page)*int64(params.PageSize) >= response.Count || len(items) < params.PageSize {
 				break
 			}
 			params.Page++
