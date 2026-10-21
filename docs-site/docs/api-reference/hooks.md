@@ -44,17 +44,17 @@ func (Product) Hooks() *schema.ModelHooks {
 ## Execution Lifecycle Order
 
 ### On Record Creation (`Create` / `Save` on new instance)
-1. `Clean(instance)` — Validate cross-field business constraints.
+1. `BeforeCreate(ctx, instance)` — Creation-specific tasks (e.g. assigning UUIDs or hashing passwords).
 2. `BeforeSave(ctx, instance)` — Common pre-save normalization (e.g. slug generation).
-3. `BeforeCreate(ctx, instance)` — Creation-specific tasks (e.g. assigning UUIDs or hashing passwords).
+3. `Clean(instance)` — Validate cross-field business constraints after before hooks have run.
 4. **SQL INSERT** (inside the current transaction, if any)
 5. `AfterCreate(ctx, instance)` — Fire event, publish audit log.
 6. `AfterSave(ctx, instance)` — Common post-save notifications.
 
 ### On Record Update (`Update` / `Save` on existing instance)
-1. `Clean(instance)` — Validate updated fields.
+1. `BeforeUpdate(ctx, instance)` — Check permission or log old vs new diffs.
 2. `BeforeSave(ctx, instance)` — Re-calculate computed attributes.
-3. `BeforeUpdate(ctx, instance)` — Check permission or log old vs new diffs.
+3. `Clean(instance)` — Validate updated fields after before hooks have run.
 4. **Database Transaction / SQL UPDATE**
 5. `AfterUpdate(ctx, instance)` — Clear caches.
 6. `AfterSave(ctx, instance)` — Common post-save triggers.

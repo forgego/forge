@@ -113,7 +113,6 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 - Auto-generated forms from models
 - Field widgets (text, select, date picker, etc.)
 - Form validation
-- Fieldsets
 - Related object selection and inline relations
 
 ### Admin Features
@@ -135,7 +134,7 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 ### Serializers
 - Typed serializers for models
 - Enhanced serializers with relations
-- Nested serializers
+- Nested serializers are not implemented
 - Read-only and write-only fields
 - Custom field serialization
 - Validation rules

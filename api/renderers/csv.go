@@ -1,9 +1,12 @@
 package renderers
 
 import (
+	"bytes"
 	"encoding/csv"
+	"fmt"
 	"io"
 	"reflect"
+	"sort"
 )
 
 // CSVRenderer renders data as CSV
@@ -16,9 +19,11 @@ func NewCSVRenderer() *CSVRenderer {
 
 // Render renders data to CSV bytes
 func (r *CSVRenderer) Render(data interface{}) ([]byte, error) {
-	// CSV rendering requires special handling for slices of objects
-	// This is a simplified implementation
-	return nil, nil
+	var b bytes.Buffer
+	if err := r.RenderToWriter(&b, data); err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
 }
 
 // MediaType returns the CSV media type
@@ -29,40 +34,84 @@ func (r *CSVRenderer) MediaType() string {
 // RenderToWriter renders data directly to a writer
 func (r *CSVRenderer) RenderToWriter(w io.Writer, data interface{}) error {
 	writer := csv.NewWriter(w)
-	defer writer.Flush()
-
-	// Handle slice of maps/structs
 	v := reflect.ValueOf(data)
-	if v.Kind() == reflect.Slice {
-		// Write header
-		if v.Len() > 0 {
-			first := v.Index(0).Interface()
-			headers := getHeaders(first)
-			if err := writer.Write(headers); err != nil {
-				return err
-			}
+	if !v.IsValid() || (v.Kind() != reflect.Slice && v.Kind() != reflect.Array) {
+		return fmt.Errorf("CSV data must be a slice or array")
+	}
+	if v.Len() == 0 {
+		return nil
+	}
+	headers, err := csvHeaders(v.Index(0))
+	if err != nil {
+		return err
+	}
+	if err := writer.Write(headers); err != nil {
+		return err
+	}
+	for i := 0; i < v.Len(); i++ {
+		row, err := csvRow(v.Index(i), headers)
+		if err != nil {
+			return err
+		}
+		if err := writer.Write(row); err != nil {
+			return err
+		}
+	}
+	writer.Flush()
+	return writer.Error()
+}
 
-			// Write rows
-			for i := 0; i < v.Len(); i++ {
-				row := getRow(v.Index(i).Interface(), headers)
-				if err := writer.Write(row); err != nil {
-					return err
-				}
+func csvValue(v reflect.Value) (reflect.Value, error) {
+	for v.Kind() == reflect.Interface || v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return v, fmt.Errorf("CSV row is nil")
+		}
+		v = v.Elem()
+	}
+	if v.Kind() != reflect.Struct && (v.Kind() != reflect.Map || v.Type().Key().Kind() != reflect.String) {
+		return v, fmt.Errorf("CSV rows must be structs or string-keyed maps")
+	}
+	return v, nil
+}
+
+func csvHeaders(v reflect.Value) ([]string, error) {
+	v, err := csvValue(v)
+	if err != nil {
+		return nil, err
+	}
+	var headers []string
+	if v.Kind() == reflect.Map {
+		for _, k := range v.MapKeys() {
+			headers = append(headers, k.String())
+		}
+		sort.Strings(headers)
+	} else {
+		for i := 0; i < v.NumField(); i++ {
+			field := v.Type().Field(i)
+			if field.IsExported() {
+				headers = append(headers, field.Name)
 			}
 		}
 	}
-
-	return nil
+	return headers, nil
 }
 
-// getHeaders extracts headers from an object
-func getHeaders(obj interface{}) []string {
-	// Simplified - would use reflection to get field names
-	return []string{}
-}
-
-// getRow extracts row data from an object
-func getRow(obj interface{}, headers []string) []string {
-	// Simplified - would use reflection to get field values
-	return make([]string, len(headers))
+func csvRow(v reflect.Value, headers []string) ([]string, error) {
+	v, err := csvValue(v)
+	if err != nil {
+		return nil, err
+	}
+	row := make([]string, len(headers))
+	for i, name := range headers {
+		var value reflect.Value
+		if v.Kind() == reflect.Map {
+			value = v.MapIndex(reflect.ValueOf(name).Convert(v.Type().Key()))
+		} else {
+			value = v.FieldByName(name)
+		}
+		if value.IsValid() {
+			row[i] = fmt.Sprint(value.Interface())
+		}
+	}
+	return row, nil
 }

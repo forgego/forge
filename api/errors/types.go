@@ -93,7 +93,7 @@ func (e *BaseError) ToProblem() *Problem {
 // getTypeURI generates the type URI for the problem
 func (e *BaseError) getTypeURI() string {
 	// Default base URL, can be overridden via configuration
-	baseURL := "https://api.example.com/problems"
+	baseURL := GetTypeBaseURL()
 	return fmt.Sprintf("%s/%s", baseURL, string(e.Type))
 }
 

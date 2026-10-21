@@ -5,6 +5,6 @@ description: Security policy and reporting.
 
 # Security
 
-Report security issues privately. See the full policy here:
+For reporting channels and disclosure guidance, see the full security policy:
 
 - https://github.com/forgego/forge/blob/master/SECURITY.md

@@ -24,7 +24,7 @@ schema.ForeignKeyField("author_id", "User", schema.OnDelete(schema.CascadeCASCAD
 
 ### 2. `schema.OneToOneField` (One-to-One)
 
-Establishes a foreign key with an automatic `UNIQUE` database constraint, guaranteeing a strict 1:1 relationship:
+Declares a one-to-one relation in model metadata. Migrations currently create its foreign key but do not add a `UNIQUE` constraint automatically. Mark the corresponding field `schema.Unique()` or declare a unique constraint in `Meta()` to enforce 1:1 cardinality in the database:
 
 ```go
 schema.OneToOneField("profile_id", "UserProfile", schema.OnDelete(schema.CascadeCASCADE),
@@ -61,5 +61,5 @@ The `CascadeType` parameter defines what happens to dependent rows when a refere
 - `RelatedName(name string)`: Stores the reverse relation name in schema metadata; it does not generate a Go accessor such as `user.Posts`.
 - `RelatedQueryName(name string)`: Sets the query lookup name for reverse filters.
 - `Through(tableName string)`: Specifies the junction table for `ManyToMany` relationships.
-- `DBConstraint(bool)`: If `false`, omits the foreign key constraint from migrations while maintaining ORM JOIN capabilities.
+- `DBConstraint(bool)`: Stores the requested constraint setting in relation metadata. Migration generation currently does not honor `false`; it still emits the foreign key constraint. Do not use this option to disable database enforcement.
 

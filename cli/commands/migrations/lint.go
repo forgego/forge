@@ -57,22 +57,20 @@ func (c *LintCommand) Execute(ctx *core.Context, args []string) error {
 	if verbose {
 		// Load state with verbose mode to get parse errors
 		loader := state.NewFileStateLoaderWithOptions(migrationsPath, state.LoaderOptions{Verbose: true})
-		_, err := loader.Load()
-		if err == nil {
-			// Get parse errors if available
-			if fileLoader, ok := loader.(*state.FileStateLoader); ok {
-				parseErrors := fileLoader.GetParseErrors()
-				if len(parseErrors) > 0 {
-					fmt.Println("\nParse errors (from state loader):")
-					for _, perr := range parseErrors {
-						fmt.Printf("  %s", perr.File)
-						if perr.Line > 0 {
-							fmt.Printf(":%d", perr.Line)
-						}
-						fmt.Printf(": %s\n", perr.Message)
+		_, _ = loader.Load()
+		// A parse failure is precisely when diagnostics are most useful.
+		if fileLoader, ok := loader.(*state.FileStateLoader); ok {
+			parseErrors := fileLoader.GetParseErrors()
+			if len(parseErrors) > 0 {
+				fmt.Println("\nParse errors (from state loader):")
+				for _, perr := range parseErrors {
+					fmt.Printf("  %s", perr.File)
+					if perr.Line > 0 {
+						fmt.Printf(":%d", perr.Line)
 					}
-					fmt.Println()
+					fmt.Printf(": %s\n", perr.Message)
 				}
+				fmt.Println()
 			}
 		}
 	}

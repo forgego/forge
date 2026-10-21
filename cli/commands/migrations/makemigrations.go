@@ -32,8 +32,8 @@ func (c *MakeMigrationsCommand) Definition() *cobra.Command {
 	cmd.Flags().String("models", "./models", "Directory containing model definitions (used with --auto)")
 	cmd.Flags().Bool("auto", false, "Generate SQL from models automatically")
 	cmd.Flags().Bool("empty", false, "Create an empty migration file")
-	cmd.Flags().Bool("merge", false, "Enable fixing of migration conflicts")
-	cmd.Flags().Bool("verbose", false, "Enable verbose output including parse errors and warnings")
+	cmd.Flags().Bool("merge", false, "Create a merge template for a version gap")
+	cmd.Flags().Bool("verbose", false, "Reserved for future diagnostic output")
 	return cmd
 }
 
@@ -81,7 +81,7 @@ func (c *MakeMigrationsCommand) Execute(ctx *core.Context, args []string) error 
 	}
 
 	if merge {
-		// Handle merge conflicts
+		// Create a merge template for the first detected version gap.
 		conflicts, err := detectConflicts(migrationsDir)
 		if err != nil {
 			return fmt.Errorf("failed to detect conflicts: %w", err)
