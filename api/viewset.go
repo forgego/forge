@@ -2202,7 +2202,11 @@ func setIntField(field reflect.Value, value interface{}) error {
 	case int64:
 		n = v
 	case uint:
-		n = int64(v)
+		var err error
+		n, err = unsignedToInt64(uint64(v))
+		if err != nil {
+			return err
+		}
 	case uint8:
 		n = int64(v)
 	case uint16:
@@ -2210,7 +2214,11 @@ func setIntField(field reflect.Value, value interface{}) error {
 	case uint32:
 		n = int64(v)
 	case uint64:
-		n = int64(v)
+		var err error
+		n, err = unsignedToInt64(v)
+		if err != nil {
+			return err
+		}
 	case json.Number:
 		parsed, err := parseIntegralInt64(v.String())
 		if err != nil {
@@ -2229,7 +2237,11 @@ func setIntField(field reflect.Value, value interface{}) error {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			n = rv.Int()
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			n = int64(rv.Uint())
+			var err error
+			n, err = unsignedToInt64(rv.Uint())
+			if err != nil {
+				return err
+			}
 		case reflect.Float32, reflect.Float64:
 			var err error
 			n, err = integralFloatToInt64(rv.Float())
@@ -2245,6 +2257,13 @@ func setIntField(field reflect.Value, value interface{}) error {
 	}
 	field.SetInt(n)
 	return nil
+}
+
+func unsignedToInt64(value uint64) (int64, error) {
+	if value > math.MaxInt64 {
+		return 0, fmt.Errorf("value %d out of range for signed integer", value)
+	}
+	return int64(value), nil
 }
 
 func parseIntegralInt64(value string) (int64, error) {

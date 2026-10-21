@@ -36,13 +36,21 @@ func (s *EnhancedSerializer) AddField(name string, field fields.Field) {
 func (s *EnhancedSerializer) Validate() error {
 	s.Valid = true
 	s.Errors = make(map[string][]string)
+	if s.Data == nil {
+		s.Data = make(map[string]interface{})
+	}
 
 	for name, field := range s.Fields {
 		if field.IsReadOnly() {
 			continue
 		}
 
-		value := s.Data[name]
+		value, exists := s.Data[name]
+		if !exists {
+			if defaults, ok := field.(interface{ DefaultValue() interface{} }); ok && defaults.DefaultValue() != nil {
+				value = defaults.DefaultValue()
+			}
+		}
 		if value == nil && !field.IsRequired() {
 			continue
 		}

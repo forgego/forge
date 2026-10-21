@@ -2,6 +2,7 @@ package fields
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 )
 
@@ -42,8 +43,14 @@ func (f *IntegerField) ToInternalValue(data interface{}) (interface{}, error) {
 	case int64:
 		intVal = v
 	case float64:
+		if math.IsNaN(v) || math.IsInf(v, 0) || math.Trunc(v) != v || v < -0x1p63 || v >= 0x1p63 {
+			return nil, fmt.Errorf("%s: Expected integer in int64 range", f.FieldName)
+		}
 		intVal = int64(v)
 	case float32:
+		if math.IsNaN(float64(v)) || math.IsInf(float64(v), 0) || math.Trunc(float64(v)) != float64(v) || float64(v) < -0x1p63 || float64(v) >= 0x1p63 {
+			return nil, fmt.Errorf("%s: Expected integer in int64 range", f.FieldName)
+		}
 		intVal = int64(v)
 	default:
 		return nil, fmt.Errorf("%s: Expected integer, got %T", f.FieldName, data)

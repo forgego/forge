@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/forgego/forge/db/migrate/core"
+	"github.com/forgego/forge/db/migrate/internal/migrationfiles"
 	"github.com/forgego/forge/db/migrate/parse"
 )
 
@@ -75,9 +76,12 @@ func (l *FileStateLoader) Load() (*SchemaState, error) {
 		}
 
 		// Check if migrations directory exists
-		if _, err := os.Stat(l.migrationsDir); os.IsNotExist(err) {
-			l.state = state
-			return state, nil
+		if _, err := os.Stat(l.migrationsDir); err != nil {
+			if os.IsNotExist(err) {
+				l.state = state
+				return state, nil
+			}
+			return nil, fmt.Errorf("failed to access migrations directory %s: %w", l.migrationsDir, err)
 		}
 
 		// Find all up migration files
@@ -102,7 +106,7 @@ func (l *FileStateLoader) Load() (*SchemaState, error) {
 		var allFileChanges []fileChanges
 
 		for _, file := range sortedFiles {
-			content, err := os.ReadFile(file)
+			content, err := migrationfiles.Read(file)
 			if err != nil {
 				if l.verbose {
 					l.parseErrors = append(l.parseErrors, &ParseErrorInfo{
@@ -111,8 +115,7 @@ func (l *FileStateLoader) Load() (*SchemaState, error) {
 						Error:   err,
 					})
 				}
-				l.skippedFiles = append(l.skippedFiles, file)
-				continue
+				return nil, err
 			}
 
 			changes, err := parser.ParseUpSQL(string(content))
@@ -125,8 +128,7 @@ func (l *FileStateLoader) Load() (*SchemaState, error) {
 						Error:   err,
 					})
 				}
-				l.skippedFiles = append(l.skippedFiles, file)
-				continue
+				return nil, fmt.Errorf("failed to parse migration %s: %w", file, err)
 			}
 
 			// Collect parse errors from parser
@@ -143,14 +145,13 @@ func (l *FileStateLoader) Load() (*SchemaState, error) {
 				}
 			}
 
-			// Log UnknownChange statements if verbose
+			// Reject statements that could change schema but could not be replayed.
 			for _, change := range changes {
-				if unknown, ok := change.(*core.UnknownChange); ok && l.verbose {
-					l.parseErrors = append(l.parseErrors, &ParseErrorInfo{
-						File:    file,
-						SQL:     unknown.SQL,
-						Message: "unparseable statement (UnknownChange)",
-					})
+				if unknown, ok := change.(*core.UnknownChange); ok {
+					if l.verbose {
+						l.parseErrors = append(l.parseErrors, &ParseErrorInfo{File: file, SQL: unknown.SQL, Message: "unparseable statement (UnknownChange)"})
+					}
+					return nil, fmt.Errorf("unparseable schema statement in migration %s: %s", file, unknown.SQL)
 				}
 			}
 
@@ -165,17 +166,18 @@ func (l *FileStateLoader) Load() (*SchemaState, error) {
 		// later created again, or renamed, ends up as the last file left it.
 		// A change whose table does not exist yet is retried once at the end,
 		// for migrations written out of order.
-		var retryChanges []core.Change
+		type retryChange struct {
+			file   string
+			change core.Change
+		}
+		var retryChanges []retryChange
 		for _, fc := range allFileChanges {
 			for _, change := range fc.changes {
-				if _, ok := change.(*core.UnknownChange); ok {
-					continue
-				}
 				if err := applyChangeToState(state, change); err != nil {
 					if _, isCreate := change.(*core.CreateTable); isCreate || !strings.Contains(err.Error(), "does not exist") {
 						return nil, l.formatError(fc.file, change, err, changeContext(change))
 					}
-					retryChanges = append(retryChanges, change)
+					retryChanges = append(retryChanges, retryChange{file: fc.file, change: change})
 					if l.verbose {
 						l.parseErrors = append(l.parseErrors, &ParseErrorInfo{
 							File:    fc.file,
@@ -188,7 +190,8 @@ func (l *FileStateLoader) Load() (*SchemaState, error) {
 		}
 
 		// Retry changes that failed due to missing tables
-		for _, change := range retryChanges {
+		for _, retry := range retryChanges {
+			change := retry.change
 			if err := applyChangeToState(state, change); err != nil {
 				if l.verbose {
 					l.parseErrors = append(l.parseErrors, &ParseErrorInfo{
@@ -196,7 +199,7 @@ func (l *FileStateLoader) Load() (*SchemaState, error) {
 						Error:   err,
 					})
 				}
-				// Continue - some changes might fail if tables truly don't exist
+				return nil, l.formatError(retry.file, change, err, changeContext(change))
 			}
 		}
 
@@ -246,13 +249,10 @@ func (l *FileStateLoader) Apply(changes []core.Change) error {
 func (l *FileStateLoader) GetState() *SchemaState {
 	if l.state == nil {
 		// Load state if not loaded
-		// If Load fails, return empty state to avoid nil pointer
+		// If Load fails, do not present an empty state as successful replay.
 		state, err := l.Load()
 		if err != nil {
-			// Return empty state on error rather than nil
-			return &SchemaState{
-				Tables: make(map[string]*TableState),
-			}
+			return nil
 		}
 		return state
 	}

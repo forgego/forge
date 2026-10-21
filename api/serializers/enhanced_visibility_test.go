@@ -38,3 +38,31 @@ func TestEnhancedSerializerHonorsSchemaVisibility(t *testing.T) {
 	assert.Equal(t, "public", data["name"])
 	assert.NotContains(t, data, "credential")
 }
+
+func TestEnhancedSerializerUsesDefaultWithNilData(t *testing.T) {
+	s := NewEnhancedSerializer()
+	field := fields.NewStringField("status")
+	field.Default = "draft"
+	s.AddField("status", field)
+	require.NoError(t, s.Validate())
+	require.Equal(t, "draft", s.Data["status"])
+}
+
+func TestEnhancedSerializerWrappedRequiredAndDefault(t *testing.T) {
+	for _, wrapped := range []bool{false, true} {
+		s := NewEnhancedSerializer()
+		source := fields.NewStringField("secret")
+		source.Required = true
+		var field fields.Field = source
+		if wrapped {
+			field = fields.NewWriteOnlyField("secret", source)
+		}
+		s.AddField("secret", field)
+		require.Error(t, s.Validate())
+		require.Contains(t, s.Errors, "secret")
+
+		source.Default = "fallback"
+		require.NoError(t, s.Validate())
+		require.Equal(t, "fallback", s.Data["secret"])
+	}
+}

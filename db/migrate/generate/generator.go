@@ -195,8 +195,8 @@ func (g *MigrationGenerator) GenerateMigrations(name string) error {
 	dependencyDetector := NewDependencyDetector(g.migrationsDir, g.stateManager)
 	dependencies, err := dependencyDetector.DetectDependencies(changes, upSQL)
 	if err != nil {
-		// Log error but continue - dependencies are optional
-		// In production, you might want to make this stricter
+		return core.NewMigrationError(core.ErrInvalidChange,
+			"failed to detect migration dependencies", err)
 	}
 
 	// Validate dependencies exist

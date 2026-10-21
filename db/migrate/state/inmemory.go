@@ -56,8 +56,16 @@ func (s *InMemoryState) Apply(changes []core.Change) error {
 			}
 		case *core.RenameColumn:
 			s.applyRenameColumn(c)
+		case *core.RenameConstraint:
+			if err := s.applyRenameConstraint(c); err != nil {
+				return err
+			}
 		case *core.AddIndex:
 			if err := s.applyAddIndex(c); err != nil {
+				return err
+			}
+		case *core.ModifyIndex:
+			if err := s.applyModifyIndex(c); err != nil {
 				return err
 			}
 		case *core.DropIndex:
@@ -66,6 +74,10 @@ func (s *InMemoryState) Apply(changes []core.Change) error {
 			}
 		case *core.AddForeignKey:
 			if err := s.applyAddForeignKey(c); err != nil {
+				return err
+			}
+		case *core.ModifyForeignKey:
+			if err := s.applyModifyForeignKey(c); err != nil {
 				return err
 			}
 		case *core.DropForeignKey:
@@ -80,6 +92,8 @@ func (s *InMemoryState) Apply(changes []core.Change) error {
 			if table, exists := s.state.Tables[c.Table]; exists {
 				delete(table.Constraints, c.ConstraintName)
 			}
+		default:
+			return fmt.Errorf("cannot apply unsupported migration change %T", change)
 		}
 	}
 	return nil
@@ -270,6 +284,15 @@ func (s *InMemoryState) applyAddIndex(c *core.AddIndex) error {
 	return nil
 }
 
+func (s *InMemoryState) applyModifyIndex(c *core.ModifyIndex) error {
+	table, exists := s.state.Tables[c.Table]
+	if !exists {
+		return fmt.Errorf("table %s does not exist", c.Table)
+	}
+	delete(table.Indexes, c.OldIndex.Name)
+	return s.applyAddIndex(&core.AddIndex{Table: c.Table, Index: c.NewIndex})
+}
+
 func (s *InMemoryState) applyAddForeignKey(c *core.AddForeignKey) error {
 	table, exists := s.state.Tables[c.Table]
 	if !exists {
@@ -295,6 +318,15 @@ func (s *InMemoryState) applyAddForeignKey(c *core.AddForeignKey) error {
 
 	table.ForeignKeys[fkName] = fkState
 	return nil
+}
+
+func (s *InMemoryState) applyModifyForeignKey(c *core.ModifyForeignKey) error {
+	table, exists := s.state.Tables[c.Table]
+	if !exists {
+		return fmt.Errorf("table %s does not exist", c.Table)
+	}
+	delete(table.ForeignKeys, fmt.Sprintf("fk_%s_%s", c.Table, c.OldFK.Name))
+	return s.applyAddForeignKey(&core.AddForeignKey{Table: c.Table, Relation: c.NewFK, TargetTable: c.TargetTable})
 }
 
 func (s *InMemoryState) applyAddConstraint(c *core.AddConstraint) error {

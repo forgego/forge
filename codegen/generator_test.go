@@ -78,6 +78,57 @@ func (Product) Hooks() *schema.ModelHooks {
 	assert.Contains(t, string(apiBytes), "RegisterAPIRoutes(router *forgehttp.Router)")
 }
 
+func TestGeneratorPreservesHandwrittenSerializerOwnership(t *testing.T) {
+	for _, apiOnly := range []bool{false, true} {
+		t.Run(map[bool]string{false: "generate", true: "api_only"}[apiOnly], func(t *testing.T) {
+			dir := t.TempDir()
+			models := `package models
+import "github.com/forgego/forge/schema"
+type User struct { schema.BaseSchema; ID int64 }
+func (User) Fields() []schema.Field { return []schema.Field{schema.Int64("id").Primary().AutoIncrement().Build()} }
+type Product struct { schema.BaseSchema; ID int64 }
+func (Product) Fields() []schema.Field { return []schema.Field{schema.Int64("id").Primary().AutoIncrement().Build()} }
+`
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "models.go"), []byte(models), 0600))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "api.go"), []byte("package models\ntype UserSerializer struct{}\nfunc NewUserSerializer() *UserSerializer { return &UserSerializer{} }\n"), 0600))
+			gen := NewGenerator(dir, dir).SetGenerateAPI(true)
+			var err error
+			if apiOnly {
+				err = gen.GenerateAPI()
+			} else {
+				err = gen.Generate()
+			}
+			require.NoError(t, err)
+			api, err := os.ReadFile(filepath.Join(dir, "api_gen.go"))
+			require.NoError(t, err)
+			assert.NotContains(t, string(api), "type UserSerializer struct")
+			assert.NotContains(t, string(api), "func NewUserSerializer()")
+			assert.Contains(t, string(api), "type UserViewSet struct")
+			assert.Contains(t, string(api), "func RegisterUserRoutes(")
+			assert.Contains(t, string(api), `apiRouter.Register("users", NewUserViewSet())`)
+			assert.Contains(t, string(api), "ProductSerializer")
+		})
+	}
+}
+
+func TestGeneratorRejectsIncompleteHandwrittenAPIType(t *testing.T) {
+	for _, declaration := range []string{"type UserSerializer struct{}", "type UserViewSet struct{}"} {
+		t.Run(declaration, func(t *testing.T) {
+			dir := t.TempDir()
+			models := `package models
+import "github.com/forgego/forge/schema"
+type User struct { schema.BaseSchema; ID int64 }
+func (User) Fields() []schema.Field { return []schema.Field{schema.Int64("id").Primary().AutoIncrement().Build()} }
+`
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "models.go"), []byte(models), 0600))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "api.go"), []byte("package models\n"+declaration+"\n"), 0600))
+			err := NewGenerator(dir, dir).SetGenerateAPI(true).Generate()
+			require.ErrorContains(t, err, "handwritten")
+			assert.NoFileExists(t, filepath.Join(dir, "api_gen.go"))
+		})
+	}
+}
+
 func TestValidateAPIModels_AcceptsOnlyInt64IDPrimaryKey(t *testing.T) {
 	tests := []struct {
 		name    string

@@ -9,6 +9,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/forgego/forge/cli/core"
 	"github.com/forgego/forge/cli/templates"
+	codegen "github.com/forgego/forge/codegen"
 	"github.com/spf13/cobra"
 )
 
@@ -93,6 +94,15 @@ func (c *AddAPICommand) Execute(ctx *core.Context, args []string) error {
 	// Read existing api.go
 	appPath := filepath.Join(projectRoot, "app", appName)
 	apiPath := filepath.Join(appPath, "api.go")
+	declared, err := codegen.DeclaredNames(appPath)
+	if err != nil {
+		return fmt.Errorf("failed to inspect API declarations: %w", err)
+	}
+	for _, name := range []string{"Register" + resourceIdent + "API", modelName + "Serializer", "New" + modelName + "Serializer"} {
+		if declared[name] {
+			return fmt.Errorf("API declaration %s already exists in %s", name, appPath)
+		}
+	}
 
 	// Generate API code
 	apiCode, err := generateAPICode(appName, modelName, resourceName, resourcePath, graphql)
