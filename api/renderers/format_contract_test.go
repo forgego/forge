@@ -3,6 +3,7 @@ package renderers
 import (
 	"bytes"
 	"encoding/csv"
+	"reflect"
 	"testing"
 
 	"go.yaml.in/yaml/v3"
@@ -45,6 +46,42 @@ func TestCSVRendererAcceptsStringKeyedMaps(t *testing.T) {
 	}
 	if string(encoded) != "count\n2\n" {
 		t.Fatalf("CSV=%q", encoded)
+	}
+}
+
+func TestCSVRendererEscapesFormulaCellsButPreservesNumericValues(t *testing.T) {
+	data := []map[string]any{{"value": "=1+1"}, {"value": -5}, {"value": "-5"}}
+	encoded, err := NewCSVRenderer().Render(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	records, err := csv.NewReader(bytes.NewReader(encoded)).ReadAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := [][]string{{"value"}, {"'=1+1"}, {"-5"}, {"'-5"}}
+	if !reflect.DeepEqual(records, want) {
+		t.Fatalf("records=%q, want %q", records, want)
+	}
+}
+
+func TestCSVRendererUsesJSONFieldNamesAndOmitsIgnoredFields(t *testing.T) {
+	data := []struct {
+		Name   string `json:"display_name,omitempty"`
+		Secret string `json:"-"`
+		Count  int
+	}{{"apple", "hidden", 2}}
+	encoded, err := NewCSVRenderer().Render(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	records, err := csv.NewReader(bytes.NewReader(encoded)).ReadAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := [][]string{{"display_name", "Count"}, {"apple", "2"}}
+	if !reflect.DeepEqual(records, want) {
+		t.Fatalf("records=%q, want %q", records, want)
 	}
 }
 

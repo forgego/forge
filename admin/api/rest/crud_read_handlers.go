@@ -160,6 +160,7 @@ func (r *Router) handleAutocomplete(admin core.AdminInterface) http.HandlerFunc 
 			respondError(w, http.StatusInternalServerError, "autocomplete_failed", err.Error(), nil)
 			return
 		}
+		results = visibleAutocompleteItems(ctx, admin, user, results)
 
 		_ = field // Currently not using field-specific autocomplete, but available for future
 

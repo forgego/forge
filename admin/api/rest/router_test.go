@@ -1157,14 +1157,17 @@ func TestHandleAutocomplete_ClampsLimit(t *testing.T) {
 
 func TestHandleGlobalSearch_RespectsModelsParam(t *testing.T) {
 	registry := core.NewRegistry()
+	getObject := func(id interface{}) (interface{}, error) { return map[string]interface{}{"id": id}, nil }
 	registerViewableModel(t, registry, &mockAdmin{
-		modelName: "products",
+		modelName:   "products",
+		getObjectFn: getObject,
 		autocompleteItems: []core.AutocompleteItem{
 			{Value: 7, Label: "Laptop Pro"},
 		},
 	})
 	registerViewableModel(t, registry, &mockAdmin{
-		modelName: "orders",
+		modelName:   "orders",
+		getObjectFn: getObject,
 		autocompleteItems: []core.AutocompleteItem{
 			{Value: 9, Label: "Order 9"},
 		},
@@ -1208,7 +1211,8 @@ func TestHandleGlobalSearch_SkipsDeniedModels(t *testing.T) {
 func TestHandleGlobalSearch_UsesAdminPrefix(t *testing.T) {
 	registry := core.NewRegistry()
 	registerViewableModel(t, registry, &mockAdmin{
-		modelName: "products",
+		modelName:   "products",
+		getObjectFn: func(id interface{}) (interface{}, error) { return map[string]interface{}{"id": id}, nil },
 		autocompleteItems: []core.AutocompleteItem{
 			{Value: 7, Label: "Laptop Pro"},
 		},

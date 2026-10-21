@@ -9,6 +9,8 @@ import (
 // IsAuthenticated requires authentication
 type IsAuthenticated struct{}
 
+func (*IsAuthenticated) HasObjectRules(*http.Request) bool { return false }
+
 // NewIsAuthenticated creates a new IsAuthenticated permission
 func NewIsAuthenticated() *IsAuthenticated {
 	return &IsAuthenticated{}

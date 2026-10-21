@@ -12,6 +12,7 @@ import (
 
 	"github.com/forgego/forge/admin/core"
 	apicore "github.com/forgego/forge/api/core"
+	"github.com/forgego/forge/internal/csvsafe"
 )
 
 // handleExport returns list results as CSV or JSON using current filters/search.
@@ -192,6 +193,9 @@ func writeCSVExport(
 		}
 	}
 
+	for i, header := range headers {
+		headers[i] = csvsafe.Cell(header, header)
+	}
 	if err := writer.Write(headers); err != nil {
 		return err
 	}
@@ -199,7 +203,7 @@ func writeCSVExport(
 	for _, row := range rows {
 		record := make([]string, len(fields))
 		for i, field := range fields {
-			record[i] = formatExportValue(row[field])
+			record[i] = csvsafe.Cell(row[field], formatExportValue(row[field]))
 		}
 		if err := writer.Write(record); err != nil {
 			return err

@@ -93,12 +93,12 @@ func TestOptionalResponseMiddlewareReference(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/plain", nil)
 	req.Header.Set("Origin", "https://store.example.com")
 	srv.Handler.ServeHTTP(rec, req)
-	t.Run("A-262", func(t *testing.T) {
+	t.Run("CORS middleware is opt-in", func(t *testing.T) {
 		if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
 			t.Fatalf("CORS installed by default: %q", got)
 		}
 	})
-	t.Run("A-263", func(t *testing.T) {
+	t.Run("secure headers middleware is opt-in", func(t *testing.T) {
 		if got := rec.Header().Get("X-Content-Type-Options"); got != "" {
 			t.Fatalf("SecureHeaders installed by default: %q", got)
 		}

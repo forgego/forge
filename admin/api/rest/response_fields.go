@@ -88,3 +88,16 @@ func visibleAdminRows(ctx context.Context, admin core.AdminInterface, user any, 
 	}
 	return visible
 }
+
+// visibleAutocompleteItems resolves suggestions before exposing their labels.
+func visibleAutocompleteItems(ctx context.Context, admin core.AdminInterface, user any, items []core.AutocompleteItem) []core.AutocompleteItem {
+	visible := make([]core.AutocompleteItem, 0, len(items))
+	for _, item := range items {
+		obj, err := admin.GetObject(ctx, item.Value)
+		if err != nil || obj == nil || !admin.HasViewPermission(ctx, user, obj) {
+			continue
+		}
+		visible = append(visible, item)
+	}
+	return visible
+}

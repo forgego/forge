@@ -60,51 +60,51 @@ func TestAfterCreateRunsBeforeTransactionCommit_A183(t *testing.T) {
 
 // These assignments compile only while the documented public signatures hold.
 func TestManagerReferenceSignatures(t *testing.T) {
-	t.Run("A-191", func(t *testing.T) {
+	t.Run("create signature", func(t *testing.T) {
 		var method func(*Manager[referenceModel], context.Context, *referenceModel) error = (*Manager[referenceModel]).Create
 		_ = method
 	})
-	t.Run("A-192", func(t *testing.T) {
+	t.Run("get signature", func(t *testing.T) {
 		var method func(*Manager[referenceModel], context.Context, int64) (*referenceModel, error) = (*Manager[referenceModel]).Get
 		_ = method
 	})
-	t.Run("A-195", func(t *testing.T) {
+	t.Run("delete signature", func(t *testing.T) {
 		var method func(*Manager[referenceModel], context.Context, *referenceModel) error = (*Manager[referenceModel]).Delete
 		_ = method
 	})
-	t.Run("A-196", func(t *testing.T) {
+	t.Run("all signature", func(t *testing.T) {
 		var method func(*Manager[referenceModel], context.Context) ([]*referenceModel, error) = (*Manager[referenceModel]).All
 		_ = method
 	})
-	t.Run("A-197", func(t *testing.T) {
+	t.Run("manager filter signature", func(t *testing.T) {
 		var method func(*Manager[referenceModel], Expression) (QuerySet[referenceModel], error) = (*Manager[referenceModel]).Filter
 		_ = method
 	})
-	t.Run("A-202", func(t *testing.T) {
+	t.Run("bulk create signature", func(t *testing.T) {
 		var method func(*Manager[referenceModel], context.Context, []*referenceModel) error = (*Manager[referenceModel]).BulkCreate
 		_ = method
 	})
 }
 
 func TestQuerySetReferenceSignatures(t *testing.T) {
-	t.Run("A-205", func(t *testing.T) {
+	t.Run("queryset filter signature", func(t *testing.T) {
 		var method func(QuerySet[referenceModel], Expression) QuerySet[referenceModel] = QuerySet[referenceModel].Filter
 		_ = method
 	})
-	t.Run("A-206", func(t *testing.T) {
+	t.Run("queryset exclude signature", func(t *testing.T) {
 		var method func(QuerySet[referenceModel], Expression) QuerySet[referenceModel] = QuerySet[referenceModel].Exclude
 		_ = method
 	})
-	t.Run("A-215", func(t *testing.T) {
+	t.Run("aggregate signatures", func(t *testing.T) {
 		var method func(QuerySet[referenceModel], ...Aggregate) QuerySet[referenceModel] = QuerySet[referenceModel].Aggregate
 		var values func(context.Context, QuerySet[referenceModel], ...Aggregate) (map[string]any, error) = AggregateValues[referenceModel]
 		_, _ = method, values
 	})
-	t.Run("A-216", func(t *testing.T) {
+	t.Run("annotate signature", func(t *testing.T) {
 		var method func(QuerySet[referenceModel], ...AnnotationExpr) QuerySet[referenceModel] = QuerySet[referenceModel].Annotate
 		_ = method
 	})
-	t.Run("A-218", func(t *testing.T) {
+	t.Run("queryset get signature", func(t *testing.T) {
 		var method func(QuerySet[referenceModel], context.Context) (*referenceModel, error) = QuerySet[referenceModel].Get
 		_ = method
 	})

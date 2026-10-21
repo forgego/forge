@@ -25,6 +25,9 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 // List handles GET /users/
 func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	if !authorizeUser(w, r, 0, accessList) {
+		return
+	}
 
 	// Get pagination parameters
 	page, pageSize, _ := api.ParsePaginationParams(r, 20)
@@ -70,6 +73,9 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 // Create handles POST /users/
 func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	if !authorizeUser(w, r, 0, accessAdmin) {
+		return
+	}
 
 	// Parse request
 	var data map[string]interface{}
@@ -124,6 +130,9 @@ func (h *UserHandler) Retrieve(w http.ResponseWriter, r *http.Request) {
 		forgehttp.SendError(w, http.StatusBadRequest, "Invalid ID")
 		return
 	}
+	if !authorizeUser(w, r, id, accessRead) {
+		return
+	}
 
 	// Get user
 	user, err := h.userService.GetUser(ctx, id)
@@ -148,12 +157,30 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		forgehttp.SendError(w, http.StatusBadRequest, "Invalid ID")
 		return
 	}
+	if !authorizeUser(w, r, id, accessUpdate) {
+		return
+	}
 
 	// Parse request
 	var data map[string]interface{}
 	if err := forgehttp.GetJSON(r, &data); err != nil {
 		forgehttp.SendError(w, http.StatusBadRequest, "Invalid JSON")
 		return
+	}
+	if _, active := data["is_active"]; active {
+		if !authorizeUser(w, r, id, accessAdmin) {
+			return
+		}
+	}
+	if _, staff := data["is_staff"]; staff {
+		if !authorizeUser(w, r, id, accessAdmin) {
+			return
+		}
+	}
+	if _, locked := data["is_locked"]; locked {
+		if !authorizeUser(w, r, id, accessAdmin) {
+			return
+		}
 	}
 
 	// Build update request
@@ -200,6 +227,9 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		forgehttp.SendError(w, http.StatusBadRequest, "Invalid ID")
+		return
+	}
+	if !authorizeUser(w, r, id, accessAdmin) {
 		return
 	}
 

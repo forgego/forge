@@ -41,6 +41,8 @@ func SetupAdmin(r chi.Router) error {
 
 ## Permissions
 
+Autocomplete and global search apply `HasViewPermission` to each suggested object. Objects denied by the callback do not appear in suggestions. CSV exports also omit denied objects and escape formula-like text cells before download.
+
 Permission callbacks receive a context, the registered admin, a user value, and (except for add and module permissions) the object. The user is an `interface{}` value; check its type before using application-specific roles.
 
 ```go

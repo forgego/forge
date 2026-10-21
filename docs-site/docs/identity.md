@@ -22,6 +22,17 @@ forge includes a full identity system for user management and authentication.
 - Backends: password, token
 - Config: password policy, lockout, rate limits
 
+## User API access
+
+All `/api/users` routes require authentication. Listing users requires staff or
+superuser status. A user can retrieve their own record; staff and superusers can
+retrieve any record. A user can update their own email, first name, and last name.
+Only superusers can update another user or set `is_active`, `is_staff`, or
+`is_locked`. Attempts to set those flags without superuser status return 403
+without saving any part of the request. Creating and deleting users requires
+superuser status. `/api/auth/logout` only revokes a session belonging to the
+authenticated user.
+
 ## Setup example
 
 ```go

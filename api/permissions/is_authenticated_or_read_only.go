@@ -10,6 +10,8 @@ import (
 // but requires authentication for write operations
 type IsAuthenticatedOrReadOnly struct{}
 
+func (*IsAuthenticatedOrReadOnly) HasObjectRules(*http.Request) bool { return false }
+
 // NewIsAuthenticatedOrReadOnly creates a new IsAuthenticatedOrReadOnly permission
 func NewIsAuthenticatedOrReadOnly() *IsAuthenticatedOrReadOnly {
 	return &IsAuthenticatedOrReadOnly{}

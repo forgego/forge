@@ -7,6 +7,9 @@ import (
 	"io"
 	"reflect"
 	"sort"
+	"strings"
+
+	"github.com/forgego/forge/internal/csvsafe"
 )
 
 // CSVRenderer renders data as CSV
@@ -45,7 +48,11 @@ func (r *CSVRenderer) RenderToWriter(w io.Writer, data interface{}) error {
 	if err != nil {
 		return err
 	}
-	if err := writer.Write(headers); err != nil {
+	safeHeaders := make([]string, len(headers))
+	for i, header := range headers {
+		safeHeaders[i] = csvsafe.Cell(header, header)
+	}
+	if err := writer.Write(safeHeaders); err != nil {
 		return err
 	}
 	for i := 0; i < v.Len(); i++ {
@@ -88,9 +95,17 @@ func csvHeaders(v reflect.Value) ([]string, error) {
 	} else {
 		for i := 0; i < v.NumField(); i++ {
 			field := v.Type().Field(i)
-			if field.IsExported() {
-				headers = append(headers, field.Name)
+			if !field.IsExported() {
+				continue
 			}
+			name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
+			if name == "-" {
+				continue
+			}
+			if name == "" {
+				name = field.Name
+			}
+			headers = append(headers, name)
 		}
 	}
 	return headers, nil
@@ -107,10 +122,27 @@ func csvRow(v reflect.Value, headers []string) ([]string, error) {
 		if v.Kind() == reflect.Map {
 			value = v.MapIndex(reflect.ValueOf(name).Convert(v.Type().Key()))
 		} else {
-			value = v.FieldByName(name)
+			for j := 0; j < v.NumField(); j++ {
+				field := v.Type().Field(j)
+				if !field.IsExported() {
+					continue
+				}
+				jsonName, _, _ := strings.Cut(field.Tag.Get("json"), ",")
+				if jsonName == "-" {
+					continue
+				}
+				if jsonName == "" {
+					jsonName = field.Name
+				}
+				if jsonName == name {
+					value = v.Field(j)
+					break
+				}
+			}
 		}
 		if value.IsValid() {
-			row[i] = fmt.Sprint(value.Interface())
+			raw := value.Interface()
+			row[i] = csvsafe.Cell(raw, fmt.Sprint(raw))
 		}
 	}
 	return row, nil

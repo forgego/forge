@@ -23,10 +23,10 @@ A model's `Fields()` schema sets two flags on each field. Together they give the
 
 Some fields are read-only even with `Editable: true`, because the database owns their values: an auto-increment primary key, `AutoNow`, `AutoNowAdd` and `Generated` columns.
 
-The viewset enforces these roles only through two fields that you set from the schema. The generated viewset sets both:
+The viewset always omits fields with `Serialize: false` from responses, including `schema.WriteOnly()` fields. The generated viewset also sets these fields for compatibility and request handling:
 
 ```go
-vs.ExcludeResponseFields = api.NonSerializableFields(&Product{}) // drop Serialize(false) fields from responses
+vs.ExcludeResponseFields = api.NonSerializableFields(&Product{}) // optional explicit response exclusion
 vs.ReadOnlyRequestFields = api.NonEditableFields(&Product{})     // ignore read-only and database-owned fields in requests
 ```
 
@@ -34,13 +34,15 @@ vs.ReadOnlyRequestFields = api.NonEditableFields(&Product{})     // ignore read-
 
 ## Responses
 
-A response contains every exported struct field that has a `json` tag other than `-`, under its JSON name. A tag that gives no name, such as `json:",omitempty"`, uses the Go field name. The viewset then removes the following keys, in order:
+A response starts with every exported struct field that has a `json` tag other than `-`, under its JSON name. A tag that gives no name, such as `json:",omitempty"`, uses the Go field name. Schema fields with `Serialize: false` are removed automatically, including from nested model relations. The viewset then removes the following keys, in order:
 
 1. `ExcludeResponseFields`.
 2. Keys not listed in the serializer's `Fields()`, when that list is non-empty. A nil or empty `Fields()` keeps every field.
 3. The serializer's `Exclude()` and `WriteOnlyFields()`.
 
 `BaseViewSet` has no computed response fields. Every key comes from a struct field. A value derived from other columns belongs in a `Generated` schema field, which the database computes and the viewset treats as read-only. Values computed in Go belong in a custom handler or a [router action](/docs/api/viewsets/).
+
+The same visibility rules apply to list, detail, create, update, and partial update responses. Custom actions and handlers that serialize models should use `api.SerializeModel` or `api.SerializeMany` to apply schema visibility; their own response formatting remains the handler's responsibility.
 
 ## Requests
 

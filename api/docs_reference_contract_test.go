@@ -24,13 +24,13 @@ func (s *referenceSerializer) Validate() error {
 }
 
 func TestSerializerReferenceContract(t *testing.T) {
-	t.Run("A-074", func(t *testing.T) {
+	t.Run("model serializer implements contract", func(t *testing.T) {
 		var serializer Serializer = NewModelSerializer(struct{ Name string }{Name: "item"})
 		if serializer == nil {
 			t.Fatal("model serializer is nil")
 		}
 	})
-	t.Run("A-078", func(t *testing.T) {
+	t.Run("custom serializer validation and cloning", func(t *testing.T) {
 		var validate func(*referenceSerializer) error = (*referenceSerializer).Validate
 		s := &referenceSerializer{NewBaseSerializer(nil)}
 		if err := validate(s); err == nil || len(s.Errors()["price"]) != 1 {
@@ -53,7 +53,7 @@ func TestViewSetReferenceErrorResponses(t *testing.T) {
 		{"malformed JSON", `{`, true},
 		{"serializer validation", `{"count":1,"enabled":true}`, false},
 	} {
-		t.Run("A-081/"+tc.name, func(t *testing.T) {
+		t.Run("create rejects "+tc.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
 			vs.Create(rec, httptest.NewRequest(http.MethodPost, "/items/", strings.NewReader(tc.body)))
 			if rec.Code != http.StatusBadRequest {

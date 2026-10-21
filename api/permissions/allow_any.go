@@ -7,6 +7,8 @@ import (
 // AllowAny allows unrestricted access
 type AllowAny struct{}
 
+func (*AllowAny) HasObjectRules(*http.Request) bool { return false }
+
 // NewAllowAny creates a new AllowAny permission
 func NewAllowAny() *AllowAny {
 	return &AllowAny{}

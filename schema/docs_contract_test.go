@@ -23,14 +23,14 @@ func TestFieldReferenceConstructors(t *testing.T) {
 		fields []Field
 		want   []FieldType
 	}{
-		{"A-153", []Field{Int64Field("id"), Int32Field("age")}, []FieldType{TypeInt64, TypeInt32}},
-		{"A-154", []Field{Float64Field("score"), Float32Field("ratio")}, []FieldType{TypeFloat64, TypeFloat32}},
-		{"A-155", []Field{DecimalField("amount", MaxDigits(12), DecimalPlaces(2))}, []FieldType{TypeDecimal}},
-		{"A-156", []Field{StringField("name"), TextField("body")}, []FieldType{TypeString, TypeText}},
-		{"A-157", []Field{EmailField("email"), URLField("website")}, []FieldType{TypeEmail, TypeURL}},
-		{"A-158", []Field{UUIDField("identifier")}, []FieldType{TypeUUID}},
-		{"A-159", []Field{TimeField("seen_at"), DateField("day"), DateTimeField("timestamp")}, []FieldType{TypeTime, TypeDate, TypeDateTime}},
-		{"A-160", []Field{BoolField("active"), JSONField("payload"), BytesField("raw")}, []FieldType{TypeBool, TypeJSON, TypeBytes}},
+		{"integer field types", []Field{Int64Field("id"), Int32Field("age")}, []FieldType{TypeInt64, TypeInt32}},
+		{"floating point field types", []Field{Float64Field("score"), Float32Field("ratio")}, []FieldType{TypeFloat64, TypeFloat32}},
+		{"decimal field type", []Field{DecimalField("amount", MaxDigits(12), DecimalPlaces(2))}, []FieldType{TypeDecimal}},
+		{"string and text field types", []Field{StringField("name"), TextField("body")}, []FieldType{TypeString, TypeText}},
+		{"email and URL field types", []Field{EmailField("email"), URLField("website")}, []FieldType{TypeEmail, TypeURL}},
+		{"UUID field type", []Field{UUIDField("identifier")}, []FieldType{TypeUUID}},
+		{"time and date field types", []Field{TimeField("seen_at"), DateField("day"), DateTimeField("timestamp")}, []FieldType{TypeTime, TypeDate, TypeDateTime}},
+		{"boolean JSON and bytes field types", []Field{BoolField("active"), JSONField("payload"), BytesField("raw")}, []FieldType{TypeBool, TypeJSON, TypeBytes}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.row, func(t *testing.T) {
@@ -49,9 +49,9 @@ func TestRelationReferenceConstructors(t *testing.T) {
 		relation Relation
 		wantType RelationType
 	}{
-		{"A-170", ForeignKeyField("author_id", "User", OnDelete(CascadeCASCADE), RelatedName("posts"), RelatedQueryName("post")), RelationForeignKey},
-		{"A-172", OneToOneField("profile_id", "UserProfile", OnDelete(CascadeCASCADE), RelatedName("user")), RelationOneToOne},
-		{"A-173", ManyToManyField("tags", "Tag", Through("post_tags"), RelatedName("posts")), RelationManyToMany},
+		{"foreign key relation", ForeignKeyField("author_id", "User", OnDelete(CascadeCASCADE), RelatedName("posts"), RelatedQueryName("post")), RelationForeignKey},
+		{"one-to-one relation", OneToOneField("profile_id", "UserProfile", OnDelete(CascadeCASCADE), RelatedName("user")), RelationOneToOne},
+		{"many-to-many relation", ManyToManyField("tags", "Tag", Through("post_tags"), RelatedName("posts")), RelationManyToMany},
 	}
 	for _, tc := range cases {
 		t.Run(tc.row, func(t *testing.T) {
@@ -60,7 +60,7 @@ func TestRelationReferenceConstructors(t *testing.T) {
 			}
 		})
 	}
-	t.Run("A-178", func(t *testing.T) {
+	t.Run("foreign key stores reverse name", func(t *testing.T) {
 		relation := ForeignKeyField("author_id", "User", RelatedName("posts"))
 		if relation.RelatedName != "posts" {
 			t.Fatalf("reverse name not stored: %+v", relation)

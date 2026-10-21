@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/forgego/forge/api/core"
 	"github.com/forgego/forge/identity/models"
 	"github.com/forgego/forge/identity/service"
 	"github.com/go-chi/chi/v5"
@@ -41,6 +42,9 @@ func (failingAuthService) Authenticate(context.Context, *service.AuthenticateReq
 	return nil, privateDBError
 }
 func (failingAuthService) Logout(context.Context, string) error { return privateDBError }
+func (failingAuthService) GetSession(context.Context, string) (*models.UserSession, error) {
+	return nil, privateDBError
+}
 
 func TestIdentityHandlersHideUnexpectedServiceErrors(t *testing.T) {
 	users := NewUserHandler(failingUserService{})
@@ -68,6 +72,7 @@ func TestIdentityHandlersHideUnexpectedServiceErrors(t *testing.T) {
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("id", "1")
 			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+			req = req.WithContext(core.WithUser(req.Context(), &models.User{ID: 1, IsSuperuser: true}))
 			resp := httptest.NewRecorder()
 			tc.handler(resp, req)
 			require.Equal(t, http.StatusInternalServerError, resp.Code)

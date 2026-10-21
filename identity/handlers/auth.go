@@ -149,6 +149,14 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		forgehttp.SendError(w, http.StatusBadRequest, "Session key required")
 		return
 	}
+	session, err := h.authService.GetSession(ctx, sessionKey)
+	if err != nil {
+		sendServiceError(w, err)
+		return
+	}
+	if !authorizeUser(w, r, session.UserID, accessSelf) {
+		return
+	}
 
 	// Logout
 	if err := h.authService.Logout(ctx, sessionKey); err != nil {
@@ -167,6 +175,9 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	user, ok := GetUserFromContext(ctx)
 	if !ok {
 		forgehttp.SendError(w, http.StatusUnauthorized, "Not authenticated")
+		return
+	}
+	if !authorizeUser(w, r, user.ID, accessSelf) {
 		return
 	}
 

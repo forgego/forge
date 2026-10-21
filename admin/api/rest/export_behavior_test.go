@@ -70,6 +70,16 @@ func TestCSVExportKeepsListedColumnsWhenClientHidesOne(t *testing.T) {
 	require.Equal(t, []string{"1", "first"}, rows[1])
 }
 
+func TestCSVExportEscapesFormulaCellsButPreservesNumericValues(t *testing.T) {
+	rec := httptest.NewRecorder()
+	err := writeCSVExport(rec, "items", []string{"formula", "number", "numeric_text"}, nil,
+		[]map[string]any{{"formula": "=1+1", "number": -5, "numeric_text": "-5"}})
+	require.NoError(t, err)
+	rows, err := csv.NewReader(strings.NewReader(rec.Body.String())).ReadAll()
+	require.NoError(t, err)
+	require.Equal(t, []string{"'=1+1", "-5", "'-5"}, rows[1])
+}
+
 func TestJSONExportUsesFilteredListRatherThanSelectedIDs(t *testing.T) {
 	admin := &mockAdmin{
 		modelName: "items",

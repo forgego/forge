@@ -75,24 +75,28 @@ func isRequestReadOnly(f schema.Field) bool {
 	return (f.PrimaryKey && f.AutoIncrement) || f.AutoNow || f.AutoNowAdd || f.Generated
 }
 
-// stripExcludedFields removes ExcludeResponseFields keys from a serialized map.
-func (vs *BaseViewSet) stripExcludedFields(m map[string]interface{}) map[string]interface{} {
-	if m == nil || len(vs.ExcludeResponseFields) == 0 {
-		return m
-	}
-	for _, k := range vs.ExcludeResponseFields {
-		delete(m, k)
+// applyResponseVisibility removes schema fields that are not serializable.
+// modelToMap calls it for every model, including populated nested relations.
+func applyResponseVisibility(model interface{}, m map[string]interface{}) map[string]interface{} {
+	for _, name := range NonSerializableFields(model) {
+		delete(m, name)
 	}
 	return m
 }
 
-// stripExcludedFieldsMany removes ExcludeResponseFields keys from each map.
-func (vs *BaseViewSet) stripExcludedFieldsMany(items []map[string]interface{}) []map[string]interface{} {
-	if len(vs.ExcludeResponseFields) == 0 {
-		return items
+// serializeResponse applies the model, viewset, and serializer response rules.
+func (vs *BaseViewSet) serializeResponse(model interface{}) map[string]interface{} {
+	m := SerializeModel(model)
+	for _, name := range vs.ExcludeResponseFields {
+		delete(m, name)
 	}
-	for _, m := range items {
-		vs.stripExcludedFields(m)
+	return filterOutputMap(vs.Serializer(), m)
+}
+
+func (vs *BaseViewSet) serializeResponses(models []interface{}) []map[string]interface{} {
+	result := make([]map[string]interface{}, 0, len(models))
+	for _, model := range models {
+		result = append(result, vs.serializeResponse(model))
 	}
-	return items
+	return result
 }
