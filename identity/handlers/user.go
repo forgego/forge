@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 
@@ -54,7 +53,7 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 	// Get users
 	users, count, err := h.userService.ListUsers(ctx, filters)
 	if err != nil {
-		forgehttp.SendError(w, http.StatusInternalServerError, err.Error())
+		sendServiceError(w, err)
 		return
 	}
 
@@ -103,11 +102,9 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	// Create user
 	user, err := h.userService.CreateUser(ctx, req)
 	if err != nil {
-		status := http.StatusInternalServerError
-		if err == service.ErrEmailExists || err == service.ErrUsernameExists {
-			status = http.StatusConflict
-		}
-		forgehttp.SendError(w, status, err.Error())
+		sendServiceError(w, err,
+			publicServiceError{service.ErrEmailExists, http.StatusConflict, "email already exists"},
+			publicServiceError{service.ErrUsernameExists, http.StatusConflict, "username already exists"})
 		return
 	}
 
@@ -131,11 +128,7 @@ func (h *UserHandler) Retrieve(w http.ResponseWriter, r *http.Request) {
 	// Get user
 	user, err := h.userService.GetUser(ctx, id)
 	if err != nil {
-		if errors.Is(err, service.ErrUserNotFound) {
-			forgehttp.SendError(w, http.StatusNotFound, "User not found")
-		} else {
-			forgehttp.SendError(w, http.StatusInternalServerError, err.Error())
-		}
+		sendServiceError(w, err, publicServiceError{service.ErrUserNotFound, http.StatusNotFound, "User not found"})
 		return
 	}
 
@@ -187,13 +180,9 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	// Update user
 	user, err := h.userService.UpdateUser(ctx, id, req)
 	if err != nil {
-		if errors.Is(err, service.ErrUserNotFound) {
-			forgehttp.SendError(w, http.StatusNotFound, "User not found")
-		} else if err == service.ErrEmailExists {
-			forgehttp.SendError(w, http.StatusConflict, err.Error())
-		} else {
-			forgehttp.SendError(w, http.StatusInternalServerError, err.Error())
-		}
+		sendServiceError(w, err,
+			publicServiceError{service.ErrUserNotFound, http.StatusNotFound, "User not found"},
+			publicServiceError{service.ErrEmailExists, http.StatusConflict, "email already exists"})
 		return
 	}
 
@@ -216,11 +205,7 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	// Delete user
 	if err := h.userService.DeleteUser(ctx, id); err != nil {
-		if errors.Is(err, service.ErrUserNotFound) {
-			forgehttp.SendError(w, http.StatusNotFound, "User not found")
-		} else {
-			forgehttp.SendError(w, http.StatusInternalServerError, err.Error())
-		}
+		sendServiceError(w, err, publicServiceError{service.ErrUserNotFound, http.StatusNotFound, "User not found"})
 		return
 	}
 

@@ -61,11 +61,9 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userService.Register(ctx, req)
 	if err != nil {
-		status := http.StatusInternalServerError
-		if err == service.ErrEmailExists || err == service.ErrUsernameExists {
-			status = http.StatusConflict
-		}
-		forgehttp.SendError(w, status, err.Error())
+		sendServiceError(w, err,
+			publicServiceError{service.ErrEmailExists, http.StatusConflict, "email already exists"},
+			publicServiceError{service.ErrUsernameExists, http.StatusConflict, "username already exists"})
 		return
 	}
 
@@ -105,11 +103,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.authService.Authenticate(ctx, req)
 	if err != nil {
-		status := http.StatusUnauthorized
-		if err == service.ErrUserInactive || err == service.ErrUserLocked {
-			status = http.StatusForbidden
-		}
-		forgehttp.SendError(w, status, err.Error())
+		sendServiceError(w, err,
+			publicServiceError{service.ErrInvalidCredentials, http.StatusUnauthorized, "invalid credentials"},
+			publicServiceError{service.ErrUserInactive, http.StatusForbidden, "user account is inactive"},
+			publicServiceError{service.ErrUserLocked, http.StatusForbidden, "user account is locked"})
 		return
 	}
 
@@ -155,7 +152,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	// Logout
 	if err := h.authService.Logout(ctx, sessionKey); err != nil {
-		forgehttp.SendError(w, http.StatusInternalServerError, err.Error())
+		sendServiceError(w, err)
 		return
 	}
 

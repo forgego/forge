@@ -161,6 +161,10 @@ func (r *sessionRepository) Update(ctx context.Context, session *models.UserSess
 	return nil
 }
 
+func (r *sessionRepository) TouchLastActivity(ctx context.Context, key string, at time.Time) error {
+	return execOne(ctx, r.db.ExecContext, `UPDATE user_sessions SET last_activity = $1 WHERE session_key = $2`, at.UTC(), key)
+}
+
 // Delete deletes a session by session key
 func (r *sessionRepository) Delete(ctx context.Context, key string) error {
 	query := `DELETE FROM user_sessions WHERE session_key = $1`

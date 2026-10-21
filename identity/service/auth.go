@@ -12,6 +12,8 @@ import (
 	"github.com/forgego/forge/identity/repository"
 )
 
+var ErrInvalidCredentials = fmt.Errorf("invalid credentials")
+
 // authService implements AuthService interface
 type authService struct {
 	userRepo        repository.UserRepository
@@ -44,11 +46,11 @@ func (s *authService) Authenticate(ctx context.Context, req *AuthenticateRequest
 	// Try authentication with backend registry
 	user, err := s.backendRegistry.Authenticate(ctx, credentials)
 	if err != nil {
-		return nil, fmt.Errorf("invalid credentials")
+		return nil, ErrInvalidCredentials
 	}
 
 	if user == nil {
-		return nil, fmt.Errorf("invalid credentials")
+		return nil, ErrInvalidCredentials
 	}
 
 	// Check if active (backend already checks this, but double-check for safety)
@@ -63,11 +65,17 @@ func (s *authService) Authenticate(ctx context.Context, req *AuthenticateRequest
 
 	// Update last login
 	now := time.Now()
-	user.LastLogin = &now
-	if err := s.userRepo.Update(ctx, user); err != nil {
-		// Log error but don't fail authentication
-		fmt.Printf("Warning: failed to update last_login: %v\n", err)
+	if mutations, ok := s.userRepo.(repository.UserMutations); ok {
+		if err := mutations.SetLastLogin(ctx, user.ID, now); err != nil {
+			return nil, fmt.Errorf("failed to update last login: %w", err)
+		}
+	} else {
+		user.LastLogin = &now
+		if err := s.userRepo.Update(ctx, user); err != nil {
+			return nil, fmt.Errorf("failed to update last login: %w", err)
+		}
 	}
+	user.LastLogin = &now
 
 	return user, nil
 }
@@ -126,7 +134,9 @@ func (s *authService) GetSession(ctx context.Context, key string) (*models.UserS
 	// Check if expired
 	if session.IsExpired() {
 		// Delete expired session
-		_ = s.sessionRepo.Delete(ctx, key)
+		if err := s.sessionRepo.Delete(ctx, key); err != nil {
+			return nil, fmt.Errorf("failed to delete expired session: %w", err)
+		}
 		return nil, fmt.Errorf("session expired")
 	}
 
@@ -145,9 +155,16 @@ func (s *authService) RefreshSession(ctx context.Context, key string) (*models.U
 		return nil, err
 	}
 
-	// Update last activity
+	activity, ok := s.sessionRepo.(repository.SessionActivityRepository)
+	// Update last activity without writing a possibly stale expiry.
 	session.LastActivity = time.Now()
-	if err := s.sessionRepo.Update(ctx, session); err != nil {
+	var updateErr error
+	if ok {
+		updateErr = activity.TouchLastActivity(ctx, key, session.LastActivity)
+	} else {
+		updateErr = s.sessionRepo.Update(ctx, session)
+	}
+	if err := updateErr; err != nil {
 		return nil, fmt.Errorf("failed to refresh session: %w", err)
 	}
 

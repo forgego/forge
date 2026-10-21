@@ -111,6 +111,8 @@ func (s *userService) UpdateUser(ctx context.Context, id int64, req *UpdateUserR
 	}
 
 	// Update fields if provided
+	fields := make(map[string]any)
+	oldEmail := user.Email
 	if req.Email != nil {
 		email := strings.ToLower(strings.TrimSpace(*req.Email))
 		// Match repository canonicalization before checking uniqueness/proof.
@@ -126,47 +128,73 @@ func (s *userService) UpdateUser(ctx context.Context, id int64, req *UpdateUserR
 		if email != user.Email {
 			user.EmailVerified = false
 			user.EmailVerifiedAt = nil
+			fields["email_verified"] = false
+			fields["email_verified_at"] = nil
 		}
 		user.Email = email
+		fields["email"] = email
 	}
 
 	if req.FirstName != nil {
 		user.FirstName = *req.FirstName
+		fields["first_name"] = *req.FirstName
 	}
 
 	if req.LastName != nil {
 		user.LastName = *req.LastName
+		fields["last_name"] = *req.LastName
 	}
 
 	if req.IsActive != nil {
 		user.IsActive = *req.IsActive
+		fields["is_active"] = *req.IsActive
 	}
 
 	if req.IsStaff != nil {
 		user.IsStaff = *req.IsStaff
+		fields["is_staff"] = *req.IsStaff
 	}
 
 	if req.IsLocked != nil {
 		user.IsLocked = *req.IsLocked
+		fields["is_locked"] = *req.IsLocked
 		if *req.IsLocked {
 			now := time.Now()
 			user.LockedAt = &now
+			fields["locked_at"] = now
 		} else {
 			user.LockedAt = nil
 			user.LockedReason = ""
+			fields["locked_at"] = nil
+			fields["locked_reason"] = ""
 		}
 	}
 
 	if req.IsSuperuser != nil {
 		user.IsSuperuser = *req.IsSuperuser
+		fields["is_superuser"] = *req.IsSuperuser
 	}
 
 	// Update in database
-	if err := s.userRepo.Update(ctx, user); err != nil {
+	mutations, ok := s.userRepo.(repository.UserMutations)
+	var updateErr error
+	if ok {
+		if req.Email != nil {
+			if emailMutations, supportsCAS := s.userRepo.(repository.UserEmailMutations); supportsCAS {
+				updateErr = emailMutations.UpdateEmailIfCurrent(ctx, id, oldEmail, fields)
+			} else {
+				updateErr = mutations.UpdateFields(ctx, id, fields)
+			}
+		} else {
+			updateErr = mutations.UpdateFields(ctx, id, fields)
+		}
+	} else {
+		updateErr = s.userRepo.Update(ctx, user)
+	}
+	if err := updateErr; err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
 	}
-
-	return user, nil
+	return s.userRepo.GetByID(ctx, id)
 }
 
 // DeleteUser deletes a user (soft delete)
@@ -286,20 +314,33 @@ func (s *userService) VerifyEmail(ctx context.Context, token string) error {
 		return ErrEmailAlreadyVerified
 	}
 
-	// 6. Mark user's email as verified
-	now := time.Now()
-	user.EmailVerified = true
-	user.EmailVerifiedAt = &now
-
-	if err := s.userRepo.Update(ctx, user); err != nil {
-		return fmt.Errorf("failed to update user: %w", err)
+	mutations, ok := s.userRepo.(repository.UserMutations)
+	var commitErr error
+	if ok && sharedTokenTransaction(s.userRepo, s.tokenRepo) {
+		commitErr = mutations.CommitEmailVerification(ctx, verificationToken.ID, user.ID, user.Email, time.Now())
+	} else if tokenCommit, supportsCommit := s.tokenRepo.(repository.TokenCommitRepository); ok && supportsCommit {
+		commitErr = tokenCommit.CommitEmailVerification(ctx, mutations, verificationToken.ID, user.ID, user.Email, time.Now())
+	} else {
+		commitErr = consumeThenWrite(func() error {
+			return s.tokenRepo.MarkEmailVerificationTokenUsed(ctx, verificationToken.ID)
+		}, func() error {
+			now := time.Now()
+			if emailMutations, supportsCAS := s.userRepo.(repository.UserEmailMutations); supportsCAS {
+				return emailMutations.UpdateEmailIfCurrent(ctx, user.ID, user.Email, map[string]any{
+					"email": user.Email, "email_verified": true, "email_verified_at": now,
+				})
+			}
+			if ok {
+				return mutations.UpdateFields(ctx, user.ID, map[string]any{
+					"email_verified": true, "email_verified_at": now,
+				})
+			}
+			user.EmailVerified, user.EmailVerifiedAt = true, &now
+			return s.userRepo.Update(ctx, user)
+		})
 	}
-
-	// 7. Mark token as used
-	if err := s.tokenRepo.MarkEmailVerificationTokenUsed(ctx, verificationToken.ID); err != nil {
-		// Log this error but don't fail - the email is verified
-		// In production, you might want to handle this differently
-		return fmt.Errorf("failed to mark token as used: %w", err)
+	if err := commitErr; err != nil {
+		return fmt.Errorf("failed to verify email: %w", err)
 	}
 
 	return nil
