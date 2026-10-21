@@ -54,41 +54,39 @@ The dashboard renderer does not currently register a table component. Use the mo
 
 ## Custom Plugin Pages
 
-When your application requires dedicated interfaces beyond standard CRUD (such as batch billing engines, marketing email composers, or live logistics maps), register a **Custom Plugin**:
+Register a plugin implementing `admin.Plugin` to add server-driven pages and sidebar items. Plugin pages are built from `admin/components` values, not custom React bundles:
 
 ```go
-site.RegisterPlugin(admin.Plugin{
-    ID:          "sales_reports",
-    Label:       "Sales Analytics",
-    Icon:        "bar-chart-2",
-    Route:       "/reports/sales",
-    Permissions: []string{"admin", "finance"},
-    Handler: func(w http.ResponseWriter, r *http.Request) {
-        // Return custom JSON data or server-rendered React component bundle
-        data := GenerateSalesReport(r.Context())
-        json.NewEncoder(w).Encode(data)
-    },
-})
+type ReportsPlugin struct { core.BasePlugin }
+
+func (*ReportsPlugin) ID() string { return "reports" }
+func (*ReportsPlugin) Name() string { return "Reports" }
+func (*ReportsPlugin) GetPages() map[string]components.Component {
+    return map[string]components.Component{
+        "overview": components.Page("Reports").WithChildren(components.Text("Sales overview")),
+    }
+}
+func (*ReportsPlugin) GetMenuItems() []core.MenuItem {
+    return []core.MenuItem{{Label: "Reports", Path: "/plugins/reports/pages/overview"}}
+}
+
+err := site.RegisterPlugin(ctx, &ReportsPlugin{})
 ```
 
-The plugin automatically appears in the Admin sidebar navigation, respecting user RBAC role permissions.
+The plugin provides menu items through `GetMenuItems`. Check `RegisterPlugin`'s error; duplicate IDs are rejected. Implement permission checks in the plugin's data operations.
 
 ---
 
 ## Theming & Brand Customization
 
-Customize the Admin brand and visual appearance in `admin.SiteConfig`:
+Set the site's title directly. `admin.UIConfig` controls the asset source and URL prefix. There is no `SiteConfig` with logo, favicon, or theme fields:
 
 ```go
-site := admin.NewSite(admin.SiteConfig{
-    Title:     "Acme Commerce",
-    BrandLogo: "/static/brand-logo.svg",
-    Favicon:   "/static/favicon.ico",
-    Theme: admin.ThemeConfig{
-        DefaultColorMode: "dark", // "dark", "light", or "system"
-        PrimaryColor:     "#0284c7",
-    },
-})
+site := admin.NewSite("commerce")
+site.Title = "Acme Commerce"
+ui := admin.DefaultUIConfig()
+ui.Prefix = "/admin"
+site.WithUIConfig(ui)
 ```
 
 ---

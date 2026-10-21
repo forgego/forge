@@ -274,7 +274,7 @@ Request IDs, error handling, logging, sessions and CSRF are installed by `server
 - `forge migrate status` - Check migration state
 - `forge migrate rollback` - Roll back the last applied migration
 - `forge migrate recover`, `forge migrate force` - Recover from a dirty or altered history
-- `forge migrate squash` - Not implemented yet
+- `forge migrate squash` - Command exists, but execution returns a not-implemented error; it does not produce a migration.
 
 ### User Management
 - `forge createsuperuser` - Create admin user

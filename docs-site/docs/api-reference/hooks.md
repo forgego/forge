@@ -30,7 +30,7 @@ func (Product) Hooks() *schema.ModelHooks {
 | Hook Method | Signature | Trigger Event |
 | :--- | :--- | :--- |
 | `WithBeforeCreate` | `func(ctx context.Context, instance any) error` | Immediately before a new record is inserted into the database. |
-| `WithAfterCreate` | `func(ctx context.Context, instance any) error` | Immediately after a new record is successfully committed to the database. |
+| `WithAfterCreate` | `func(ctx context.Context, instance any) error` | After the INSERT succeeds and the ID is assigned; if using a transaction, this can run before commit. |
 | `WithBeforeUpdate` | `func(ctx context.Context, instance any) error` | Immediately before an existing record is updated in the database. |
 | `WithAfterUpdate` | `func(ctx context.Context, instance any) error` | Immediately after an existing record is updated in the database. |
 | `WithBeforeSave` | `func(ctx context.Context, instance any) error` | Before either create or update execution. |
@@ -47,7 +47,7 @@ func (Product) Hooks() *schema.ModelHooks {
 1. `Clean(instance)` — Validate cross-field business constraints.
 2. `BeforeSave(ctx, instance)` — Common pre-save normalization (e.g. slug generation).
 3. `BeforeCreate(ctx, instance)` — Creation-specific tasks (e.g. assigning UUIDs or hashing passwords).
-4. **Database Transaction / SQL INSERT**
+4. **SQL INSERT** (inside the current transaction, if any)
 5. `AfterCreate(ctx, instance)` — Fire event, publish audit log.
 6. `AfterSave(ctx, instance)` — Common post-save notifications.
 

@@ -10,7 +10,9 @@ Serializers control the representation of model data sent over HTTP and validate
 
 ---
 
-## Defining a ModelSerializer
+## Defining a serializer
+
+`api.ModelSerializer` is a non-generic type. Embed `api.BaseSerializer` when defining a custom serializer with its own validation.
 
 ```go
 package catalog
@@ -26,6 +28,11 @@ type ProductSerializer struct {
 
 func NewProductSerializer() api.Serializer {
     return &ProductSerializer{BaseSerializer: api.NewBaseSerializer(nil)}
+}
+
+// New preserves custom validation when the viewset creates another instance.
+func (s *ProductSerializer) New() api.Serializer {
+    return NewProductSerializer()
 }
 
 // Fields controls which attributes are exposed in JSON
@@ -75,13 +82,10 @@ Forge calls the serializer's `Validate()` method. Methods named `ValidatePrice` 
 
 ## Handling Validation Errors
 
-When a client submits invalid JSON or fails validation constraints, Forge automatically formats an RFC 7807 compliant error payload:
+The viewset returns HTTP 400 for malformed JSON and serializer validation failures. Malformed JSON uses a problem-details response with the detail `Invalid JSON`. A serializer validation failure returns its field errors:
 
 ```json
 {
-  "status": 422,
-  "error": "Unprocessable Entity",
-  "detail": "Validation failed for 2 fields",
   "errors": {
     "price": ["price must be at least $0.01"],
     "tax_rate": ["tax rate must be between 0.0 and 1.0"]

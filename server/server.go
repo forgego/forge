@@ -319,6 +319,21 @@ func (s *Server) validateProductionSecrets() error {
 	if len(missing) > 0 {
 		problems = append(problems, "production requires explicit "+strings.Join(missing, ", "))
 	}
+	for _, key := range keys {
+		if !flagged[key] && len(effective[key]) < 32 {
+			problems = append(problems, key+" must be at least 32 bytes")
+		}
+	}
+	for i, key := range keys {
+		if flagged[key] {
+			continue
+		}
+		for _, other := range keys[i+1:] {
+			if !flagged[other] && effective[key] == effective[other] {
+				problems = append(problems, key+" and "+other+" must be distinct")
+			}
+		}
+	}
 	// Debug mode enables the profiling routes (with server.enable_profiling),
 	// so it is rejected in production like a missing secret.
 	if s.settings.App.Debug {

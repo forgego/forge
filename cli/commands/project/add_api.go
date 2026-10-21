@@ -13,7 +13,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// AddAPICommand creates the "add api" command
+// AddAPICommand creates the "add api" command. Its --graphql flag only adds
+// a resolver placeholder; it does not generate GraphQL support.
 type AddAPICommand struct{}
 
 // NewAddAPICommand creates a new instance of AddAPICommand
@@ -32,7 +33,7 @@ func (c *AddAPICommand) Definition() *cobra.Command {
 	cmd.Flags().String("app", "", "App name (auto-detected if in app directory)")
 	cmd.Flags().String("model", "", "Model name for the API")
 	cmd.Flags().String("resource", "", "URL resource path (default: resource-name)")
-	cmd.Flags().Bool("graphql", false, "Include GraphQL support")
+	cmd.Flags().Bool("graphql", false, "Append a GraphQL resolver placeholder (does not implement GraphQL support)")
 	cmd.Flags().Bool("dry-run", false, "Preview changes without writing files")
 	return cmd
 }
@@ -84,7 +85,7 @@ func (c *AddAPICommand) Execute(ctx *core.Context, args []string) error {
 		fmt.Printf("Dry-run mode - would create API %s in app %s\n", resourceName, appName)
 		fmt.Printf("Model: %s, Resource: %s\n", modelName, resourcePath)
 		if graphql {
-			fmt.Printf("GraphQL: enabled\n")
+			fmt.Printf("GraphQL: resolver placeholder requested\n")
 		}
 		return nil
 	}
@@ -128,7 +129,7 @@ func (c *AddAPICommand) Execute(ctx *core.Context, args []string) error {
 	fmt.Printf("✓ Added API %s to app %s\n", resourceName, appName)
 	fmt.Printf("  Model: %s, Resource: /api/v1/%s\n", modelName, resourcePath)
 	if graphql {
-		fmt.Printf("  GraphQL: enabled\n")
+		fmt.Printf("  GraphQL: resolver placeholder added (implementation required)\n")
 	}
 
 	return nil

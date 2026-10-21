@@ -6,23 +6,24 @@ image: /social-card.png
 
 # Middleware
 
-Default middleware includes request ID, logging, recoverer, and timeouts.
+`NewServer` installs request ID handling, and logging and error handling when a logger is supplied. It also installs request size limiting, sessions, and CSRF when configured.
 
 ## Default stack
 
 - RequestID
-- RealIP: replaces `r.RemoteAddr` with the client IP from `X-Forwarded-For`
-  or `X-Real-IP`, but only when the direct peer is listed in
-  `server.trusted_proxies`; headers from any other peer are ignored
-- Recoverer
-- Logger
-- Timeout
+- ErrorHandler and Logger (when a logger is supplied)
+- RequestSizeLimit (when `server.max_request_size` is positive)
+- Session middleware (when `security.session_secret` is set)
+- CSRF middleware (when `security.csrf_secret_key` is set)
+
+The client IP resolver trusts forwarding headers only from peers in `server.trusted_proxies`. `Recoverer` and `Timeout` are available for explicit installation.
 
 ## Additional middleware
 
 - CORS
 - Compress
 - SecureHeaders
+- Recoverer, Timeout
 - StripSlashes, RedirectSlashes
 
 ## Next steps

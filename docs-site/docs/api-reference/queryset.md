@@ -11,15 +11,15 @@ A `QuerySet[T]` represents a collection of database queries targeting model `T`.
 
 ## Filtering & Slicing Methods
 
-### `Filter(conditions ...any) *QuerySet[T]`
-Adds conditions to the SQL `WHERE` clause combined via `AND`. Accepts generated field expressions, `orm.Q` / `QueryExpr` boolean trees, or `orm.Where()`.
+### `Filter(expr orm.Expression) orm.QuerySet[T]`
+Adds one expression to the SQL `WHERE` clause. Combine multiple expressions with `orm.And`.
 
 ```go
-qs = qs.Filter(ProductExpr.Price.Lte(100.00), ProductExpr.InStock.Eq(true))
+qs = qs.Filter(orm.And(ProductExpr.Price.Lte(100.00), ProductExpr.InStock.Eq(true)))
 ```
 
-### `Exclude(conditions ...any) *QuerySet[T]`
-Negates the provided conditions (`NOT (...)`) and appends them to the `WHERE` clause.
+### `Exclude(expr orm.Expression) orm.QuerySet[T]`
+Negates the expression (`NOT (...)`) and appends it to the `WHERE` clause.
 
 ```go
 qs = qs.Exclude(ProductExpr.Status.Eq("archived"))
@@ -79,15 +79,15 @@ Returns query results as flat slices of tuples / interface values.
 
 ## Aggregations & Annotations
 
-### `Aggregate(ctx context.Context, funcs ...Aggregate) (map[string]any, error)`
-Executes an immediate aggregate query (`COUNT`, `SUM`, `AVG`, `MIN`, `MAX`) and returns a map of evaluated scalar values.
+### `Aggregate(funcs ...Aggregate) QuerySet[T]`
+Adds aggregates to a queryset. Use `orm.AggregateValues(ctx, qs, funcs...)` to evaluate scalar aggregates (`COUNT`, `SUM`, `AVG`, `MIN`, `MAX`).
 
 ```go
-stats, err := qs.Aggregate(ctx, orm.Count("id"), orm.Avg("price"))
+stats, err := orm.AggregateValues(ctx, qs, orm.Count("id"), orm.Avg("price"))
 ```
 
-### `Annotate(funcs ...Aggregate) *QuerySet[T]`
-Annotates each returned row with a calculated aggregate value (e.g. counting total reviews per product).
+### `Annotate(anns ...orm.AnnotationExpr) orm.QuerySet[T]`
+Adds computed annotation expressions to returned rows. Construct them with `orm.NewAnnotation` or `orm.NewExpressionAnnotation`.
 
 ---
 
@@ -98,7 +98,7 @@ Terminal methods execute the SQL statement against the active database connectio
 | Method | Signature | Description |
 | :--- | :--- | :--- |
 | `All(ctx)` | `All(ctx context.Context) ([]*T, error)` | Evaluates the query and returns all matching records. |
-| `Get(ctx, pk)` | `Get(ctx context.Context, pk any) (*T, error)` | Returns exactly one matching record. Returns `ErrNotFound` if missing, or `ErrMultipleObjects` if more than 1 matches. |
+| `Get(ctx)` | `Get(ctx context.Context) (*T, error)` | Returns exactly one row matching the queryset filters; errors for zero or multiple matches. Use `Manager.Get(ctx, id)` for primary-key lookup. |
 | `First(ctx)` | `First(ctx context.Context) (*T, error)` | Returns the first matching record, or `nil` if empty. |
 | `Last(ctx)` | `Last(ctx context.Context) (*T, error)` | Reverses ordering and returns the first record. |
 | `Count(ctx)` | `Count(ctx context.Context) (int64, error)` | Executes `SELECT COUNT(*)` and returns the count. |

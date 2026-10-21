@@ -28,6 +28,19 @@ func TestGenerateAPICodeDashedResourceName(t *testing.T) {
 	require.Error(t, err, "a name that cannot start an identifier is rejected")
 }
 
+func TestAddAPIGraphQLFlagDescribesPlaceholder(t *testing.T) {
+	flag := NewAddAPICommand().Definition().Flags().Lookup("graphql")
+	require.NotNil(t, flag)
+	assert.Contains(t, flag.Usage, "placeholder")
+	code, err := generateAPICode("blog", "Post", "posts", "posts", true)
+	require.NoError(t, err)
+	assert.Contains(t, code, "GraphQL resolver would go here")
+	assert.NotContains(t, code, "graphql.New")
+	withoutGraphQL, err := generateAPICode("blog", "Post", "posts", "posts", false)
+	require.NoError(t, err)
+	assert.NotContains(t, withoutGraphQL, "GraphQL resolver would go here")
+}
+
 func TestAddAPIRejectsDuplicateDeclarations(t *testing.T) {
 	dir := t.TempDir()
 	previous, err := os.Getwd()

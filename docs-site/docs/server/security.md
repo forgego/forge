@@ -6,7 +6,7 @@ image: /social-card.png
 
 # Platform Security & Hardening
 
-Forge is designed with secure-by-default architecture, protecting your application against common OWASP vulnerabilities (CSRF, session fixation, timing attacks, and password truncation) out of the box.
+Forge provides CSRF, session, and security middleware. Enable and configure the components needed by your application.
 
 ---
 
@@ -15,7 +15,7 @@ Forge is designed with secure-by-default architecture, protecting your applicati
 Forge integrates Gorilla CSRF middleware to defend state-changing HTTP requests (`POST`, `PUT`, `PATCH`, `DELETE`).
 
 ### How It Works
-1. For HTML/SPA requests, Forge issues a cryptographically masked CSRF token via an `HttpOnly` cookie or header.
+1. For HTML/SPA requests, Forge issues a cryptographically masked CSRF token using Gorilla CSRF.
 2. Form submissions or AJAX calls must provide the token via the `X-CSRF-Token` header or `gorilla.csrf.Token` form field.
 
 ### Configuring CSRF Exempt Paths
@@ -23,26 +23,26 @@ Public webhook listeners (e.g. Stripe, PayPal, GitHub webhooks) and stateless RE
 
 ```yaml
 security:
-  csrf_enabled: true
+  csrf_secret_key: "set-a-persistent-secret"
   csrf_exempt_paths:
     - "/api/v1/*"
     - "/webhooks/stripe"
     - "/webhooks/logistics"
 ```
 
-In Go code, the middleware automatically validates the request URL path prefix against registered exempt patterns.
+`NewServer` installs CSRF protection when `security.csrf_secret_key` is nonempty. It checks request paths against `security.csrf_exempt_paths`; there is no `csrf_enabled` setting.
 
 ---
 
 ## Secret Keys Configuration
 
-Forge requires 3 distinct 32-byte cryptographically secure keys:
+For production, Forge requires three explicit, non-placeholder keys. Each must contain at least 32 bytes, and the values must be distinct. Supply strong, independent secrets through your secret manager.
 
 ```yaml
 security:
-  secret_key: "your-32-byte-hex-encoded-app-secret"
-  csrf_secret_key: "your-32-byte-csrf-encryption-key"
-  session_secret: "your-32-byte-session-cookie-secret"
+  secret_key: "replace-with-a-unique-app-secret-of-32-plus-bytes"
+  csrf_secret_key: "replace-with-a-unique-csrf-secret-of-32-plus-bytes"
+  session_secret: "replace-with-a-unique-session-secret-of-32-plus-bytes"
 ```
 
 :::warning Production Recommendation
@@ -74,35 +74,23 @@ Forge mitigates this by passing incoming passwords through a SHA-256 pre-hash be
 
 ## CORS (Cross-Origin Resource Sharing)
 
-Configure permitted browser origins for frontend clients in `config/config.yaml`:
+`NewServer` does not read `server.cors` YAML settings. Register `server.CORS` on your router to configure permitted browser origins:
 
-```yaml
-server:
-  cors:
-    enabled: true
-    allowed_origins:
-      - "http://localhost:3000"
-      - "https://store.example.com"
-    allowed_methods:
-      - "GET"
-      - "POST"
-      - "PUT"
-      - "PATCH"
-      - "DELETE"
-      - "OPTIONS"
-    allowed_headers:
-      - "Content-Type"
-      - "Authorization"
-      - "X-CSRF-Token"
-    allow_credentials: true
-    max_age: 86400
+```go
+srv.RegisterRoutes(func(r *server.Router) {
+    r.Use(server.CORS(&server.CORSOptions{
+        AllowedOrigins: []string{"https://store.example.com"},
+        AllowedMethods: []string{"GET", "POST", "OPTIONS"},
+        AllowedHeaders: []string{"Content-Type", "Authorization"},
+    }))
+})
 ```
 
 ---
 
 ## Security Headers
 
-Forge automatically injects essential security response headers:
+`NewServer` does not install `SecureHeaders` automatically. Register `server.SecureHeaders(nil)` on the router to add its default headers, including:
 - `X-Content-Type-Options: nosniff`
 - `X-Frame-Options: DENY` (or `SAMEORIGIN` for Admin embedding)
 - `X-XSS-Protection: 1; mode=block`

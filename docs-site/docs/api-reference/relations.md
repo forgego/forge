@@ -13,33 +13,31 @@ The `github.com/forgego/forge/schema` package provides expressive constructors f
 
 Forge supports three relational cardinality patterns:
 
-### 1. `schema.ForeignKey` (Many-to-One)
+### 1. `schema.ForeignKeyField` (Many-to-One)
 
 Establishes a foreign key column on the model pointing to a target model's primary key:
 
 ```go
-schema.ForeignKey("author_id", "User", schema.CascadeCASCADE).
-    RelatedName("posts").
-    RelatedQueryName("post")
+schema.ForeignKeyField("author_id", "User", schema.OnDelete(schema.CascadeCASCADE),
+    schema.RelatedName("posts"), schema.RelatedQueryName("post"))
 ```
 
-### 2. `schema.OneToOne` (One-to-One)
+### 2. `schema.OneToOneField` (One-to-One)
 
 Establishes a foreign key with an automatic `UNIQUE` database constraint, guaranteeing a strict 1:1 relationship:
 
 ```go
-schema.OneToOne("profile_id", "UserProfile", schema.CascadeCASCADE).
-    RelatedName("user")
+schema.OneToOneField("profile_id", "UserProfile", schema.OnDelete(schema.CascadeCASCADE),
+    schema.RelatedName("user"))
 ```
 
-### 3. `schema.ManyToMany` (Many-to-Many)
+### 3. `schema.ManyToManyField` (Many-to-Many)
 
 Establishes an M:N association across an intermediary through table:
 
 ```go
-schema.ManyToMany("tags", "Tag").
-    Through("post_tags").
-    RelatedName("posts")
+schema.ManyToManyField("tags", "Tag", schema.Through("post_tags"),
+    schema.RelatedName("posts"))
 ```
 
 ---
@@ -60,7 +58,7 @@ The `CascadeType` parameter defines what happens to dependent rows when a refere
 
 ## Relation Options
 
-- `RelatedName(name string)`: Sets the reverse accessor name on the target model (e.g. `user.Posts`).
+- `RelatedName(name string)`: Stores the reverse relation name in schema metadata; it does not generate a Go accessor such as `user.Posts`.
 - `RelatedQueryName(name string)`: Sets the query lookup name for reverse filters.
 - `Through(tableName string)`: Specifies the junction table for `ManyToMany` relationships.
 - `DBConstraint(bool)`: If `false`, omits the foreign key constraint from migrations while maintaining ORM JOIN capabilities.
