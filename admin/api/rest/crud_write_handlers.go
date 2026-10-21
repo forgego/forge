@@ -151,7 +151,7 @@ func (r *Router) handleReplace(admin core.AdminInterface) http.HandlerFunc {
 // Client-caused failures (bad input, not found, permission denied,
 // validation, constraint conflicts) map to 4xx; any unexpected storage error
 // makes the whole response 500. When every item failed with the same client
-// status (all 403, all 409) that status is used, otherwise 400.
+// status (for example all 403 or all 400) that status is used, otherwise 400.
 func bulkFailure(w http.ResponseWriter, code, message string, errs []bulkItemError) {
 	status := 0
 	for _, e := range errs {
@@ -179,9 +179,9 @@ func bulkItemStatus(code string) int {
 	switch code {
 	case "permission_denied":
 		return http.StatusForbidden
-	case "conflict", "in_use":
+	case "conflict":
 		return http.StatusConflict
-	case "invalid_item", "invalid_id", "not_found", "validation_error", "invalid_reference":
+	case "in_use", "invalid_item", "invalid_id", "not_found", "validation_error", "invalid_reference":
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError

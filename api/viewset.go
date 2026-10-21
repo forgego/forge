@@ -889,7 +889,7 @@ func (vs *BaseViewSet) Destroy(w http.ResponseWriter, r *http.Request) {
 
 	if len(deleteResults) > 0 && !deleteResults[0].IsNil() {
 		if err, ok := deleteResults[0].Interface().(error); ok && err != nil {
-			vs.handleException(w, r, persistenceException(err))
+			vs.handleException(w, r, deleteException(err))
 			return
 		}
 	}
