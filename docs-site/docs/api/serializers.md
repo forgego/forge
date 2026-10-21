@@ -56,7 +56,7 @@ func (ProductSerializer) ReadonlyFields() []string {
 
 // Custom validation runs when Validate is called by a viewset.
 func (s *ProductSerializer) Validate() error {
-    price, _ := s.Get("price").(float64)
+    price := s.GetFloat("price")
     if price < 0.01 {
         s.AddError("price", "price must be at least $0.01")
         return errors.New("validation failed")

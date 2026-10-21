@@ -124,17 +124,33 @@ func (Widget) Meta() schema.Meta { return schema.Meta{TableName:"widgets"} }
 
 func TestSquashReportsUnavailableForSelectedDirectory(t *testing.T) {
 	root := t.TempDir()
-	command := NewSquashCommand()
-	def := command.Definition()
-	if err := def.Flags().Set("path", root); err != nil {
+	chosen := filepath.Join(root, "chosen")
+	if err := os.Mkdir(chosen, 0700); err != nil {
 		t.Fatal(err)
 	}
-	err := command.Execute(&core.Context{Cmd: def}, []string{"000001", "000002", "combined"})
+	writeMigrationPair(t, chosen, "000001", "widgets")
+	before, err := os.ReadDir(chosen)
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := NewSquashCommand()
+	def := command.Definition()
+	if err := def.Flags().Set("path", chosen); err != nil {
+		t.Fatal(err)
+	}
+	err = command.Execute(&core.Context{Cmd: def}, []string{"000001", "000002", "combined"})
 	if !forgeerrors.IsNotImplemented(err) {
 		t.Fatalf("expected unavailable squash, got %v", err)
 	}
 	if !strings.Contains(def.Flags().Lookup("path").Usage, "not implemented") {
 		t.Fatal("path flag promises an unavailable selection")
+	}
+	after, err := os.ReadDir(chosen)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(after) != len(before) {
+		t.Fatalf("squash changed selected migration directory: before=%d after=%d", len(before), len(after))
 	}
 }
 

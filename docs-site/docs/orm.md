@@ -24,18 +24,17 @@ Every filter or ordering method returns an immutable, cloned `QuerySet`, making 
 
 ```go
 // Base active products queryset
-activeProducts := ProductManager.Filter(ProductExpr.InStock.Eq(true))
+activeProducts := ProductManager.QuerySet().Filter(ProductExpr.InStock.Eq(true))
 
 // Branch 1: Cheap items
 budgetItems, err := activeProducts.
     Filter(ProductExpr.Price.Lte(25.00)).
-    OrderBy("price").
+    OrderBy(orm.Asc("price")).
     Limit(10).
     All(ctx)
 
-// Branch 2: High-end electronics
-premiumElectronics, err := activeProducts.
-    Filter(ProductExpr.Category.Slug.Eq("electronics")).
+// Branch 2: Premium items
+premiumItems, err := activeProducts.
     Filter(ProductExpr.Price.Gte(500.00)).
     All(ctx)
 ```
@@ -64,7 +63,7 @@ Forge generates expression helpers for each model during `forge generate`. For e
 
 ```go
 // Example of expressive lookups
-products, err := ProductManager.
+products, err := ProductManager.QuerySet().
     Filter(ProductExpr.Title.IContains("mechanical keyboard")).
     Filter(ProductExpr.Price.Lte(150.00)).
     Filter(ProductExpr.DeletedAt.IsNull()).
@@ -87,7 +86,7 @@ condition := orm.And(
     ProductExpr.Status.Ne("discontinued"),
 )
 
-items, err := ProductManager.Filter(condition).All(ctx)
+items, err := ProductManager.QuerySet().Filter(condition).All(ctx)
 ```
 
 You can also use SQL-like explicit `orm.Where(field, operator, value)` when building dynamic search queries from user input:
@@ -114,9 +113,9 @@ Use `SelectRelated` for single-valued relationships (`ForeignKey` and `OneToOne`
 
 ```go
 // Fetches order and joins customer + shipping address in 1 SQL query
-order, err := OrderManager.
+order, err := OrderManager.QuerySet().
     SelectRelated("Customer", "ShippingAddress").
-    Get(ctx, orderID)
+    Filter(OrderExpr.Id.Eq(orderID)).Get(ctx)
 
 fmt.Println(order.Customer.Email) // Instant access, no extra DB query
 ```
@@ -126,7 +125,7 @@ Use `PrefetchRelated` for multi-valued relationships (`ManyToMany` or reverse fo
 
 ```go
 // Fetches 20 products, then fetches all associated tags and reviews in 2 batch queries
-products, err := ProductManager.
+products, err := ProductManager.QuerySet().
     Filter(ProductExpr.InStock.Eq(true)).
     PrefetchRelated("Tags", "Reviews").
     Limit(20).
@@ -141,7 +140,7 @@ Execute database-level aggregates with `AggregateValues(ctx, queryset, ...)`:
 
 ```go
 stats, err := orm.AggregateValues(ctx,
-    ProductManager.Filter(ProductExpr.InStock.Eq(true)),
+    ProductManager.QuerySet().Filter(ProductExpr.InStock.Eq(true)),
         orm.Count("id"),
         orm.Avg("price"),
         orm.Max("price"),
@@ -201,7 +200,7 @@ newItems := []*Product{
 err := ProductManager.BulkCreate(ctx, newItems)
 
 // QuerySet-level Update (Single SQL UPDATE statement)
-rowsAffected, err := ProductManager.
+rowsAffected, err := ProductManager.QuerySet().
     Filter(ProductExpr.Status.Eq("pending")).
     Update(ctx, orm.UpdateMap{
         "status": "archived",
@@ -209,7 +208,7 @@ rowsAffected, err := ProductManager.
     })
 
 // QuerySet-level Delete (Single SQL DELETE statement)
-deletedCount, err := ProductManager.
+deletedCount, err := ProductManager.QuerySet().
     Filter(ProductExpr.DeletedAt.IsNotNull()).
     Delete(ctx)
 ```

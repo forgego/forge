@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Dotted configuration keys have the documented FORGE_ environment form.
@@ -17,12 +18,21 @@ func TestEnvironmentOverridesDottedConfigurationKeys(t *testing.T) {
 		value := strings.Repeat("x", 64) + string(rune('a'+i))
 		t.Setenv("FORGE_"+strings.ToUpper(strings.ReplaceAll(key, ".", "_")), value)
 	}
+	// The documented form must also work through typed accessors used by the DB layer.
+	t.Setenv("FORGE_DATABASE_MAX_OPEN_CONNS", "7")
+	t.Setenv("FORGE_DATABASE_CONN_MAX_LIFETIME", "13m")
 	cfg := NewConfig()
 	for i, key := range keys {
+		if key == "database.max_open_conns" || key == "database.conn_max_lifetime" {
+			continue
+		}
 		want := strings.Repeat("x", 64) + string(rune('a'+i))
 		if got := cfg.GetString(key, ""); got != want {
 			t.Errorf("%s = %q, want environment override", key, got)
 		}
+	}
+	if pool := cfg.GetPoolConfig(); pool.MaxOpenConns != 7 || pool.ConnMaxLifetime != 13*time.Minute {
+		t.Fatalf("environment pool config = %+v", pool)
 	}
 }
 

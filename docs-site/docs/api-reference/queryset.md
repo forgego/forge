@@ -25,34 +25,34 @@ Negates the expression (`NOT (...)`) and appends it to the `WHERE` clause.
 qs = qs.Exclude(ProductExpr.Status.Eq("archived"))
 ```
 
-### `OrderBy(fields ...string) *QuerySet[T]`
+### `OrderBy(fields ...any) QuerySet[T]`
 Sets the `ORDER BY` clause. Prefix a field name with `-` for descending order.
 
 ```go
 qs = qs.OrderBy("-created_at", "title")
 ```
 
-### `Limit(n int) *QuerySet[T]`
+### `Limit(n int) QuerySet[T]`
 Sets the maximum number of records to return (`LIMIT n`).
 
-### `Offset(n int) *QuerySet[T]`
+### `Offset(n int) QuerySet[T]`
 Sets the number of rows to skip (`OFFSET n`).
 
-### `Distinct(fields ...string) *QuerySet[T]`
+### `Distinct(fields ...any) QuerySet[T]`
 Appends SQL `DISTINCT` (or `DISTINCT ON` in PostgreSQL).
 
 ---
 
 ## Eager Loading Methods
 
-### `SelectRelated(fields ...string) *QuerySet[T]`
+### `SelectRelated(fields ...any) QuerySet[T]`
 Performs SQL `JOIN`s along single-valued foreign key paths, loading parent and child rows in a single query.
 
 ```go
 qs = qs.SelectRelated("Category", "Supplier")
 ```
 
-### `PrefetchRelated(fields ...string) *QuerySet[T]`
+### `PrefetchRelated(fields ...any) QuerySet[T]`
 Executes batch queries for multi-valued relations (`ManyToMany` or reverse foreign keys) and stitches relationships in memory.
 
 ```go
@@ -63,16 +63,16 @@ qs = qs.PrefetchRelated("Tags", "Reviews")
 
 ## Projection & Field Selection
 
-### `Only(fields ...string) *QuerySet[T]`
+### `Only(fields ...any) QuerySet[T]`
 Restricts the SQL `SELECT` list to only the specified columns, reducing payload size.
 
-### `Defer(fields ...string) *QuerySet[T]`
+### `Defer(fields ...any) QuerySet[T]`
 Excludes large columns (like long text or binary blobs) from the initial `SELECT` query.
 
-### `Values(fields ...string) *ValuesQuerySet[T]`
+### `Values(fields ...any) ValuesQuerySet[T]`
 Returns query results as a slice of `map[string]any` dictionaries instead of model structs.
 
-### `ValuesList(fields ...string) *ValuesListQuerySet[T]`
+### `ValuesList(fields ...any) ValuesListQuerySet[T]`
 Returns query results as flat slices of tuples / interface values.
 
 ---

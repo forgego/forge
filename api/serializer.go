@@ -100,6 +100,26 @@ func (s *BaseSerializer) GetInt(key string) int {
 	return 0
 }
 
+// GetFloat gets a numeric value, including a JSON number from an HTTP request.
+func (s *BaseSerializer) GetFloat(key string) float64 {
+	switch value := s.data[key].(type) {
+	case float64:
+		return value
+	case float32:
+		return float64(value)
+	case json.Number:
+		parsed, err := value.Float64()
+		if err == nil {
+			return parsed
+		}
+	case int:
+		return float64(value)
+	case int64:
+		return float64(value)
+	}
+	return 0
+}
+
 // GetBool gets a bool value
 func (s *BaseSerializer) GetBool(key string) bool {
 	if val, ok := s.data[key].(bool); ok {

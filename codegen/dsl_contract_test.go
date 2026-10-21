@@ -298,6 +298,7 @@ func TestSupportedDSLCompiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	generateFixture(t, pkg)
+	generateFixture(t, guidePkg)
 	goMod := fmt.Sprintf("module example.com/dslfixture\n\ngo 1.26.0\n\nrequire github.com/forgego/forge v0.0.0\n\nreplace github.com/forgego/forge => %s\n", root)
 	if err := os.WriteFile(filepath.Join(module, "go.mod"), []byte(goMod), 0o644); err != nil {
 		t.Fatal(err)

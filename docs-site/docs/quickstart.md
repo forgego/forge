@@ -67,7 +67,7 @@ package blog
 import "github.com/forgego/forge/schema"
 
 type Article struct {
-	schema.BaseSchema
+	ArticleGenerated
 }
 
 func (Article) Fields() []schema.Field {

@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -43,6 +44,49 @@ func (Widget) Meta() schema.Meta { return schema.Meta{TableName:"widgets"} }
 		}
 		if !strings.Contains(strings.ToLower(string(data)), "widgets") {
 			t.Fatalf("%s does not mention widgets: %s", path, data)
+		}
+	}
+}
+
+func TestMakeMigrationsVerboseUsesOrdinaryGenerationOutput(t *testing.T) {
+	root := t.TempDir()
+	models := filepath.Join(root, "models")
+	if err := os.Mkdir(models, 0700); err != nil {
+		t.Fatal(err)
+	}
+	source := `package models
+import "github.com/forgego/forge/schema"
+type Widget struct { schema.BaseSchema; ID int64 }
+func (Widget) Fields() []schema.Field { return []schema.Field{schema.Int64Field("id",schema.Primary(),schema.AutoIncrement())} }
+func (Widget) Meta() schema.Meta { return schema.Meta{TableName:"widgets"} }
+`
+	if err := os.WriteFile(filepath.Join(models, "models.go"), []byte(source), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, verbose := range []bool{false, true} {
+		command := NewMakeMigrationsCommand()
+		cmd := command.Definition()
+		migrations := filepath.Join(root, map[bool]string{false: "ordinary", true: "verbose"}[verbose])
+		for name, value := range map[string]string{"path": migrations, "models": models, "auto": "true"} {
+			if err := cmd.Flags().Set(name, value); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if verbose {
+			if err := cmd.Flags().Set("verbose", "true"); err != nil {
+				t.Fatal(err)
+			}
+		}
+		var output bytes.Buffer
+		cmd.SetOut(&output)
+		if err := command.Execute(&core.Context{Cmd: cmd, Config: migrationConfig(filepath.Join(root, "app.db"))}, []string{"initial"}); err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(strings.ToLower(output.String()), "warning") {
+			t.Fatalf("unexpected diagnostic output: %s", output.String())
+		}
+		if _, err := os.Stat(filepath.Join(migrations, "000001_initial.up.sql")); err != nil {
+			t.Fatal(err)
 		}
 	}
 }

@@ -40,6 +40,9 @@ schema.ManyToManyField("tags", "Tag", schema.Through("post_tags"),
     schema.RelatedName("posts"))
 ```
 
+Create `post_tags` in a manual migration; migration generation does not create
+the through table from this declaration.
+
 ---
 
 ## Cascade Deletion Behaviors

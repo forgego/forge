@@ -19,7 +19,7 @@ From these schema definitions, Forge automatically generates:
 
 ## The Model Contract
 
-Any model struct embeds `schema.BaseSchema` and implements the following methods. This example uses functional constructors supported by Go and generation:
+Any model struct embeds its generated fields type and implements the following methods. This example uses functional constructors supported by Go and generation:
 
 ```go
 package models
@@ -30,7 +30,7 @@ import (
 )
 
 type Product struct {
-    schema.BaseSchema
+    ProductGenerated
 }
 
 func (Product) Fields() []schema.Field {

@@ -37,6 +37,10 @@ func (BaseSchema) Meta() Meta            { return Meta{} }
 func (BaseSchema) Hooks() *ModelHooks    { return nil }
 ```
 
+For models you pass to `forge generate`, embed `<Model>Generated` (for example,
+`ArticleGenerated`) when you need the generated Go fields and CRUD methods.
+The generated type includes `BaseSchema`.
+
 ---
 
 ## Model Discovery
@@ -81,11 +85,15 @@ func (Product) Meta() schema.Meta {
             schema.GINIndex("idx_product_metadata", "metadata"),
         },
         Constraints: []schema.Constraint{
-            schema.Check("chk_product_price", "price >= 0"),
+            {Name: "chk_product_price", Type: schema.ConstraintTypeCheck, Condition: "price >= 0"},
         },
     }
 }
 ```
+
+`forge makemigrations` reads the literal `Constraint` above. The `schema.Check`
+helper builds equivalent runtime metadata but is not yet supported by source
+generation. `GINIndex` is PostgreSQL-specific; use B-tree indexes on SQLite.
 
 ---
 

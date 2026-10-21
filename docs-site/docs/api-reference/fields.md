@@ -49,7 +49,7 @@ Fields use functional constructors. Pass option functions after the name, for ex
 - `DBDefault(expr)`: Sets a database-level default SQL expression (e.g. `DBDefault("NOW()")` or `DBDefault("'active'")`).
 - `DBColumn(name)`: Explicit SQL column name override.
 - `DBType(sqlType)`: Explicit SQL column type override.
-- `DBIndex()`: Instructs migrations to create a B-Tree index.
+- `DBIndex()`: Stores index metadata. Declare an index in `Meta.Indexes` for migration generation.
 - `DBCollation(name)`: Specifies character collation.
 - `DBComment(text)`: Adds a database comment to the column.
 
@@ -59,6 +59,8 @@ Fields use functional constructors. Pass option functions after the name, for ex
   // PostgreSQL STORED generated column
   schema.GeneratedColumn("price * (1 + tax_rate)", true)
   ```
+  Source generation does not yet put this option into migrations. Create the
+  generated column in a manual migration, as shown in the [models guide](/docs/models/#generated-columns).
 
 ### Validation Options
 - `MaxLength(n int)`: Maximum string or array length.

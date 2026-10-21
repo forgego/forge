@@ -266,7 +266,10 @@ it set, they fail instead.
 
 :::warning SQLite is experimental
 Applying migrations to SQLite is experimental, and the release gate does not cover it.
-`TestMigrationApplySQLite` is the one test the gate allows to skip. On SQLite, a new
+`TestMigrationApplySQLite` is the one broader integration test the gate allows to skip.
+A basic generated table migration is tested in-process against SQLite, including apply,
+data access and rollback. That test does not establish support for arbitrary SQLite
+schema changes. On SQLite, a new
 table's foreign keys and `Meta.Constraints` are declared inside its `CREATE TABLE` and read
 back from there, so regenerating unchanged models writes nothing. SQLite cannot add, drop
 or change a foreign key or constraint of an existing table without rebuilding it, and
@@ -274,6 +277,10 @@ or change a foreign key or constraint of an existing table without rebuilding it
 applies to a changed column, because SQLite has no `ALTER COLUMN`. See
 [Changes makemigrations cannot generate](#changes-makemigrations-cannot-generate).
 :::
+
+`forge makemigrations --verbose` is currently reserved and does not add generation
+warnings. `forge migrate squash` returns a not-implemented error for any selected
+`--path` and leaves the migration files untouched.
 
 ---
 
