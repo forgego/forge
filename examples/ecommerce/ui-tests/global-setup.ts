@@ -1,4 +1,4 @@
-const adminPort = process.env.FORGE_PORT || '8020';
+const adminPort = process.env.FORGE_SERVER_PORT || '8020';
 const adminApiBase = `http://localhost:${adminPort}/admin/api`;
 
 async function waitForAdminApi(timeoutMs = 2000): Promise<boolean> {

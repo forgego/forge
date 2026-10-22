@@ -3,6 +3,7 @@ package catalog
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -110,27 +111,26 @@ func RegisterAPI(ctx context.Context, router *api.Router, database *db.DB) {
 
 		whereClauses := []string{"1=1"}
 		var args []any
+		bind := func(value any) string {
+			args = append(args, value)
+			return fmt.Sprintf("$%d", len(args))
+		}
 
 		if q != "" {
-			whereClauses = append(whereClauses, "(name LIKE ? OR description LIKE ? OR sku LIKE ?)")
 			likeTerm := "%" + q + "%"
-			args = append(args, likeTerm, likeTerm, likeTerm)
+			whereClauses = append(whereClauses, "(name LIKE "+bind(likeTerm)+" OR description LIKE "+bind(likeTerm)+" OR sku LIKE "+bind(likeTerm)+")")
 		}
 		if categoryID > 0 {
-			whereClauses = append(whereClauses, "category_id = ?")
-			args = append(args, categoryID)
+			whereClauses = append(whereClauses, "category_id = "+bind(categoryID))
 		}
 		if brandID > 0 {
-			whereClauses = append(whereClauses, "brand_id = ?")
-			args = append(args, brandID)
+			whereClauses = append(whereClauses, "brand_id = "+bind(brandID))
 		}
 		if minPrice > 0 {
-			whereClauses = append(whereClauses, "price >= ?")
-			args = append(args, minPrice)
+			whereClauses = append(whereClauses, "price >= "+bind(minPrice))
 		}
 		if maxPrice > 0 {
-			whereClauses = append(whereClauses, "price <= ?")
-			args = append(args, maxPrice)
+			whereClauses = append(whereClauses, "price <= "+bind(maxPrice))
 		}
 		if inStock {
 			whereClauses = append(whereClauses, "stock_quantity > 0")

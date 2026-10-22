@@ -447,6 +447,14 @@ func (p *ASTParser) isSupportedOptionCall(methodName string, call *ast.CallExpr)
 		return false
 	}
 	name := sel.Sel.Name
+	if name == "ChoicesFromPairsOpts" {
+		for _, arg := range call.Args {
+			literal, ok := arg.(*ast.BasicLit)
+			if !ok || literal.Kind != token.STRING {
+				return false
+			}
+		}
+	}
 	if p.isFieldBuilder(name) {
 		return true
 	}
