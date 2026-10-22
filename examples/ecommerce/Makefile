@@ -1,6 +1,6 @@
 # Forge Ecommerce Makefile
 
-.PHONY: help install generate migrate migrate-down migrate-status run test clean docker-up docker-down seed admin-ui run-go build-embed ui-test demo
+.PHONY: help install generate makemigrations migrate migrate-down migrate-status run test clean docker-up docker-down seed admin-ui run-go build-embed ui-test demo
 
 ADMIN_UI_DIR := ../../admin/ui/web
 
@@ -10,6 +10,7 @@ help:
 	@echo ""
 	@echo "  make install       - Install dependencies and setup project"
 	@echo "  make generate      - Generate code from models"
+	@echo "  make makemigrations - Generate migrations from models for the configured driver"
 	@echo "  make migrate       - Run database migrations"
 	@echo "  make migrate-down  - Rollback last migration"
 	@echo "  make migrate-status - Show migration status"
@@ -39,6 +40,10 @@ generate:
 	@echo "Generating code..."
 	forge generate
 	@echo "Code generated"
+
+makemigrations:
+	@echo "Generating migrations..."
+	forge migrate makemigrations initial --auto --models ./app
 
 # Run migrations
 migrate:
@@ -116,10 +121,9 @@ seed:
 	go run scripts/seed.go
 	@echo "Database seeded"
 
-# Create superuser
+# The example admin login is configured through admin.username/admin.password.
 superuser:
-	@echo "Creating superuser..."
-	forge createsuperuser
+	@echo "This example uses the configured admin login; forge createsuperuser manages a separate identity user table."
 
 # Build for production
 build:
@@ -143,13 +147,12 @@ ui-test:         ## Run the Playwright admin suite (needs Chrome; starts the ser
 demo: admin-ui run-go   ## One command: build the admin UI and start the server
 
 # Full setup (for new developers)
-setup: install db-create generate migrate
+setup: install generate makemigrations migrate
 	@echo "Setup complete."
 	@echo ""
 	@echo "Next steps:"
-	@echo "  1. Create a superuser: make superuser"
-	@echo "  2. Start the server: make run"
-	@echo "  3. Visit http://localhost:8000/admin/"
+	@echo "  1. Start the server: make run"
+	@echo "  2. Visit http://localhost:8020/admin/ (or your configured port)"
 
 # Complete workflow
 all: setup seed run

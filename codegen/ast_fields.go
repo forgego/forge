@@ -320,34 +320,35 @@ func (p *ASTParser) mapFieldTypeToGoType(fieldType string) string {
 }
 
 var fieldOptionParsers = map[string]func(p *ASTParser, call *ast.CallExpr, options map[string]interface{}){
-	"Primary":         parsePrimaryOption,
-	"AutoIncrement":   trueOption("auto_increment"),
-	"Required":        trueOption("required"),
-	"Optional":        parseOptionalOption,
-	"Unique":          trueOption("unique"),
-	"Blank":           trueOption("blank"),
-	"DBIndex":         trueOption("db_index"),
-	"DBColumn":        stringOption("db_column"),
-	"MaxLength":       intOption("max_length"),
-	"MinLength":       intOption("min_length"),
-	"MaxValue":        floatOption("max_value"),
-	"MinValue":        floatOption("min_value"),
-	"Default":         parseDefaultOption,
-	"HelpText":        stringOption("help_text"),
-	"VerboseName":     stringOption("verbose_name"),
-	"AutoNow":         trueOption("auto_now"),
-	"AutoNowAdd":      trueOption("auto_now_add"),
-	"WriteOnly":       trueOption("write_only"),
-	"Editable":        boolOption("editable"),
-	"Choices":         parseChoicesOption,
-	"MaxDigits":       intOption("max_digits"),
-	"DecimalPlaces":   intOption("decimal_places"),
-	"DBDefault":       stringOption("db_default"),
-	"GeneratedColumn": parseGeneratedColumnOption,
-	"DBComment":       stringOption("db_comment"),
-	"DBCollation":     stringOption("db_collation"),
-	"DBTablespace":    stringOption("db_tablespace"),
-	"DBType":          stringOption("db_type"),
+	"Primary":              parsePrimaryOption,
+	"AutoIncrement":        trueOption("auto_increment"),
+	"Required":             trueOption("required"),
+	"Optional":             parseOptionalOption,
+	"Unique":               trueOption("unique"),
+	"Blank":                trueOption("blank"),
+	"DBIndex":              trueOption("db_index"),
+	"DBColumn":             stringOption("db_column"),
+	"MaxLength":            intOption("max_length"),
+	"MinLength":            intOption("min_length"),
+	"MaxValue":             floatOption("max_value"),
+	"MinValue":             floatOption("min_value"),
+	"Default":              parseDefaultOption,
+	"HelpText":             stringOption("help_text"),
+	"VerboseName":          stringOption("verbose_name"),
+	"AutoNow":              trueOption("auto_now"),
+	"AutoNowAdd":           trueOption("auto_now_add"),
+	"WriteOnly":            trueOption("write_only"),
+	"Editable":             boolOption("editable"),
+	"Choices":              parseChoicesOption,
+	"ChoicesFromPairsOpts": parseChoicePairsOption,
+	"MaxDigits":            intOption("max_digits"),
+	"DecimalPlaces":        intOption("decimal_places"),
+	"DBDefault":            stringOption("db_default"),
+	"GeneratedColumn":      parseGeneratedColumnOption,
+	"DBComment":            stringOption("db_comment"),
+	"DBCollation":          stringOption("db_collation"),
+	"DBTablespace":         stringOption("db_tablespace"),
+	"DBType":               stringOption("db_type"),
 }
 
 func trueOption(key string) func(*ASTParser, *ast.CallExpr, map[string]interface{}) {
@@ -434,6 +435,31 @@ func parseChoicesOption(_ *ASTParser, call *ast.CallExpr, options map[string]int
 	}
 }
 
+func parseChoicePairsOption(_ *ASTParser, call *ast.CallExpr, options map[string]interface{}) {
+	pairs := make([]string, 0, len(call.Args))
+	for _, arg := range call.Args {
+		lit, ok := arg.(*ast.BasicLit)
+		if !ok || lit.Kind != token.STRING {
+			return
+		}
+		value, err := strconv.Unquote(lit.Value)
+		if err != nil {
+			return
+		}
+		pairs = append(pairs, value)
+	}
+	choices := make([]string, 0, len(pairs))
+	if len(pairs)%2 == 0 {
+		for i := 0; i < len(pairs); i += 2 {
+			choices = append(choices, pairs[i])
+		}
+	} else {
+		choices = pairs
+	}
+	options["has_choices"] = true
+	options["choices"] = choices
+}
+
 func parseGeneratedColumnOption(p *ASTParser, call *ast.CallExpr, options map[string]interface{}) {
 	options["generated"] = true
 	if len(call.Args) > 0 {
@@ -500,8 +526,13 @@ func (p *ASTParser) buildValidationTag(fieldType string, options map[string]inte
 	if schema.IsDatabaseFunctionDefault(options["default"]) {
 		tags = append(tags, "omitempty")
 	} else if required, ok := options["required"].(bool); ok && required {
-		// Check if Required() was called
-		tags = append(tags, "required")
+		// Numeric zero and false are valid scalar values. HTTP input
+		// presence is checked before model validation; go-playground's
+		// required rule would conflate these values with missing input.
+		goType := p.mapFieldTypeToGoType(fieldType)
+		if goType != "bool" && !strings.HasPrefix(goType, "int") && !strings.HasPrefix(goType, "float") {
+			tags = append(tags, "required")
+		}
 	}
 
 	// Unique

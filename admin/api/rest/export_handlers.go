@@ -12,6 +12,7 @@ import (
 
 	"github.com/forgego/forge/admin/core"
 	apicore "github.com/forgego/forge/api/core"
+	"github.com/forgego/forge/internal/csvsafe"
 )
 
 // handleExport returns list results as CSV or JSON using current filters/search.
@@ -32,6 +33,17 @@ func (r *Router) handleExport(admin core.AdminInterface) http.HandlerFunc {
 		}
 
 		listFields, labelMap := exportListFields(meta)
+		hidden := make(map[string]bool)
+		for _, name := range hiddenResponseFields(admin) {
+			hidden[name] = true
+		}
+		visibleFields := make([]string, 0, len(listFields))
+		for _, name := range listFields {
+			if !hidden[name] {
+				visibleFields = append(visibleFields, name)
+			}
+		}
+		listFields = visibleFields
 		if len(listFields) == 0 {
 			respondError(w, http.StatusBadRequest, "export_failed", "No fields available for export", nil)
 			return
@@ -58,7 +70,7 @@ func (r *Router) handleExport(admin core.AdminInterface) http.HandlerFunc {
 				break
 			}
 
-			for _, item := range items {
+			for _, item := range visibleAdminRows(ctx, admin, user, items) {
 				rowMap := make(map[string]interface{}, len(listFields))
 				itemMap := objectToMap(item)
 				for _, field := range listFields {
@@ -67,7 +79,7 @@ func (r *Router) handleExport(admin core.AdminInterface) http.HandlerFunc {
 				results = append(results, rowMap)
 			}
 
-			if int64(len(results)) >= response.Count || len(items) < params.PageSize {
+			if int64(params.Page)*int64(params.PageSize) >= response.Count || len(items) < params.PageSize {
 				break
 			}
 			params.Page++
@@ -135,7 +147,9 @@ func objectToMap(obj interface{}) map[string]interface{} {
 		return map[string]interface{}{}
 	}
 	var result map[string]interface{}
-	if err := json.Unmarshal(data, &result); err != nil {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	if err := decoder.Decode(&result); err != nil {
 		return map[string]interface{}{}
 	}
 	return result
@@ -179,6 +193,9 @@ func writeCSVExport(
 		}
 	}
 
+	for i, header := range headers {
+		headers[i] = csvsafe.Cell(header, header)
+	}
 	if err := writer.Write(headers); err != nil {
 		return err
 	}
@@ -186,7 +203,7 @@ func writeCSVExport(
 	for _, row := range rows {
 		record := make([]string, len(fields))
 		for i, field := range fields {
-			record[i] = formatExportValue(row[field])
+			record[i] = csvsafe.Cell(row[field], formatExportValue(row[field]))
 		}
 		if err := writer.Write(record); err != nil {
 			return err

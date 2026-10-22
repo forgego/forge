@@ -1,117 +1,48 @@
 ---
 sidebar_position: 22
-description: Advanced filtering with FilterSets, URL query parameter binding, search filters, and AST parsing.
+description: HTTP query parsing and FilterSet configuration.
 image: /social-card.png
 ---
 
 # Filters & FilterSets
 
-Forge provides a powerful, declarative filtering layer inspired by `django-filter`. FilterSets bridge HTTP query parameters directly into type-safe ORM `QuerySet` constraints with input validation, type coercion, and security whitelisting.
-
----
-
-## Defining a FilterSet
-
-A `FilterSet` declares which fields can be filtered, their matching operators, and default behaviors:
+`filter.FilterSet[T]` parses allowed HTTP query parameters into ORM expressions. Create it with `filter.NewFilterSet[T]()`, set a base queryset with `WithQueryset`, configure allowed fields and lookups with `WithSecurity`, then call `ApplyQueryParams(ctx, request)`.
 
 ```go
-package catalog
-
-import (
-    "github.com/forgego/forge/filter"
-    "myapp/models"
-)
-
-type ProductFilterSet struct {
-    filter.BaseFilterSet[models.Product]
+fs, err := filter.NewFilterSet[models.Product]()
+if err != nil {
+    return err
 }
+security := filter.DefaultSecurityConfig()
+security.AllowedFields["product"] = []string{"name", "price", "in_stock", "created_at", "status", "id"}
+security.AllowedLookups["name"] = []string{"icontains"}
+security.AllowedLookups["price"] = []string{"gte", "lte"}
+fs.WithQueryset(baseQS).WithSecurity(security)
 
-func NewProductFilterSet() *ProductFilterSet {
-    fs := &ProductFilterSet{}
-    
-    // Exact match on category slug
-    fs.AddCharFilter("category", "category.slug", filter.OpExact)
-    
-    // Case-insensitive substring search on name
-    fs.AddCharFilter("q", "name", filter.OpIContains)
-    
-    // Price range filters
-    fs.AddNumberFilter("min_price", "price", filter.OpGte)
-    fs.AddNumberFilter("max_price", "price", filter.OpLte)
-    
-    // Boolean availability
-    fs.AddBooleanFilter("in_stock", "in_stock")
-    
-    // Choice filter for status
-    fs.AddChoiceFilter("status", "status", []string{"active", "sale", "featured"})
-
-    return fs
+filteredQS, err := fs.ApplyQueryParams(r.Context(), r)
+if err != nil {
+    return err
 }
+products, err := filteredQS.Limit(20).All(r.Context())
 ```
 
----
+For example, request `?name__icontains=pro&price__gte=500&price__lte=1500`. Unknown fields and disallowed lookups return an error. The parser converts numeric comparison values to `float64`, `__in` values to a string slice, and `__isnull` values to booleans.
 
-## Applying FilterSets to HTTP Requests
+## Filter objects
 
-In your Chi handler or ViewSet, pass the `http.Request` URL query parameters into the FilterSet:
+The `filter/filters` subpackage provides constructors for filter objects. Register them with `fs.AddFilter(name, object)` when using the filter-object API. `ApplyQueryParams` parses the request through its security configuration; it does not use the `AddFilter` registry.
 
-```go
-func ListProductsHandler(w http.ResponseWriter, r *http.Request) {
-    fs := NewProductFilterSet()
-    
-    // Start with base QuerySet (e.g. only non-deleted items)
-    baseQS := models.ProductManager.Filter(models.ProductExpr.DeletedAt.IsNull(true))
-    
-    // FilterSet parses r.URL.Query(), validates types, and builds SQL WHERE tree
-    filteredQS, err := fs.Filter(r.Context(), baseQS, r.URL.Query())
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusBadRequest)
-        return
-    }
-    
-    // Execute query with pagination
-    products, err := filteredQS.Limit(20).All(r.Context())
-    if err != nil {
-        http.Error(w, "Database error", http.StatusInternalServerError)
-        return
-    }
-    
-    json.NewEncoder(w).Encode(products)
-}
-```
+| Filter | Constructor |
+| :--- | :--- |
+| Character | `filters.NewCharFilter[T](field)` |
+| Number | `filters.NewNumberFilter[T](field)` |
+| Boolean | `filters.NewBooleanFilter[T](field)` |
+| Choice | `filters.NewChoiceFilter[T](field, choices)` |
+| Date | `filters.NewDateFilter[T](field)` |
+| In lookup | Use the parser's `field__in=one,two` parameter |
 
-Now, frontend clients can query your API naturally:
+There are no `AddCharFilter`, `AddNumberFilter`, `AddBooleanFilter`, `AddChoiceFilter`, `AddDateFilter`, or `AddInFilter` convenience methods on `FilterSet`.
 
-```http
-GET /api/v1/products?category=laptops&min_price=500&max_price=1500&in_stock=true&q=pro
-```
+## Security
 
----
-
-## Built-in Filter Types
-
-| Filter Type | Constructors | URL Example | Generated SQL |
-| :--- | :--- | :--- | :--- |
-| **CharFilter** | `fs.AddCharFilter(param, field, op)` | `?q=forge` | `name ILIKE '%forge%'` |
-| **NumberFilter** | `fs.AddNumberFilter(param, field, op)` | `?min_price=100` | `price >= 100.00` |
-| **BooleanFilter** | `fs.AddBooleanFilter(param, field)` | `?in_stock=true` | `in_stock = true` |
-| **DateFilter** | `fs.AddDateFilter(param, field, op)` | `?created_after=2026-01-01` | `created_at >= '2026-01-01'` |
-| **ChoiceFilter** | `fs.AddChoiceFilter(param, field, choices)` | `?status=active` | `status = 'active'` |
-| **InFilter** | `fs.AddInFilter(param, field)` | `?id=1,2,3,4` | `id IN (1, 2, 3, 4)` |
-
----
-
-## Security & Query Whitelisting
-
-Direct client-to-SQL parameter binding can introduce vulnerabilities or Denial of Service via unbounded Cartesian joins. Forge FilterSets prevent this by:
-1. **Strict Whitelisting**: Only fields explicitly added to the FilterSet are permitted. Unknown query parameters are ignored or rejected.
-2. **Type Coercion & Bounds**: Parameters are strongly parsed (e.g., parsing a non-numeric string into a NumberFilter returns a 400 Validation Error).
-3. **Max Limits**: Prevents unbounded limit sizes and guards against expensive operations.
-
----
-
-## Next Steps
-
-- **[REST API ViewSets](/docs/api/viewsets/)**: Use FilterSets seamlessly inside REST API ViewSets.
-- **[QuerySet API Reference](/docs/api-reference/queryset/)**: Complete list of terminal execution and lookup methods.
-
+`DefaultSecurityConfig` denies field access until `AllowedFields` is configured. `AllowedLookups` limits operators per field. The parser also enforces configured complexity limits. Validate request parameters before executing the returned queryset and return a client error for invalid filters.

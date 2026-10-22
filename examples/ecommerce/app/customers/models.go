@@ -65,7 +65,7 @@ func (Customer) Fields() []schema.Field {
 		// Authentication (if using built-in auth)
 		schema.StringField("email", schema.Required(), schema.MaxLength(255), schema.Unique(),
 			schema.HelpText("Customer email address")),
-		schema.StringField("password_hash", schema.Required(), schema.MaxLength(255),
+		schema.StringField("password_hash", schema.Required(), schema.MaxLength(255), schema.WriteOnly(),
 			schema.HelpText("Hashed password")),
 
 		// Personal information
@@ -97,8 +97,8 @@ func (Customer) Fields() []schema.Field {
 			schema.HelpText("Accepts marketing emails")),
 
 		// Account security
-		schema.StringField("verification_token", schema.MaxLength(255), schema.Optional()),
-		schema.StringField("reset_password_token", schema.MaxLength(255), schema.Optional()),
+		schema.StringField("verification_token", schema.MaxLength(255), schema.Optional(), schema.WriteOnly()),
+		schema.StringField("reset_password_token", schema.MaxLength(255), schema.Optional(), schema.WriteOnly()),
 		schema.TimeField("reset_password_expires_at", schema.Optional()),
 		schema.TimeField("last_login_at", schema.Optional()),
 		schema.StringField("last_login_ip", schema.MaxLength(45), schema.Optional()),

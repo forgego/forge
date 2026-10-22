@@ -8,8 +8,16 @@ import (
 	"github.com/forgego/forge/api/exceptions"
 	forgeerrors "github.com/forgego/forge/errors"
 	"github.com/forgego/forge/internal/dberrors"
+	"github.com/forgego/forge/internal/deleteerrors"
 	"github.com/forgego/forge/validate"
 )
+
+func deleteException(err error) error {
+	if status, code, message, ok := deleteerrors.Protection(err); ok {
+		return exceptions.NewAPIException(status, code, message, nil)
+	}
+	return persistenceException(err)
+}
 
 // persistenceException maps manager persistence failures to API exceptions
 // without leaking internal details. Errors already in API form are returned

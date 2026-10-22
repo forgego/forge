@@ -303,6 +303,10 @@ func (r *Router) handleGlobalSearch(w http.ResponseWriter, req *http.Request) {
 		if err != nil || len(items) == 0 {
 			continue
 		}
+		items = visibleAutocompleteItems(ctx, admin, user, items)
+		if len(items) == 0 {
+			continue
+		}
 
 		group := core.SearchResultGroup{
 			Model: name,

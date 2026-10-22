@@ -17,6 +17,7 @@ const (
 	ChangeTypeDropColumn       ChangeType = "DropColumn"
 	ChangeTypeModifyColumn     ChangeType = "ModifyColumn"
 	ChangeTypeRenameColumn     ChangeType = "RenameColumn"
+	ChangeTypeRenameConstraint ChangeType = "RenameConstraint"
 	ChangeTypeAlterColumn      ChangeType = "AlterColumn"
 	ChangeTypeAddIndex         ChangeType = "AddIndex"
 	ChangeTypeDropIndex        ChangeType = "DropIndex"
@@ -139,6 +140,17 @@ type RenameColumn struct {
 func (c *RenameColumn) Type() ChangeType  { return ChangeTypeRenameColumn }
 func (c *RenameColumn) TableName() string { return c.Table }
 func (c *RenameColumn) Reversible() bool  { return true }
+
+// RenameConstraint represents ALTER TABLE .. RENAME CONSTRAINT.
+type RenameConstraint struct {
+	Table   string
+	OldName string
+	NewName string
+}
+
+func (c *RenameConstraint) Type() ChangeType  { return ChangeTypeRenameConstraint }
+func (c *RenameConstraint) TableName() string { return c.Table }
+func (c *RenameConstraint) Reversible() bool  { return true }
 
 // AddIndex represents adding an index
 type AddIndex struct {

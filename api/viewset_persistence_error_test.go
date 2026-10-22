@@ -12,6 +12,7 @@ import (
 	forgeerrors "github.com/forgego/forge/errors"
 	forgehttp "github.com/forgego/forge/server"
 	validate "github.com/forgego/forge/validate"
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,6 +20,18 @@ import (
 type persistenceTestItem struct {
 	ID    int64  `json:"id"`
 	Title string `json:"title"`
+}
+
+func TestBaseViewSet_DestroyProtectedReferenceReturns400(t *testing.T) {
+	mgr := &persistenceTestManager{
+		items:     map[int64]*persistenceTestItem{1: {ID: 1, Title: "x"}},
+		deleteErr: &pq.Error{Code: "23503", Detail: `Key (id)=(1) is still referenced from table "secret_orders".`},
+	}
+	rec := httptest.NewRecorder()
+	newPersistenceRouter(mgr).ServeHTTP(rec, httptest.NewRequest(http.MethodDelete, "/api/items/1", nil))
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), "in_use")
+	assert.NotContains(t, rec.Body.String(), "secret_orders")
 }
 
 type persistenceTestSerializer struct {

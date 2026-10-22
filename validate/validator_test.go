@@ -59,6 +59,12 @@ func TestValidateField_Choices(t *testing.T) {
 	assert.Error(t, v.ValidateField("deleted", "choices=active inactive pending"))
 }
 
+func TestDocumentedValidatorFieldAPI(t *testing.T) {
+	v := NewValidator()
+	assert.NoError(t, v.ValidateField("forge", "min=3"))
+	assert.Error(t, v.ValidateField("go", "min=3"))
+}
+
 func TestValidateField_UniqueTag(t *testing.T) {
 	v := NewValidator()
 

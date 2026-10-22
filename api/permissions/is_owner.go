@@ -18,6 +18,8 @@ type IsOwnerOrReadOnly struct {
 	UserIDField string
 }
 
+func (*IsOwnerOrReadOnly) HasObjectRules(r *http.Request) bool { return !IsSafeMethod(r.Method) }
+
 // NewIsOwnerOrReadOnly creates a new IsOwnerOrReadOnly permission
 func NewIsOwnerOrReadOnly(ownerField string) *IsOwnerOrReadOnly {
 	return &IsOwnerOrReadOnly{

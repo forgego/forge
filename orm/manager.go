@@ -177,6 +177,21 @@ func (m *Manager[T]) Filter(expr Expression) (QuerySet[T], error) {
 	return qs.Filter(expr), nil
 }
 
+// Exclude returns a fresh queryset that omits rows matching expr.
+func (m *Manager[T]) Exclude(expr Expression) QuerySet[T] {
+	return m.QuerySet().Exclude(expr)
+}
+
+// OrderBy returns a fresh queryset ordered by the given fields.
+func (m *Manager[T]) OrderBy(fields ...any) QuerySet[T] {
+	return m.QuerySet().OrderBy(fields...)
+}
+
+// SelectRelated returns a fresh queryset that eager loads the given relations.
+func (m *Manager[T]) SelectRelated(relations ...any) QuerySet[T] {
+	return m.QuerySet().SelectRelated(relations...)
+}
+
 // Get retrieves a single model instance by its primary key ID.
 func (m *Manager[T]) Get(ctx context.Context, id int64) (*T, error) {
 	if !m.hasDB() {

@@ -187,7 +187,7 @@ func (p *ASTParser) findRelationBuilderInChain(expr ast.Expr) (*ast.CallExpr, st
 	switch x := expr.(type) {
 	case *ast.CallExpr:
 		if sel, ok := x.Fun.(*ast.SelectorExpr); ok {
-			if pkgIdent, ok := sel.X.(*ast.Ident); ok && pkgIdent.Name == "schema" {
+			if pkgIdent, ok := sel.X.(*ast.Ident); ok && p.isSchemaQualifier(pkgIdent.Name) {
 				builderType := sel.Sel.Name
 				if strings.HasPrefix(builderType, "ForeignKey") ||
 					strings.HasPrefix(builderType, "OneToOne") ||
@@ -235,7 +235,7 @@ func (p *ASTParser) extractRelationOptionFromMethod(methodName string, call *ast
 		if len(call.Args) > 0 {
 			if sel, ok := call.Args[0].(*ast.SelectorExpr); ok {
 				// Handle schema.CascadeCASCADE, etc.
-				if pkgIdent, ok := sel.X.(*ast.Ident); ok && pkgIdent.Name == "schema" {
+				if pkgIdent, ok := sel.X.(*ast.Ident); ok && p.isSchemaQualifier(pkgIdent.Name) {
 					options["on_delete"] = strings.TrimPrefix(sel.Sel.Name, "Cascade")
 				}
 			} else if val := p.extractStringFromExpr(call.Args[0]); val != "" {
@@ -246,7 +246,7 @@ func (p *ASTParser) extractRelationOptionFromMethod(methodName string, call *ast
 		if len(call.Args) > 0 {
 			if sel, ok := call.Args[0].(*ast.SelectorExpr); ok {
 				// Handle schema.CascadeCASCADE, etc.
-				if pkgIdent, ok := sel.X.(*ast.Ident); ok && pkgIdent.Name == "schema" {
+				if pkgIdent, ok := sel.X.(*ast.Ident); ok && p.isSchemaQualifier(pkgIdent.Name) {
 					options["on_update"] = strings.TrimPrefix(sel.Sel.Name, "Cascade")
 				}
 			} else if val := p.extractStringFromExpr(call.Args[0]); val != "" {

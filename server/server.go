@@ -117,6 +117,11 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 		})
 	}
 
+	// chi requires middleware to be registered before the first route.
+	if settings.Server.EnableProfiling && settings.App.Debug {
+		router.Use(Profiler("/debug", true))
+	}
+
 	// Register health check endpoints
 	if settings.Server.HealthCheckPath != "" {
 		router.Get(settings.Server.HealthCheckPath, HealthHandler())
@@ -138,11 +143,6 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 	// Serve static files if configured
 	if settings.Server.StaticFilesPath != "" {
 		router.Mount("/static", StaticFiles("/static", settings.Server.StaticFilesPath))
-	}
-
-	// Enable profiling if configured (dev mode only)
-	if settings.Server.EnableProfiling && settings.App.Debug {
-		router.Use(Profiler("/debug", true))
 	}
 
 	// Create server
@@ -318,6 +318,21 @@ func (s *Server) validateProductionSecrets() error {
 	var problems []string
 	if len(missing) > 0 {
 		problems = append(problems, "production requires explicit "+strings.Join(missing, ", "))
+	}
+	for _, key := range keys {
+		if !flagged[key] && len(effective[key]) < 32 {
+			problems = append(problems, key+" must be at least 32 bytes")
+		}
+	}
+	for i, key := range keys {
+		if flagged[key] {
+			continue
+		}
+		for _, other := range keys[i+1:] {
+			if !flagged[other] && effective[key] == effective[other] {
+				problems = append(problems, key+" and "+other+" must be distinct")
+			}
+		}
 	}
 	// Debug mode enables the profiling routes (with server.enable_profiling),
 	// so it is rejected in production like a missing secret.

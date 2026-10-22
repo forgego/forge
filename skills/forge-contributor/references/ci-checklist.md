@@ -3,8 +3,9 @@
 Use this as the authoritative "everything must happen" list. Run the checks that match your changes.
 
 ## Versions and Tooling
-- Go versions in CI: 1.24 and 1.25 for unit tests.
-- Node version in CI: 22 for docs site and admin UI.
+- Go versions in CI: 1.26.10 and 1.27.3 for unit tests; other Go jobs use 1.27.3.
+- The framework and generated projects require Go 1.26.10 or newer for standard-library security fixes.
+- Node version in CI: 26.8.1 for docs site and admin UI.
 - Docs site requires Node >= 20 (see `docs-site/package.json`).
 
 ## Core Go (Forge framework)
@@ -27,7 +28,7 @@ Use this as the authoritative "everything must happen" list. Run the checks that
 - From the repository root: `go build -o <bin>/forge ./cmd/forge`
 - Add `<bin>` to PATH for the test run.
 - `cd tests`
-- `$env:RUN_POSTGRES_TESTS="1"`
+- Set `RUN_POSTGRES_TESTS=1` (Bash: `export RUN_POSTGRES_TESTS=1`).
 - `go test -v ./e2e/cli/...`
 
 ## Admin UI (admin/ui/web)

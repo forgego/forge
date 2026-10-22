@@ -49,7 +49,7 @@ func (a *Admin[T]) ExecuteAction(ctx context.Context, actionName string, ids []i
 			continue
 		}
 
-		if !a.HasChangePermission(ctx, user, instance) {
+		if !a.HasChangePermission(ctx, user, instance) || !a.hasActionPermission(ctx, user, instance, selectedAction.Permissions) {
 			actionErrors = append(actionErrors, BulkActionError{
 				ID:      intID,
 				Code:    "permission_denied",
@@ -89,4 +89,18 @@ func (a *Admin[T]) ExecuteAction(ctx context.Context, actionName string, ids []i
 		response.Message = fmt.Sprintf("Executed %s on %d objects; %d skipped", selectedAction.Label, len(instances), len(actionErrors))
 	}
 	return response, nil
+}
+
+func (a *Admin[T]) hasActionPermission(ctx context.Context, user any, instance *T, required []string) bool {
+	for _, permission := range required {
+		if a.config.PermissionChecker != nil {
+			if !a.config.PermissionChecker.HasPermission(ctx, user, permission) ||
+				!a.config.PermissionChecker.HasObjectPermission(ctx, user, instance, permission) {
+				return false
+			}
+		} else if !isSuperuser(user) {
+			return false
+		}
+	}
+	return true
 }

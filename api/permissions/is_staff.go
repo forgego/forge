@@ -11,6 +11,8 @@ import (
 // field), matching the existing IsAdminUser detection via reflection.
 type IsStaffUser struct{}
 
+func (*IsStaffUser) HasObjectRules(*http.Request) bool { return false }
+
 // NewIsStaffUser creates a new IsStaffUser permission.
 func NewIsStaffUser() *IsStaffUser {
 	return &IsStaffUser{}

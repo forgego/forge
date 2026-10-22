@@ -111,6 +111,17 @@ func TestBuildUpdateSQL_QuotesIdentifiers(t *testing.T) {
 	assert.Equal(t, []interface{}{"Widget", "", float64(0), false, int64(42)}, values)
 }
 
+func TestBuildUpdateSQL_NullableForeignKeyZeroBecomesNull(t *testing.T) {
+	instance := insertRulesModel{ID: 7, Name: "Item"}
+	sql, values, err := BuildUpdateSQL(instance, "insert_rules", "id")
+	require.NoError(t, err)
+	assert.Contains(t, sql, `"parent_id" = $9`)
+	assert.Contains(t, sql, `"owner" = $10`)
+	assert.Nil(t, values[8])
+	assert.Nil(t, values[9])
+	assert.Equal(t, int64(0), values[2])
+}
+
 func TestBuildDeleteSQL_QuotesIdentifiers(t *testing.T) {
 	sql, values := BuildDeleteSQL("order", "id", int64(42))
 	assert.Equal(t, `DELETE FROM "order" WHERE "id" = $1`, sql)

@@ -85,14 +85,14 @@ var CartFieldsInstance = CartFields{
 type CartItemGenerated struct {
 	schema.BaseSchema
 	Id             int64     `json:"id" db:"id" validate:""`
-	CartId         int64     `json:"cart_id" db:"cart_id" validate:"required"`
-	ProductId      int64     `json:"product_id" db:"product_id" validate:"required"`
+	CartId         int64     `json:"cart_id" db:"cart_id" validate:""`
+	ProductId      int64     `json:"product_id" db:"product_id" validate:""`
 	VariantId      int64     `json:"variant_id" db:"variant_id" validate:""`
-	Quantity       int32     `json:"quantity" db:"quantity" validate:"required"`
-	UnitPrice      float64   `json:"unit_price" db:"unit_price" validate:"required"`
+	Quantity       int32     `json:"quantity" db:"quantity" validate:""`
+	UnitPrice      float64   `json:"unit_price" db:"unit_price" validate:""`
 	DiscountAmount float64   `json:"discount_amount" db:"discount_amount" validate:""`
 	TaxAmount      float64   `json:"tax_amount" db:"tax_amount" validate:""`
-	Total          float64   `json:"total" db:"total" validate:"required"`
+	Total          float64   `json:"total" db:"total" validate:""`
 	ProductName    string    `json:"product_name" db:"product_name" validate:"max=255"`
 	VariantName    string    `json:"variant_name" db:"variant_name" validate:"max=255"`
 	ImageUrl       string    `json:"image_url" db:"image_url" validate:"max=500"`
@@ -149,23 +149,23 @@ var CartItemFieldsInstance = CartItemFields{
 type OrderGenerated struct {
 	schema.BaseSchema
 	Id                   int64     `json:"id" db:"id" validate:""`
-	OrderNumber          string    `json:"order_number" db:"order_number" validate:"required,max=50"`
-	CustomerId           int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	OrderNumber          string    `json:"order_number" db:"order_number" validate:"required,unique,max=50"`
+	CustomerId           int64     `json:"customer_id" db:"customer_id" validate:""`
 	CustomerEmail        string    `json:"customer_email" db:"customer_email" validate:"required,max=255"`
 	CustomerFirstName    string    `json:"customer_first_name" db:"customer_first_name" validate:"required,max=100"`
 	CustomerLastName     string    `json:"customer_last_name" db:"customer_last_name" validate:"required,max=100"`
 	CustomerPhone        string    `json:"customer_phone" db:"customer_phone" validate:"max=20"`
-	Subtotal             float64   `json:"subtotal" db:"subtotal" validate:"required"`
+	Subtotal             float64   `json:"subtotal" db:"subtotal" validate:""`
 	DiscountAmount       float64   `json:"discount_amount" db:"discount_amount" validate:""`
-	TaxAmount            float64   `json:"tax_amount" db:"tax_amount" validate:"required"`
-	ShippingAmount       float64   `json:"shipping_amount" db:"shipping_amount" validate:"required"`
-	Total                float64   `json:"total" db:"total" validate:"required"`
+	TaxAmount            float64   `json:"tax_amount" db:"tax_amount" validate:""`
+	ShippingAmount       float64   `json:"shipping_amount" db:"shipping_amount" validate:""`
+	Total                float64   `json:"total" db:"total" validate:""`
 	CouponId             int64     `json:"coupon_id" db:"coupon_id" validate:""`
 	CouponCode           string    `json:"coupon_code" db:"coupon_code" validate:"max=50"`
 	CouponDiscount       float64   `json:"coupon_discount" db:"coupon_discount" validate:""`
-	Status               string    `json:"status" db:"status" validate:"required,max=20"`
-	PaymentStatus        string    `json:"payment_status" db:"payment_status" validate:"required,max=20"`
-	FulfillmentStatus    string    `json:"fulfillment_status" db:"fulfillment_status" validate:"required,max=20"`
+	Status               string    `json:"status" db:"status" validate:"required,oneof=pending processing shipped delivered cancelled refunded,max=20"`
+	PaymentStatus        string    `json:"payment_status" db:"payment_status" validate:"required,oneof=pending paid failed refunded,max=20"`
+	FulfillmentStatus    string    `json:"fulfillment_status" db:"fulfillment_status" validate:"required,oneof=unfulfilled partial shipped fulfilled,max=20"`
 	ShippingAddressId    int64     `json:"shipping_address_id" db:"shipping_address_id" validate:""`
 	BillingAddressId     int64     `json:"billing_address_id" db:"billing_address_id" validate:""`
 	ShippingFirstName    string    `json:"shipping_first_name" db:"shipping_first_name" validate:"max=100"`
@@ -342,19 +342,19 @@ var OrderFieldsInstance = OrderFields{
 type OrderItemGenerated struct {
 	schema.BaseSchema
 	Id                int64     `json:"id" db:"id" validate:""`
-	OrderId           int64     `json:"order_id" db:"order_id" validate:"required"`
-	ProductId         int64     `json:"product_id" db:"product_id" validate:"required"`
+	OrderId           int64     `json:"order_id" db:"order_id" validate:""`
+	ProductId         int64     `json:"product_id" db:"product_id" validate:""`
 	VariantId         int64     `json:"variant_id" db:"variant_id" validate:""`
 	ProductName       string    `json:"product_name" db:"product_name" validate:"required,max=255"`
 	ProductSku        string    `json:"product_sku" db:"product_sku" validate:"required,max=100"`
 	VariantName       string    `json:"variant_name" db:"variant_name" validate:"max=255"`
 	VariantSku        string    `json:"variant_sku" db:"variant_sku" validate:"max=100"`
 	ImageUrl          string    `json:"image_url" db:"image_url" validate:"max=500"`
-	Quantity          int32     `json:"quantity" db:"quantity" validate:"required"`
-	UnitPrice         float64   `json:"unit_price" db:"unit_price" validate:"required"`
+	Quantity          int32     `json:"quantity" db:"quantity" validate:""`
+	UnitPrice         float64   `json:"unit_price" db:"unit_price" validate:""`
 	DiscountAmount    float64   `json:"discount_amount" db:"discount_amount" validate:""`
 	TaxAmount         float64   `json:"tax_amount" db:"tax_amount" validate:""`
-	Total             float64   `json:"total" db:"total" validate:"required"`
+	Total             float64   `json:"total" db:"total" validate:""`
 	QuantityFulfilled int32     `json:"quantity_fulfilled" db:"quantity_fulfilled" validate:""`
 	QuantityRefunded  int32     `json:"quantity_refunded" db:"quantity_refunded" validate:""`
 	FulfillmentStatus string    `json:"fulfillment_status" db:"fulfillment_status" validate:"required,max=20"`
@@ -424,9 +424,9 @@ var OrderItemFieldsInstance = OrderItemFields{
 type PaymentGenerated struct {
 	schema.BaseSchema
 	Id              int64     `json:"id" db:"id" validate:""`
-	OrderId         int64     `json:"order_id" db:"order_id" validate:"required"`
+	OrderId         int64     `json:"order_id" db:"order_id" validate:""`
 	TransactionId   string    `json:"transaction_id" db:"transaction_id" validate:"max=255"`
-	Amount          float64   `json:"amount" db:"amount" validate:"required"`
+	Amount          float64   `json:"amount" db:"amount" validate:""`
 	Currency        string    `json:"currency" db:"currency" validate:"required,max=3"`
 	PaymentMethod   string    `json:"payment_method" db:"payment_method" validate:"required,max=50"`
 	PaymentGateway  string    `json:"payment_gateway" db:"payment_gateway" validate:"max=50"`
@@ -497,7 +497,7 @@ var PaymentFieldsInstance = PaymentFields{
 type ShipmentGenerated struct {
 	schema.BaseSchema
 	Id                  int64     `json:"id" db:"id" validate:""`
-	OrderId             int64     `json:"order_id" db:"order_id" validate:"required"`
+	OrderId             int64     `json:"order_id" db:"order_id" validate:""`
 	TrackingNumber      string    `json:"tracking_number" db:"tracking_number" validate:"required,max=255"`
 	Carrier             string    `json:"carrier" db:"carrier" validate:"required,max=100"`
 	ServiceLevel        string    `json:"service_level" db:"service_level" validate:"max=100"`
@@ -511,7 +511,7 @@ type ShipmentGenerated struct {
 	CountryName         string    `json:"country_name" db:"country_name" validate:"required,max=100"`
 	Phone               string    `json:"phone" db:"phone" validate:"max=20"`
 	Weight              float64   `json:"weight" db:"weight" validate:""`
-	ShippingCost        float64   `json:"shipping_cost" db:"shipping_cost" validate:"required"`
+	ShippingCost        float64   `json:"shipping_cost" db:"shipping_cost" validate:""`
 	Status              string    `json:"status" db:"status" validate:"required,max=20"`
 	TrackingEvents      string    `json:"tracking_events" db:"tracking_events" validate:""`
 	Notes               string    `json:"notes" db:"notes" validate:""`

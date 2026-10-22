@@ -3,8 +3,11 @@ package project
 import (
 	"go/parser"
 	"go/token"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/forgego/forge/cli/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,4 +26,42 @@ func TestGenerateAPICodeDashedResourceName(t *testing.T) {
 
 	_, err = generateAPICode("blog", "Post", "2fa", "2fa", false)
 	require.Error(t, err, "a name that cannot start an identifier is rejected")
+}
+
+func TestAddAPIGraphQLFlagDescribesPlaceholder(t *testing.T) {
+	flag := NewAddAPICommand().Definition().Flags().Lookup("graphql")
+	require.NotNil(t, flag)
+	assert.Contains(t, flag.Usage, "placeholder")
+	code, err := generateAPICode("blog", "Post", "posts", "posts", true)
+	require.NoError(t, err)
+	assert.Contains(t, code, "GraphQL resolver would go here")
+	assert.NotContains(t, code, "graphql.New")
+	withoutGraphQL, err := generateAPICode("blog", "Post", "posts", "posts", false)
+	require.NoError(t, err)
+	assert.NotContains(t, withoutGraphQL, "GraphQL resolver would go here")
+}
+
+func TestAddAPIRejectsDuplicateDeclarations(t *testing.T) {
+	dir := t.TempDir()
+	previous, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = os.Chdir(previous) })
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/app\n\ngo 1.26\n"), 0600))
+	appDir := filepath.Join(dir, "app", "blog")
+	require.NoError(t, os.MkdirAll(appDir, 0755))
+	apiPath := filepath.Join(appDir, "api.go")
+	require.NoError(t, os.WriteFile(apiPath, []byte("package blog\n"), 0600))
+	require.NoError(t, os.Chdir(dir))
+	cmd := NewAddAPICommand().Definition()
+	require.NoError(t, cmd.Flags().Set("app", "blog"))
+	require.NoError(t, cmd.Flags().Set("model", "Post"))
+	add := NewAddAPICommand()
+	require.NoError(t, add.Execute(&core.Context{Cmd: cmd}, []string{"posts"}))
+	first, err := os.ReadFile(apiPath)
+	require.NoError(t, err)
+	err = add.Execute(&core.Context{Cmd: cmd}, []string{"posts"})
+	require.ErrorContains(t, err, "RegisterPostsAPI")
+	second, err := os.ReadFile(apiPath)
+	require.NoError(t, err)
+	require.Equal(t, first, second)
 }

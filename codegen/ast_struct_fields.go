@@ -15,7 +15,7 @@ import (
 // schema entries, so such fields are otherwise dropped without notice.
 func (p *ASTParser) reportUndeclaredStructFields(def *ModelDefinition, typeSpec *ast.TypeSpec, structType *ast.StructType, fieldsMethod *ast.FuncDecl) {
 	if fieldsMethod == nil {
-		if !embedsBaseSchema(structType) {
+		if !p.embedsBaseSchema(structType) {
 			return
 		}
 		p.reportDiagnostic(typeSpec.Pos(), def.Name, "Fields", "model embeds schema.BaseSchema but has no Fields() method; no columns will be generated")
@@ -83,13 +83,13 @@ func structFieldDeclared(declared map[string]bool, goName, column string) bool {
 	return declared[utils.ToSnake(goName)] || declared[strings.ToLower(goName)]
 }
 
-func embedsBaseSchema(structType *ast.StructType) bool {
+func (p *ASTParser) embedsBaseSchema(structType *ast.StructType) bool {
 	for _, field := range structType.Fields.List {
 		if len(field.Names) != 0 {
 			continue
 		}
 		if sel, ok := field.Type.(*ast.SelectorExpr); ok {
-			if ident, ok := sel.X.(*ast.Ident); ok && ident.Name == "schema" && (sel.Sel.Name == "Schema" || sel.Sel.Name == "BaseSchema") {
+			if ident, ok := sel.X.(*ast.Ident); ok && p.isSchemaQualifier(ident.Name) && (sel.Sel.Name == "Schema" || sel.Sel.Name == "BaseSchema") {
 				return true
 			}
 		}

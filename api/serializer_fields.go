@@ -98,14 +98,6 @@ func filterOutputMap(s Serializer, m map[string]interface{}) map[string]interfac
 	return m
 }
 
-// filterOutputMany applies filterOutputMap to each serialized model.
-func filterOutputMany(s Serializer, items []map[string]interface{}) []map[string]interface{} {
-	for i := range items {
-		items[i] = filterOutputMap(s, items[i])
-	}
-	return items
-}
-
 // stripReadOnlyInput removes serializer-declared read-only keys from decoded
 // request data before validation and model population.
 func stripReadOnlyInput(s Serializer, data map[string]interface{}) {

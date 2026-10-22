@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 
@@ -26,6 +25,9 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 // List handles GET /users/
 func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	if !authorizeUser(w, r, 0, accessList) {
+		return
+	}
 
 	// Get pagination parameters
 	page, pageSize, _ := api.ParsePaginationParams(r, 20)
@@ -54,7 +56,7 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 	// Get users
 	users, count, err := h.userService.ListUsers(ctx, filters)
 	if err != nil {
-		forgehttp.SendError(w, http.StatusInternalServerError, err.Error())
+		sendServiceError(w, err)
 		return
 	}
 
@@ -71,6 +73,9 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 // Create handles POST /users/
 func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	if !authorizeUser(w, r, 0, accessAdmin) {
+		return
+	}
 
 	// Parse request
 	var data map[string]interface{}
@@ -103,11 +108,9 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	// Create user
 	user, err := h.userService.CreateUser(ctx, req)
 	if err != nil {
-		status := http.StatusInternalServerError
-		if err == service.ErrEmailExists || err == service.ErrUsernameExists {
-			status = http.StatusConflict
-		}
-		forgehttp.SendError(w, status, err.Error())
+		sendServiceError(w, err,
+			publicServiceError{service.ErrEmailExists, http.StatusConflict, "email already exists"},
+			publicServiceError{service.ErrUsernameExists, http.StatusConflict, "username already exists"})
 		return
 	}
 
@@ -127,15 +130,14 @@ func (h *UserHandler) Retrieve(w http.ResponseWriter, r *http.Request) {
 		forgehttp.SendError(w, http.StatusBadRequest, "Invalid ID")
 		return
 	}
+	if !authorizeUser(w, r, id, accessRead) {
+		return
+	}
 
 	// Get user
 	user, err := h.userService.GetUser(ctx, id)
 	if err != nil {
-		if errors.Is(err, service.ErrUserNotFound) {
-			forgehttp.SendError(w, http.StatusNotFound, "User not found")
-		} else {
-			forgehttp.SendError(w, http.StatusInternalServerError, err.Error())
-		}
+		sendServiceError(w, err, publicServiceError{service.ErrUserNotFound, http.StatusNotFound, "User not found"})
 		return
 	}
 
@@ -155,12 +157,30 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		forgehttp.SendError(w, http.StatusBadRequest, "Invalid ID")
 		return
 	}
+	if !authorizeUser(w, r, id, accessUpdate) {
+		return
+	}
 
 	// Parse request
 	var data map[string]interface{}
 	if err := forgehttp.GetJSON(r, &data); err != nil {
 		forgehttp.SendError(w, http.StatusBadRequest, "Invalid JSON")
 		return
+	}
+	if _, active := data["is_active"]; active {
+		if !authorizeUser(w, r, id, accessAdmin) {
+			return
+		}
+	}
+	if _, staff := data["is_staff"]; staff {
+		if !authorizeUser(w, r, id, accessAdmin) {
+			return
+		}
+	}
+	if _, locked := data["is_locked"]; locked {
+		if !authorizeUser(w, r, id, accessAdmin) {
+			return
+		}
 	}
 
 	// Build update request
@@ -187,13 +207,9 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	// Update user
 	user, err := h.userService.UpdateUser(ctx, id, req)
 	if err != nil {
-		if errors.Is(err, service.ErrUserNotFound) {
-			forgehttp.SendError(w, http.StatusNotFound, "User not found")
-		} else if err == service.ErrEmailExists {
-			forgehttp.SendError(w, http.StatusConflict, err.Error())
-		} else {
-			forgehttp.SendError(w, http.StatusInternalServerError, err.Error())
-		}
+		sendServiceError(w, err,
+			publicServiceError{service.ErrUserNotFound, http.StatusNotFound, "User not found"},
+			publicServiceError{service.ErrEmailExists, http.StatusConflict, "email already exists"})
 		return
 	}
 
@@ -213,14 +229,13 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		forgehttp.SendError(w, http.StatusBadRequest, "Invalid ID")
 		return
 	}
+	if !authorizeUser(w, r, id, accessAdmin) {
+		return
+	}
 
 	// Delete user
 	if err := h.userService.DeleteUser(ctx, id); err != nil {
-		if errors.Is(err, service.ErrUserNotFound) {
-			forgehttp.SendError(w, http.StatusNotFound, "User not found")
-		} else {
-			forgehttp.SendError(w, http.StatusInternalServerError, err.Error())
-		}
+		sendServiceError(w, err, publicServiceError{service.ErrUserNotFound, http.StatusNotFound, "User not found"})
 		return
 	}
 

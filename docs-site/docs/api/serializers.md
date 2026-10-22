@@ -10,20 +10,29 @@ Serializers control the representation of model data sent over HTTP and validate
 
 ---
 
-## Defining a ModelSerializer
+## Defining a serializer
+
+`api.ModelSerializer` is a non-generic type. Embed `api.BaseSerializer` when defining a custom serializer with its own validation.
 
 ```go
 package catalog
 
 import (
-    "context"
     "errors"
     "github.com/forgego/forge/api"
-    "myapp/models"
 )
 
 type ProductSerializer struct {
-    api.ModelSerializer[models.Product]
+    *api.BaseSerializer
+}
+
+func NewProductSerializer() api.Serializer {
+    return &ProductSerializer{BaseSerializer: api.NewBaseSerializer(nil)}
+}
+
+// New preserves custom validation when the viewset creates another instance.
+func (s *ProductSerializer) New() api.Serializer {
+    return NewProductSerializer()
 }
 
 // Fields controls which attributes are exposed in JSON
@@ -45,22 +54,18 @@ func (ProductSerializer) ReadonlyFields() []string {
     return []string{"id", "price_with_tax", "created_at"}
 }
 
-// Custom field validation: Validate<FieldName>
-func (s *ProductSerializer) ValidatePrice(price float64) error {
+// Custom validation runs when Validate is called by a viewset.
+func (s *ProductSerializer) Validate() error {
+    price := s.GetFloat("price")
     if price < 0.01 {
-        return errors.New("price must be at least $0.01")
+        s.AddError("price", "price must be at least $0.01")
+        return errors.New("validation failed")
     }
-    return nil
-}
-
-// Cross-field object validation
-func (s *ProductSerializer) Validate(ctx context.Context, p *models.Product) error {
-    if p.TaxRate < 0 || p.TaxRate > 1.0 {
-        return errors.New("tax rate must be between 0.0 and 1.0")
-    }
-    return nil
+    return s.BaseSerializer.Validate()
 }
 ```
+
+Forge calls the serializer's `Validate()` method. Methods named `ValidatePrice` are not discovered automatically. For model-level checks, implement validation on the model or define schema field constraints.
 
 ---
 
@@ -77,13 +82,10 @@ func (s *ProductSerializer) Validate(ctx context.Context, p *models.Product) err
 
 ## Handling Validation Errors
 
-When a client submits invalid JSON or fails validation constraints, Forge automatically formats an RFC 7807 compliant error payload:
+The viewset returns HTTP 400 for malformed JSON and serializer validation failures. Malformed JSON uses a problem-details response with the detail `Invalid JSON`. A serializer validation failure returns its field errors:
 
 ```json
 {
-  "status": 422,
-  "error": "Unprocessable Entity",
-  "detail": "Validation failed for 2 fields",
   "errors": {
     "price": ["price must be at least $0.01"],
     "tax_rate": ["tax rate must be between 0.0 and 1.0"]
@@ -95,13 +97,15 @@ When a client submits invalid JSON or fails validation constraints, Forge automa
 
 ## Nested Relational Serialization
 
-Serialize related entities by embedding their serializers:
+The response is built from the model's JSON-tagged fields. A populated nested model field is serialized as an object; embedding another serializer in the serializer struct does not add or fetch a relation. Load the relation explicitly (for example, with `SelectRelated`) before serializing it:
 
 ```go
 type OrderSerializer struct {
-    api.ModelSerializer[models.Order]
-    Customer   CustomerSummarySerializer   `json:"customer"`
-    OrderItems []OrderItemDetailSerializer `json:"items"`
+    *api.BaseSerializer
+}
+
+type Order struct {
+    Customer *Customer `json:"customer"`
 }
 ```
 

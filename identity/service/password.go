@@ -15,6 +15,8 @@ import (
 	"github.com/forgego/forge/identity/utils"
 )
 
+var ErrResetNotifierNotConfigured = fmt.Errorf("password reset notifier is not configured")
+
 // PasswordResetNotifier is responsible for delivering password reset tokens.
 type PasswordResetNotifier interface {
 	SendPasswordReset(ctx context.Context, user *models.User, token string) error
@@ -80,13 +82,16 @@ func (s *passwordService) ChangePassword(ctx context.Context, userID int64, req 
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	// Update password
-	now := time.Now()
-	user.Password = hashedPassword
-	user.PasswordChangedAt = &now
-	user.MustChangePassword = false
-
-	if err := s.userRepo.Update(ctx, user); err != nil {
+	mutations, ok := s.userRepo.(repository.UserMutations)
+	var updateErr error
+	if ok {
+		updateErr = mutations.ChangePasswordIfCurrent(ctx, userID, user.Password, hashedPassword, time.Now())
+	} else {
+		now := time.Now()
+		user.Password, user.PasswordChangedAt, user.MustChangePassword = hashedPassword, &now, false
+		updateErr = s.userRepo.Update(ctx, user)
+	}
+	if err := updateErr; err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
 	}
 
@@ -95,6 +100,9 @@ func (s *passwordService) ChangePassword(ctx context.Context, userID int64, req 
 
 // RequestPasswordReset requests a password reset
 func (s *passwordService) RequestPasswordReset(ctx context.Context, email string) error {
+	if s.notifier == nil {
+		return ErrResetNotifierNotConfigured
+	}
 	// Get user by email
 	user, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
@@ -125,10 +133,8 @@ func (s *passwordService) RequestPasswordReset(ctx context.Context, email string
 		return fmt.Errorf("failed to create reset token: %w", err)
 	}
 
-	if s.notifier != nil {
-		if err := s.notifier.SendPasswordReset(ctx, user, token); err != nil {
-			return fmt.Errorf("failed to send password reset token: %w", err)
-		}
+	if err := s.notifier.SendPasswordReset(ctx, user, token); err != nil {
+		return fmt.Errorf("failed to send password reset token: %w", err)
 	}
 
 	return nil
@@ -169,22 +175,27 @@ func (s *passwordService) ResetPassword(ctx context.Context, token string, newPa
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	// Update password
-	now := time.Now()
-	user.Password = hashedPassword
-	user.PasswordChangedAt = &now
-	user.MustChangePassword = false
-
-	if err := s.userRepo.Update(ctx, user); err != nil {
-		return fmt.Errorf("failed to update password: %w", err)
+	mutations, ok := s.userRepo.(repository.UserMutations)
+	var commitErr error
+	if ok && sharedTokenTransaction(s.userRepo, s.tokenRepo) {
+		commitErr = mutations.CommitPasswordReset(ctx, resetToken.ID, user.ID, hashedPassword, time.Now())
+	} else if tokenCommit, supportsCommit := s.tokenRepo.(repository.TokenCommitRepository); ok && supportsCommit {
+		commitErr = tokenCommit.CommitPasswordReset(ctx, mutations, resetToken.ID, user.ID, hashedPassword, time.Now())
+	} else {
+		commitErr = consumeThenWrite(func() error {
+			return s.tokenRepo.DeletePasswordResetToken(ctx, resetToken.Token)
+		}, func() error {
+			now := time.Now()
+			if ok {
+				return mutations.ChangePasswordIfCurrent(ctx, user.ID, user.Password, hashedPassword, now)
+			}
+			user.Password, user.PasswordChangedAt, user.MustChangePassword = hashedPassword, &now, false
+			return s.userRepo.Update(ctx, user)
+		})
 	}
-
-	// Mark token as used
-	resetToken.UsedAt = &now
-	// Note: TokenRepository would need an Update method for this
-	// For now, we'll delete it
-	_ = s.tokenRepo.DeletePasswordResetToken(ctx, resetToken.Token)
-
+	if err := commitErr; err != nil {
+		return fmt.Errorf("failed to reset password: %w", err)
+	}
 	return nil
 }
 

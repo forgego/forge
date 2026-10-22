@@ -1,40 +1,36 @@
 import { test, expect } from '@playwright/test';
+import { mockAdminApi } from './fixtures/admin-api-mock';
 
-// Admin CRUD smoke flow. Requires a running backend for the dev proxy
-// (vite `server.proxy` -> http://localhost:8080) with a `categories`
-// model (name/slug required, is_active boolean, activate action).
-// NOTE: the ecommerce reference app is covered more thoroughly by
-// examples/ecommerce/ui-tests/tests/admin-redesign.spec.ts against the
-// production bundle; this spec keeps the vite-dev path honest.
-const MODEL = process.env.FORGE_E2E_MODEL || 'categories';
+const MODEL = 'categories';
 
 test.describe('Admin CRUD Flow', () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.removeItem('admin_token');
-    });
+    await mockAdminApi(page, false);
   });
 
   test('login → navigate → create → edit → bulk action → filter → delete', async ({ page }) => {
     // 1) Login
-    await page.goto('/login');
+    await page.goto('/admin/login');
     await page.fill('[data-testid="username-input"]', 'admin');
     await page.fill('[data-testid="password-input"]', 'admin123');
     await page.click('[data-testid="login-button"]');
 
-    await expect(page).toHaveURL('/');
-    await expect(page.getByTestId('nav-dashboard')).toBeVisible();
+    await expect(page).toHaveURL(/\/admin\/?$/);
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 
     // 2) Navigate to the model via sidebar
+    if (test.info().project.name === 'mobile') {
+      await page.getByRole('button', { name: 'Open navigation' }).click();
+    }
     await page.click(`[data-testid="nav-${MODEL}"]`);
-    await expect(page).toHaveURL(new RegExp(`/${MODEL}$`));
+    await expect(page).toHaveURL(new RegExp(`/admin/${MODEL}/?$`));
 
     // List loads
     await expect(page.locator('table')).toBeVisible();
 
     // 3) Create new
     await page.click('[data-testid="create-button"]');
-    await expect(page).toHaveURL(new RegExp(`/${MODEL}/create$`));
+    await expect(page).toHaveURL(new RegExp(`/admin/${MODEL}/create$`));
 
     const unique = Date.now();
     const createdName = `E2E Category ${unique}`;
@@ -43,7 +39,7 @@ test.describe('Admin CRUD Flow', () => {
     await page.fill('#slug', `e2e-${unique}`);
     await page.click('[data-testid="submit-button"]');
 
-    await expect(page).toHaveURL(new RegExp(`/${MODEL}$`));
+    await expect(page).toHaveURL(new RegExp(`/admin/${MODEL}/?$`));
     await expect(page.locator('table')).toContainText(createdName);
 
     // Capture new id from the row's edit button (actions are always
@@ -56,28 +52,27 @@ test.describe('Admin CRUD Flow', () => {
 
     // 4) Edit
     await editBtn.click();
-    await expect(page).toHaveURL(new RegExp(`/${MODEL}/${id}$`));
+    await expect(page).toHaveURL(new RegExp(`/admin/${MODEL}/${id}$`));
 
     const updatedName = `${createdName} Updated`;
     await page.fill('#name', updatedName);
     await page.click('[data-testid="submit-button"]');
 
-    await expect(page).toHaveURL(new RegExp(`/${MODEL}$`));
+    await expect(page).toHaveURL(new RegExp(`/admin/${MODEL}/?$`));
     await expect(page.locator('table')).toContainText(updatedName);
 
     // 5) Bulk action (activate requires confirmation in the reference app)
     await page.click(`[data-testid="select-${id}"]`);
     await expect(page.getByTestId('bulk-toolbar')).toContainText('1 selected');
     await page.click('[data-testid="bulk-action-activate"]');
-    const actionDialog = page.getByTestId('bulk-action-dialog');
-    if (await actionDialog.isVisible()) {
-      await page.getByTestId('bulk-action-dialog-confirm').click();
-    }
+    await expect(page.getByTestId('bulk-action-dialog')).toBeVisible();
+    await page.getByTestId('bulk-action-dialog-confirm').click();
     await expect(page.getByTestId('bulk-toolbar')).toContainText(/Select rows/);
 
     // 6) Filter: inactive only hides the active row, then reset shows it.
     await page.click('[data-testid="filter-button"]');
-    await page.selectOption('[data-testid="filter-is_active"]', 'false');
+    await page.getByTestId('filter-is_active').click();
+    await page.getByRole('option', { name: 'No' }).click();
     await expect(page.locator('table')).not.toContainText(updatedName);
     await page.getByTestId('reset-filters').click();
     await expect(page.locator('table')).toContainText(updatedName);

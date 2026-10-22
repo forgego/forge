@@ -72,7 +72,8 @@ type BaseViewSet struct {
 	Serializer func() Serializer
 	Queryset   interface{} // This would be a QuerySet in real implementation
 	Model      interface{}
-	// ExcludeResponseFields holds response keys removed from serialized output; nil keeps every field.
+	// ExcludeResponseFields holds additional response keys to remove. Schema
+	// fields with Serialize(false) are always excluded.
 	ExcludeResponseFields []string
 	// ReadOnlyRequestFields holds request keys ignored on create and update; nil accepts every field.
 	ReadOnlyRequestFields []string
@@ -365,6 +366,43 @@ func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 		vs.listConfigurationError(w, r, err)
 		return
 	}
+	// Object permissions can differ by row. Scan the filtered, ordered queryset
+	// before pagination so count and page links describe only visible rows.
+	perms := vs.Permissions
+	if perms == nil {
+		perms = GetDefaultPermissions()
+	}
+	needsObjectScan := false
+	for _, permission := range perms {
+		if reporter, ok := permission.(permissions.ObjectRuleReporter); !ok || reporter.HasObjectRules(r) {
+			needsObjectScan = true
+			break
+		}
+	}
+	if needsObjectScan {
+		rows, err := allListRows(qs, ctx)
+		if err != nil {
+			vs.listConfigurationError(w, r, err)
+			return
+		}
+		visible := make([]interface{}, 0, len(rows))
+		for _, row := range rows {
+			if vs.checkObjectPermissions(r, row) == nil {
+				visible = append(visible, row)
+			}
+		}
+		count := len(visible)
+		start := (page - 1) * pageSize
+		if start > count {
+			start = count
+		}
+		end := start + pageSize
+		if end > count {
+			end = count
+		}
+		_ = SendPaginatedResponse(w, r, vs.serializeResponses(visible[start:end]), count, page, pageSize)
+		return
+	}
 
 	// Get total count using cached method lookup. Registration checks every
 	// statically typed chain result; a value whose type is only known now is
@@ -456,12 +494,37 @@ func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Serialize results
-	serialized := vs.stripExcludedFieldsMany(SerializeMany(resultList))
-	serialized = filterOutputMany(vs.Serializer(), serialized)
+	serialized := vs.serializeResponses(resultList)
 
 	// Send paginated response
 	// nolint:errcheck // HTTP response errors can't be handled meaningfully
 	_ = SendPaginatedResponse(w, r, serialized, int(totalCount), page, pageSize)
+}
+
+func allListRows(qs reflect.Value, ctx context.Context) ([]interface{}, error) {
+	if err := checkListCall(qs.Type(), "All"); err != nil {
+		return nil, err
+	}
+	method, _ := globalCache.GetMethod(qs.Type(), "All")
+	results := method.Func.Call([]reflect.Value{qs, reflect.ValueOf(ctx)})
+	if !results[1].IsNil() {
+		return nil, results[1].Interface().(error)
+	}
+	items := results[0]
+	if items.Kind() == reflect.Interface {
+		if items.IsNil() {
+			return []interface{}{}, nil
+		}
+		items = items.Elem()
+	}
+	if items.Kind() != reflect.Slice && items.Kind() != reflect.Array {
+		return nil, fmt.Errorf("all returned %s instead of a slice", items.Kind())
+	}
+	rows := make([]interface{}, 0, items.Len())
+	for i := 0; i < items.Len(); i++ {
+		rows = append(rows, items.Index(i).Interface())
+	}
+	return rows, nil
 }
 
 // Create handles POST /resource/
@@ -504,6 +567,10 @@ func (vs *BaseViewSet) Create(w http.ResponseWriter, r *http.Request) {
 	var ignoredKeys []string
 	ignoredKeys = append(ignoredKeys, vs.ReadOnlyRequestFields...)
 	ignoredKeys = append(ignoredKeys, serializerReadOnly(serializer)...)
+	if missing := missingRequiredFields(instance, data, ignoredKeys, true); len(missing) > 0 {
+		vs.handleException(w, r, exceptions.NewValidationError(missing))
+		return
+	}
 
 	// Populate instance from data
 	if err := populateFromMap(instance, data, ignoredKeys...); err != nil {
@@ -559,8 +626,7 @@ func (vs *BaseViewSet) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Serialize and return created instance
-	serialized := vs.stripExcludedFields(SerializeModel(instance))
-	serialized = filterOutputMap(vs.Serializer(), serialized)
+	serialized := vs.serializeResponse(instance)
 	// nolint:errcheck // HTTP response errors can't be handled meaningfully
 	_ = forgehttp.SendJSON(w, http.StatusCreated, serialized)
 }
@@ -627,8 +693,7 @@ func (vs *BaseViewSet) Retrieve(w http.ResponseWriter, r *http.Request) {
 	if !vs.allowObject(w, r, instance) {
 		return
 	}
-	serialized := vs.stripExcludedFields(SerializeModel(instance))
-	serialized = filterOutputMap(vs.Serializer(), serialized)
+	serialized := vs.serializeResponse(instance)
 	// nolint:errcheck // HTTP response errors can't be handled meaningfully
 	_ = forgehttp.SendJSON(w, http.StatusOK, serialized)
 }
@@ -738,7 +803,7 @@ func (vs *BaseViewSet) update(w http.ResponseWriter, r *http.Request, action str
 	// PUT replaces the record, so it must carry every required writable
 	// field; otherwise the stored value would silently survive, as in PATCH.
 	if action == "update" {
-		if missing := missingRequiredFields(instance, data, ignoredKeys); len(missing) > 0 {
+		if missing := missingRequiredFields(instance, data, ignoredKeys, false); len(missing) > 0 {
 			vs.handleException(w, r, exceptions.NewValidationError(missing))
 			return
 		}
@@ -789,8 +854,7 @@ func (vs *BaseViewSet) update(w http.ResponseWriter, r *http.Request, action str
 		instance = refetched
 	}
 
-	serialized := vs.stripExcludedFields(SerializeModel(instance))
-	serialized = filterOutputMap(vs.Serializer(), serialized)
+	serialized := vs.serializeResponse(instance)
 	forgehttp.SendJSON(w, http.StatusOK, serialized)
 }
 
@@ -885,7 +949,7 @@ func (vs *BaseViewSet) Destroy(w http.ResponseWriter, r *http.Request) {
 
 	if len(deleteResults) > 0 && !deleteResults[0].IsNil() {
 		if err, ok := deleteResults[0].Interface().(error); ok && err != nil {
-			vs.handleException(w, r, persistenceException(err))
+			vs.handleException(w, r, deleteException(err))
 			return
 		}
 	}
@@ -1317,8 +1381,10 @@ func applyOrdering(qs reflect.Value, r *http.Request, model interface{}, default
 		}
 		args = append(args, reflect.ValueOf(field))
 	}
-	if len(args) <= 1 { // Only receiver, no fields
-		return qs, nil
+	if len(args) <= 1 { // No fields survived visibility filtering.
+		// Internal pagination order may use a hidden key, but never the
+		// direction requested for a hidden field. This does not serialize it.
+		args = append(args, reflect.ValueOf(primaryKeyOrdering(model)))
 	}
 	results := orderByMethod.Func.Call(args)
 	if len(results) > 0 {
@@ -1338,20 +1404,28 @@ func defaultOrdering(model interface{}) []string {
 	if ordering := s.Meta().OrderBy; len(ordering) > 0 {
 		return append([]string(nil), ordering...)
 	}
+	return []string{primaryKeyOrdering(model)}
+}
+
+func primaryKeyOrdering(model interface{}) string {
+	s, ok := model.(schema.Schema)
+	if !ok {
+		return "id"
+	}
 	for _, field := range s.Fields() {
 		if field.PrimaryKey {
 			if field.DBColumn != "" {
-				return []string{field.DBColumn}
+				return field.DBColumn
 			}
 			if resolved, ok := schema.ResolveField(model, field); ok && resolved.DBTag != "" && resolved.DBTag != "-" {
-				return []string{resolved.DBTag}
+				return resolved.DBTag
 			}
 			if field.Name != "" {
-				return []string{field.Name}
+				return field.Name
 			}
 		}
 	}
-	return []string{"id"}
+	return "id"
 }
 
 func resolveQueryField(model interface{}, name string) (string, schema.Field, bool) {
@@ -1564,8 +1638,9 @@ func schemaFieldsByRequestName(instance interface{}) map[string]*schema.Field {
 // populateFromMap would write but data does not supply. It uses the same
 // rules as populateFromMap: a field needs a struct field that request input
 // may write (see requestField.writable), a field named by ignoredKeys
-// (case-insensitively) is not writable, and data keys match exactly.
-func missingRequiredFields(instance interface{}, data map[string]interface{}, ignoredKeys []string) map[string][]string {
+// (case-insensitively) is not writable, and data keys match exactly. On create,
+// null does not satisfy a required value; PUT retains scalar-null semantics.
+func missingRequiredFields(instance interface{}, data map[string]interface{}, ignoredKeys []string, creating bool) map[string][]string {
 	ignored := make(map[string]bool, len(ignoredKeys))
 	for _, key := range ignoredKeys {
 		ignored[strings.ToLower(key)] = true
@@ -1577,10 +1652,15 @@ func missingRequiredFields(instance interface{}, data map[string]interface{}, ig
 		if f == nil || !f.Required || !f.Editable || f.Default != nil || isRequestReadOnly(*f) {
 			return
 		}
+		// INSERT can defer a required DBDefault to the database; an existing
+		// row on PUT must still receive every required writable field.
+		if creating && f.DBDefault != "" {
+			return
+		}
 		if !field.writable() || field.ignoredBy(instance, ignored) {
 			return
 		}
-		if _, _, ok := field.lookup(instance, data); ok {
+		if _, value, ok := field.lookup(instance, data); ok && (!creating || value != nil) {
 			return
 		}
 		requestName := field.key
@@ -2182,7 +2262,11 @@ func setIntField(field reflect.Value, value interface{}) error {
 	case int64:
 		n = v
 	case uint:
-		n = int64(v)
+		var err error
+		n, err = unsignedToInt64(uint64(v))
+		if err != nil {
+			return err
+		}
 	case uint8:
 		n = int64(v)
 	case uint16:
@@ -2190,7 +2274,11 @@ func setIntField(field reflect.Value, value interface{}) error {
 	case uint32:
 		n = int64(v)
 	case uint64:
-		n = int64(v)
+		var err error
+		n, err = unsignedToInt64(v)
+		if err != nil {
+			return err
+		}
 	case json.Number:
 		parsed, err := parseIntegralInt64(v.String())
 		if err != nil {
@@ -2209,7 +2297,11 @@ func setIntField(field reflect.Value, value interface{}) error {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			n = rv.Int()
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			n = int64(rv.Uint())
+			var err error
+			n, err = unsignedToInt64(rv.Uint())
+			if err != nil {
+				return err
+			}
 		case reflect.Float32, reflect.Float64:
 			var err error
 			n, err = integralFloatToInt64(rv.Float())
@@ -2225,6 +2317,13 @@ func setIntField(field reflect.Value, value interface{}) error {
 	}
 	field.SetInt(n)
 	return nil
+}
+
+func unsignedToInt64(value uint64) (int64, error) {
+	if value > math.MaxInt64 {
+		return 0, fmt.Errorf("value %d out of range for signed integer", value)
+	}
+	return int64(value), nil
 }
 
 func parseIntegralInt64(value string) (int64, error) {

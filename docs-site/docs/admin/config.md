@@ -1,111 +1,49 @@
 ---
 sidebar_position: 2
-description: Declarative Admin ModelConfig, ListDisplay, search, filters, fieldsets, and permissions.
+description: Configure Forge admin models with typed fields, permissions, and actions.
 image: /social-card.png
 ---
 
 # Admin Model Configuration
 
-The `admin.ModelConfig[T]` struct defines how a model is presented, filtered, edited, and audited in the React Admin SPA.
-
----
-
-## Full Configuration Example
+`admin.Config[T]` controls a registered model. Pass a pointer to `admin.Register` for the default site or `admin.RegisterWithSite` for a specific site.
 
 ```go
-package catalog
-
-import (
-    "context"
-    "github.com/forgego/forge/admin"
-    "myapp/models"
-)
-
-func RegisterProductAdmin(site *admin.Site) {
-    admin.Register[models.Product](site, admin.ModelConfig[models.Product]{
-        // Human-friendly labels
-        VerboseName:       "Product",
-        VerboseNamePlural: "Products",
-
-        // List View Table Columns
-        ListDisplay: []string{
-            "SKU",
-            "Name",
-            "Category",
-            "Price",
-            "PriceWithTax",
-            "InStock",
-            "CreatedAt",
-        },
-
-        // Searchable fields (debounced ILIKE search)
-        SearchFields: []string{"SKU", "Name", "Description"},
-
-        // Sidebar faceted filters
-        ListFilter: []string{
-            "InStock",
-            "Category",
-            "Status",
-            "CreatedAt",
-        },
-
-        // Default sorting
-        Ordering: []string{"-created_at"},
-
-        // Pagination size
-        ListPerPage: 25,
-
-        // Non-editable fields in form view
-        ReadonlyFields: []string{"PriceWithTax", "CreatedAt", "UpdatedAt"},
-
-        // Granular RBAC Permissions
-        HasViewPermission: func(ctx context.Context, u *admin.User) bool {
-            return true
-        },
-        HasChangePermission: func(ctx context.Context, u *admin.User) bool {
-            return u.HasRole("admin", "manager")
-        },
-        HasDeletePermission: func(ctx context.Context, u *admin.User) bool {
-            return u.HasRole("admin")
-        },
-
-        // Custom Bulk Actions
-        Actions: []admin.Action{
-            {
-                ID:             "restock",
-                Label:          "Restock (+50 Units)",
-                ConfirmMessage: "Are you sure you want to add 50 units to the selected products?",
-                Handler: func(ctx context.Context, ids []any) error {
-                    return models.ProductManager.Restock(ctx, ids, 50)
-                },
+_, err := admin.RegisterWithSite(site, &admin.Config[models.Product]{
+    VerboseName: "Product",
+    ListDisplay: []admin.Field{admin.Computed("name"), admin.Computed("price")},
+    SearchFields: []admin.Field{admin.Computed("name")},
+    ListFilter: []admin.Field{admin.Computed("active")},
+    Ordering: []admin.Field{admin.Computed("-created_at")},
+    ListPerPage: 25,
+    ReadOnlyFields: []string{"created_at"},
+    HasChangePermission: func(ctx context.Context, modelAdmin *admin.Admin[models.Product], user interface{}, obj *models.Product) bool {
+        return user != nil && obj != nil
+    },
+    Actions: []admin.Action[models.Product]{
+        {
+            Name: "restock",
+            Label: "Restock",
+            Confirmation: "Restock selected products?",
+            Handler: func(ctx context.Context, products []*models.Product) error {
+                // Update selected model instances here.
+                return nil
             },
         },
-    })
-}
+    },
+})
 ```
 
----
+Use generated field references such as `models.ProductFieldsInstance.Name` when available. `admin.Computed("field_path")` provides an `admin.Field` for a named path. A leading `-` in an ordering path requests descending order.
 
-## Configuration Options Reference
-
-| Option | Type | Description |
+| Option | Type | Purpose |
 | :--- | :--- | :--- |
-| `VerboseName` | `string` | Singular human-readable name shown in breadcrumbs and titles. |
-| `VerboseNamePlural` | `string` | Plural name shown in the sidebar navigation. |
-| `ListDisplay` | `[]string` | Struct field names rendered as columns in the data table. |
-| `SearchFields` | `[]string` | Fields queried when typing into the global table search box. |
-| `ListFilter` | `[]string` | Fields rendered as filter chips or faceted dropdowns. |
-| `Ordering` | `[]string` | Default SQL `ORDER BY` fields. Prefix with `-` for descending. |
-| `ListPerPage` | `int` | Number of items per page (defaults to 25). |
-| `ReadonlyFields` | `[]string` | Fields visible but non-editable in the detail/edit modal. |
-| `Actions` | `[]admin.Action` | Custom batch actions shown when items are checked. |
-| `Widgets` | `[]admin.Widget` | Dashboard widgets pinned to this model or main dashboard. |
+| `ListDisplay` | `[]admin.Field` | Columns |
+| `SearchFields` | `[]admin.Field` | Search paths |
+| `ListFilter` | `[]admin.Field` | Filter paths |
+| `Ordering` | `[]admin.Field` | Default sort paths |
+| `ListPerPage` | `int` | Page size |
+| `ReadOnlyFields` | `[]string` | Non-editable form fields |
+| `Actions` | `[]admin.Action[T]` | Bulk actions |
 
----
-
-## Next Steps
-
-- **[Custom Actions](/docs/admin/actions/)**: Build batch processing actions.
-- **[Faceted Filters](/docs/admin/filters/)**: Configure smart filter chips and saved views.
-- **[Dashboard Widgets](/docs/admin/ui/)**: Attach charts and KPI metrics to models.
-
+`HasAddPermission` takes `(context.Context, *admin.Admin[T], interface{})`. `HasViewPermission`, `HasChangePermission`, and `HasDeletePermission` additionally take `*T`. Dashboard layout is configured separately with `core.SetDashboard`.

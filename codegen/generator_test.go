@@ -78,6 +78,73 @@ func (Product) Hooks() *schema.ModelHooks {
 	assert.Contains(t, string(apiBytes), "RegisterAPIRoutes(router *forgehttp.Router)")
 }
 
+func TestModelGenerationEmitsSchemaMetadataForAdminRegistration(t *testing.T) {
+	tmpDir := t.TempDir()
+	modelSrc := `package testmodels
+import "github.com/forgego/forge/schema"
+type Product struct { schema.BaseSchema; ID int64 }
+func (Product) Fields() []schema.Field { return []schema.Field{schema.Int64("id").Primary().AutoIncrement().Build()} }
+func (Product) Meta() schema.Meta { return schema.Meta{TableName: "products", VerboseName: "Product"} }
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "models.go"), []byte(modelSrc), 0644))
+	require.NoError(t, NewGenerator(tmpDir, tmpDir).Generate())
+	generated, err := os.ReadFile(filepath.Join(tmpDir, "gen.go"))
+	require.NoError(t, err)
+	assert.Contains(t, string(generated), `MustNewManager[Product]("products")`)
+	assert.NotContains(t, string(generated), "AdminConfig")
+}
+
+func TestGeneratorPreservesHandwrittenSerializerOwnership(t *testing.T) {
+	for _, apiOnly := range []bool{false, true} {
+		t.Run(map[bool]string{false: "generate", true: "api_only"}[apiOnly], func(t *testing.T) {
+			dir := t.TempDir()
+			models := `package models
+import "github.com/forgego/forge/schema"
+type User struct { schema.BaseSchema; ID int64 }
+func (User) Fields() []schema.Field { return []schema.Field{schema.Int64("id").Primary().AutoIncrement().Build()} }
+type Product struct { schema.BaseSchema; ID int64 }
+func (Product) Fields() []schema.Field { return []schema.Field{schema.Int64("id").Primary().AutoIncrement().Build()} }
+`
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "models.go"), []byte(models), 0600))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "api.go"), []byte("package models\ntype UserSerializer struct{}\nfunc NewUserSerializer() *UserSerializer { return &UserSerializer{} }\n"), 0600))
+			gen := NewGenerator(dir, dir).SetGenerateAPI(true)
+			var err error
+			if apiOnly {
+				err = gen.GenerateAPI()
+			} else {
+				err = gen.Generate()
+			}
+			require.NoError(t, err)
+			api, err := os.ReadFile(filepath.Join(dir, "api_gen.go"))
+			require.NoError(t, err)
+			assert.NotContains(t, string(api), "type UserSerializer struct")
+			assert.NotContains(t, string(api), "func NewUserSerializer()")
+			assert.Contains(t, string(api), "type UserViewSet struct")
+			assert.Contains(t, string(api), "func RegisterUserRoutes(")
+			assert.Contains(t, string(api), `apiRouter.Register("users", NewUserViewSet())`)
+			assert.Contains(t, string(api), "ProductSerializer")
+		})
+	}
+}
+
+func TestGeneratorRejectsIncompleteHandwrittenAPIType(t *testing.T) {
+	for _, declaration := range []string{"type UserSerializer struct{}", "type UserViewSet struct{}"} {
+		t.Run(declaration, func(t *testing.T) {
+			dir := t.TempDir()
+			models := `package models
+import "github.com/forgego/forge/schema"
+type User struct { schema.BaseSchema; ID int64 }
+func (User) Fields() []schema.Field { return []schema.Field{schema.Int64("id").Primary().AutoIncrement().Build()} }
+`
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "models.go"), []byte(models), 0600))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "api.go"), []byte("package models\n"+declaration+"\n"), 0600))
+			err := NewGenerator(dir, dir).SetGenerateAPI(true).Generate()
+			require.ErrorContains(t, err, "handwritten")
+			assert.NoFileExists(t, filepath.Join(dir, "api_gen.go"))
+		})
+	}
+}
+
 func TestValidateAPIModels_AcceptsOnlyInt64IDPrimaryKey(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -390,4 +457,56 @@ func (ProductVariant) Fields() []schema.Field {
 	require.NoError(t, err)
 	assert.Contains(t, string(contents), `apiRouter.Register("product-variants", NewProductVariantViewSet())`)
 	assert.NotContains(t, string(contents), "product_variants")
+}
+
+// Generation writes typed managers for models
+func TestGenerationWritesTypedManagersForModels(t *testing.T) {
+	tmpDir := t.TempDir()
+	modelSrc := `package testmodels
+import "github.com/forgego/forge/schema"
+type Article struct { schema.BaseSchema; ID int64 }
+func (Article) Fields() []schema.Field {
+	return []schema.Field{schema.Int64Field("id", schema.Primary(), schema.AutoIncrement())}
+}
+func (Article) Meta() schema.Meta {
+	return schema.Meta{TableName: "articles"}
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "models.go"), []byte(modelSrc), 0644))
+	require.NoError(t, NewGenerator(tmpDir, tmpDir).Generate())
+
+	genFile := filepath.Join(tmpDir, "gen.go")
+	contents, err := os.ReadFile(genFile)
+	require.NoError(t, err)
+	assert.Contains(t, string(contents), `var ArticleObjects = orm.MustNewManager[Article]("articles")`)
+}
+
+// Generated expressions provide compile-time query validation
+func TestGeneratedExpressionsProvideCompileTimeQueryValidation(t *testing.T) {
+	tmpDir := t.TempDir()
+	modelSrc := `package testmodels
+import "github.com/forgego/forge/schema"
+type Customer struct { schema.BaseSchema; ID int64 }
+func (Customer) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.StringField("email"),
+	}
+}
+func (Customer) Meta() schema.Meta {
+	return schema.Meta{TableName: "customers"}
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "models.go"), []byte(modelSrc), 0644))
+	require.NoError(t, NewGenerator(tmpDir, tmpDir).Generate())
+
+	genFile := filepath.Join(tmpDir, "gen.go")
+	contents, err := os.ReadFile(genFile)
+	require.NoError(t, err)
+	assert.Contains(t, string(contents), "type CustomerFields struct")
+	assert.Contains(t, string(contents), "Id orm.Field[int64]")
+	assert.Contains(t, string(contents), "Email orm.Field[string]")
+	assert.Contains(t, string(contents), "var CustomerFieldsInstance = CustomerFields{")
+	assert.Contains(t, string(contents), `Id: orm.NewField[int64]("id", "customers")`)
+	assert.Contains(t, string(contents), `Email: orm.NewField[string]("email", "customers")`)
 }

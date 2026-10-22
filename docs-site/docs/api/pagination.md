@@ -36,7 +36,8 @@ queryset is counted and then sliced with `Offset` and `Limit`, so an
 }
 ```
 
-- `count` is the total number of matching rows after filtering.
+- `count` is the total number of matching rows after filtering and object permission checks. Rows denied by object permissions are omitted before pagination, so they do not create gaps in pages or contribute to `count`, `next`, or `previous`.
+- When a permission has object rules for the request, the viewset loads the filtered, ordered rows and checks each one before slicing the authorized page. Permissions without object rules use database pagination. Custom permissions are treated as having object rules unless they implement `permissions.ObjectRuleReporter`. The full scan can cost more than database pagination; apply queryset filters as well for large collections.
 - `next` and `previous` are absolute URLs that keep the request's other query
   parameters (filters, `ordering`, `search`). They are omitted on the last and
   first page.

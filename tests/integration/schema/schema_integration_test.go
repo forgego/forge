@@ -212,32 +212,32 @@ type ComplexModel struct {
 func (ComplexModel) Fields() []schema.Field {
 	return []schema.Field{
 		// Integer types
-		schema.Int64("id").Primary().AutoIncrement().Build(),
-		schema.Int32("count").Default(0).Build(),
-		schema.Int64("total").Default(0).Build(),
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.Int32Field("count", schema.Default(0)),
+		schema.Int64Field("total", schema.Default(0)),
 		
 		// String types
-		schema.String("title").Required().MaxLength(255).MinLength(1).Build(),
-		schema.Text("content").Optional().Build(),
-		schema.Email("email").Required().Unique().MaxLength(255).Build(),
-		schema.URL("website").Optional().MaxLength(500).Build(),
+		schema.StringField("title", schema.Required(), schema.MaxLength(255), schema.MinLength(1)),
+		schema.TextField("content", schema.Optional()),
+		schema.EmailField("email", schema.Required(), schema.Unique(), schema.MaxLength(255)),
+		schema.URLField("website", schema.Optional(), schema.MaxLength(500)),
 		
 		// Numeric types
-		schema.Float32("rating").Default(0.0).MaxValue(5.0).MinValue(0.0).Build(),
-		schema.Float64("score").Default(0.0).MaxValue(100.0).MinValue(0.0).Build(),
-		schema.Decimal("amount").MaxDigits(10).DecimalPlaces(2).Default(0.0).Build(),
+		schema.Float32Field("rating", schema.Default(0.0), schema.MaxValue(5.0), schema.MinValue(0.0)),
+		schema.Float64Field("score", schema.Default(0.0), schema.MaxValue(100.0), schema.MinValue(0.0)),
+		schema.DecimalField("amount", schema.MaxDigits(10), schema.DecimalPlaces(2), schema.Default(0.0)),
 		
 		// Other types
-		schema.Bool("is_published").Default(false).Build(),
-		schema.JSON("settings").Optional().Build(),
-		schema.Bytes("avatar").Optional().MaxLength(1048576).Build(), // 1MB max
-		schema.UUID("external_id").Optional().Unique().Build(),
+		schema.BoolField("is_published", schema.Default(false)),
+		schema.JSONField("settings", schema.Optional()),
+		schema.BytesField("avatar", schema.Optional(), schema.MaxLength(1048576)), // 1MB max
+		schema.UUIDField("external_id", schema.Optional(), schema.Unique()),
 		
 		// Temporal types
-		schema.Time("start_time").Optional().Build(),
-		schema.Date("birth_date").Optional().Build(),
-		schema.DateTime("created_at").AutoNowAdd().Build(),
-		schema.DateTime("updated_at").AutoNow().Build(),
+		schema.TimeField("start_time", schema.Optional()),
+		schema.DateField("birth_date", schema.Optional()),
+		schema.DateTimeField("created_at", schema.AutoNowAdd()),
+		schema.DateTimeField("updated_at", schema.AutoNow()),
 	}
 }
 
@@ -276,11 +276,11 @@ func (ComplexModel) Relations() []schema.Relation {
 	// Verify table exists
 	testhelpers.AssertTableExists(ctx, t, postgresDB, "postgres", "complex_models")
 
-	// Verify all columns exist
-	// Note: Some field types may not be fully supported by the migration generator yet
-	// We'll check for the core columns that should definitely exist
+	// Verify every declared column; silently omitted fields must fail this test.
 	expectedColumns := []string{
-		"id", "title", "email", "is_published", "created_at", "updated_at",
+		"id", "count", "total", "title", "content", "email", "website",
+		"rating", "score", "amount", "is_published", "settings", "avatar",
+		"external_id", "start_time", "birth_date", "created_at", "updated_at",
 	}
 
 	for _, colName := range expectedColumns {

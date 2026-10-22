@@ -74,7 +74,7 @@ func (qs *BaseQuerySet[T]) Get(ctx context.Context) (*T, error) {
 }
 
 // First retrieves the first model instance from the filtered queryset.
-// Returns an error if no instances are found.
+// Returns nil if no instances are found.
 //
 // This is ordered by the queryset's ordering (via OrderBy()), or natural
 // database order if no ordering is specified.
@@ -93,7 +93,7 @@ func (qs *BaseQuerySet[T]) First(ctx context.Context) (*T, error) {
 	}
 
 	if len(results) == 0 {
-		return nil, forgeerrors.NewNotFoundErrorWithMessage(fmt.Sprintf("%s matching query does not exist", qs.table))
+		return nil, nil
 	}
 
 	return results[0], nil

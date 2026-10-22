@@ -312,10 +312,11 @@ export default function ModelListPage() {
   };
 
   const handleSelectAll = (checked: boolean) => {
+    const pageIds = listData?.results?.map((obj: any) => obj.id) || [];
     if (checked) {
-      setSelectedIds(listData?.results?.map((obj: any) => obj.id) || []);
+      setSelectedIds((prev) => [...prev, ...pageIds.filter((id: string | number) => !prev.includes(id))]);
     } else {
-      setSelectedIds([]);
+      setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)));
     }
   };
 
@@ -492,9 +493,9 @@ export default function ModelListPage() {
     (v) => v !== "" && v !== null && v !== undefined
   ).length;
   const allSelected =
-    objects.length > 0 && selectedIds.length === objects.length;
+    objects.length > 0 && objects.every((obj: any) => selectedIds.includes(obj.id));
   const someSelected =
-    selectedIds.length > 0 && selectedIds.length < objects.length;
+    !allSelected && objects.some((obj: any) => selectedIds.includes(obj.id));
   const hasActiveSearchOrFilters =
     debouncedSearch !== "" || activeFilterCount > 0;
 

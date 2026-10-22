@@ -238,6 +238,15 @@ func (f Field[T]) In(vals ...T) ComparisonExpression[T] {
 	}
 }
 
+// NotIn creates a NOT IN clause comparison.
+func (f Field[T]) NotIn(vals ...T) ComparisonExpression[T] {
+	return ComparisonExpression[T]{
+		Field: f,
+		Op:    OpNotIn,
+		Value: vals,
+	}
+}
+
 // IsNull creates an IS NULL comparison
 func (f Field[T]) IsNull() ComparisonExpression[T] {
 	return ComparisonExpression[T]{

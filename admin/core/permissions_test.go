@@ -123,3 +123,38 @@ func TestPermissions_MetadataIsolation(t *testing.T) {
 		t.Error("cached metadata leaked alice's permission into bob's response")
 	}
 }
+
+type objectScopedChecker struct {
+	modelAllowed, objectAllowed bool
+	objectCalls                 int
+}
+
+func (p *objectScopedChecker) HasPermission(context.Context, any, string) bool { return p.modelAllowed }
+func (p *objectScopedChecker) HasObjectPermission(context.Context, any, any, string) bool {
+	p.objectCalls++
+	return p.objectAllowed
+}
+func TestPermissionCheckerEnforcesObjectDenials(t *testing.T) {
+	checker := &objectScopedChecker{modelAllowed: true}
+	admin := newPermTestAdmin(t, &Config[permTestModel]{PermissionChecker: checker})
+	object := &permTestModel{ID: 7, Name: "private"}
+	for _, check := range []func(context.Context, any, any) bool{admin.HasViewPermission, admin.HasChangePermission, admin.HasDeletePermission} {
+		if check(context.Background(), "reader", object) {
+			t.Error("object denial bypassed")
+		}
+	}
+	if checker.objectCalls != 3 {
+		t.Fatalf("object checker calls = %d", checker.objectCalls)
+	}
+	if !admin.HasViewPermission(context.Background(), "reader", nil) {
+		t.Error("model-level grant lost")
+	}
+	checker.objectAllowed = true
+	if !admin.HasViewPermission(context.Background(), "reader", object) {
+		t.Error("object grant lost")
+	}
+	checker.modelAllowed = false
+	if admin.HasViewPermission(context.Background(), "reader", object) {
+		t.Error("model denial bypassed")
+	}
+}

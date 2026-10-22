@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -109,8 +111,17 @@ func TestCLIApplyMigration(t *testing.T) {
 	testhelpers.WriteFileString(t, filepath.Join(migrationsDir, "0001_create_users.down.sql"), migrationDown)
 
 	// Run apply
+	databaseURL, err := url.Parse(dsn)
+	require.NoError(t, err)
+	password, _ := databaseURL.User.Password()
 	env := map[string]string{
-		"DATABASE_URL": dsn,
+		"FORGE_DATABASE_DRIVER":   "postgres",
+		"FORGE_DATABASE_HOST":     databaseURL.Hostname(),
+		"FORGE_DATABASE_PORT":     databaseURL.Port(),
+		"FORGE_DATABASE_USER":     databaseURL.User.Username(),
+		"FORGE_DATABASE_PASSWORD": password,
+		"FORGE_DATABASE_NAME":     strings.TrimPrefix(databaseURL.Path, "/"),
+		"FORGE_DATABASE_SSLMODE":  databaseURL.Query().Get("sslmode"),
 	}
 	stdout, stderr, err := testhelpers.RunCLI(ctx, workdir, env, []string{"migrate", "up"}, 15*time.Second)
 
@@ -118,6 +129,7 @@ func TestCLIApplyMigration(t *testing.T) {
 	if err != nil {
 		t.Logf("stderr: %s", stderr)
 	}
+	require.NoError(t, err, "migrate up must succeed before checking its schema")
 
 	// Verify table was created
 	testhelpers.AssertTableExists(ctx, t, db, "postgres", "users")

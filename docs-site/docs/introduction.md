@@ -27,7 +27,7 @@ If you've used Django, Rails, or Laravel, Forge will feel natural. Same patterns
 ```go
 // Define your schema
 type Article struct {
-    schema.BaseSchema
+    ArticleGenerated
 }
 
 func (Article) Fields() []schema.Field {
@@ -85,7 +85,7 @@ In Forge, you start by defining models. A model describes your data structure:
 
 ```go
 type User struct {
-    schema.BaseSchema
+    UserGenerated
 }
 
 func (User) Fields() []schema.Field {

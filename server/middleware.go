@@ -436,10 +436,12 @@ func Profiler(pattern string, enabled bool) Middleware {
 			return next
 		}
 	}
+	prefix := strings.TrimRight(pattern, "/")
+	profiler := http.StripPrefix(prefix, chimw.Profiler())
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if strings.HasPrefix(r.URL.Path, pattern) {
-				chimw.Profiler().ServeHTTP(w, r)
+			if r.URL.Path == prefix || strings.HasPrefix(r.URL.Path, prefix+"/") {
+				profiler.ServeHTTP(w, r)
 				return
 			}
 			next.ServeHTTP(w, r)

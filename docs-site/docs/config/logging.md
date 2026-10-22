@@ -35,8 +35,10 @@ logging:
     - type: file
       enabled: true
       level: warn
-      path: logs/app.log   # rotated at 100 MB, 30 days, 10 backups
+      path: logs/app.log   # rotated at 100 MB, up to 10 backups
 ```
+
+File rotation currently uses size and backup count. The configuration sets a 30-day age and compression flag, but the file exporter does not enforce age retention or compress backups.
 
 `config.LoadSettings` reads these into `settings.Logging`, and
 `log.NewLoggerFromSettings(settings.Logging)` builds the logger. An invalid

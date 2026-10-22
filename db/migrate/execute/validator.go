@@ -8,12 +8,20 @@ import (
 	"strings"
 
 	"github.com/forgego/forge/db/migrate/core"
+	"github.com/forgego/forge/db/migrate/parse"
 	"github.com/forgego/forge/db/migrate/verify"
 )
 
 // MigrationValidator validates migrations before execution
 type MigrationValidator struct {
 	validator *verify.Validator
+}
+
+type allowDestructiveKey struct{}
+
+// WithDestructiveOperationsAllowed marks an explicitly confirmed migration run.
+func WithDestructiveOperationsAllowed(ctx context.Context) context.Context {
+	return context.WithValue(ctx, allowDestructiveKey{}, true)
 }
 
 // NewMigrationValidator creates a new migration validator
@@ -37,8 +45,14 @@ func (v *MigrationValidator) ValidateBeforeExecution(ctx context.Context, migrat
 	}
 
 	// Check for dangerous operations
-	if err := v.checkDangerousOperations(string(content)); err != nil {
-		return fmt.Errorf("dangerous operation detected: %w", err)
+	if ctx.Value(allowDestructiveKey{}) != true {
+		operations, err := parse.DestructiveOperations(string(content))
+		if err != nil {
+			return fmt.Errorf("failed to inspect operations: %w", err)
+		}
+		if len(operations) > 0 {
+			return fmt.Errorf("dangerous operation detected: %s", strings.Join(operations, ", "))
+		}
 	}
 
 	return nil
@@ -47,32 +61,6 @@ func (v *MigrationValidator) ValidateBeforeExecution(ctx context.Context, migrat
 // ValidateMigrationPlan validates a migration plan before generation
 func (v *MigrationValidator) ValidateMigrationPlan(plan *core.MigrationPlan) error {
 	return v.validator.ValidateMigration(plan)
-}
-
-// checkDangerousOperations checks for operations that should be reviewed
-func (v *MigrationValidator) checkDangerousOperations(sql string) error {
-	upperSQL := strings.ToUpper(sql)
-
-	// List of dangerous operations that require explicit confirmation
-	dangerousOps := []struct {
-		op      string
-		message string
-	}{
-		{"DROP TABLE", "DROP TABLE operations are destructive"},
-		{"DROP COLUMN", "DROP COLUMN operations are destructive"},
-		{"TRUNCATE", "TRUNCATE operations delete all data"},
-		{"DELETE FROM", "DELETE FROM operations modify data"},
-	}
-
-	for _, op := range dangerousOps {
-		if strings.Contains(upperSQL, op.op) {
-			// In production, you might want to require a flag or confirmation
-			// For now, just log a warning
-			return fmt.Errorf("%s: %s", op.message, op.op)
-		}
-	}
-
-	return nil
 }
 
 // ValidateMigrationPair validates that up and down migrations are consistent

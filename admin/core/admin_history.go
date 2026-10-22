@@ -2,7 +2,9 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/forgego/forge/schema"
 	"reflect"
 	"time"
 )
@@ -10,7 +12,16 @@ import (
 // History methods
 func (a *Admin[T]) GetHistory(ctx context.Context, objectID string) ([]LogEntry, error) {
 	if a.config.HistoryManager != nil {
-		return a.config.HistoryManager.GetHistory(ctx, a.name, objectID)
+		entries, err := a.config.HistoryManager.GetHistory(ctx, a.name, objectID)
+		if err != nil {
+			return nil, err
+		}
+		// Redact a copy: reading old history must not mutate the backend.
+		visible := append([]LogEntry(nil), entries...)
+		for i := range visible {
+			visible[i].ChangeStats = a.visibleHistoryChanges(visible[i].ChangeStats)
+		}
+		return visible, nil
 	}
 	return []LogEntry{}, nil
 }
@@ -23,7 +34,7 @@ func (a *Admin[T]) LogAction(ctx context.Context, user interface{}, objectID str
 			ObjectID:    objectID,
 			ObjectRepr:  repr,
 			Action:      action,
-			ChangeStats: changes,
+			ChangeStats: a.visibleHistoryChanges(changes),
 			UserID:      fmt.Sprintf("%v", a.resolveUserID(user)),
 		}
 
@@ -65,4 +76,24 @@ func (a *Admin[T]) resolveUserID(user interface{}) interface{} {
 
 	// 2. Fallback to string representation
 	return fmt.Sprintf("%v", user)
+}
+
+func (a *Admin[T]) visibleHistoryChanges(changes string) string {
+	hidden := schema.NonSerializableFieldNames(new(T))
+	if len(hidden) == 0 || changes == "" {
+		return changes
+	}
+	var fields map[string]json.RawMessage
+	// A non-JSON legacy payload cannot be safely separated into field values.
+	if json.Unmarshal([]byte(changes), &fields) != nil {
+		return "{}"
+	}
+	for _, name := range hidden {
+		delete(fields, name)
+	}
+	data, err := json.Marshal(fields)
+	if err != nil {
+		return "{}"
+	}
+	return string(data)
 }

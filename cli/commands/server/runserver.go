@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 
 	"github.com/forgego/forge/cli/core"
 	"github.com/spf13/cobra"
@@ -40,6 +41,17 @@ func (c *RunServerCommand) Execute(ctx *core.Context, args []string) error {
 	// Prepare command: go run cmd/server/main.go
 	// In the future, we can add file watching here (using air or similar)
 	cmd := exec.Command("go", "run", "cmd/server/main.go")
+	port, err := ctx.Cmd.Flags().GetString("port")
+	if err != nil {
+		return fmt.Errorf("failed to get port flag: %w", err)
+	}
+	if port != "" {
+		n, err := strconv.Atoi(port)
+		if err != nil || n < 1 || n > 65535 {
+			return fmt.Errorf("invalid port %q: expected 1-65535", port)
+		}
+		cmd.Env = append(os.Environ(), "FORGE_SERVER_PORT="+port)
+	}
 
 	// Pass through arguments if needed
 	if len(args) > 0 {

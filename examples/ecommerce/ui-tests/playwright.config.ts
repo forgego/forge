@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
+const serverBaseUrl = process.env.FORGE_SERVER_BASE_URL || `http://localhost:${process.env.FORGE_SERVER_PORT || '8020'}`;
 
 export default defineConfig({
   testDir: './tests',
@@ -14,8 +15,7 @@ export default defineConfig({
   },
   workers: 1,
   use: {
-    baseURL: 'http://localhost:8020/admin/',
-    channel: 'chrome',
+    baseURL: `${serverBaseUrl}/admin/`,
     trace: 'off',
     screenshot: 'only-on-failure',
     video: 'off',
@@ -23,7 +23,7 @@ export default defineConfig({
   webServer: {
     command: 'go run -tags embed .',
     cwd: rootDir,
-    url: 'http://localhost:8020/admin/',
+    url: `${serverBaseUrl}/admin/`,
     timeout: 180_000,
     reuseExistingServer: true,
   },

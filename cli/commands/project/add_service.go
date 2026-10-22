@@ -29,7 +29,7 @@ func (c *AddServiceCommand) Definition() *cobra.Command {
 	}
 	cmd.Flags().String("app", "", "App name (for app-level service)")
 	cmd.Flags().String("domain", "", "Domain name (for domain-level service)")
-	cmd.Flags().Bool("inject", false, "Auto-wire dependencies")
+	cmd.Flags().Bool("inject", false, "Add a dependency wiring placeholder (manual implementation required)")
 	cmd.Flags().Bool("dry-run", false, "Preview changes without writing files")
 	return cmd
 }
@@ -96,7 +96,7 @@ func (c *AddServiceCommand) Execute(ctx *core.Context, args []string) error {
 		fmt.Printf("Dry-run mode - would create service %s\n", serviceName)
 		fmt.Printf("Type: %s, Package: %s\n", serviceType, packageName)
 		if inject {
-			fmt.Printf("Auto-wiring: enabled\n")
+			fmt.Printf("Dependency wiring placeholder: enabled (manual implementation required)\n")
 		}
 		return nil
 	}
@@ -150,7 +150,7 @@ func generateServiceCode(packageName, serviceName string, inject bool) string {
 	sb.WriteString(fmt.Sprintf("// %sImpl implements %s\n", serviceName, serviceName))
 	sb.WriteString(fmt.Sprintf("type %sImpl struct {\n", serviceName))
 	if inject {
-		sb.WriteString("\t// Dependencies will be auto-wired here\n")
+		sb.WriteString("\t// Add dependencies and wire them manually here\n")
 	}
 	sb.WriteString("}\n\n")
 

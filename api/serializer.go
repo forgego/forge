@@ -100,6 +100,26 @@ func (s *BaseSerializer) GetInt(key string) int {
 	return 0
 }
 
+// GetFloat gets a numeric value, including a JSON number from an HTTP request.
+func (s *BaseSerializer) GetFloat(key string) float64 {
+	switch value := s.data[key].(type) {
+	case float64:
+		return value
+	case float32:
+		return float64(value)
+	case json.Number:
+		parsed, err := value.Float64()
+		if err == nil {
+			return parsed
+		}
+	case int:
+		return float64(value)
+	case int64:
+		return float64(value)
+	}
+	return 0
+}
+
 // GetBool gets a bool value
 func (s *BaseSerializer) GetBool(key string) bool {
 	if val, ok := s.data[key].(bool); ok {
@@ -235,22 +255,44 @@ func modelToMapWithTypes(model interface{}, fieldTypes map[string]schema.FieldTy
 					result[key] = modelToMap(value.Elem().Interface())
 				}
 			}
-		default:
-			if raw, ok := value.Interface().([]byte); ok && fieldTypes[key] == schema.TypeJSON {
-				if json.Valid(raw) {
+		case reflect.Slice, reflect.Array:
+			if fieldTypes[key] == schema.TypeJSON {
+				if raw, ok := value.Interface().([]byte); ok && json.Valid(raw) {
 					result[key] = json.RawMessage(raw)
-				} else {
-					// Invalid stored bytes must not panic: keep the
-					// current base64 representation.
-					result[key] = value.Interface()
+					break
 				}
+			}
+			if nested, ok := nestedModelSlice(value); ok {
+				result[key] = nested
 			} else {
 				result[key] = value.Interface()
 			}
+		default:
+			result[key] = value.Interface()
 		}
 	}
 
-	return result
+	return applyResponseVisibility(model, result)
+}
+
+func nestedModelSlice(value reflect.Value) ([]map[string]interface{}, bool) {
+	element := value.Type().Elem()
+	if element.Kind() == reflect.Ptr {
+		element = element.Elem()
+	}
+	if element.Kind() != reflect.Struct || element == reflect.TypeOf(time.Time{}) {
+		return nil, false
+	}
+	items := make([]map[string]interface{}, 0, value.Len())
+	for i := 0; i < value.Len(); i++ {
+		item := value.Index(i)
+		if item.Kind() == reflect.Ptr && item.IsNil() {
+			items = append(items, nil)
+			continue
+		}
+		items = append(items, modelToMap(item.Interface()))
+	}
+	return items, true
 }
 
 func formatSchemaTime(value time.Time, fieldType schema.FieldType) string {

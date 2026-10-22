@@ -34,21 +34,34 @@ func NewValidator() *Validator {
 
 // registerCustomValidators registers all custom validation functions
 func (v *Validator) registerCustomValidators() {
+	register := func(tag string, fn validator.Func) {
+		if err := v.RegisterCustomValidator(tag, fn); err != nil {
+			panic(fmt.Errorf("register validator %q: %w", tag, err))
+		}
+	}
+	// Schema Required means a present value, not a nonzero number or true boolean.
+	register(TagSchemaRequired, validateSchemaRequired)
+
 	// Slug validator
-	v.RegisterCustomValidator("slug", validateSlug)
+	register("slug", validateSlug)
 
 	// Phone validator
-	v.RegisterCustomValidator("phone", validatePhone)
+	register("phone", validatePhone)
 
 	// Choices validator (validates against a set of allowed values)
-	v.RegisterCustomValidator("choices", validateChoices)
+	register("choices", validateChoices)
 
 	// Decimal validators
-	v.RegisterCustomValidator("decimal_max_digits", validateDecimalMaxDigits)
-	v.RegisterCustomValidator("decimal_places", validateDecimalPlaces)
+	register("decimal_max_digits", validateDecimalMaxDigits)
+	register("decimal_places", validateDecimalPlaces)
 
 	// Unique validator (recognized for struct tags; full DB uniqueness is verified by ORM/storage layer)
-	v.RegisterCustomValidator("unique", validateUnique)
+	register("unique", validateUnique)
+}
+
+func validateSchemaRequired(fl validator.FieldLevel) bool {
+	value := fl.Field()
+	return value.IsValid() && value.CanInterface() && !isEmpty(value.Interface())
 }
 
 // validateUnique recognizes the unique tag so struct validation succeeds without unknown tag errors.
@@ -207,6 +220,7 @@ func getErrorMessage(fe validator.FieldError) string {
 
 var validationMessages = map[string]func(string, string) string{
 	"required":           constantValidationMessage("is required"),
+	TagSchemaRequired:    constantValidationMessage("is required"),
 	"email":              constantValidationMessage("must be a valid email address"),
 	"url":                constantValidationMessage("must be a valid URL"),
 	"uuid":               constantValidationMessage("must be a valid UUID"),

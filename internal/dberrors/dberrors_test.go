@@ -22,6 +22,7 @@ func TestClassifyPostgres(t *testing.T) {
 		{"unique with key detail", &pq.Error{Code: "23505", Detail: "Key (slug)=(shoes) already exists."}, Violation{Unique, "slug"}, true},
 		{"composite key", &pq.Error{Code: "23505", Detail: "Key (a, b)=(1, 2) already exists."}, Violation{Unique, "a, b"}, true},
 		{"foreign key", &pq.Error{Code: "23503", Detail: "Key (category_id)=(9) is not present in table \"categories\"."}, Violation{ForeignKey, "category_id"}, true},
+		{"restrict violation is foreign key", &pq.Error{Code: "23001", Detail: "Key (id)=(1) is still referenced from table \"categories\"."}, Violation{ForeignKey, "id"}, true},
 		{"not null uses column", &pq.Error{Code: "23502", Column: "name"}, Violation{NotNull, "name"}, true},
 		{"check", &pq.Error{Code: "23514"}, Violation{Check, ""}, true},
 		{"data exception", &pq.Error{Code: "22001", Column: "slug"}, Violation{DataException, "slug"}, true},
@@ -81,4 +82,42 @@ func TestClassifyOtherErrors(t *testing.T) {
 	assert.False(t, IsDriverError(errors.New("boom")))
 	_, ok = Classify(nil)
 	assert.False(t, ok)
+}
+
+func TestClassifySQLiteRestrictSeparatelyFromApplicationTrigger(t *testing.T) {
+	database, err := sql.Open("sqlite3", ":memory:?_foreign_keys=on")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, database.Close()) })
+	database.SetMaxOpenConns(1)
+	_, err = database.Exec(`CREATE TABLE parents (id INTEGER PRIMARY KEY);
+		CREATE TABLE children (parent_id INTEGER REFERENCES parents(id) ON DELETE RESTRICT);
+		INSERT INTO parents VALUES (1);
+		INSERT INTO children VALUES (1);
+		CREATE TRIGGER veto_parent_delete BEFORE DELETE ON parents WHEN OLD.id = 2
+		BEGIN SELECT RAISE(ABORT, 'business veto'); END;
+		INSERT INTO parents VALUES (2);`)
+	require.NoError(t, err)
+
+	_, err = database.Exec(`DELETE FROM parents WHERE id = 1`)
+	require.Error(t, err)
+	violation, ok := Classify(fmt.Errorf("delete failed: %w", err))
+	require.True(t, ok)
+	assert.Equal(t, ForeignKey, violation.Kind)
+
+	_, err = database.Exec(`DELETE FROM parents WHERE id = 2`)
+	require.Error(t, err)
+	violation, ok = Classify(err)
+	assert.False(t, ok && violation.Kind == ForeignKey)
+}
+
+func TestClassifyPostgres_RestrictViolationOnDelete(t *testing.T) {
+	err := fmt.Errorf("delete failed: %w", &pq.Error{
+		Code:   "23001",
+		Detail: `Key (id)=(1) is still referenced from table "categories".`,
+	})
+	got, ok := Classify(err)
+	assert.True(t, ok)
+	assert.Equal(t, ForeignKey, got.Kind)
+	assert.Equal(t, "id", got.Field)
+	assert.True(t, IsDriverError(err))
 }

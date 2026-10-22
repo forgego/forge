@@ -49,6 +49,13 @@ func (m *mockResolverAdmin) ObjectLabels(ctx context.Context, ids []interface{})
 	return result, nil
 }
 
+func (m *mockResolverAdmin) GetObject(ctx context.Context, id interface{}) (interface{}, error) {
+	if m.getObjectFn != nil || m.getObjectErr != nil {
+		return m.mockAdmin.GetObject(ctx, id)
+	}
+	return map[string]interface{}{"id": id}, nil
+}
+
 func TestHandleList_FKDisplayLabels(t *testing.T) {
 	registry := core.NewRegistry()
 
