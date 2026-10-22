@@ -2,10 +2,10 @@ import { test, expect } from '@playwright/test';
 import { mockAdminApi } from './fixtures/admin-api-mock';
 
 const ROUTES = [
-  { name: 'dashboard', path: '/admin/' },
-  { name: 'registry', path: '/admin/registry' },
-  { name: 'list', path: '/admin/categories' },
-  { name: 'create', path: '/admin/categories/create' },
+  { name: 'dashboard', path: '/admin/', heading: 'Dashboard' },
+  { name: 'registry', path: '/admin/registry', heading: 'Model Registry' },
+  { name: 'list', path: '/admin/categories', heading: 'Categories' },
+  { name: 'create', path: '/admin/categories/create', heading: 'Add Category' },
 ] as const;
 
 const THEMES = ['light', 'dark'] as const;
@@ -39,15 +39,17 @@ test.describe('Design & Health Sweep', () => {
         });
 
         await mockAdminApi(page);
+        await page.addInitScript((t) => {
+          localStorage.setItem('admin-theme-storage', JSON.stringify({
+            state: { theme: t, resolvedTheme: t, primary: 'iris', radius: 0.625 },
+            version: 0,
+          }));
+        }, theme);
         await page.goto(route.path);
 
-        await page.evaluate(
-          (t) => document.documentElement.classList.toggle('dark', t === 'dark'),
-          theme
-        );
-
         await expect(page.locator('main')).toBeVisible();
-        await expect(page.locator('h1').first()).toBeVisible();
+        await expect(page.getByRole('heading', { name: route.heading, level: 1 })).toBeVisible();
+        await expect(page.locator('html')).toHaveClass(new RegExp(`(^|\\s)${theme}(\\s|$)`));
 
         const overflow = await page.evaluate(
           () => document.documentElement.scrollWidth - document.documentElement.clientWidth

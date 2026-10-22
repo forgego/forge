@@ -23,8 +23,8 @@ const (
     "status" TEXT DEFAULT 'Active',
     "motto" TEXT DEFAULT 'read, then write it''s',
     "rank" INTEGER DEFAULT (1 + 2),
-    "balance" REAL,
-    "born_on" TIMESTAMP,
+    "balance" NUMERIC(12,2),
+    "born_on" DATE,
     "seen_at" TIMESTAMP,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     "updated_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP`

@@ -3,6 +3,8 @@ package orders
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/forgego/forge/api"
@@ -166,39 +168,50 @@ func RegisterAPI(ctx context.Context, router *api.Router, database *db.DB) {
 			},
 		}
 
-		// Order.Hooks().BeforeCreate executes here, populating OrderNumber, Total, and Expiry!
-		if err := OrderObjects.Create(ctx, &order); err != nil {
-			http.Error(w, "failed to create order: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// Insert order items
-		for _, it := range input.Items {
-			qty := it.Quantity
-			if qty <= 0 {
-				qty = 1
-			}
-			lineTotal := it.UnitPrice * float64(qty)
-			name := it.ProductName
-			if name == "" {
-				name = "Product Item"
-			}
-			sku := it.SKU
-			if sku == "" {
-				sku = "SKU-ITEM"
+		if err := database.WithTx(ctx, func(tx *db.Tx) error {
+			// BeforeCreate populates the order number, total, and expiry.
+			if err := OrderObjects.WithTx(tx).Create(ctx, &order); err != nil {
+				return fmt.Errorf("create order: %w", err)
 			}
 
-			_, _ = database.ExecContext(ctx, `
+			for _, it := range input.Items {
+				qty := it.Quantity
+				if qty <= 0 {
+					qty = 1
+				}
+				lineTotal := it.UnitPrice * float64(qty)
+				name := it.ProductName
+				if name == "" {
+					name = "Product Item"
+				}
+				sku := it.SKU
+				if sku == "" {
+					sku = "SKU-ITEM"
+				}
+
+				_, err := tx.ExecContext(ctx, tx.RebindPlaceholders(`
 				INSERT INTO order_items (order_id, product_id, product_name, product_sku, quantity, unit_price, total, fulfillment_status)
-				VALUES (?, ?, ?, ?, ?, ?, ?, 'unfulfilled')
-			`, order.Id, it.ProductID, name, sku, qty, it.UnitPrice, lineTotal)
+					VALUES ($1, $2, $3, $4, $5, $6, $7, 'unfulfilled')
+				`), order.Id, it.ProductID, name, sku, qty, it.UnitPrice, lineTotal)
+				if err != nil {
+					return fmt.Errorf("create order item: %w", err)
+				}
 
-			// Deduct inventory stock
-			if it.ProductID > 0 {
-				_, _ = database.ExecContext(ctx, `
-					UPDATE products SET stock_quantity = MAX(0, stock_quantity - ?) WHERE id = ?
-				`, qty, it.ProductID)
+				// Deduct inventory stock
+				if it.ProductID > 0 {
+					_, err := tx.ExecContext(ctx, tx.RebindPlaceholders(`
+						UPDATE products SET stock_quantity = CASE WHEN stock_quantity > $1 THEN stock_quantity - $1 ELSE 0 END WHERE id = $2
+					`), qty, it.ProductID)
+					if err != nil {
+						return fmt.Errorf("update product stock: %w", err)
+					}
+				}
 			}
+			return nil
+		}); err != nil {
+			log.Printf("checkout failed: %v", err)
+			http.Error(w, "failed to place order", http.StatusInternalServerError)
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")

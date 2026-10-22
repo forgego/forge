@@ -13,6 +13,8 @@ import (
 	"github.com/forgego/forge/cli/core"
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/db/migrate/execute"
+	"github.com/forgego/forge/db/migrate/parse"
+	"github.com/forgego/forge/internal/safepath"
 	"github.com/spf13/cobra"
 )
 
@@ -39,6 +41,7 @@ func (c *UpCommand) Definition() *cobra.Command {
 	}
 	cmd.Flags().String("path", "./migrations", "Path to migrations directory")
 	cmd.Flags().Bool("dry-run", false, "Preview migrations without applying them")
+	cmd.Flags().Bool("allow-destructive", false, "Apply migrations that delete data")
 	return cmd
 }
 
@@ -196,6 +199,31 @@ func (c *UpCommand) Execute(ctx *core.Context, args []string) error {
 		}
 	}
 
+	allowDestructive, err := ctx.Cmd.Flags().GetBool("allow-destructive")
+	if err != nil {
+		return fmt.Errorf("failed to get allow-destructive flag: %w", err)
+	}
+	var runner *db.MigrationRunner
+	if hasMigrationFiles(migrationsPath) {
+		runner, err = db.NewMigrationRunner(database, migrationsPath)
+		if err != nil {
+			return fmt.Errorf("failed to create migration runner: %w", err)
+		}
+		defer runner.Close()
+		version, dirty, err := runner.Version(cmdCtx)
+		if err != nil {
+			return err
+		}
+		if dirty {
+			return fmt.Errorf("database is in a dirty state (version %d)", version)
+		}
+		if !allowDestructive {
+			if err := checkPendingDestructive(migrationsPath, version); err != nil {
+				return err
+			}
+		}
+	}
+
 	// Framework store tables (server.stores: database) come first; they
 	// do not depend on the application's schema.
 	if err := applyFrameworkMigrations(cmdCtx, ctx.Config, database, out); err != nil {
@@ -207,18 +235,53 @@ func (c *UpCommand) Execute(ctx *core.Context, args []string) error {
 	}
 
 	// Create migration runner
-	runner, err := db.NewMigrationRunner(database, migrationsPath)
-	if err != nil {
-		return fmt.Errorf("failed to create migration runner: %w", err)
+	if runner == nil {
+		runner, err = db.NewMigrationRunner(database, migrationsPath)
+		if err != nil {
+			return fmt.Errorf("failed to create migration runner: %w", err)
+		}
+		defer runner.Close()
 	}
-	defer runner.Close()
 
 	// Apply migrations
+	if allowDestructive {
+		cmdCtx = execute.WithDestructiveOperationsAllowed(cmdCtx)
+	}
 	if err := runner.Migrate(cmdCtx); err != nil {
 		return fmt.Errorf("migration failed: %w", err)
 	}
 
 	fmt.Fprintln(out, "✓ Migrations applied successfully")
+	return nil
+}
+
+func checkPendingDestructive(dir string, currentVersion uint) error {
+	files, err := filepath.Glob(filepath.Join(dir, "*_*.up.sql"))
+	if err != nil {
+		return fmt.Errorf("failed to scan migrations directory: %w", err)
+	}
+	var found []string
+	for _, file := range files {
+		versionText := strings.SplitN(filepath.Base(file), "_", 2)[0]
+		version, err := strconv.ParseUint(versionText, 10, strconv.IntSize-1)
+		if err != nil || version > math.MaxUint || uint(version) <= currentVersion {
+			continue
+		}
+		content, err := safepath.ReadFile(dir, file)
+		if err != nil {
+			return fmt.Errorf("failed to read migration %s: %w", file, err)
+		}
+		operations, err := parse.DestructiveOperations(string(content))
+		if err != nil {
+			return fmt.Errorf("failed to inspect migration %s: %w", file, err)
+		}
+		for _, operation := range operations {
+			found = append(found, fmt.Sprintf("%s: %s", filepath.Base(file), operation))
+		}
+	}
+	if len(found) > 0 {
+		return fmt.Errorf("destructive migrations require --allow-destructive; nothing applied:\n  %s", strings.Join(found, "\n  "))
+	}
 	return nil
 }
 

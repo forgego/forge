@@ -48,7 +48,7 @@ func TestNewProjectCompiles(t *testing.T) {
 				cmd.Dir = projectPath
 				// Resolve Forge from this checkout and every other module from the
 				// local module cache, which the root module's tests already need.
-				cmd.Env = append(os.Environ(), "GOFLAGS=-mod=mod", "GOPROXY=off", "GOWORK=off")
+				cmd.Env = append(os.Environ(), "GOFLAGS=-mod=mod -buildvcs=false", "GOPROXY=off", "GOWORK=off")
 				out, err := cmd.CombinedOutput()
 				require.NoError(t, err, "go %v failed:\n%s", args, out)
 			}

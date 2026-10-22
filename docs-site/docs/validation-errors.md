@@ -12,14 +12,14 @@ Validation and errors are handled consistently across schema, API, and server la
 
 - Field and schema validation with typed validators
 - API errors with problem details
-- Idempotency handling for safe retries
+- Idempotency key hashing and response stores for applications implementing safe retries (Forge does not automatically replay HTTP requests)
 - Sanitization and request ID support
 
 ## Validator example
 
 ```go
-v := validate.NewTypedValidator()
-err := v.ValidateString("name", "forge", validate.MinLength(3))
+v := validate.NewValidator()
+err := v.ValidateField("forge", "min=3")
 ```
 
 ## Error codes

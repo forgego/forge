@@ -19,6 +19,8 @@ forge makemigrations <name> --auto
 # Preview, then apply pending migrations
 forge migrate up --dry-run
 forge migrate up
+# If a pending migration deletes data, review it and explicitly allow it
+forge migrate up --allow-destructive
 
 # Show the applied version and pending migrations
 forge migrate status
@@ -48,6 +50,14 @@ forge migrate recover --clean --version <version>
    `schema_migrations` (`version`, `dirty`) and the SHA-256 of each applied up and down file
    in `forge_migration_checksums`.
 
+`makemigrations --auto` warns for each generated operation that deletes data.
+Before applying, `migrate up` checks every pending migration for `DROP TABLE`,
+`DROP COLUMN`, `TRUNCATE`, `DELETE FROM`, `DROP SCHEMA`, and `DROP DATABASE`.
+If it finds one, it lists the migration and operation, exits with an error, and
+applies none of the pending migrations. Review the SQL and take a backup, then
+run `forge migrate up --allow-destructive` to apply it. Additive migrations do
+not need this flag. The guard does not replace reviewing hand-written SQL.
+
 ---
 
 ## Safe Schema Changes
@@ -59,8 +69,8 @@ reaches a database with data in it.
   of the old name and an `ADD` of the new one, which loses the data. Write the rename by
   hand instead (see [Renaming a column or table](#renaming-a-column-or-table)).
 - **Destructive statements.** Treat `DROP TABLE`, `DROP COLUMN`, and type changes
-  (`ALTER COLUMN ... TYPE`) as data loss until proven otherwise. `forge migrate lint` flags
-  `DROP TABLE` and `TRUNCATE`, but not `DROP COLUMN`, so read the SQL yourself.
+  (`ALTER COLUMN ... TYPE`) as data loss until proven otherwise. Review the SQL
+  even when the command prints a warning.
 - **Constraints check existing rows.** Adding a foreign key, a `CHECK`, a `UNIQUE`
   constraint, or a `NOT NULL` column without a default fails if existing rows violate it.
   Clean up the data first, in its own migration.
@@ -266,7 +276,10 @@ it set, they fail instead.
 
 :::warning SQLite is experimental
 Applying migrations to SQLite is experimental, and the release gate does not cover it.
-`TestMigrationApplySQLite` is the one test the gate allows to skip. On SQLite, a new
+`TestMigrationApplySQLite` is the one broader integration test the gate allows to skip.
+A basic generated table migration is tested in-process against SQLite, including apply,
+data access and rollback. That test does not establish support for arbitrary SQLite
+schema changes. On SQLite, a new
 table's foreign keys and `Meta.Constraints` are declared inside its `CREATE TABLE` and read
 back from there, so regenerating unchanged models writes nothing. SQLite cannot add, drop
 or change a foreign key or constraint of an existing table without rebuilding it, and
@@ -274,6 +287,10 @@ or change a foreign key or constraint of an existing table without rebuilding it
 applies to a changed column, because SQLite has no `ALTER COLUMN`. See
 [Changes makemigrations cannot generate](#changes-makemigrations-cannot-generate).
 :::
+
+`forge makemigrations --verbose` is currently reserved and does not add generation
+warnings. `forge migrate squash` returns a not-implemented error for any selected
+`--path` and leaves the migration files untouched.
 
 ---
 

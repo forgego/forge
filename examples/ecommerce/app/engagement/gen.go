@@ -12,8 +12,8 @@ import (
 type RecentlyViewedGenerated struct {
 	schema.BaseSchema
 	Id         int64     `json:"id" db:"id" validate:""`
-	CustomerId int64     `json:"customer_id" db:"customer_id" validate:"required"`
-	ProductId  int64     `json:"product_id" db:"product_id" validate:"required"`
+	CustomerId int64     `json:"customer_id" db:"customer_id" validate:""`
+	ProductId  int64     `json:"product_id" db:"product_id" validate:""`
 	ViewedAt   time.Time `json:"viewed_at" db:"viewed_at" validate:"required"`
 	ViewCount  int32     `json:"view_count" db:"view_count" validate:""`
 	SessionId  string    `json:"session_id" db:"session_id" validate:"max=100"`
@@ -58,7 +58,7 @@ var RecentlyViewedFieldsInstance = RecentlyViewedFields{
 type ProductComparisonGenerated struct {
 	schema.BaseSchema
 	Id         int64     `json:"id" db:"id" validate:""`
-	CustomerId int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	CustomerId int64     `json:"customer_id" db:"customer_id" validate:""`
 	Name       string    `json:"name" db:"name" validate:"max=200"`
 	IsPublic   bool      `json:"is_public" db:"is_public" validate:""`
 	CreatedAt  time.Time `json:"created_at" db:"created_at" validate:""`
@@ -98,7 +98,7 @@ var ProductComparisonFieldsInstance = ProductComparisonFields{
 type NotificationGenerated struct {
 	schema.BaseSchema
 	Id          int64     `json:"id" db:"id" validate:""`
-	CustomerId  int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	CustomerId  int64     `json:"customer_id" db:"customer_id" validate:""`
 	Title       string    `json:"title" db:"title" validate:"required,max=200"`
 	Message     string    `json:"message" db:"message" validate:"required"`
 	Type        string    `json:"type" db:"type" validate:"max=50"`
@@ -220,8 +220,8 @@ var CustomerActivityFieldsInstance = CustomerActivityFields{
 type AbandonedCartReminderGenerated struct {
 	schema.BaseSchema
 	Id           int64     `json:"id" db:"id" validate:""`
-	CartId       int64     `json:"cart_id" db:"cart_id" validate:"required"`
-	CustomerId   int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	CartId       int64     `json:"cart_id" db:"cart_id" validate:""`
+	CustomerId   int64     `json:"customer_id" db:"customer_id" validate:""`
 	ReminderType string    `json:"reminder_type" db:"reminder_type" validate:"max=50"`
 	SentAt       time.Time `json:"sent_at" db:"sent_at" validate:"required"`
 	Status       string    `json:"status" db:"status" validate:"max=20"`
@@ -327,7 +327,7 @@ var UserSegmentFieldsInstance = UserSegmentFields{
 type SegmentRuleGenerated struct {
 	schema.BaseSchema
 	Id        int64     `json:"id" db:"id" validate:""`
-	SegmentId int64     `json:"segment_id" db:"segment_id" validate:"required"`
+	SegmentId int64     `json:"segment_id" db:"segment_id" validate:""`
 	Field     string    `json:"field" db:"field" validate:"required,max=100"`
 	Operator  string    `json:"operator" db:"operator" validate:"required,max=20"`
 	Value     string    `json:"value" db:"value" validate:"required,max=500"`

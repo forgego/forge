@@ -12,8 +12,8 @@ import (
 type WarehouseGenerated struct {
 	schema.BaseSchema
 	Id            int64     `json:"id" db:"id" validate:""`
-	Name          string    `json:"name" db:"name" validate:"required,max=200"`
-	Code          string    `json:"code" db:"code" validate:"required,max=50"`
+	Name          string    `json:"name" db:"name" validate:"required,unique,max=200"`
+	Code          string    `json:"code" db:"code" validate:"required,unique,max=50"`
 	ContactName   string    `json:"contact_name" db:"contact_name" validate:"max=200"`
 	ContactEmail  string    `json:"contact_email" db:"contact_email" validate:"max=255"`
 	ContactPhone  string    `json:"contact_phone" db:"contact_phone" validate:"max=20"`
@@ -97,9 +97,9 @@ var WarehouseFieldsInstance = WarehouseFields{
 type StockGenerated struct {
 	schema.BaseSchema
 	Id                int64     `json:"id" db:"id" validate:""`
-	ProductVariantId  int64     `json:"product_variant_id" db:"product_variant_id" validate:"required"`
-	WarehouseId       int64     `json:"warehouse_id" db:"warehouse_id" validate:"required"`
-	Quantity          int32     `json:"quantity" db:"quantity" validate:"required"`
+	ProductVariantId  int64     `json:"product_variant_id" db:"product_variant_id" validate:""`
+	WarehouseId       int64     `json:"warehouse_id" db:"warehouse_id" validate:""`
+	Quantity          int32     `json:"quantity" db:"quantity" validate:""`
 	ReservedQuantity  int32     `json:"reserved_quantity" db:"reserved_quantity" validate:""`
 	AvailableQuantity int32     `json:"available_quantity" db:"available_quantity" validate:""`
 	ReorderPoint      int32     `json:"reorder_point" db:"reorder_point" validate:""`
@@ -161,13 +161,13 @@ var StockFieldsInstance = StockFields{
 type StockMovementGenerated struct {
 	schema.BaseSchema
 	Id               int64     `json:"id" db:"id" validate:""`
-	StockId          int64     `json:"stock_id" db:"stock_id" validate:"required"`
-	ProductVariantId int64     `json:"product_variant_id" db:"product_variant_id" validate:"required"`
-	WarehouseId      int64     `json:"warehouse_id" db:"warehouse_id" validate:"required"`
+	StockId          int64     `json:"stock_id" db:"stock_id" validate:""`
+	ProductVariantId int64     `json:"product_variant_id" db:"product_variant_id" validate:""`
+	WarehouseId      int64     `json:"warehouse_id" db:"warehouse_id" validate:""`
 	Type             string    `json:"type" db:"type" validate:"required,max=50"`
-	Quantity         int32     `json:"quantity" db:"quantity" validate:"required"`
-	QuantityBefore   int32     `json:"quantity_before" db:"quantity_before" validate:"required"`
-	QuantityAfter    int32     `json:"quantity_after" db:"quantity_after" validate:"required"`
+	Quantity         int32     `json:"quantity" db:"quantity" validate:""`
+	QuantityBefore   int32     `json:"quantity_before" db:"quantity_before" validate:""`
+	QuantityAfter    int32     `json:"quantity_after" db:"quantity_after" validate:""`
 	ReferenceType    string    `json:"reference_type" db:"reference_type" validate:"max=50"`
 	ReferenceId      int64     `json:"reference_id" db:"reference_id" validate:""`
 	ReferenceNumber  string    `json:"reference_number" db:"reference_number" validate:"max=100"`
@@ -246,12 +246,12 @@ var StockMovementFieldsInstance = StockMovementFields{
 type StockAlertGenerated struct {
 	schema.BaseSchema
 	Id                 int64     `json:"id" db:"id" validate:""`
-	StockId            int64     `json:"stock_id" db:"stock_id" validate:"required"`
-	ProductVariantId   int64     `json:"product_variant_id" db:"product_variant_id" validate:"required"`
-	WarehouseId        int64     `json:"warehouse_id" db:"warehouse_id" validate:"required"`
+	StockId            int64     `json:"stock_id" db:"stock_id" validate:""`
+	ProductVariantId   int64     `json:"product_variant_id" db:"product_variant_id" validate:""`
+	WarehouseId        int64     `json:"warehouse_id" db:"warehouse_id" validate:""`
 	AlertType          string    `json:"alert_type" db:"alert_type" validate:"required,max=50"`
-	CurrentQuantity    int32     `json:"current_quantity" db:"current_quantity" validate:"required"`
-	Threshold          int32     `json:"threshold" db:"threshold" validate:"required"`
+	CurrentQuantity    int32     `json:"current_quantity" db:"current_quantity" validate:""`
+	Threshold          int32     `json:"threshold" db:"threshold" validate:""`
 	Status             string    `json:"status" db:"status" validate:"required,max=20"`
 	ResolvedByUserId   int64     `json:"resolved_by_user_id" db:"resolved_by_user_id" validate:""`
 	ResolvedByUserName string    `json:"resolved_by_user_name" db:"resolved_by_user_name" validate:"max=200"`
@@ -319,11 +319,11 @@ var StockAlertFieldsInstance = StockAlertFields{
 type StockTransferGenerated struct {
 	schema.BaseSchema
 	Id                  int64     `json:"id" db:"id" validate:""`
-	TransferNumber      string    `json:"transfer_number" db:"transfer_number" validate:"required,max=50"`
-	FromWarehouseId     int64     `json:"from_warehouse_id" db:"from_warehouse_id" validate:"required"`
-	ToWarehouseId       int64     `json:"to_warehouse_id" db:"to_warehouse_id" validate:"required"`
-	ProductVariantId    int64     `json:"product_variant_id" db:"product_variant_id" validate:"required"`
-	Quantity            int32     `json:"quantity" db:"quantity" validate:"required"`
+	TransferNumber      string    `json:"transfer_number" db:"transfer_number" validate:"required,unique,max=50"`
+	FromWarehouseId     int64     `json:"from_warehouse_id" db:"from_warehouse_id" validate:""`
+	ToWarehouseId       int64     `json:"to_warehouse_id" db:"to_warehouse_id" validate:""`
+	ProductVariantId    int64     `json:"product_variant_id" db:"product_variant_id" validate:""`
+	Quantity            int32     `json:"quantity" db:"quantity" validate:""`
 	Status              string    `json:"status" db:"status" validate:"required,max=20"`
 	TrackingNumber      string    `json:"tracking_number" db:"tracking_number" validate:"max=255"`
 	Carrier             string    `json:"carrier" db:"carrier" validate:"max=100"`

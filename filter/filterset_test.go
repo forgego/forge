@@ -1,8 +1,11 @@
 package filter
 
 import (
+	"context"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
 )
 
@@ -40,6 +43,34 @@ func TestFilterSet_NewFilterSet(t *testing.T) {
 
 	if fs.schema == nil {
 		t.Error("FilterSet schema is nil")
+	}
+}
+
+func TestDocumentedFilterSetRequestAPI(t *testing.T) {
+	fs, err := NewFilterSet[MockModel]()
+	if err != nil {
+		t.Fatal(err)
+	}
+	base, err := orm.NewQuerySet[MockModel]("mock_models")
+	if err != nil {
+		t.Fatal(err)
+	}
+	security := DefaultSecurityConfig()
+	security.AllowedFields["mock_models"] = []string{"username", "id"}
+	security.AllowedLookups["username"] = []string{"icontains"}
+	security.AllowedLookups["id"] = []string{"in"}
+	fs.WithQueryset(base).WithSecurity(security)
+	if _, err := fs.ApplyQueryParams(context.Background(), httptest.NewRequest("GET", "/?username__icontains=forge", nil)); err != nil {
+		t.Fatalf("allowed lookup: %v", err)
+	}
+	if _, err := fs.ApplyQueryParams(context.Background(), httptest.NewRequest("GET", "/?id__in=1,2", nil)); err != nil {
+		t.Fatalf("in lookup: %v", err)
+	}
+	if _, err := fs.ApplyQueryParams(context.Background(), httptest.NewRequest("GET", "/?email=hidden", nil)); err == nil {
+		t.Fatal("unlisted field must be rejected")
+	}
+	if _, err := fs.ApplyQueryParams(context.Background(), httptest.NewRequest("GET", "/?username__gt=5", nil)); err == nil {
+		t.Fatal("unlisted lookup must be rejected")
 	}
 }
 

@@ -2,12 +2,12 @@ package generate
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/forgego/forge/db/migrate/core"
+	"github.com/forgego/forge/db/migrate/internal/migrationfiles"
 	"github.com/forgego/forge/db/migrate/state"
 )
 
@@ -32,7 +32,10 @@ func (d *DependencyDetector) DetectDependencies(changes []core.Change, upSQL str
 	seen := make(map[string]bool)
 
 	// 1. Detect dependencies from foreign key relationships
-	fkDeps := d.detectFromForeignKeys(changes)
+	fkDeps, err := d.detectFromForeignKeys(changes)
+	if err != nil {
+		return nil, err
+	}
 	for _, dep := range fkDeps {
 		key := dep.Version
 		if dep.App != "" {
@@ -45,7 +48,10 @@ func (d *DependencyDetector) DetectDependencies(changes []core.Change, upSQL str
 	}
 
 	// 2. Detect dependencies from SQL table references
-	sqlDeps := d.detectFromSQL(upSQL)
+	sqlDeps, err := d.detectFromSQL(upSQL)
+	if err != nil {
+		return nil, err
+	}
 	for _, dep := range sqlDeps {
 		key := dep.Version
 		if dep.App != "" {
@@ -61,17 +67,23 @@ func (d *DependencyDetector) DetectDependencies(changes []core.Change, upSQL str
 }
 
 // detectFromForeignKeys detects dependencies from foreign key relationships
-func (d *DependencyDetector) detectFromForeignKeys(changes []core.Change) []core.Dependency {
+func (d *DependencyDetector) detectFromForeignKeys(changes []core.Change) ([]core.Dependency, error) {
 	var dependencies []core.Dependency
 
 	// Get current state to find which migrations created which tables
-	schemaState := d.stateManager.GetState()
+	schemaState, err := d.stateManager.Load()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load migration state: %w", err)
+	}
 	if schemaState == nil {
-		return dependencies
+		return dependencies, nil
 	}
 
 	// Build a map of table name to migration version
-	tableToVersion := d.buildTableToVersionMap()
+	tableToVersion, err := d.buildTableToVersionMap()
+	if err != nil {
+		return nil, err
+	}
 
 	for _, change := range changes {
 		// Check for AddForeignKey changes
@@ -116,15 +128,18 @@ func (d *DependencyDetector) detectFromForeignKeys(changes []core.Change) []core
 		}
 	}
 
-	return dependencies
+	return dependencies, nil
 }
 
 // detectFromSQL detects dependencies from table references in SQL
-func (d *DependencyDetector) detectFromSQL(sql string) []core.Dependency {
+func (d *DependencyDetector) detectFromSQL(sql string) ([]core.Dependency, error) {
 	var dependencies []core.Dependency
 
 	// Build table to version map
-	tableToVersion := d.buildTableToVersionMap()
+	tableToVersion, err := d.buildTableToVersionMap()
+	if err != nil {
+		return nil, err
+	}
 
 	// Find all table references in SQL
 	// Pattern: REFERENCES table_name, ALTER TABLE table_name, etc.
@@ -155,18 +170,18 @@ func (d *DependencyDetector) detectFromSQL(sql string) []core.Dependency {
 		}
 	}
 
-	return dependencies
+	return dependencies, nil
 }
 
 // buildTableToVersionMap builds a map of table name to migration version
-func (d *DependencyDetector) buildTableToVersionMap() map[string]string {
+func (d *DependencyDetector) buildTableToVersionMap() (map[string]string, error) {
 	tableToVersion := make(map[string]string)
 
 	// Find all migration files
 	pattern := filepath.Join(d.migrationsDir, "*_*.up.sql")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
-		return tableToVersion
+		return nil, fmt.Errorf("failed to scan migrations directory: %w", err)
 	}
 
 	// Parse each migration to find which tables it creates
@@ -179,9 +194,9 @@ func (d *DependencyDetector) buildTableToVersionMap() map[string]string {
 		version := parts[0]
 
 		// Read migration file
-		content, err := os.ReadFile(file)
+		content, err := migrationfiles.Read(d.migrationsDir, file)
 		if err != nil {
-			continue
+			return nil, err
 		}
 
 		// Find CREATE TABLE statements
@@ -198,7 +213,7 @@ func (d *DependencyDetector) buildTableToVersionMap() map[string]string {
 		}
 	}
 
-	return tableToVersion
+	return tableToVersion, nil
 }
 
 // ValidateDependencies validates that all dependencies exist

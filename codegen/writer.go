@@ -18,6 +18,21 @@ type Writer struct {
 	rename    func(string, string) error
 }
 
+// apiModel tracks declaration ownership independently so a custom serializer
+// does not remove the generated viewset and routes for its model.
+type apiModel struct {
+	*ModelDefinition
+	Serializer, NewSerializer, ViewSet, NewViewSet, Routes bool
+}
+
+func allAPIModels(definitions []*ModelDefinition) []apiModel {
+	models := make([]apiModel, 0, len(definitions))
+	for _, def := range definitions {
+		models = append(models, apiModel{def, true, true, true, true, true})
+	}
+	return models
+}
+
 // NewWriter creates a new writer
 func NewWriter() *Writer {
 	return &Writer{
@@ -80,6 +95,10 @@ func usesTimePackage(definitions []*ModelDefinition) bool {
 
 // WriteAPI writes all generated REST API code to an api_gen.go file
 func (w *Writer) WriteAPI(definitions []*ModelDefinition, outputDir string) error {
+	return w.writeAPI(definitions, allAPIModels(definitions), true, outputDir)
+}
+
+func (w *Writer) writeAPI(definitions []*ModelDefinition, apiDefinitions []apiModel, register bool, outputDir string) error {
 	if len(definitions) == 0 {
 		return nil
 	}
@@ -89,15 +108,14 @@ func (w *Writer) WriteAPI(definitions []*ModelDefinition, outputDir string) erro
 	if err := ValidateAPIModels(definitions); err != nil {
 		return err
 	}
-	contents, err := w.renderAPI(definitions)
+	contents, err := w.renderAPI(definitions[0].Package, apiDefinitions, register)
 	if err != nil {
 		return err
 	}
 	return w.writeBytes(contents, filepath.Join(outputDir, "api_gen.go"))
 }
 
-func (w *Writer) renderAPI(definitions []*ModelDefinition) ([]byte, error) {
-	packageName := definitions[0].Package
+func (w *Writer) renderAPI(packageName string, definitions []apiModel, register bool) ([]byte, error) {
 
 	t := template.New("api").Funcs(template.FuncMap{
 		"ToLower":       strings.ToLower,
@@ -115,8 +133,9 @@ func (w *Writer) renderAPI(definitions []*ModelDefinition) ([]byte, error) {
 	}
 
 	data := map[string]interface{}{
-		"Package": packageName,
-		"Models":  definitions,
+		"Package":  packageName,
+		"Models":   definitions,
+		"Register": register,
 	}
 
 	return executeTemplate(t, data)
@@ -133,6 +152,10 @@ func executeTemplate(t *template.Template, data interface{}) ([]byte, error) {
 // WriteCombinedAndAPI renders and stages both generated files before replacing
 // either destination, so preparation failures cannot leave a mixed generation.
 func (w *Writer) WriteCombinedAndAPI(definitions []*ModelDefinition, outputDir string) error {
+	return w.writeCombinedAndAPI(definitions, allAPIModels(definitions), true, outputDir)
+}
+
+func (w *Writer) writeCombinedAndAPI(definitions []*ModelDefinition, apiDefinitions []apiModel, register bool, outputDir string) error {
 	if len(definitions) == 0 {
 		return nil
 	}
@@ -143,7 +166,7 @@ func (w *Writer) WriteCombinedAndAPI(definitions []*ModelDefinition, outputDir s
 	if err != nil {
 		return err
 	}
-	api, err := w.renderAPI(definitions)
+	api, err := w.renderAPI(definitions[0].Package, apiDefinitions, register)
 	if err != nil {
 		return err
 	}

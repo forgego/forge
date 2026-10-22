@@ -436,3 +436,56 @@ func TestWithTx_Success(t *testing.T) {
 		t.Fatalf("expected 'item4', got %q", name)
 	}
 }
+
+// Database transactions support savepoints
+func TestTransactionSavepointRollbackAndRelease(t *testing.T) {
+	db := setupTransactionTestDB(t)
+
+	err := db.WithTx(context.Background(), func(tx *Tx) error {
+		// Insert item 10 before savepoint
+		_, err := tx.Exec("INSERT INTO test_items (id, name) VALUES (10, 'pre_savepoint')")
+		if err != nil {
+			return err
+		}
+
+		// Create savepoint
+		sp, err := tx.CreateSavepoint("sp1")
+		if err != nil {
+			return err
+		}
+
+		// Insert item 11 after savepoint
+		_, err = tx.Exec("INSERT INTO test_items (id, name) VALUES (11, 'post_savepoint')")
+		if err != nil {
+			return err
+		}
+
+		// Roll back to savepoint (undo item 11, retain item 10)
+		if err := sp.RollbackToSavepoint(); err != nil {
+			return err
+		}
+
+		// Create another savepoint and release it
+		sp2, err := tx.CreateSavepoint("sp2")
+		if err != nil {
+			return err
+		}
+		if err := sp2.ReleaseSavepoint(); err != nil {
+			return err
+		}
+
+		return nil
+	})
+	require.NoError(t, err)
+
+	var count10, count11 int
+	require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM test_items WHERE id = 10").Scan(&count10))
+	require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM test_items WHERE id = 11").Scan(&count11))
+
+	if count10 != 1 {
+		t.Fatalf("expected 1 row for id 10, got %d", count10)
+	}
+	if count11 != 0 {
+		t.Fatalf("expected 0 rows for id 11 after rollback to savepoint, got %d", count11)
+	}
+}

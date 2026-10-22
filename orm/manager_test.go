@@ -28,6 +28,16 @@ func TestNewManager(t *testing.T) {
 	})
 }
 
+func TestDocumentedManagerWriteSignatures(t *testing.T) {
+	manager := MustNewManager[testModel]("test_table")
+	var create func(context.Context, *testModel) error = manager.Create
+	var remove func(context.Context, *testModel) error = manager.Delete
+	var bulk func(context.Context, []*testModel) error = manager.BulkCreate
+	if create == nil || remove == nil || bulk == nil {
+		t.Fatal("manager write methods are unavailable")
+	}
+}
+
 type invalidManagerModel struct{}
 
 func TestMustNewManagerReturnsManagerForValidModel(t *testing.T) {
@@ -112,6 +122,28 @@ func TestManager_Filter_WithoutDB(t *testing.T) {
 	qs, err := manager.Filter(expr)
 	require.NoError(t, err)
 	assert.NotNil(t, qs)
+}
+
+func TestManager_QuerySetShortcuts(t *testing.T) {
+	manager, err := NewManager[testModel]("test_table")
+	require.NoError(t, err)
+
+	expr := NewField[float64]("price", "test_table").Gt(10)
+	excluded := manager.Exclude(expr)
+	require.NotNil(t, excluded)
+	assert.Len(t, excluded.(*BaseQuerySet[testModel]).excludes, 1)
+
+	ordered := manager.OrderBy("-price", "name")
+	require.NotNil(t, ordered)
+	assert.Equal(t, []OrderField{Desc("price"), Asc("name")}, ordered.(*BaseQuerySet[testModel]).orderBy)
+
+	related := manager.SelectRelated("category")
+	require.NotNil(t, related)
+	assert.Equal(t, []string{"category"}, related.(*BaseQuerySet[testModel]).selectRelated)
+
+	assert.Empty(t, manager.QuerySet().(*BaseQuerySet[testModel]).excludes)
+	assert.Empty(t, manager.QuerySet().(*BaseQuerySet[testModel]).orderBy)
+	assert.Empty(t, manager.QuerySet().(*BaseQuerySet[testModel]).selectRelated)
 }
 
 func TestManager_Get_WithoutDB_ReturnsConfigurationError(t *testing.T) {

@@ -142,4 +142,40 @@ describe("ModelListPage bulk action feedback", () => {
     );
     expect(screen.queryByTestId("bulk-result")).toBeNull();
   });
+
+  it("disables the action button and shows a spinner while its request is pending", async () => {
+    let finish!: (value: any) => void;
+    executeActionMock.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    renderPage();
+    fireEvent.click(screen.getByTestId("select-3"));
+    fireEvent.click(screen.getByTestId("bulk-action-activate"));
+    const action = screen.getByTestId("bulk-action-activate");
+    await waitFor(() => expect(action).toBeDisabled());
+    expect(action.querySelector("svg.animate-spin")).toBeInTheDocument();
+    finish({ success: true, affected: 1, message: "activated" });
+    await waitFor(() => expect(action.querySelector("svg.animate-spin")).toBeNull());
+  });
+
+  it("shows a success toast after an action completes", async () => {
+    executeActionMock.mockResolvedValue({ success: true, affected: 1, message: "Warehouse activated" });
+    renderPage();
+    fireEvent.click(screen.getByTestId("select-3"));
+    fireEvent.click(screen.getByTestId("bulk-action-activate"));
+    await waitFor(() => expect(toastMock).toHaveBeenCalledWith({
+      title: "Success", description: "Warehouse activated",
+    }));
+    expect(screen.getByText("Select rows to enable bulk actions")).toBeInTheDocument();
+  });
+
+  it("retains selected rows after an action request fails", async () => {
+    executeActionMock.mockRejectedValue(new Error("Connection lost"));
+    renderPage();
+    fireEvent.click(screen.getByTestId("select-3"));
+    fireEvent.click(screen.getByTestId("bulk-action-activate"));
+    await waitFor(() => expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Action failed" })
+    ));
+    expect(screen.getByTestId("select-3")).toBeChecked();
+    expect(screen.getByText("1 selected")).toBeInTheDocument();
+  });
 });

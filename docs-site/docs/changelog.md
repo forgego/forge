@@ -11,7 +11,87 @@ the change.
 
 ## Unreleased
 
+### Fixed
+
+- Static `IndexOn`/`UniqueIndexOn` metadata is preserved during generation,
+  including genuine schema import aliases. Dynamic arguments still fail static
+  analysis. Integration fixtures now verify composite indexes and every complex
+  model column instead of silently accepting omitted declarations.
+- Enhanced serializers parse JSON tag options before checking configured
+  write-only fields and honor schema response exclusions.
+- Unsupported Meta expressions such as concatenated table names produce a
+  diagnostic; automatic migrations refuse reported parser diagnostics before
+  writing files, preventing a partial model from generating unintended drops.
+- Schema-derived validators resolve concrete model fields and aliases instead
+  of silently skipping them; required scalar values accept zero/false, nil inputs
+  return validation errors, and custom schema validators run.
+- Admin object permission checkers and declared action permissions are enforced;
+  detail and history endpoints check the loaded object's view permission.
+- Admin write-only values are excluded from detail/list/CRUD/bulk/export output
+  and new audit payloads. Legacy audit payloads are filtered when read; stored
+  historical payloads are not rewritten by this change.
+- Changing an identity email address clears its previous verification. Proof
+  tokens are checked against the current canonical address before verification.
+- Strict generation accepts public schema constraint constants and schema import
+  aliases, including composite uniqueness and check constraints.
+- Generated required numeric/boolean fields accept explicit zero/false. API
+  creation rejects omitted or null required writable fields without a default.
+- Per-user throttling recognizes generated models' pointer-receiver `GetID`,
+  so different authenticated users receive independent allowances.
+- Identity repositories preserve UTC instants in their timezone-less timestamp
+  columns. Non-UTC application clocks no longer shift token/session expiry or
+  user security dates. Expiry selection and cleanup are also independent of
+  the PostgreSQL session timezone.
+- Hidden-only or empty API sort fields fall back to an internal primary-key
+  order. Hidden fields still cannot control the requested sort direction.
+- The public documentation checker excludes the exact local working notes
+  listed by the documentation policy while continuing to check public guides.
+
+### Security and upgrade requirements
+
+- Rewrite reported unsupported model expressions into supported static DSL
+  before automatic migration generation. Review any migration drafts generated
+  with unsupported expressions by earlier versions; no existing migration is
+  rewritten automatically. Reviewed handwritten SQL remains a separate path.
+- Configure an admin permission checker for action-specific permissions granted
+  to non-superusers; change permission alone no longer grants those actions.
+  History requests now require an existing, viewable object and return 404 for
+  missing/deleted objects. Review historical audit storage separately if it held
+  write-only values; response filtering does not erase old stored data.
+- Schema tags emitted by `validation.GenerateValidationTag` use `schema_required`
+  with Forge's `validation.NewValidator` to accept required numeric zero/false
+  while rejecting missing values. Explicit application tags retain their rules.
+- Update build toolchains to Go 1.26.10 or a patched Go 1.27 release (CI uses
+  1.27.3), including generated projects and Docker builders. Dependency updates
+  remove the admin npm audit findings and docs-site critical findings.
+- Before rolling out the identity UTC fix, use UTC for every database session
+  and external writer that relies on timestamp defaults. Switch all application
+  writers consistently. Existing UTC rows need no conversion. Existing rows
+  written in local time have no stored offset: determine their original
+  timezone before converting them, or revoke outstanding sessions and reset/
+  verification tokens and review account password-expiry/lockout dates. No
+  automatic data conversion or revocation is performed.
+
+### Known issues
+
+- Consumer acceptance on 2026-10-20 found that regenerating all apps with
+  `--api` after `forge auth` duplicates its handwritten user serializer. Generate
+  the auth model without `--api` and target other apps separately.
+- `DBIndex`, `UniqueTogether` and implicit many-to-many joins still produce no
+  corresponding migration SQL. Use inspected literal Meta indexes/constraints
+  and explicit join models; strict generation alone does not certify a schema.
+- The published v0.1.1 scaffold fails its default build with missing embedded
+  static files; the current checkout fixes that template but is unpublished.
+- Docs-site npm audit still reports high findings from the unpatched `braces`
+  dependency; see [contributor guidance](/docs/contributing/development/).
+- Migration schema/type and round-trip limitations remain tracked in
+  [#292](https://github.com/forgego/forge/issues/292).
+
 ## v0.2.0 (2026-09-29)
+
+Release preparation merged on this date. Publication still requires a new tag,
+successful public install smoke, and a GitHub release; as of 2026-10-20 the
+public module proxy's latest release is v0.1.1.
 
 v0.2.0 is a minor release because it contains breaking changes. Read
 **Upgrading from v0.1.1** below before you update.

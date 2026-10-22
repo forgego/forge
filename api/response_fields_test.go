@@ -227,6 +227,80 @@ func TestBaseViewSet_ExcludeResponseFields_OmitsFieldsInListRetrieveCreateUpdate
 	assert.Equal(t, "alice2", m["username"])
 }
 
+func TestBaseViewSetSchemaHiddenFieldsStayOutOfEveryCRUDResponse(t *testing.T) {
+	mgr := &excludeResponseManager{items: []*nonSerializableTestModel{{ID: 1, Username: "alice", Password: "secret1"}}, nextID: 1}
+	vs := NewBaseViewSet(newExcludeResponseSerializer, mgr, &nonSerializableTestModel{})
+	router := NewRouter("/api")
+	router.Register("users", vs)
+	handler := forgehttp.NewRouter()
+	router.RegisterRoutes(handler)
+
+	for _, tc := range []struct {
+		name, method, path, body string
+		status                   int
+		list                     bool
+	}{
+		{"list", http.MethodGet, "/api/users/", "", http.StatusOK, true},
+		{"detail", http.MethodGet, "/api/users/1", "", http.StatusOK, false},
+		{"create", http.MethodPost, "/api/users/", `{"username":"bob","token":"secret2"}`, http.StatusCreated, false},
+		{"update", http.MethodPut, "/api/users/1", `{"username":"alice2","token":"secret3"}`, http.StatusOK, false},
+		{"partial update", http.MethodPatch, "/api/users/1", `{"username":"alice3"}`, http.StatusOK, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.path, bytes.NewBufferString(tc.body))
+			if tc.body != "" {
+				req.Header.Set("Content-Type", "application/json")
+			}
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+			require.Equal(t, tc.status, rec.Code, rec.Body.String())
+			var response map[string]interface{}
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+			if tc.list {
+				rows, ok := response["results"].([]interface{})
+				require.True(t, ok)
+				require.Len(t, rows, 1)
+				response = rows[0].(map[string]interface{})
+			}
+			assert.NotContains(t, response, "token")
+			assert.Contains(t, response, "username")
+		})
+	}
+}
+
+type nestedPrivateModel struct {
+	schema.BaseSchema
+	Name   string `json:"name" db:"name"`
+	Secret string `json:"secret" db:"secret"`
+}
+
+func (nestedPrivateModel) Fields() []schema.Field {
+	return []schema.Field{schema.StringField("name"), schema.StringField("secret", schema.WriteOnly())}
+}
+
+type parentPrivateModel struct {
+	schema.BaseSchema
+	Child    *nestedPrivateModel   `json:"child"`
+	Children []*nestedPrivateModel `json:"children"`
+}
+
+func TestResponseVisibilityOmitsWriteOnlyFieldsInNestedRelations(t *testing.T) {
+	model := &parentPrivateModel{
+		Child:    &nestedPrivateModel{Name: "visible", Secret: "hidden"},
+		Children: []*nestedPrivateModel{{Name: "also visible", Secret: "also hidden"}},
+	}
+	response := SerializeModel(model)
+	child, ok := response["child"].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "visible", child["name"])
+	assert.NotContains(t, child, "secret")
+	children, ok := response["children"].([]map[string]interface{})
+	require.True(t, ok)
+	require.Len(t, children, 1)
+	assert.Equal(t, "also visible", children[0]["name"])
+	assert.NotContains(t, children[0], "secret")
+}
+
 type nonEditableTestModel struct {
 	schema.BaseSchema
 	ID        int64  `json:"id" db:"id"`

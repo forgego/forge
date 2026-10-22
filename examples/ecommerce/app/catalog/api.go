@@ -11,6 +11,16 @@ import (
 	"github.com/forgego/forge/db"
 )
 
+const searchProductsQuery = `SELECT id, name, slug, sku, description, price, stock_quantity, category_id, brand_id, is_active
+	FROM products
+	WHERE ($1 = '' OR name LIKE '%' || $1 || '%' OR description LIKE '%' || $1 || '%' OR sku LIKE '%' || $1 || '%')
+	AND ($2 <= 0 OR category_id = $2)
+	AND ($3 <= 0 OR brand_id = $3)
+	AND ($4 <= 0 OR price >= $4)
+	AND ($5 <= 0 OR price <= $5)
+	AND ($6 = FALSE OR stock_quantity > 0)
+	ORDER BY id DESC LIMIT 50`
+
 // RegisterAPI registers catalog API endpoints.
 func RegisterAPI(ctx context.Context, router *api.Router, database *db.DB) {
 	_ = ctx
@@ -108,37 +118,7 @@ func RegisterAPI(ctx context.Context, router *api.Router, database *db.DB) {
 		maxPrice, _ := strconv.ParseFloat(r.URL.Query().Get("max_price"), 64)
 		inStock := r.URL.Query().Get("in_stock") == "true" || r.URL.Query().Get("in_stock") == "1"
 
-		whereClauses := []string{"1=1"}
-		var args []any
-
-		if q != "" {
-			whereClauses = append(whereClauses, "(name LIKE ? OR description LIKE ? OR sku LIKE ?)")
-			likeTerm := "%" + q + "%"
-			args = append(args, likeTerm, likeTerm, likeTerm)
-		}
-		if categoryID > 0 {
-			whereClauses = append(whereClauses, "category_id = ?")
-			args = append(args, categoryID)
-		}
-		if brandID > 0 {
-			whereClauses = append(whereClauses, "brand_id = ?")
-			args = append(args, brandID)
-		}
-		if minPrice > 0 {
-			whereClauses = append(whereClauses, "price >= ?")
-			args = append(args, minPrice)
-		}
-		if maxPrice > 0 {
-			whereClauses = append(whereClauses, "price <= ?")
-			args = append(args, maxPrice)
-		}
-		if inStock {
-			whereClauses = append(whereClauses, "stock_quantity > 0")
-		}
-
-		query := "SELECT id, name, slug, sku, description, price, stock_quantity, category_id, brand_id, is_active FROM products WHERE " + strings.Join(whereClauses, " AND ") + " ORDER BY id DESC LIMIT 50"
-
-		rows, err := database.QueryContext(ctx, query, args...)
+		rows, err := database.QueryContext(ctx, searchProductsQuery, q, categoryID, brandID, minPrice, maxPrice, inStock)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

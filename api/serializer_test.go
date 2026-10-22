@@ -26,6 +26,16 @@ type invalidSerializer struct {
 	*BaseSerializer
 }
 
+type priceMethodSerializer struct {
+	*BaseSerializer
+	called bool
+}
+
+func (s *priceMethodSerializer) ValidatePrice(_ float64) error {
+	s.called = true
+	return errors.New("invalid price")
+}
+
 func (s *invalidSerializer) Validate() error {
 	s.AddError("name", "Name is required")
 	return errors.New("validation failed")
@@ -69,6 +79,37 @@ func TestBaseSerializer_Validate_Invalid(t *testing.T) {
 	require.Error(t, err)
 	assert.False(t, serializer.IsValid())
 	assert.Equal(t, map[string][]string{"name": {"Name is required"}}, serializer.Errors())
+}
+
+func TestSerializer_FieldMethodRequiresExplicitValidate(t *testing.T) {
+	s := &priceMethodSerializer{BaseSerializer: NewBaseSerializer(map[string]interface{}{"price": -1.0})}
+	require.NoError(t, s.Validate())
+	assert.False(t, s.called)
+	assert.True(t, s.IsValid())
+
+	custom := &invalidSerializer{BaseSerializer: NewBaseSerializer(map[string]interface{}{})}
+	require.Error(t, custom.Validate())
+	assert.Equal(t, []string{"Name is required"}, custom.Errors()["name"])
+}
+
+func TestSerializer_NestingComesFromModelFields(t *testing.T) {
+	type customer struct {
+		Name string `json:"name"`
+	}
+	type order struct {
+		ID       int64    `json:"id"`
+		Customer customer `json:"customer"`
+	}
+	type orderSerializer struct {
+		*BaseSerializer
+		Extra customer `json:"extra"`
+	}
+
+	model := order{ID: 1, Customer: customer{Name: "Ada"}}
+	s := &orderSerializer{BaseSerializer: NewBaseSerializer(nil), Extra: customer{Name: "ignored"}}
+	result := filterOutputMap(s, SerializeModel(model))
+	assert.Equal(t, map[string]interface{}{"name": "Ada"}, result["customer"])
+	assert.NotContains(t, result, "extra")
 }
 
 func TestBaseSerializer_ReadOnlyFields(t *testing.T) {

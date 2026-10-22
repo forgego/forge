@@ -102,7 +102,7 @@ func TestRespondWriteError_TypedValidationErrorIsBadRequest(t *testing.T) {
 	assert.Equal(t, []string{"unknown field"}, details["bogus"])
 }
 
-func TestDeleteFailure_ReferencedRecordIsConflictWithoutDriverText(t *testing.T) {
+func TestDeleteFailure_ReferencedRecordIsBadRequestWithoutDriverText(t *testing.T) {
 	err := fmt.Errorf("delete failed: %w", &pq.Error{
 		Code:    "23503",
 		Message: `update or delete on table "categories" violates foreign key constraint "categories_parent_id_fkey" on table "categories"`,
@@ -110,7 +110,7 @@ func TestDeleteFailure_ReferencedRecordIsConflictWithoutDriverText(t *testing.T)
 	})
 
 	status, code, message := deleteFailure(err)
-	assert.Equal(t, http.StatusConflict, status)
+	assert.Equal(t, http.StatusBadRequest, status)
 	assert.Equal(t, "in_use", code)
 	assert.NotContains(t, message, "categories_parent_id_fkey")
 
@@ -118,6 +118,19 @@ func TestDeleteFailure_ReferencedRecordIsConflictWithoutDriverText(t *testing.T)
 	assert.Equal(t, http.StatusInternalServerError, status)
 	assert.Equal(t, "delete_failed", code)
 	assert.NotContains(t, message, "pq:")
+}
+
+func TestDeleteFailure_PostgresRestrictViolationIsBadRequestWithoutDriverText(t *testing.T) {
+	err := fmt.Errorf("delete failed: %w", &pq.Error{
+		Code:    "23001",
+		Message: `update or delete on table "categories" violates foreign key constraint "categories_parent_id_fkey" on table "categories"`,
+		Detail:  `Key (id)=(1) is still referenced from table "categories".`,
+	})
+
+	status, code, message := deleteFailure(err)
+	assert.Equal(t, http.StatusBadRequest, status)
+	assert.Equal(t, "in_use", code)
+	assert.NotContains(t, message, "categories_parent_id_fkey")
 }
 
 func TestRespondWriteError_UnexpectedErrorDoesNotLeakDriverText(t *testing.T) {
@@ -314,7 +327,7 @@ func TestHandleBulkUpdate_UnclassifiedErrorIsGenericServerError(t *testing.T) {
 	assert.Equal(t, "update_failed", body.Error.Details.Errors[0].Code)
 }
 
-func TestHandleBulkDelete_AllInUseReturn409(t *testing.T) {
+func TestHandleBulkDelete_AllInUseReturn400(t *testing.T) {
 	admin := &mockAdmin{
 		getObjectFn: func(id interface{}) (interface{}, error) {
 			return map[string]interface{}{"id": id}, nil
@@ -332,10 +345,73 @@ func TestHandleBulkDelete_AllInUseReturn409(t *testing.T) {
 	rec := httptest.NewRecorder()
 	router.handleBulkDelete(admin)(rec, req)
 
-	require.Equal(t, http.StatusConflict, rec.Code)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
 	body := decodeBulkErrors(t, rec)
 	require.Len(t, body.Error.Details.Errors, 2)
 	assert.Equal(t, "in_use", body.Error.Details.Errors[0].Code)
+	assert.NotContains(t, rec.Body.String(), "products")
+}
+
+func TestHandleDelete_ProtectedReferenceReturns400(t *testing.T) {
+	admin := &mockAdmin{
+		getObjectResponse: map[string]interface{}{"id": int64(1)},
+		deleteObjectFn: func(interface{}) error {
+			return fmt.Errorf("delete failed: %w", &pq.Error{Code: "23503", Detail: `Key (id)=(1) is still referenced from table "secret_orders".`})
+		},
+	}
+	req := withURLParam(httptest.NewRequest(http.MethodDelete, "/api/products/1/", nil), "id", "1")
+	rec := httptest.NewRecorder()
+	NewRouter(core.NewRegistry()).handleDelete(admin)(rec, req)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	code, _, _ := decodeWriteError(t, rec)
+	assert.Equal(t, "in_use", code)
+	assert.NotContains(t, rec.Body.String(), "secret_orders")
+}
+
+func sqliteRestrictDeleteError(t *testing.T) error {
+	t.Helper()
+	database, err := sql.Open("sqlite3", ":memory:?_foreign_keys=on")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, database.Close()) })
+	_, err = database.Exec(`CREATE TABLE products (id INTEGER PRIMARY KEY);
+		CREATE TABLE secret_lines (product_id INTEGER REFERENCES products(id) ON DELETE RESTRICT);
+		INSERT INTO products VALUES (1);
+		INSERT INTO secret_lines VALUES (1);`)
+	require.NoError(t, err)
+	_, err = database.Exec(`DELETE FROM products WHERE id = 1`)
+	require.Error(t, err)
+	return fmt.Errorf("delete failed: %w", err)
+}
+
+func TestHandleDelete_SQLiteRestrictReturns400(t *testing.T) {
+	deleteErr := sqliteRestrictDeleteError(t)
+	admin := &mockAdmin{
+		getObjectResponse: map[string]interface{}{"id": int64(1)},
+		deleteObjectFn:    func(interface{}) error { return deleteErr },
+	}
+	req := withURLParam(httptest.NewRequest(http.MethodDelete, "/api/products/1/", nil), "id", "1")
+	rec := httptest.NewRecorder()
+	NewRouter(core.NewRegistry()).handleDelete(admin)(rec, req)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	code, _, _ := decodeWriteError(t, rec)
+	assert.Equal(t, "in_use", code)
+	assert.NotContains(t, rec.Body.String(), "secret_lines")
+}
+
+func TestHandleBulkDelete_SQLiteRestrictReturns400(t *testing.T) {
+	deleteErr := sqliteRestrictDeleteError(t)
+	admin := &mockAdmin{
+		getObjectFn:    func(id interface{}) (interface{}, error) { return map[string]interface{}{"id": id}, nil },
+		deleteObjectFn: func(interface{}) error { return deleteErr },
+	}
+	req := httptest.NewRequest(http.MethodDelete, "/api/products/bulk-delete", strings.NewReader(`{"ids":[1,2]}`))
+	rec := httptest.NewRecorder()
+	NewRouter(core.NewRegistry()).handleBulkDelete(admin)(rec, req)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	body := decodeBulkErrors(t, rec)
+	require.Len(t, body.Error.Details.Errors, 2)
+	assert.Equal(t, "in_use", body.Error.Details.Errors[0].Code)
+	assert.NotContains(t, rec.Body.String(), "secret_lines")
 }
 
 func TestBulkFailure_MixedClientErrorsReturn400AndAnyServerErrorReturns500(t *testing.T) {

@@ -1,8 +1,35 @@
 package admin
 
 import (
+	"encoding/json"
+	"net/http/httptest"
+	"reflect"
 	"testing"
 )
+
+func TestSiteIndexDoesNotExposeWidgetRegistration(t *testing.T) {
+	if _, ok := reflect.TypeOf(&Site{}).MethodByName("AddWidget"); ok {
+		t.Fatal("Site unexpectedly exposes AddWidget; update dashboard documentation")
+	}
+
+	recorder := httptest.NewRecorder()
+	NewSite("test").IndexView().ServeHTTP(recorder, httptest.NewRequest("GET", "/", nil))
+	if recorder.Code != 200 {
+		t.Fatalf("index status = %d, want 200", recorder.Code)
+	}
+	var response map[string]json.RawMessage
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"models", "plugins"} {
+		if _, ok := response[key]; !ok {
+			t.Errorf("index response missing %q", key)
+		}
+	}
+	if _, ok := response["widgets"]; ok {
+		t.Fatal("index response unexpectedly advertises widgets")
+	}
+}
 
 func TestNewSite(t *testing.T) {
 	tests := []struct {

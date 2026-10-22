@@ -73,17 +73,24 @@ func (t *UserRateThrottle) GetScope(r *http.Request, view interface{}) string {
 
 func getUserID(user interface{}) interface{} {
 	value := reflect.ValueOf(user)
+	if !value.IsValid() || (value.Kind() == reflect.Ptr && value.IsNil()) {
+		return nil
+	}
+	// Generated models expose GetID on a pointer receiver. Dereferencing
+	// first discards that method and merges all their throttle counters.
+	if method := value.MethodByName("GetID"); method.IsValid() && method.Type().NumIn() == 0 && method.Type().NumOut() == 1 {
+		results := method.Call(nil)
+		return results[0].Interface()
+	}
 	if value.Kind() == reflect.Ptr {
 		value = value.Elem()
 	}
-	if method := value.MethodByName("GetID"); method.IsValid() {
-		results := method.Call(nil)
-		if len(results) > 0 {
-			return results[0].Interface()
+	if value.Kind() == reflect.Struct {
+		for _, name := range []string{"ID", "Id"} {
+			if field := value.FieldByName(name); field.IsValid() && field.CanInterface() {
+				return field.Interface()
+			}
 		}
-	}
-	if field := value.FieldByName("ID"); field.IsValid() {
-		return field.Interface()
 	}
 	return nil
 }

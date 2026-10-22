@@ -341,9 +341,16 @@ func (a *Admin[T]) getObjectLabel(obj *T) string {
 	if val.Kind() == reflect.Ptr {
 		val = val.Elem()
 	}
+	hidden := make(map[string]bool)
+	for _, name := range schema.NonSerializableFieldNames(new(T)) {
+		hidden[strings.ToLower(name)] = true
+	}
 
 	// 1. Try common label fields
 	for _, name := range []string{"Name", "Title", "Label", "Email", "Username", "DisplayName", "Subject", "Description", "Code", "Slug"} {
+		if hidden[strings.ToLower(name)] {
+			continue
+		}
 		f := val.FieldByName(name)
 		if f.IsValid() {
 			str := fmt.Sprintf("%v", f.Interface())

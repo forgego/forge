@@ -81,7 +81,14 @@ func (a *Admin[T]) checkObjectPermission(
 		return hook(ctx, a, user, typedObj)
 	}
 	if a.config.PermissionChecker != nil {
-		return a.config.PermissionChecker.HasPermission(ctx, user, GetPermissionName(a.name, permType))
+		permission := GetPermissionName(a.name, permType)
+		if !a.config.PermissionChecker.HasPermission(ctx, user, permission) {
+			return false
+		}
+		if typedObj != nil {
+			return a.config.PermissionChecker.HasObjectPermission(ctx, user, typedObj, permission)
+		}
+		return true
 	}
 	if isSuperuser(user) {
 		return true

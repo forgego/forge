@@ -23,6 +23,8 @@ Content negotiation selects a renderer and parser based on request headers.
 - CSV
 - YAML
 
+CSV struct headers use JSON field names: `json:"name"` renames a column, `json:"-"` omits it, and `omitempty` does not remove a column. Formula-like text cells receive a leading single quote; numeric Go values retain their numeric representation.
+
 ## Next steps
 
 - [Errors](/docs/api/errors/)

@@ -432,6 +432,18 @@ func (ManualKey) Fields() []schema.Field {
 	assert.Equal(t, oldAPI, gotAPI)
 }
 
+func TestGenerateRejectsUnreadableAppModels(t *testing.T) {
+	appDir := filepath.Join(t.TempDir(), "app")
+	broken := filepath.Join(appDir, "catalog", "models.go")
+	require.NoError(t, os.MkdirAll(filepath.Dir(broken), 0755))
+	require.NoError(t, os.Symlink(filepath.Join(appDir, "gone"), broken))
+	good := filepath.Join(appDir, "valid", "models.go")
+	require.NoError(t, os.MkdirAll(filepath.Dir(good), 0755))
+	require.NoError(t, os.WriteFile(good, []byte(testNoPKModelSource), 0600))
+	_, err := executeGenerate(t, appDir, true)
+	require.ErrorContains(t, err, broken)
+}
+
 func executeGenerate(t *testing.T, modelsDir string, strict bool) (string, error) {
 	t.Helper()
 	command := NewGenerateCommand().Definition()

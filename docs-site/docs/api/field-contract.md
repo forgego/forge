@@ -23,10 +23,10 @@ A model's `Fields()` schema sets two flags on each field. Together they give the
 
 Some fields are read-only even with `Editable: true`, because the database owns their values: an auto-increment primary key, `AutoNow`, `AutoNowAdd` and `Generated` columns.
 
-The viewset enforces these roles only through two fields that you set from the schema. The generated viewset sets both:
+The viewset always omits fields with `Serialize: false` from responses, including `schema.WriteOnly()` fields. The generated viewset also sets these fields for compatibility and request handling:
 
 ```go
-vs.ExcludeResponseFields = api.NonSerializableFields(&Product{}) // drop Serialize(false) fields from responses
+vs.ExcludeResponseFields = api.NonSerializableFields(&Product{}) // optional explicit response exclusion
 vs.ReadOnlyRequestFields = api.NonEditableFields(&Product{})     // ignore read-only and database-owned fields in requests
 ```
 
@@ -34,13 +34,15 @@ vs.ReadOnlyRequestFields = api.NonEditableFields(&Product{})     // ignore read-
 
 ## Responses
 
-A response contains every exported struct field that has a `json` tag other than `-`, under its JSON name. A tag that gives no name, such as `json:",omitempty"`, uses the Go field name. The viewset then removes the following keys, in order:
+A response starts with every exported struct field that has a `json` tag other than `-`, under its JSON name. A tag that gives no name, such as `json:",omitempty"`, uses the Go field name. Schema fields with `Serialize: false` are removed automatically, including from nested model relations. The viewset then removes the following keys, in order:
 
 1. `ExcludeResponseFields`.
 2. Keys not listed in the serializer's `Fields()`, when that list is non-empty. A nil or empty `Fields()` keeps every field.
 3. The serializer's `Exclude()` and `WriteOnlyFields()`.
 
 `BaseViewSet` has no computed response fields. Every key comes from a struct field. A value derived from other columns belongs in a `Generated` schema field, which the database computes and the viewset treats as read-only. Values computed in Go belong in a custom handler or a [router action](/docs/api/viewsets/).
+
+The same visibility rules apply to list, detail, create, update, and partial update responses. Custom actions and handlers that serialize models should use `api.SerializeModel` or `api.SerializeMany` to apply schema visibility; their own response formatting remains the handler's responsibility.
 
 ## Requests
 
@@ -88,6 +90,8 @@ Read-only keys that clients echo back from an earlier response, such as `id` and
 | `null` on a `TypeJSON` field | JSON `null` is written: the bytes `null` for a `[]byte` field, otherwise the zero value. |
 
 ### Zero values the database fills on create
+
+On `POST`, a required editable field without a Go-side or database default must be supplied with a non-null value. Explicit numeric zero and boolean false are valid values; string length and other field validators still apply.
 
 On `POST`, the viewset hands the model to the manager's `Create`, which writes the value each field holds, including `false`, `0` and `""` on required fields and fields with a `Default`. A key omitted from the body first gets the field's Go-side `Default`. A few fields still reach `Create` at their zero value and are left out of the `INSERT`, whether the client omitted the key or sent the zero explicitly, so the database fills them (see [Defaults, zero values and timestamps](/docs/models/#defaults-zero-values-and-timestamps)):
 

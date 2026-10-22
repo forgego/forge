@@ -13,6 +13,25 @@ import (
 
 type mockAuthUser struct{ ID string }
 
+// Generated model bases expose Id through a pointer-receiver GetID method.
+type generatedAuthUser struct{ Id int64 }
+
+func (u *generatedAuthUser) GetID() int64 { return u.Id }
+
+func TestUserThrottleSeparatesGeneratedModelPrincipals(t *testing.T) {
+	throttle := NewUserRateThrottle("1/minute").WithStore(newFakeStore(1, time.Minute))
+	for _, id := range []int64{11, 22} {
+		request := httptest.NewRequest(http.MethodGet, "/limited", nil)
+		authentication.SetUserOnRequest(request, &generatedAuthUser{Id: id})
+		allowed, _, err := throttle.AllowRequest(request, nil)
+		require.NoError(t, err)
+		assert.True(t, allowed, "principal %d must have its own allowance", id)
+		allowed, _, err = throttle.AllowRequest(request, nil)
+		require.NoError(t, err)
+		assert.False(t, allowed, "principal %d must still be limited", id)
+	}
+}
+
 func TestParseRate(t *testing.T) {
 	limit, window, err := parseRate("100/hour")
 	require.NoError(t, err)

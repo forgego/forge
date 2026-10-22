@@ -9,7 +9,7 @@ async function chooseRadixOption(page, triggerTestId: string, optionName: string
 // ecommerce reference server (seeded sqlite) serving the production bundle.
 const username = process.env.FORGE_ADMIN_USERNAME || 'admin';
 const password = process.env.FORGE_ADMIN_PASSWORD || 'admin123';
-const adminApi = 'http://localhost:8020/admin/api';
+const adminApi = `${process.env.FORGE_SERVER_BASE_URL || `http://localhost:${process.env.FORGE_SERVER_PORT || '8020'}`}/admin/api`;
 
 async function login(page) {
   await page.goto('login');

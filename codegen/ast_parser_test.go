@@ -42,6 +42,26 @@ func (hookHelpers) afterSave(ctx context.Context, instance interface{}) error { 
 	}
 }
 
+func TestParseDirectory_DiscoversModelDefinitionsFromSource(t *testing.T) {
+	dir := t.TempDir()
+	source := `package models
+import "github.com/forgego/forge/schema"
+type Product struct { schema.BaseSchema }
+func (Product) Fields() []schema.Field { return []schema.Field{schema.StringField("name")} }
+func (Product) Meta() schema.Meta { return schema.Meta{TableName: "products"} }
+`
+	if err := os.WriteFile(filepath.Join(dir, "models.go"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	definitions, err := NewASTParser().ParseDirectory(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(definitions) != 1 || definitions[0].Name != "Product" || definitions[0].Meta.TableName != "products" {
+		t.Fatalf("expected Product from source without registration, got %#v", definitions)
+	}
+}
+
 func TestParseFile_ExtractsHooksFromBuilderChain(t *testing.T) {
 	src := `package models
 import (

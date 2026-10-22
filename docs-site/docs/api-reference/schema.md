@@ -37,19 +37,17 @@ func (BaseSchema) Meta() Meta            { return Meta{} }
 func (BaseSchema) Hooks() *ModelHooks    { return nil }
 ```
 
+For models you pass to `forge generate`, embed `<Model>Generated` (for example,
+`ArticleGenerated`) when you need the generated Go fields and CRUD methods.
+The generated type includes `BaseSchema`.
+
 ---
 
-## Schema Registry
+## Model Discovery
 
-Forge maintains a package-level registry of declared models used by the code generator and migration engine:
+The code generator and migration generator parse model declarations from the configured models directory. They do not use a runtime model registry: `schema.Register` and `schema.GetRegisteredModels` are not package APIs. Declare models as Go structs implementing `schema.Schema` and pass their source directory to generation commands.
 
-```go
-// Register a model definition
-schema.Register(&Product{})
-
-// Retrieve registered models
-models := schema.GetRegisteredModels()
-```
+The registry in the `schema` package is for custom **field types**. Use `schema.RegisterFieldType` to add a field factory and `schema.ListRegisteredFieldTypes` to list those field type names.
 
 ---
 
@@ -87,11 +85,15 @@ func (Product) Meta() schema.Meta {
             schema.GINIndex("idx_product_metadata", "metadata"),
         },
         Constraints: []schema.Constraint{
-            schema.Check("chk_product_price", "price >= 0"),
+            {Name: "chk_product_price", Type: schema.ConstraintTypeCheck, Condition: "price >= 0"},
         },
     }
 }
 ```
+
+`forge makemigrations` reads the literal `Constraint` above. The `schema.Check`
+helper builds equivalent runtime metadata but is not yet supported by source
+generation. `GINIndex` is PostgreSQL-specific; use B-tree indexes on SQLite.
 
 ---
 

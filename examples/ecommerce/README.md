@@ -1,807 +1,119 @@
-# Forge Ecommerce - Complete Example
+# Forge ecommerce example
 
-A full-featured, production-grade ecommerce system built with Forge framework, demonstrating all framework capabilities.
+This is a reference store for Forge's generated models, REST resources, admin UI, and a few custom catalog and order endpoints. It is a development example. The `/api/v1/` model resources allow writes without authentication; the admin API requires an admin login. Add API permissions before exposing this app to untrusted clients.
 
-## Overview
+## Run locally
 
-This is a comprehensive ecommerce platform showcasing:
-
-- **Complex Schema System** - Multiple models with intricate relationships
-- **Advanced ORM** - Complex queries, filters, aggregations
-- **Complete Admin Interface** - Full CRUD with custom actions and filters
-- **REST API** - Full API for frontend applications
-- **Filter System** - Advanced filtering across all models
-- **Authentication & Authorization** - User management, permissions
-- **Migrations** - Complete database schema management
-- **Business Logic** - Inventory management, order processing, pricing
-
-## Features
-
-### Catalog Management
-- **Categories** - Hierarchical product categories with nested subcategories
-- **Products** - Full product information with multiple variants
-- **Product Variants** - SKU-based variants (size, color, etc.)
-- **Product Images** - Multiple images per product
-- **Attributes** - Dynamic product attributes
-
-### Customer Management
-- **Customers** - Customer profiles with authentication
-- **Addresses** - Multiple shipping/billing addresses
-- **Wish Lists** - Customer wish lists
-- **Customer Groups** - Segmentation for pricing/promotions
-
-### Order Management
-- **Shopping Cart** - Persistent shopping carts
-- **Orders** - Complete order lifecycle
-- **Order Items** - Line items with pricing history
-- **Payments** - Payment tracking and processing
-- **Shipments** - Shipping and fulfillment tracking
-- **Order Status** - Complete status workflow
-
-### Inventory Management
-- **Warehouses** - Multiple warehouse support
-- **Stock** - Real-time inventory tracking
-- **Stock Movements** - Full inventory audit trail
-- **Stock Alerts** - Low stock notifications
-
-### Marketing & Promotion
-- **Coupons** - Discount codes and promotions
-- **Reviews** - Product reviews and ratings
-- **Ratings** - Star ratings with aggregation
-
-## Project Structure
-
-```
-ecommerce/
-├── main.go                     # Application entry point
-├── go.mod                      # Go module file
-├── config/
-│   └── config.yaml            # Configuration
-├── app/
-│   ├── catalog/               # Catalog management
-│   │   ├── models.go          # Product, Category, Variant models
-│   │   ├── admin.go           # Admin configuration
-│   │   ├── api.go             # API viewsets
-│   │   └── filters.go         # Custom filters
-│   ├── customers/             # Customer management
-│   │   ├── models.go          # Customer, Address models
-│   │   ├── admin.go
-│   │   ├── api.go
-│   │   └── filters.go
-│   ├── orders/                # Order management
-│   │   ├── models.go          # Order, OrderItem, Payment models
-│   │   ├── admin.go
-│   │   ├── api.go
-│   │   ├── filters.go
-│   │   └── services.go        # Business logic
-│   ├── inventory/             # Inventory management
-│   │   ├── models.go          # Stock, Warehouse models
-│   │   ├── admin.go
-│   │   ├── api.go
-│   │   └── services.go
-│   └── marketing/             # Marketing features
-│       ├── models.go          # Coupon, Review models
-│       ├── admin.go
-│       ├── api.go
-│       └── filters.go
-├── migrations/                 # Database migrations
-├── static/                     # Static files
-└── templates/                  # HTML templates
-
-```
-
-## Models Overview
-
-### Catalog (7 models)
-1. **Category** - Product categories with parent/child hierarchy
-2. **Product** - Main product model
-3. **ProductVariant** - Product variations (SKU level)
-4. **ProductImage** - Product images with ordering
-5. **ProductAttribute** - Dynamic attributes
-6. **AttributeValue** - Attribute values
-7. **Brand** - Product brands
-
-### Customers (4 models)
-1. **Customer** - Customer profiles
-2. **Address** - Shipping/billing addresses
-3. **WishList** - Customer wish lists
-4. **CustomerGroup** - Customer segmentation
-
-### Orders (6 models)
-1. **Cart** - Shopping cart
-2. **CartItem** - Cart line items
-3. **Order** - Order master
-4. **OrderItem** - Order line items
-5. **Payment** - Payment transactions
-6. **Shipment** - Shipping information
-
-### Inventory (4 models)
-1. **Warehouse** - Warehouse locations
-2. **Stock** - Inventory levels
-3. **StockMovement** - Inventory transactions
-4. **StockAlert** - Low stock alerts
-
-### Marketing (3 models)
-1. **Coupon** - Discount codes
-2. **Review** - Product reviews
-3. **Rating** - Product ratings
-
-**Total: 23 Models with complex relationships**
-
-## Database Schema
-
-### Key Relationships
-
-```
-Category (self-referential)
-    ├── Products (one-to-many)
-    
-Product
-    ├── Category (foreign key)
-    ├── Brand (foreign key)
-    ├── ProductVariants (one-to-many)
-    ├── ProductImages (one-to-many)
-    ├── Reviews (one-to-many)
-    └── Attributes (many-to-many)
-
-ProductVariant
-    ├── Product (foreign key)
-    └── Stock (one-to-many)
-
-Customer
-    ├── Addresses (one-to-many)
-    ├── WishLists (one-to-many)
-    ├── CustomerGroup (foreign key)
-    ├── Orders (one-to-many)
-    └── Reviews (one-to-many)
-
-Order
-    ├── Customer (foreign key)
-    ├── OrderItems (one-to-many)
-    ├── Payments (one-to-many)
-    ├── Shipment (one-to-one)
-    └── Coupon (foreign key)
-
-OrderItem
-    ├── Order (foreign key)
-    └── ProductVariant (foreign key)
-
-Stock
-    ├── ProductVariant (foreign key)
-    ├── Warehouse (foreign key)
-    └── StockMovements (one-to-many)
-```
-
-## Quick Start
-
-### 1. Create the Project
-
-This example is already created, but to create a similar project:
+From the repository root, build the local CLI and put it on `PATH`:
 
 ```bash
-# Navigate to examples directory
-cd examples
-
-# The ecommerce project is ready to use
-cd ecommerce
+GOTOOLCHAIN=go1.26.10 go build -o /tmp/forge ./cmd/forge
+export PATH=/tmp:$PATH
+cd examples/ecommerce
+export GOTOOLCHAIN=go1.26.10
 ```
 
-### 2. Configure Database
-
-Edit `config/config.yaml`:
-
-```yaml
-database:
-  driver: postgres
-  host: localhost
-  port: 5432
-  user: postgres
-  password: postgres
-  dbname: ecommerce_db
-  sqlite_path: ./ecommerce.sqlite
-  sslmode: disable
-```
-
-Create the database:
-
-```sql
-CREATE DATABASE ecommerce_db;
-```
-
-If Postgres is unavailable, the example will fall back to SQLite automatically, or you can set `driver: sqlite` and use `sqlite_path` to point to a local file.
-
-### 3. Generate Code
-
-Generate type-safe code from models:
+The default `config/config.yaml` uses SQLite and creates `./ecommerce.sqlite` on first use. To use PostgreSQL, create an empty database first and set the connection through environment variables. For example, with a PostgreSQL database named `ecom` listening on local port `55433`:
 
 ```bash
-forge generate
+export FORGE_DATABASE_DRIVER=postgres
+export FORGE_DATABASE_HOST=127.0.0.1
+export FORGE_DATABASE_PORT=55433
+export FORGE_DATABASE_USER=ecom
+export FORGE_DATABASE_PASSWORD='<your database password>'
+export FORGE_DATABASE_NAME=ecom
 ```
 
-This generates:
-- Model structs with all fields
-- Type-safe field expressions
-- Managers with CRUD operations
-- QuerySets for filtering and queries
-
-### 4. Create Migrations
-
-Generate migrations from models:
+Then install dependencies, generate model code and a migration for the selected driver, apply it, and build the admin UI:
 
 ```bash
-forge makemigrations
-```
-
-Apply migrations:
-
-```bash
-forge migrate
-```
-
-### 5. Create Superuser
-
-Create an admin user:
-
-```bash
-forge createsuperuser
-```
-
-### 6. Run Server
-
-Start the development server:
-
-```bash
-forge runserver
-```
-
-Or directly:
-
-```bash
-go run main.go
-```
-
-### 7. Access Interfaces
-
-- **Admin Interface**: http://localhost:8020/admin/
-- **REST API**: http://localhost:8020/api/v1/
-- **API Docs**: http://localhost:8020/api/v1/docs/
-
-## Admin UI
-
-The admin interface is a modern React application served directly by the Go server at http://localhost:8020/admin/. The port is configured via `server.port` in `config/config.yaml` (default `8020`, or overridden by the `FORGE_SERVER_PORT` environment variable). Log in with default credentials `admin` / `admin123` (configured via `admin.username` and `admin.password` in `config/config.yaml`).
-
-Without building the UI bundle, the server falls back to serving a placeholder stub page (`admin/ui/stub/index.html`).
-
-### Quick Start
-
-Build the admin UI bundle and start the server:
-
-```bash
+make install
+make generate
+make makemigrations
+make migrate
 make admin-ui
+```
+
+`make makemigrations` creates SQL under `migrations/` using the current database driver. Review the SQL before applying it. The server also runs `SetupSchema` at startup for the example's models. Do not reuse a PostgreSQL migration against SQLite, or vice versa.
+
+Pick an unused local port (`ss -ltn` shows listeners), then run the server:
+
+```bash
+export FORGE_SERVER_PORT=8020
 make run-go
 ```
 
-Or build and run in a single command:
+The homepage is at `/`, the admin UI at `/admin/`, and the OpenAPI document at `/api/openapi.json`. `/api/v1/` is a route prefix, not an index or documentation page. The admin login uses the credentials configured under `admin` in `config/config.yaml`, or `FORGE_ADMIN_USERNAME` and `FORGE_ADMIN_PASSWORD`. `forge createsuperuser` manages Forge identity users in a separate `users` table; it does not create this example's admin login.
+
+For a standalone binary with the built UI embedded, run `make build-embed` and then `./ecommerce` with the same database and port settings.
+
+## Exercise the REST API
+
+Set `BASE` to the port selected above. Collection URLs end in `/`; detail URLs use the ID without a trailing `/`.
 
 ```bash
-make demo
+BASE=http://localhost:8020
+curl "$BASE/api/v1/categories/"
+curl "$BASE/api/v1/products/"
+curl "$BASE/api/v1/orders/"
+curl "$BASE/api/openapi.json"
 ```
 
-### Production Binary
-
-Build the admin UI and compile a self-contained production binary with the UI bundle embedded via `-tags embed`:
+Create a category, then use its returned ID when creating a product. Product `slug` and `sku` are required.
 
 ```bash
-make build-embed
-./ecommerce
+curl -X POST "$BASE/api/v1/categories/" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Electronics","slug":"electronics"}'
+
+curl -X POST "$BASE/api/v1/products/" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Laptop","slug":"laptop","sku":"LAP-001","description":"Laptop","price":999.99,"category_id":1}'
+
+curl "$BASE/api/v1/products/1"
+curl "$BASE/api/v1/products/?category_id=1&price__gte=100"
+curl "$BASE/api/v1/products/?search=laptop&ordering=-created_at"
+curl -X PATCH "$BASE/api/v1/products/1" \
+  -H 'Content-Type: application/json' -d '{"price":899.99}'
+curl -X DELETE "$BASE/api/v1/products/1"
 ```
 
-### End-to-End Tests
-
-Run the Playwright end-to-end test suite for the admin UI (Google Chrome is required; the suite starts the server automatically):
+Use the IDs returned by your own requests; they may differ from `1`. Direct field filters such as `category_id`, `price__gte`, `status`, and `status__in` work on the model resources. Deep relation filters such as `category__name` and `customer__email` are not implemented by these resources. The custom catalog endpoint supports `q`, `category_id`, `brand_id`, `min_price`, `max_price`, and `in_stock`:
 
 ```bash
+curl "$BASE/api/v1/catalog/search?q=lap&min_price=100&in_stock=true"
+curl "$BASE/api/v1/catalog/stats"
+```
+
+An order resource requires an existing customer and the order's required snapshot and total fields. `items` is not accepted by the ordinary `/orders/` create route. For an order with line items, use the checkout endpoint with an existing customer and product ID:
+
+```bash
+curl -X POST "$BASE/api/v1/orders/checkout" \
+  -H 'Content-Type: application/json' \
+  -d '{"customer_id":1,"items":[{"product_id":1,"quantity":2,"unit_price":99.99}]}'
+curl "$BASE/api/v1/orders/?status=pending"
+curl "$BASE/api/v1/orders/summary"
+```
+
+## Admin API and UI tests
+
+The admin API returns 401 without authentication. POST to `/admin/api/login` with the configured admin username and password, then send its `token` as a Bearer token. For example:
+
+```bash
+curl -X POST "$BASE/admin/api/login" \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"<admin username>","password":"<admin password>"}'
+curl "$BASE/admin/api/categories" -H 'Authorization: Bearer <token>'
+```
+
+The admin UI has model list, create, edit, detail, search, export, and bulk action views. The example registers models across `catalog`, `customers`, `orders`, `inventory`, `marketing`, `commerce`, `engagement`, `promotions`, `support`, and `users`.
+
+Run the Go and browser suites from this directory:
+
+```bash
+cd ui-tests && npm ci && npx playwright install chromium && cd ..
+make test
 make ui-test
 ```
 
-### Mounting Under a Different Path
-
-To mount the admin UI under a custom path, set `admin.path` in `config/config.yaml` (for example, `admin.path: /custom-admin/`). The Go server injects the prefix into the React UI at runtime, so no rebuild of the UI bundle is needed.
-
-## CLI Commands Demonstrated
-
-### Project Management
-```bash
-# Create new project
-forge new ecommerce --template=simple --database=postgres
-
-# Add new app
-forge add app marketing
-
-# Add new model
-forge add model Product --app=catalog
-```
-
-### Code Generation
-```bash
-# Generate all code
-forge generate
-
-# Generate for specific app
-forge generate --models=./app/catalog
-
-# Preview generation
-forge generate --dry-run
-```
-
-### Migration Management
-```bash
-# Create new migration
-forge makemigrations
-
-# Apply migrations
-forge migrate
-
-# Check migration status
-forge migrate status
-
-# Rollback migration
-forge migrate rollback
-
-# Show migration SQL
-forge migrate show 001_initial
-
-# Lint migrations
-forge migrate lint
-```
-
-### Development
-```bash
-# Run development server
-forge runserver
-
-# Run with custom host/port
-forge runserver --host=0.0.0.0 --port=9000
-
-# Run tests
-forge test
-
-# Check project
-forge check
-
-# Interactive shell
-forge shell
-```
-
-### Admin
-```bash
-# Create superuser
-forge createsuperuser
-
-# Create regular user
-forge createsuperuser --no-superuser
-```
-
-## API Examples
-
-### Products API
-
-```bash
-# List products
-curl http://localhost:8020/api/v1/products/
-
-# Filter products
-curl "http://localhost:8020/api/v1/products/?category__name=Electronics&price__gte=100"
-
-# Get product
-curl http://localhost:8020/api/v1/products/1/
-
-# Create product
-curl -X POST http://localhost:8020/api/v1/products/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Laptop",
-    "description": "High-performance laptop",
-    "price": 999.99,
-    "category_id": 1
-  }'
-
-# Update product
-curl -X PATCH http://localhost:8020/api/v1/products/1/ \
-  -H "Content-Type: application/json" \
-  -d '{"price": 899.99}'
-
-# Delete product
-curl -X DELETE http://localhost:8020/api/v1/products/1/
-```
-
-### Orders API
-
-```bash
-# List orders
-curl http://localhost:8020/api/v1/orders/
-
-# Filter by status
-curl "http://localhost:8020/api/v1/orders/?status=pending"
-
-# Filter by customer
-curl "http://localhost:8020/api/v1/orders/?customer__email=john@example.com"
-
-# Create order
-curl -X POST http://localhost:8020/api/v1/orders/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "customer_id": 1,
-    "items": [
-      {"product_variant_id": 1, "quantity": 2, "price": 99.99}
-    ]
-  }'
-```
-
-### Advanced Filtering
-
-```bash
-# Complex filters with deep relations
-curl "http://localhost:8020/api/v1/products/?category__parent__name=Electronics&reviews__rating__gte=4"
-
-# Multiple conditions
-curl "http://localhost:8020/api/v1/orders/?status__in=pending,processing&created_at__gte=2024-01-01&total__gte=100"
-
-# Search
-curl "http://localhost:8020/api/v1/products/?search=laptop"
-
-# Ordering
-curl "http://localhost:8020/api/v1/products/?ordering=-created_at,price"
-```
-
-## ORM Usage Examples
-
-### Simple Queries
-
-```go
-import (
-    "context"
-    "examples/ecommerce/app/catalog"
-)
-
-ctx := context.Background()
-
-// Get all products
-products, err := catalog.Product.Objects.All(ctx)
-
-// Get single product
-product, err := catalog.Product.Objects.Get(ctx, 1)
-
-// Filter products
-products, err := catalog.Product.Objects.
-    Filter(catalog.Product.Fields.Price.GreaterThan(100)).
-    OrderBy("-created_at").
-    All(ctx)
-
-// Count products
-count, err := catalog.Product.Objects.
-    Filter(catalog.Product.Fields.IsActive.Equals(true)).
-    Count(ctx)
-```
-
-### Complex Queries
-
-```go
-// Filter with multiple conditions
-products, err := catalog.Product.Objects.
-    Filter(
-        catalog.Product.Fields.Price.Between(50, 200).
-            And(catalog.Product.Fields.IsActive.Equals(true)).
-            And(catalog.Product.Fields.Stock.GreaterThan(0)),
-    ).
-    OrderBy("-created_at").
-    Limit(10).
-    All(ctx)
-
-// Deep relation filtering
-products, err := catalog.Product.Objects.
-    Filter(
-        catalog.Product.Fields.Category.Name.Equals("Electronics").
-            And(catalog.Product.Fields.Reviews.Rating.GreaterThanOrEqual(4)),
-    ).
-    All(ctx)
-
-// Aggregations
-avgPrice, err := catalog.Product.Objects.
-    Filter(catalog.Product.Fields.Category.ID.Equals(1)).
-    Aggregate(catalog.Product.Fields.Price.Avg())
-```
-
-### Create, Update, Delete
-
-```go
-// Create
-product := &catalog.Product{
-    Name:        "New Product",
-    Description: "Product description",
-    Price:       99.99,
-    CategoryID:  1,
-    IsActive:    true,
-}
-err := catalog.Product.Objects.Create(ctx, product)
-
-// Update
-product.Price = 89.99
-err := catalog.Product.Objects.Update(ctx, product)
-
-// Delete
-err := catalog.Product.Objects.Delete(ctx, product)
-
-// Bulk operations
-err := catalog.Product.Objects.
-    Filter(catalog.Product.Fields.IsActive.Equals(false)).
-    Delete(ctx)
-```
-
-## Filter System Examples
-
-### Declarative Filters
-
-```go
-// Product filter
-type ProductFilter struct {
-    *filter.FilterSet[catalog.Product]
-    Name     *filters.CharFilter[catalog.Product]
-    Price    *filters.NumberFilter[catalog.Product]
-    Category *filters.RelatedFilter[catalog.Product, catalog.Category]
-}
-
-func NewProductFilter() *ProductFilter {
-    fs, _ := filter.NewFilterSet[catalog.Product]()
-    return &ProductFilter{
-        FilterSet: fs,
-        Name:      filters.NewCharFilter[catalog.Product]("name").IContains(),
-        Price:     filters.NewNumberFilter[catalog.Product]("price").Range(),
-        Category:  filters.NewRelatedFilter[catalog.Product, catalog.Category]("category"),
-    }
-}
-```
-
-### Using Filters
-
-```go
-// Create filter
-pf := NewProductFilter()
-
-// Apply filters
-pf.Where("name").Contains("laptop")
-pf.Where("price").Between(500, 2000)
-pf.Where("category__name").Equals("Electronics")
-
-// Get results
-products, err := pf.ApplyAST(ctx, pf.GetAST())
-```
-
-## Admin Interface
-
-The admin interface provides:
-
-### List Views
-- Sortable columns
-- Pagination
-- Bulk actions
-- Search
-- Filters sidebar
-- Export to CSV/JSON
-
-### Detail Views
-- View all fields
-- Related objects
-- Audit trail
-- Action buttons
-
-### Form Views
-- Validation
-- Rich widgets
-- File uploads
-- Related object selection
-- Inline editing
-
-### Custom Actions
-- Bulk status updates
-- Export operations
-- Custom business logic
-
-## Business Logic Examples
-
-### Order Processing
-
-```go
-// app/orders/services.go
-func ProcessOrder(ctx context.Context, orderID int64) error {
-    // Get order
-    order, err := orders.Order.Objects.Get(ctx, orderID)
-    if err != nil {
-        return err
-    }
-    
-    // Validate stock
-    for _, item := range order.Items {
-        stock, err := inventory.Stock.Objects.
-            Filter(inventory.Stock.Fields.ProductVariantID.Equals(item.ProductVariantID)).
-            First(ctx)
-        if err != nil {
-            return err
-        }
-        if stock.Quantity < item.Quantity {
-            return errors.New("insufficient stock")
-        }
-    }
-    
-    // Process payment
-    payment := &orders.Payment{
-        OrderID: order.ID,
-        Amount:  order.Total,
-        Status:  "pending",
-    }
-    err = orders.Payment.Objects.Create(ctx, payment)
-    if err != nil {
-        return err
-    }
-    
-    // Update stock
-    for _, item := range order.Items {
-        err = inventory.UpdateStock(ctx, item.ProductVariantID, -item.Quantity, "order")
-        if err != nil {
-            return err
-        }
-    }
-    
-    // Update order status
-    order.Status = "processing"
-    err = orders.Order.Objects.Update(ctx, order)
-    
-    return err
-}
-```
-
-### Inventory Management
-
-```go
-// app/inventory/services.go
-func UpdateStock(ctx context.Context, variantID int64, quantity int, reason string) error {
-    stock, err := inventory.Stock.Objects.
-        Filter(inventory.Stock.Fields.ProductVariantID.Equals(variantID)).
-        First(ctx)
-    if err != nil {
-        return err
-    }
-    
-    // Create movement record
-    movement := &inventory.StockMovement{
-        StockID:   stock.ID,
-        Quantity:  quantity,
-        Type:      reason,
-        CreatedAt: time.Now(),
-    }
-    err = inventory.StockMovement.Objects.Create(ctx, movement)
-    if err != nil {
-        return err
-    }
-    
-    // Update stock
-    stock.Quantity += quantity
-    err = inventory.Stock.Objects.Update(ctx, stock)
-    if err != nil {
-        return err
-    }
-    
-    // Check for low stock alert
-    if stock.Quantity <= stock.LowStockThreshold {
-        alert := &inventory.StockAlert{
-            StockID:   stock.ID,
-            Message:   "Low stock alert",
-            Threshold: stock.LowStockThreshold,
-            CreatedAt: time.Now(),
-        }
-        inventory.StockAlert.Objects.Create(ctx, alert)
-    }
-    
-    return nil
-}
-```
-
-## Testing
-
-```bash
-# Run all tests
-forge test
-
-# Run specific package
-forge test ./app/orders
-
-# Run with coverage
-forge test -cover
-
-# Run with verbose output
-forge test -v
-```
-
-## Deployment
-
-### Docker
-
-```bash
-# Build image
-docker build -t ecommerce:latest .
-
-# Run with docker-compose
-docker-compose up -d
-```
-
-### Production Checklist
-
-- [ ] Change secret keys in config
-- [ ] Set up production database
-- [ ] Configure CORS for API
-- [ ] Set up SSL/TLS
-- [ ] Configure logging
-- [ ] Set up monitoring
-- [ ] Configure backups
-- [ ] Set up rate limiting
-- [ ] Review security settings
-
-## Architecture Highlights
-
-### Modular Design
-
-- Each app (`catalog`, `customers`, `orders`, `inventory`, `marketing`,
-  `commerce`, `engagement`, `promotions`, `support`, `users`) owns its
-  `models` / `admin` / `api` code plus generated managers, and is
-  independently reusable.
-
-### Request Flow
-
-CORS → Auth → Logging → RateLimit → Router → Service → ORM → DB.
-
-### Order Flow
-
-Cart → validate → checkout → pay → transaction-create → reserve stock
-→ email → fulfill → track.
-
-### Commerce Foundation
-
-`commerce` provides `ShippingMethod` / `PaymentMethod` + `TaxRate` +
-`Currency` / `ExchangeRate` for tax and multi-currency support.
-
-### Promotion Engine
-
-Promotions replace coupons-only: banners, newsletter, usage tracking
-(`PromotionUsage`), stacking rules.
-
-### Engagement
-
-`RecentlyViewed`, product comparisons, user segments, and
-abandoned-cart recovery.
-
-### Support
-
-Tickets, threaded messages, live chat, returns, FAQ, and attachments
-audit trail.
-
-### Inventory
-
-Multi-warehouse `Stock` plus a `StockMovement` audit trail and
-`StockAlert` thresholds.
-
-### Type Safety
-
-- Compile-time type checking
-- IDE autocomplete support
-- Generated managers and field instances per model
-
-## Learn More
-
-- **Framework Docs**: `../../docs-site/docs/`
-- **Framework Design**: `../../docs/DESIGN.md`
-- **Setup Guide**: `SETUP.md`
-
-
-## License
-
-MIT
+The browser suite starts the server if the configured port is free. It can reuse a server already running on that port. Build the admin UI first with `make admin-ui`. Set `FORGE_SERVER_PORT` and `FORGE_SERVER_BASE_URL` together when using a port other than `8020`.

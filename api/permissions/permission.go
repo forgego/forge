@@ -28,6 +28,12 @@ type Permission interface {
 	GetCode() string
 }
 
+// ObjectRuleReporter lets a permission declare whether object checks can
+// restrict this request. Permissions without this method are checked per row.
+type ObjectRuleReporter interface {
+	HasObjectRules(r *http.Request) bool
+}
+
 // CheckPermissions checks a list of permissions
 // Returns true if all permissions pass, false otherwise
 func CheckPermissions(r *http.Request, view ViewSet, perms []Permission) bool {

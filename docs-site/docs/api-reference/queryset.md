@@ -11,48 +11,48 @@ A `QuerySet[T]` represents a collection of database queries targeting model `T`.
 
 ## Filtering & Slicing Methods
 
-### `Filter(conditions ...any) *QuerySet[T]`
-Adds conditions to the SQL `WHERE` clause combined via `AND`. Accepts generated field expressions, `orm.Q` / `QueryExpr` boolean trees, or `orm.Where()`.
+### `Filter(expr orm.Expression) orm.QuerySet[T]`
+Adds one expression to the SQL `WHERE` clause. Combine multiple expressions with `orm.And`.
 
 ```go
-qs = qs.Filter(ProductExpr.Price.Lte(100.00), ProductExpr.InStock.Eq(true))
+qs = qs.Filter(orm.And(ProductExpr.Price.Lte(100.00), ProductExpr.InStock.Eq(true)))
 ```
 
-### `Exclude(conditions ...any) *QuerySet[T]`
-Negates the provided conditions (`NOT (...)`) and appends them to the `WHERE` clause.
+### `Exclude(expr orm.Expression) orm.QuerySet[T]`
+Negates the expression (`NOT (...)`) and appends it to the `WHERE` clause.
 
 ```go
 qs = qs.Exclude(ProductExpr.Status.Eq("archived"))
 ```
 
-### `OrderBy(fields ...string) *QuerySet[T]`
+### `OrderBy(fields ...any) QuerySet[T]`
 Sets the `ORDER BY` clause. Prefix a field name with `-` for descending order.
 
 ```go
 qs = qs.OrderBy("-created_at", "title")
 ```
 
-### `Limit(n int) *QuerySet[T]`
+### `Limit(n int) QuerySet[T]`
 Sets the maximum number of records to return (`LIMIT n`).
 
-### `Offset(n int) *QuerySet[T]`
+### `Offset(n int) QuerySet[T]`
 Sets the number of rows to skip (`OFFSET n`).
 
-### `Distinct(fields ...string) *QuerySet[T]`
+### `Distinct(fields ...any) QuerySet[T]`
 Appends SQL `DISTINCT` (or `DISTINCT ON` in PostgreSQL).
 
 ---
 
 ## Eager Loading Methods
 
-### `SelectRelated(fields ...string) *QuerySet[T]`
+### `SelectRelated(fields ...any) QuerySet[T]`
 Performs SQL `JOIN`s along single-valued foreign key paths, loading parent and child rows in a single query.
 
 ```go
 qs = qs.SelectRelated("Category", "Supplier")
 ```
 
-### `PrefetchRelated(fields ...string) *QuerySet[T]`
+### `PrefetchRelated(fields ...any) QuerySet[T]`
 Executes batch queries for multi-valued relations (`ManyToMany` or reverse foreign keys) and stitches relationships in memory.
 
 ```go
@@ -63,31 +63,31 @@ qs = qs.PrefetchRelated("Tags", "Reviews")
 
 ## Projection & Field Selection
 
-### `Only(fields ...string) *QuerySet[T]`
+### `Only(fields ...any) QuerySet[T]`
 Restricts the SQL `SELECT` list to only the specified columns, reducing payload size.
 
-### `Defer(fields ...string) *QuerySet[T]`
+### `Defer(fields ...any) QuerySet[T]`
 Excludes large columns (like long text or binary blobs) from the initial `SELECT` query.
 
-### `Values(fields ...string) *ValuesQuerySet[T]`
+### `Values(fields ...any) ValuesQuerySet[T]`
 Returns query results as a slice of `map[string]any` dictionaries instead of model structs.
 
-### `ValuesList(fields ...string) *ValuesListQuerySet[T]`
+### `ValuesList(fields ...any) ValuesListQuerySet[T]`
 Returns query results as flat slices of tuples / interface values.
 
 ---
 
 ## Aggregations & Annotations
 
-### `Aggregate(ctx context.Context, funcs ...Aggregate) (map[string]any, error)`
-Executes an immediate aggregate query (`COUNT`, `SUM`, `AVG`, `MIN`, `MAX`) and returns a map of evaluated scalar values.
+### `Aggregate(funcs ...Aggregate) QuerySet[T]`
+Adds aggregates to a queryset. Use `orm.AggregateValues(ctx, qs, funcs...)` to evaluate scalar aggregates (`COUNT`, `SUM`, `AVG`, `MIN`, `MAX`).
 
 ```go
-stats, err := qs.Aggregate(ctx, orm.Count("id"), orm.Avg("price"))
+stats, err := orm.AggregateValues(ctx, qs, orm.Count("id"), orm.Avg("price"))
 ```
 
-### `Annotate(funcs ...Aggregate) *QuerySet[T]`
-Annotates each returned row with a calculated aggregate value (e.g. counting total reviews per product).
+### `Annotate(anns ...orm.AnnotationExpr) orm.QuerySet[T]`
+Adds computed annotation expressions to returned rows. Construct them with `orm.NewAnnotation` or `orm.NewExpressionAnnotation`.
 
 ---
 
@@ -98,7 +98,7 @@ Terminal methods execute the SQL statement against the active database connectio
 | Method | Signature | Description |
 | :--- | :--- | :--- |
 | `All(ctx)` | `All(ctx context.Context) ([]*T, error)` | Evaluates the query and returns all matching records. |
-| `Get(ctx, pk)` | `Get(ctx context.Context, pk any) (*T, error)` | Returns exactly one matching record. Returns `ErrNotFound` if missing, or `ErrMultipleObjects` if more than 1 matches. |
+| `Get(ctx)` | `Get(ctx context.Context) (*T, error)` | Returns exactly one row matching the queryset filters; errors for zero or multiple matches. Use `Manager.Get(ctx, id)` for primary-key lookup. |
 | `First(ctx)` | `First(ctx context.Context) (*T, error)` | Returns the first matching record, or `nil` if empty. |
 | `Last(ctx)` | `Last(ctx context.Context) (*T, error)` | Reverses ordering and returns the first record. |
 | `Count(ctx)` | `Count(ctx context.Context) (int64, error)` | Executes `SELECT COUNT(*)` and returns the count. |

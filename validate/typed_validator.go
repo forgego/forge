@@ -5,12 +5,14 @@ import (
 	"reflect"
 
 	"github.com/forgego/forge/orm"
+	"github.com/forgego/forge/schema"
 )
 
 // TypedValidatorBuilder provides type-safe validator construction
 type TypedValidatorBuilder[T any] struct {
 	fields    map[string]*FieldValidatorBuilder[T]
 	validator *Validator
+	err       error
 }
 
 // For creates a new typed validator builder for a model type
@@ -40,19 +42,22 @@ func (tvb *TypedValidatorBuilder[T]) Build() *TypedValidator[T] {
 	return &TypedValidator[T]{
 		fields:    tvb.fields,
 		validator: tvb.validator,
+		err:       tvb.err,
 	}
 }
 
 // FieldValidatorBuilder provides fluent API for field validation rules
 type FieldValidatorBuilder[T any] struct {
-	fieldName string
-	parent    *TypedValidatorBuilder[T]
-	rules     []string
-	min       *float64
-	max       *float64
-	minLength *int
-	maxLength *int
-	choices   []interface{}
+	fieldName   string
+	parent      *TypedValidatorBuilder[T]
+	rules       []string
+	min         *float64
+	max         *float64
+	minLength   *int
+	maxLength   *int
+	choices     []interface{}
+	schemaField *schema.Field
+	fieldIndex  []int
 }
 
 // Required marks the field as required
@@ -209,19 +214,55 @@ func (fvb *FieldValidatorBuilder[T]) Back() *TypedValidatorBuilder[T] {
 type TypedValidator[T any] struct {
 	fields    map[string]*FieldValidatorBuilder[T]
 	validator *Validator
+	err       error
 }
 
 // Validate validates a model instance
 func (tv *TypedValidator[T]) Validate(instance *T) error {
+	if tv.err != nil {
+		return tv.err
+	}
+	if instance == nil {
+		return fmt.Errorf("instance is nil")
+	}
 	// Build validation tags dynamically
 	instanceValue := reflect.ValueOf(instance)
 	if instanceValue.Kind() == reflect.Ptr {
 		instanceValue = instanceValue.Elem()
 	}
 
+	if instanceValue.Kind() != reflect.Struct {
+		return fmt.Errorf("model must be a struct")
+	}
+	schemaValidator := NewFieldValidator(tv.validator)
 	// Validate each field
 	for fieldName, fieldBuilder := range tv.fields {
-		fieldValue := instanceValue.FieldByName(fieldName)
+		var fieldValue reflect.Value
+		if fieldBuilder.schemaField != nil {
+			fieldValue, _ = valueByIndex(instanceValue, fieldBuilder.fieldIndex)
+			for fieldValue.IsValid() && (fieldValue.Kind() == reflect.Ptr || fieldValue.Kind() == reflect.Interface) && !fieldValue.IsNil() {
+				fieldValue = fieldValue.Elem()
+			}
+			var value any
+			if fieldValue.IsValid() && fieldValue.CanInterface() {
+				value = fieldValue.Interface()
+			}
+			// A nil optional pointer/embedded field represents SQL NULL.
+			if isEmpty(value) && !fieldBuilder.schemaField.Required &&
+				(!fieldValue.IsValid() || fieldValue.Kind() == reflect.Ptr || fieldValue.Kind() == reflect.Interface) {
+				continue
+			}
+			if err := schemaValidator.ValidateField(*fieldBuilder.schemaField, value); err != nil {
+				return err
+			}
+			// Blank is explicit schema permission to skip all other validators.
+			// Required was already checked above, so this cannot admit a missing required value.
+			if fieldBuilder.schemaField.Blank && isEmpty(value) {
+				continue
+			}
+		} else {
+			fieldValue = instanceValue.FieldByName(fieldName)
+		}
 		if !fieldValue.IsValid() {
 			// Try lowercase
 			fieldValue = instanceValue.FieldByName(toPascalCase(fieldName))

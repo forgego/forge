@@ -2,9 +2,56 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/forgego/forge/identity/models"
 )
+
+// UserMutations exposes narrow and transactional identity writes without changing
+// the existing UserRepository contract used by custom repositories.
+// Custom repositories that do not implement this interface use full-row Update
+// fallbacks for login, password changes, resets, profile changes, and email
+// verification. Those fallbacks cannot prevent a concurrent lock, password, or
+// email change from being overwritten. Even with UserMutations, repositories
+// without UserEmailMutations cannot condition email updates or email_verified
+// writes on the address read earlier. Implement both mutation interfaces to
+// preserve those concurrent-change checks.
+type UserMutations interface {
+	SetLastLogin(ctx context.Context, userID int64, at time.Time) error
+	UpdateFields(ctx context.Context, userID int64, fields map[string]any) error
+	ChangePasswordIfCurrent(ctx context.Context, userID int64, oldHash, newHash string, at time.Time) error
+	CommitPasswordReset(ctx context.Context, tokenID, userID int64, newHash string, at time.Time) error
+	CommitEmailVerification(ctx context.Context, tokenID, userID int64, email string, at time.Time) error
+}
+
+// UserEmailMutations conditionally applies email-bound fields in one write.
+// Implementations must reject an address changed since read, including when
+// the submitted email is unchanged. Without this interface, email-bound writes
+// cannot be protected against a concurrent address change.
+type UserEmailMutations interface {
+	UpdateEmailIfCurrent(ctx context.Context, userID int64, oldEmail string, fields map[string]any) error
+}
+
+// TokenTransactionRepository reports whether token writes and user mutations
+// share one transaction. The service only uses this claim for the built-in SQL
+// repositories; custom token stores use the fail-closed fallback unless they
+// implement TokenCommitRepository.
+type TokenTransactionRepository interface {
+	SharesUserTransaction(users UserRepository) bool
+}
+
+// TokenCommitRepository lets a custom token store explicitly own atomic token
+// consumption and user mutation. Implementations must commit both writes in one
+// transaction or return an error without changing either record.
+type TokenCommitRepository interface {
+	CommitPasswordReset(ctx context.Context, users UserMutations, tokenID, userID int64, newHash string, at time.Time) error
+	CommitEmailVerification(ctx context.Context, users UserMutations, tokenID, userID int64, email string, at time.Time) error
+}
+
+// SessionActivityRepository updates activity without rewriting a stale expiry.
+type SessionActivityRepository interface {
+	TouchLastActivity(ctx context.Context, key string, at time.Time) error
+}
 
 // UserRepository defines the interface for user data access
 type UserRepository interface {

@@ -20,7 +20,7 @@ func GenerateValidationTag(field schema.Field) string {
 
 	// Required
 	if field.Required {
-		tags = append(tags, "required")
+		tags = append(tags, TagSchemaRequired)
 	}
 
 	// Type-specific validations

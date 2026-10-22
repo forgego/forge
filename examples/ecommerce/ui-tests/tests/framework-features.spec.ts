@@ -5,7 +5,7 @@ import path from 'node:path';
 const adminUser = process.env.FORGE_ADMIN_USERNAME || 'admin';
 const adminPass = process.env.FORGE_ADMIN_PASSWORD || 'admin123';
 const rootDir = path.resolve(process.cwd(), '..');
-const serverBaseUrl = process.env.FORGE_SERVER_BASE_URL || 'http://localhost:8020';
+const serverBaseUrl = process.env.FORGE_SERVER_BASE_URL || `http://localhost:${process.env.FORGE_SERVER_PORT || '8020'}`;
 
 test.describe('Ecommerce Framework Features', () => {
   test('REST API resources are reachable', async ({ request }) => {
@@ -170,10 +170,14 @@ test.describe('Ecommerce Framework Features', () => {
     expect(orderData.status).toBe('success');
     expect(orderData.order_status).toBe('pending');
     expect(orderData.total_amount).toBeGreaterThan(0);
+    const itemsResp = await request.get(`${serverBaseUrl}/api/v1/order-items/?order_id=${orderData.order_id}`);
+    expect(itemsResp.ok()).toBeTruthy();
+    const itemsData = await itemsResp.json();
+    expect(itemsData.results).toHaveLength(1);
 
     // 5. Storefront UI in browser
     await page.goto(`${serverBaseUrl}/`);
-    await expect(page.locator('h1')).toContainText('Full-Stack Go Framework');
+    await expect(page.locator('h1')).toContainText('An ecommerce app');
     await expect(page.locator('.brand')).toContainText('Forge');
     await expect(page.locator('#productGrid')).toBeVisible();
     await expect(page.locator('#api-console')).toBeVisible();

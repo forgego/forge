@@ -61,7 +61,11 @@ func (g *Generator) Generate() error {
 	}
 
 	if g.generateAPI {
-		if err := g.writer.WriteCombinedAndAPI(definitions, g.outputDir); err != nil {
+		apiDefinitions, register, err := g.apiDefinitions(definitions)
+		if err != nil {
+			return fmt.Errorf("failed to inspect API declarations: %w", err)
+		}
+		if err := g.writer.writeCombinedAndAPI(definitions, apiDefinitions, register, g.outputDir); err != nil {
 			return fmt.Errorf("failed to generate API code: %w", err)
 		}
 		return nil
@@ -89,7 +93,38 @@ func (g *Generator) GenerateAPI() error {
 		return fmt.Errorf("failed to generate API code: %w", err)
 	}
 
-	return g.writer.WriteAPI(definitions, g.outputDir)
+	apiDefinitions, register, err := g.apiDefinitions(definitions)
+	if err != nil {
+		return fmt.Errorf("failed to inspect API declarations: %w", err)
+	}
+	return g.writer.writeAPI(definitions, apiDefinitions, register, g.outputDir)
+}
+
+// apiDefinitions leaves models with handwritten API declarations under their
+// existing owner's control. This applies to auth scaffolding and custom APIs.
+func (g *Generator) apiDefinitions(definitions []*ModelDefinition) ([]apiModel, bool, error) {
+	declared, err := DeclaredNames(g.outputDir, "gen.go", "api_gen.go")
+	if err != nil {
+		return nil, false, err
+	}
+	filtered := make([]apiModel, 0, len(definitions))
+	for _, def := range definitions {
+		name := def.Name
+		for _, pair := range [][2]string{{name + "Serializer", "New" + name + "Serializer"}, {name + "ViewSet", "New" + name + "ViewSet"}} {
+			if declared[pair[0]] && !declared[pair[1]] {
+				return nil, false, fmt.Errorf("handwritten %s requires handwritten %s", pair[0], pair[1])
+			}
+		}
+		filtered = append(filtered, apiModel{
+			ModelDefinition: def,
+			Serializer:      !declared[name+"Serializer"],
+			NewSerializer:   !declared["New"+name+"Serializer"],
+			ViewSet:         !declared[name+"ViewSet"],
+			NewViewSet:      !declared["New"+name+"ViewSet"],
+			Routes:          !declared["Register"+name+"Routes"],
+		})
+	}
+	return filtered, !declared["RegisterAPIRoutes"], nil
 }
 
 // generateCombined generates all models in a single gen.go file

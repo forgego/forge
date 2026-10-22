@@ -1,28 +1,16 @@
 ---
 sidebar_position: 1
-description: Modern React 19 Admin SPA, declarative configuration, RBAC, audit logging, and custom plugins.
+description: Register models and mount the Forge admin site.
 image: /social-card.png
 ---
 
 # Admin Console Overview
 
-Forge includes a production-grade, auto-generated **React 19 Single Page Application (SPA)** that mounts directly to your Go backend. Inspired by Django Admin, it provides complete data management capabilities out of the box with zero frontend engineering required.
+Forge serves an admin UI and API from an `admin.Site`. The UI includes model pages, a dashboard, and server-driven plugin pages.
 
----
+The frontend uses React 19 and TanStack Router. Its theme controls switch between light and dark modes. Press Ctrl+K to open the global search palette; press `?` outside a text field for keyboard shortcut help. The default dashboard shows model and record summaries. A configured server-driven dashboard can render Recharts charts; see [dashboard configuration](/docs/admin/ui/).
 
-## Architectural Highlights
-
-- **React 19 & TanStack Router**: Ultra-fast client-side navigation with deep linking, stateful search parameters, and optimistic UI updates.
-- **Declarative Go Registration**: Register any model with search fields, list filters, custom actions, and dashboard widgets in a single Go statement.
-- **Enterprise Security & Auth**: Session token cookies with SHA-256 hashing, protection against session fixation, and granular Role-Based Access Control (RBAC).
-- **Modern Design**: Built with Tailwind CSS, Radix UI primitives, Lucide icons, full dark/light theme switching, and keyboard command palette (`Cmd+K` / `Ctrl+K`).
-- **Extensible Plugin System**: Embed custom React dashboards, analytics reports, and external workflows directly inside the admin navigation.
-
----
-
-## Quick Example
-
-Mounting the Admin Console into your Chi router:
+## Set up a site
 
 ```go
 package main
@@ -33,101 +21,39 @@ import (
     "myapp/models"
 )
 
-func SetupAdmin(r chi.Router) {
-    // 1. Create the Admin Site
-    adminSite := admin.NewSite(admin.SiteConfig{
-        Title:       "Forge Commerce Admin",
-        BasePath:    "/admin",
-        RequireAuth: true,
-    })
+func SetupAdmin(r chi.Router) error {
+    site := admin.NewSite("commerce")
+    site.Title = "Forge Commerce Admin"
+    ui := admin.DefaultUIConfig()
+    ui.Prefix = "/admin"
+    site.WithUIConfig(ui)
 
-    // 2. Register models with declarative configuration
-    admin.Register[models.Product](adminSite, admin.ModelConfig[models.Product]{
-        ListDisplay:  []string{"SKU", "Name", "Category", "Price", "InStock"},
-        SearchFields: []string{"SKU", "Name"},
-        ListFilter:   []string{"InStock", "Category"},
-        Ordering:     []string{"-created_at"},
-        Actions: []admin.Action{
-            {
-                ID:             "restock",
-                Label:          "Restock Inventory (+50)",
-                ConfirmMessage: "Are you sure you want to add 50 units to selected products?",
-                Handler: func(ctx context.Context, ids []any) error {
-                    return InventoryService.Restock(ctx, ids, 50)
-                },
-            },
-        },
+    _, err := admin.RegisterWithSite(site, &admin.Config[models.Product]{
+        ListDisplay: []admin.Field{admin.Computed("name")},
+        SearchFields: []admin.Field{admin.Computed("name")},
     })
+    if err != nil { return err }
 
-    // 3. Mount HTTP and static assets onto Chi router
-    adminSite.Mount(r)
+    r.Mount("/admin", site.Handler())
+    return nil
 }
 ```
 
-Now navigate your browser to `http://localhost:8000/admin/`.
+`admin.Register(&admin.Config[T]{...})` registers on `admin.DefaultSite`. Use `RegisterWithSite` for a separate site. Set the site's database with `site.SetDB(database)` before registering models that need it.
 
----
+## Permissions
 
-## Authentication & Security
+Autocomplete and global search apply `HasViewPermission` to each suggested object. Objects denied by the callback do not appear in suggestions. CSV exports also omit denied objects and escape formula-like text cells before download.
 
-The Admin Console includes complete security defaults:
-
-### Admin Credentials
-Configure administrative credentials via environment variables or configuration files:
-
-```bash
-export FORGE_ADMIN_USERNAME="admin"
-export FORGE_ADMIN_PASSWORD="super-secret-password"
-```
-
-### Session Security
-- **SHA-256 Token Hashing**: Plaintext session tokens are sent to the client as an `HttpOnly`, `SameSite=Strict`, `Secure` cookie, while only the SHA-256 hash is persisted in the session repository.
-- **Timing-Safe Comparison**: Authentication uses constant-time string comparison to defend against timing attacks.
-- **Brute-Force Rate Limiting**: Consecutive failed login attempts trigger progressive delays.
-
----
-
-## Role-Based Access Control (RBAC)
-
-Forge provides granular permission hooks on each registered model:
+Permission callbacks receive a context, the registered admin, a user value, and (except for add and module permissions) the object. The user is an `interface{}` value; check its type before using application-specific roles.
 
 ```go
-admin.Register[models.Order](adminSite, admin.ModelConfig[models.Order]{
-    HasViewPermission: func(ctx context.Context, u *admin.User) bool {
-        return u.HasRole("admin", "support", "finance")
-    },
-    HasAddPermission: func(ctx context.Context, u *admin.User) bool {
-        return u.HasRole("admin")
-    },
-    HasChangePermission: func(ctx context.Context, u *admin.User) bool {
-        return u.HasRole("admin", "support")
-    },
-    HasDeletePermission: func(ctx context.Context, u *admin.User) bool {
-        return u.HasRole("admin") // Only superadmins can delete orders
-    },
-})
+HasViewPermission: func(ctx context.Context, modelAdmin *admin.Admin[models.Product], user interface{}, obj *models.Product) bool {
+    return user != nil && obj != nil
+},
+HasAddPermission: func(ctx context.Context, modelAdmin *admin.Admin[models.Product], user interface{}) bool {
+    return user != nil
+},
 ```
 
-If a user lacks permission, actions and mutation buttons are automatically hidden from the UI, and corresponding API endpoints reject requests with HTTP 403 Forbidden.
-
----
-
-## Core Capabilities
-
-1. **List & Table Views**: Sortable columns, live search with debouncing, multi-select checkboxes for batch operations.
-2. **Faceted Filtering**: Filter by category, dates, boolean flags, or custom dropdowns with instant client-side URL sync.
-3. **Saved Views**: Bookmark frequently used filter and search configurations as named views for quick access.
-4. **Change History & Audit Logs**: Inspect detailed timelines of who modified each record and what fields were changed.
-5. **Data Export**: One-click export of filtered datasets to CSV or JSON formats.
-6. **Dashboard Widgets**: Embed Recharts analytics charts, KPI metric cards, and low-stock alerts.
-7. **Custom Plugins**: Extend the sidebar navigation with custom React pages and reports.
-
----
-
-## Next Steps
-
-- **[Admin Configuration Reference](/docs/admin/config/)**: Detailed breakdown of `ModelConfig` options.
-- **[Custom Actions](/docs/admin/actions/)**: Build batch processing actions with confirmation dialogs.
-- **[Filters & Search](/docs/admin/filters/)**: Advanced list filtering configurations.
-- **[UI Customization & Plugins](/docs/admin/ui/)**: Customize theme and register custom plugin pages.
-
+See [model configuration](/docs/admin/config/), [actions](/docs/admin/actions/), [filters](/docs/admin/filters/), and [plugin pages](/docs/admin/ui/).

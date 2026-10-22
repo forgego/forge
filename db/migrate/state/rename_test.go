@@ -61,6 +61,20 @@ ALTER TABLE volumes RENAME CONSTRAINT fk_books_author_id TO fk_volumes_writer_id
 	}
 }
 
+func TestLoadRenamesExplicitConstraint(t *testing.T) {
+	dir := writeMigrations(t, map[string]string{
+		"000001_a.up.sql": `CREATE TABLE items ("id" BIGINT PRIMARY KEY, "price" INTEGER); ALTER TABLE items ADD CONSTRAINT old_price CHECK (price > 0);`,
+		"000002_b.up.sql": `ALTER TABLE items RENAME CONSTRAINT old_price TO new_price;`,
+	})
+	state, err := LoadStateFromFiles(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Tables["items"].Constraints["old_price"] != nil || state.Tables["items"].Constraints["new_price"] == nil {
+		t.Fatalf("constraint rename lost: %+v", state.Tables["items"].Constraints)
+	}
+}
+
 // A generated column's expression follows a renamed column it computes from,
 // as it does in the database.
 func TestRenameColumnRewritesGeneratedExpressions(t *testing.T) {

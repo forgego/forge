@@ -13,8 +13,9 @@ import (
 
 // ASTParser parses Go AST to extract schema definitions
 type ASTParser struct {
-	fset        *token.FileSet
-	diagnostics []Diagnostic
+	fset          *token.FileSet
+	diagnostics   []Diagnostic
+	schemaAliases map[string]bool
 }
 
 // NewASTParser creates a new AST parser
@@ -214,6 +215,17 @@ func (p *ASTParser) ParseFile(filename string) ([]*ModelDefinition, error) {
 	if err != nil {
 		return nil, err
 	}
+	p.schemaAliases = make(map[string]bool)
+	for _, imported := range node.Imports {
+		if imported.Path.Value != `"github.com/forgego/forge/schema"` {
+			continue
+		}
+		name := "schema"
+		if imported.Name != nil {
+			name = imported.Name.Name
+		}
+		p.schemaAliases[name] = true
+	}
 
 	var definitions []*ModelDefinition
 	packageName := node.Name.Name
@@ -263,7 +275,7 @@ func (p *ASTParser) embedsSchema(st *ast.StructType) bool {
 		if len(field.Names) == 0 {
 			// Embedded field
 			if sel, ok := field.Type.(*ast.SelectorExpr); ok {
-				if ident, ok := sel.X.(*ast.Ident); ok && ident.Name == "schema" {
+				if ident, ok := sel.X.(*ast.Ident); ok && (p.isSchemaQualifier(ident.Name)) {
 					if sel.Sel.Name == "Schema" || sel.Sel.Name == "BaseSchema" {
 						return true
 					}

@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/forgego/forge/cli/commands/generation"
 	"github.com/forgego/forge/cli/core"
-	codegen "github.com/forgego/forge/codegen"
 	"github.com/stretchr/testify/require"
 )
 
@@ -69,11 +69,19 @@ func TestAuthScaffoldGenerateProducesCompilablePackage(t *testing.T) {
 	require.NoError(t, NewAuthCommand().Execute(&core.Context{}, nil))
 
 	appPath := filepath.Join(projectPath, "app", "auth")
-	gen := codegen.NewGenerator(appPath, appPath)
-	require.NoError(t, gen.Generate(), "forge generate over the auth scaffold failed")
+	command := generation.NewGenerateCommand().Definition()
+	require.NoError(t, command.Flags().Set("models", "app"))
+	require.NoError(t, command.Flags().Set("output", "app"))
+	require.NoError(t, command.Flags().Set("api", "true"))
+	require.NoError(t, command.Flags().Set("strict", "true"))
+	require.NoError(t, generation.NewGenerateCommand().Execute(&core.Context{Cmd: command}, nil))
 
 	require.Equal(t, 1, countUserObjectsDecls(t, appPath),
 		"expected exactly one UserObjects declaration after generation")
+	apiSource, err := os.ReadFile(filepath.Join(appPath, "api_gen.go"))
+	require.NoError(t, err)
+	require.Contains(t, string(apiSource), "func RegisterUserRoutes(")
+	require.Contains(t, string(apiSource), `apiRouter.Register("users", NewUserViewSet())`)
 
 	cmd := exec.Command("go", "build", "-mod=mod", "./...")
 	cmd.Dir = projectPath

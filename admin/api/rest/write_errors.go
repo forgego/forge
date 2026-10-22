@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/forgego/forge/internal/dberrors"
+	"github.com/forgego/forge/internal/deleteerrors"
 	validation "github.com/forgego/forge/validate"
 )
 
@@ -56,8 +57,8 @@ func classifyWriteError(failureCode string, err error) writeFailure {
 // foreign-key violation means other rows still reference the record, which
 // the operator can resolve; anything else is logged as a server error.
 func deleteFailure(err error) (status int, code, message string) {
-	if v, ok := classifyConstraintViolation(err); ok && v.code == "invalid_reference" {
-		return http.StatusConflict, "in_use", "Other records still refer to this record, so it cannot be deleted."
+	if status, code, message, ok := deleteerrors.Protection(err); ok {
+		return status, code, message
 	}
 	log.Printf("admin: delete_failed: %s", strconv.Quote(err.Error()))
 	return http.StatusInternalServerError, "delete_failed", "The record could not be deleted because of a server error"

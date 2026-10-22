@@ -13,7 +13,7 @@ type ShippingMethodGenerated struct {
 	schema.BaseSchema
 	Id                int64     `json:"id" db:"id" validate:""`
 	Name              string    `json:"name" db:"name" validate:"required,max=200"`
-	Code              string    `json:"code" db:"code" validate:"required,max=50"`
+	Code              string    `json:"code" db:"code" validate:"required,unique,max=50"`
 	Description       string    `json:"description" db:"description" validate:""`
 	BasePrice         float64   `json:"base_price" db:"base_price" validate:""`
 	PricePerKg        float64   `json:"price_per_kg" db:"price_per_kg" validate:""`
@@ -77,7 +77,7 @@ type PaymentMethodGenerated struct {
 	schema.BaseSchema
 	Id             int64     `json:"id" db:"id" validate:""`
 	Name           string    `json:"name" db:"name" validate:"required,max=200"`
-	Code           string    `json:"code" db:"code" validate:"required,max=50"`
+	Code           string    `json:"code" db:"code" validate:"required,unique,max=50"`
 	Description    string    `json:"description" db:"description" validate:""`
 	ProcessorName  string    `json:"processor_name" db:"processor_name" validate:"max=100"`
 	IsActive       bool      `json:"is_active" db:"is_active" validate:""`
@@ -135,8 +135,8 @@ type TaxRateGenerated struct {
 	schema.BaseSchema
 	Id              int64     `json:"id" db:"id" validate:""`
 	Name            string    `json:"name" db:"name" validate:"required,max=200"`
-	Code            string    `json:"code" db:"code" validate:"required,max=50"`
-	Rate            float64   `json:"rate" db:"rate" validate:"required"`
+	Code            string    `json:"code" db:"code" validate:"required,unique,max=50"`
+	Rate            float64   `json:"rate" db:"rate" validate:""`
 	Country         string    `json:"country" db:"country" validate:"max=2"`
 	State           string    `json:"state" db:"state" validate:"max=100"`
 	City            string    `json:"city" db:"city" validate:"max=100"`
@@ -201,7 +201,7 @@ var TaxRateFieldsInstance = TaxRateFields{
 type CurrencyGenerated struct {
 	schema.BaseSchema
 	Id            int64     `json:"id" db:"id" validate:""`
-	Code          string    `json:"code" db:"code" validate:"required,max=3"`
+	Code          string    `json:"code" db:"code" validate:"required,unique,max=3"`
 	Name          string    `json:"name" db:"name" validate:"required,max=100"`
 	Symbol        string    `json:"symbol" db:"symbol" validate:"max=10"`
 	DecimalPlaces int32     `json:"decimal_places" db:"decimal_places" validate:""`
@@ -250,9 +250,9 @@ var CurrencyFieldsInstance = CurrencyFields{
 type ExchangeRateGenerated struct {
 	schema.BaseSchema
 	Id             int64     `json:"id" db:"id" validate:""`
-	FromCurrencyId int64     `json:"from_currency_id" db:"from_currency_id" validate:"required"`
-	ToCurrencyId   int64     `json:"to_currency_id" db:"to_currency_id" validate:"required"`
-	Rate           float64   `json:"rate" db:"rate" validate:"required"`
+	FromCurrencyId int64     `json:"from_currency_id" db:"from_currency_id" validate:""`
+	ToCurrencyId   int64     `json:"to_currency_id" db:"to_currency_id" validate:""`
+	Rate           float64   `json:"rate" db:"rate" validate:""`
 	EffectiveDate  time.Time `json:"effective_date" db:"effective_date" validate:"required"`
 	Source         string    `json:"source" db:"source" validate:"max=100"`
 	IsActive       bool      `json:"is_active" db:"is_active" validate:""`

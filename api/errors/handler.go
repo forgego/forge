@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"runtime/debug"
@@ -45,6 +46,8 @@ type Handler struct {
 	mapper *ErrorMapper
 }
 
+type requestHandlerKey struct{}
+
 // NewHandler creates a new error handler
 func NewHandler(config *HandlerConfig) *Handler {
 	if config == nil {
@@ -69,6 +72,9 @@ func NewHandler(config *HandlerConfig) *Handler {
 func (h *Handler) Middleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Explicit writers inside routes must use this server's configured
+			// handler too; the middleware otherwise only handles panics.
+			r = r.WithContext(context.WithValue(r.Context(), requestHandlerKey{}, h))
 			// Create a response writer that captures errors
 			rrw := &errorResponseWriter{
 				ResponseWriter: w,
@@ -298,5 +304,9 @@ var defaultHandler = NewHandler(DefaultHandlerConfig())
 
 // WriteError writes an error as an RFC 7807 problem response.
 func WriteError(w http.ResponseWriter, r *http.Request, err error) {
+	if handler, ok := r.Context().Value(requestHandlerKey{}).(*Handler); ok {
+		handler.HandleError(w, r, err)
+		return
+	}
 	defaultHandler.HandleError(w, r, err)
 }
