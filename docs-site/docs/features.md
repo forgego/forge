@@ -133,8 +133,8 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 
 ### Serializers
 - Typed serializers for models
-- Enhanced serializers with relations
-- Nested serializers are not implemented
+- Populated relations serialize as nested JSON objects
+- Configurable nested serializer fields are not implemented
 - Read-only and write-only fields
 - Custom field serialization
 - Validation rules

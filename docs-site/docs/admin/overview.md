@@ -8,6 +8,8 @@ image: /social-card.png
 
 Forge serves an admin UI and API from an `admin.Site`. The UI includes model pages, a dashboard, and server-driven plugin pages.
 
+The frontend uses React 19 and TanStack Router. Its theme controls switch between light and dark modes. Press Ctrl+K to open the global search palette; press `?` outside a text field for keyboard shortcut help. The default dashboard shows model and record summaries. A configured server-driven dashboard can render Recharts charts; see [dashboard configuration](/docs/admin/ui/).
+
 ## Set up a site
 
 ```go
