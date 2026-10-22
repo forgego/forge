@@ -518,7 +518,7 @@ func allListRows(qs reflect.Value, ctx context.Context) ([]interface{}, error) {
 		items = items.Elem()
 	}
 	if items.Kind() != reflect.Slice && items.Kind() != reflect.Array {
-		return nil, fmt.Errorf("All returned %s instead of a slice", items.Kind())
+		return nil, fmt.Errorf("all returned %s instead of a slice", items.Kind())
 	}
 	rows := make([]interface{}, 0, items.Len())
 	for i := 0; i < items.Len(); i++ {

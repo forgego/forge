@@ -106,7 +106,7 @@ func (l *FileStateLoader) Load() (*SchemaState, error) {
 		var allFileChanges []fileChanges
 
 		for _, file := range sortedFiles {
-			content, err := migrationfiles.Read(file)
+			content, err := migrationfiles.Read(l.migrationsDir, file)
 			if err != nil {
 				if l.verbose {
 					l.parseErrors = append(l.parseErrors, &ParseErrorInfo{

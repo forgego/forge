@@ -14,6 +14,7 @@ import (
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/db/migrate/execute"
 	"github.com/forgego/forge/db/migrate/parse"
+	"github.com/forgego/forge/internal/safepath"
 	"github.com/spf13/cobra"
 )
 
@@ -266,7 +267,7 @@ func checkPendingDestructive(dir string, currentVersion uint) error {
 		if err != nil || version > math.MaxUint || uint(version) <= currentVersion {
 			continue
 		}
-		content, err := os.ReadFile(file)
+		content, err := safepath.ReadFile(dir, file)
 		if err != nil {
 			return fmt.Errorf("failed to read migration %s: %w", file, err)
 		}

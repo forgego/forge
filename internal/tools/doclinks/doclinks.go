@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/forgego/forge/internal/safepath"
 )
 
 // problem is a single missing link target.
@@ -344,7 +346,7 @@ func extractLinks(line string) []string {
 
 // checkFile scans a single file for missing link targets.
 func checkFile(absRoot, absPath string) ([]problem, error) {
-	data, err := os.ReadFile(absPath)
+	data, err := safepath.ReadFile(absRoot, absPath)
 	if err != nil {
 		return nil, err
 	}

@@ -26,8 +26,9 @@ func (s *referenceSerializer) Validate() error {
 func TestSerializerReferenceContract(t *testing.T) {
 	t.Run("model serializer implements contract", func(t *testing.T) {
 		var serializer Serializer = NewModelSerializer(struct{ Name string }{Name: "item"})
-		if serializer == nil {
-			t.Fatal("model serializer is nil")
+		encoded, err := serializer.ToJSON()
+		if err != nil || !json.Valid(encoded) {
+			t.Fatalf("model serializer output = %s, %v", encoded, err)
 		}
 	})
 	t.Run("custom serializer validation and cloning", func(t *testing.T) {

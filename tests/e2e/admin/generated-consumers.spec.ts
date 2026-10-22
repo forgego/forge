@@ -11,9 +11,13 @@ const consumers = artifacts ? readdirSync(artifacts).flatMap(dir => {
 }) : [];
 if (!artifacts) test('generated consumers require retained CLI journey artifacts', () => test.skip());
 for (const app of consumers) {
+  // Artifacts come from the local CLI test run. Only a validated loopback port
+  // may influence requests; file contents cannot select a remote host.
+  const port = Number(app.port);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('invalid consumer port');
   test.describe(app.name, () => {
     let server: ChildProcess;
-    const base = `http://127.0.0.1:${app.port}`;
+    const base = `http://127.0.0.1:${port}`;
     test.beforeAll(async () => {
       server = spawn(join(app.project, 'bin/server'), [], { cwd: app.project, stdio: 'ignore' });
       await expect.poll(async () => {

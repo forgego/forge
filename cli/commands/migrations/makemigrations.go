@@ -2,7 +2,6 @@ package migrations
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"github.com/forgego/forge/db/migrate"
 	migratecore "github.com/forgego/forge/db/migrate/core"
 	"github.com/forgego/forge/db/migrate/parse"
+	"github.com/forgego/forge/internal/safepath"
 	"github.com/spf13/cobra"
 )
 
@@ -157,7 +157,7 @@ func (c *MakeMigrationsCommand) Execute(ctx *core.Context, args []string) error 
 			if !strings.HasSuffix(path, ".up.sql") {
 				continue
 			}
-			content, err := os.ReadFile(path)
+			content, err := safepath.ReadFile(migrationsDir, path)
 			if err != nil {
 				return fmt.Errorf("failed to read generated migration %s: %w", path, err)
 			}

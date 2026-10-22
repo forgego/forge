@@ -20,10 +20,10 @@ type migrationLockDriver struct{ spy *migrationLockSpy }
 type migrationLockConn struct{ spy *migrationLockSpy }
 
 func (c migrationLockConnector) Connect(context.Context) (driver.Conn, error) {
-	return migrationLockConn{c.spy}, nil
+	return migrationLockConn(c), nil
 }
-func (c migrationLockConnector) Driver() driver.Driver         { return migrationLockDriver{c.spy} }
-func (d migrationLockDriver) Open(string) (driver.Conn, error) { return migrationLockConn{d.spy}, nil }
+func (c migrationLockConnector) Driver() driver.Driver         { return migrationLockDriver(c) }
+func (d migrationLockDriver) Open(string) (driver.Conn, error) { return migrationLockConn(d), nil }
 func (c migrationLockConn) Prepare(string) (driver.Stmt, error) {
 	return nil, errors.New("unexpected prepare")
 }

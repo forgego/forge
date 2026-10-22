@@ -194,7 +194,7 @@ func (d *DependencyDetector) buildTableToVersionMap() (map[string]string, error)
 		version := parts[0]
 
 		// Read migration file
-		content, err := migrationfiles.Read(file)
+		content, err := migrationfiles.Read(d.migrationsDir, file)
 		if err != nil {
 			return nil, err
 		}

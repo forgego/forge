@@ -11,6 +11,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/forgego/forge/cli/core"
 	"github.com/forgego/forge/cli/templates"
+	"github.com/forgego/forge/internal/safepath"
 	"github.com/spf13/cobra"
 )
 
@@ -135,7 +136,7 @@ func (c *AddHandlerCommand) Execute(ctx *core.Context, args []string) error {
 // existing handler templates, including project overrides.
 func renderHandlerTemplate(data templates.TemplateData) ([]byte, error) {
 	path := filepath.Join(".forge", "templates", "handlers.go.tmpl")
-	content, err := os.ReadFile(path)
+	content, err := safepath.ReadFile(filepath.Join(".", ".forge", "templates"), path)
 	if os.IsNotExist(err) {
 		content, err = templates.ReadTemplate("handlers.go.tmpl")
 	}

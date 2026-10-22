@@ -27,8 +27,8 @@ func (w *observedExportWriter) WriteHeader(status int) {
 
 type observedExportAdmin struct {
 	mockAdmin
-	writer *observedExportWriter
-	pageTwoReached bool
+	writer             *observedExportWriter
+	pageTwoReached     bool
 	wroteBeforePageTwo bool
 }
 
@@ -47,7 +47,7 @@ func TestCSVExportWritesAfterFetchingAllPages(t *testing.T) {
 	w := &observedExportWriter{ResponseRecorder: httptest.NewRecorder()}
 	admin := &observedExportAdmin{mockAdmin: mockAdmin{
 		modelName: "items",
-		metadata: &core.Metadata{ListDisplay: []string{"id"}, Pagination: core.PaginationConfig{MaxPageSize: 2}},
+		metadata:  &core.Metadata{ListDisplay: []string{"id"}, Pagination: core.PaginationConfig{MaxPageSize: 2}},
 	}, writer: w}
 	NewRouter(core.NewRegistry()).handleExport(admin)(w,
 		httptest.NewRequest(http.MethodGet, "/items/export?format=csv", nil))

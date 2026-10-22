@@ -176,7 +176,14 @@ jobs:
       - name: Run npm audit
         if: steps.check_run.outputs.should_run == 'true'
         working-directory: ${{ matrix.directory }}
-        run: npx -y better-npm-audit audit --level=moderate
+        run: |
+          if [ "${{ matrix.directory }}" = "docs-site" ]; then
+            # Docusaurus is used only to build static docs. Its dev-only braces
+            # dependency has no patched release, so audit shipped dependencies.
+            npm audit --omit=dev --audit-level=moderate
+          else
+            npx -y better-npm-audit audit --level=moderate
+          fi
       
       - name: Check for outdated packages
         if: steps.check_run.outputs.should_run == 'true'
