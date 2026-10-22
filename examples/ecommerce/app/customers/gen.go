@@ -12,8 +12,8 @@ import (
 type CustomerGroupGenerated struct {
 	schema.BaseSchema
 	Id                 int64     `json:"id" db:"id" validate:""`
-	Name               string    `json:"name" db:"name" validate:"required,max=200"`
-	Code               string    `json:"code" db:"code" validate:"required,max=50"`
+	Name               string    `json:"name" db:"name" validate:"required,unique,max=200"`
+	Code               string    `json:"code" db:"code" validate:"required,unique,max=50"`
 	Description        string    `json:"description" db:"description" validate:""`
 	DiscountPercentage float64   `json:"discount_percentage" db:"discount_percentage" validate:""`
 	IsActive           bool      `json:"is_active" db:"is_active" validate:""`
@@ -58,7 +58,7 @@ var CustomerGroupFieldsInstance = CustomerGroupFields{
 type CustomerGenerated struct {
 	schema.BaseSchema
 	Id                     int64     `json:"id" db:"id" validate:""`
-	Email                  string    `json:"email" db:"email" validate:"required,max=255"`
+	Email                  string    `json:"email" db:"email" validate:"required,unique,max=255"`
 	PasswordHash           string    `json:"password_hash" db:"password_hash" validate:"required,max=255"`
 	FirstName              string    `json:"first_name" db:"first_name" validate:"required,max=100"`
 	LastName               string    `json:"last_name" db:"last_name" validate:"required,max=100"`
@@ -161,7 +161,7 @@ var CustomerFieldsInstance = CustomerFields{
 type AddressGenerated struct {
 	schema.BaseSchema
 	Id                   int64     `json:"id" db:"id" validate:""`
-	CustomerId           int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	CustomerId           int64     `json:"customer_id" db:"customer_id" validate:""`
 	AddressType          string    `json:"address_type" db:"address_type" validate:"required,max=20"`
 	FirstName            string    `json:"first_name" db:"first_name" validate:"required,max=100"`
 	LastName             string    `json:"last_name" db:"last_name" validate:"required,max=100"`
@@ -246,7 +246,7 @@ var AddressFieldsInstance = AddressFields{
 type WishListGenerated struct {
 	schema.BaseSchema
 	Id          int64     `json:"id" db:"id" validate:""`
-	CustomerId  int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	CustomerId  int64     `json:"customer_id" db:"customer_id" validate:""`
 	Name        string    `json:"name" db:"name" validate:"required,max=200"`
 	Description string    `json:"description" db:"description" validate:""`
 	IsPublic    bool      `json:"is_public" db:"is_public" validate:""`
@@ -295,8 +295,8 @@ var WishListFieldsInstance = WishListFields{
 type WishListItemGenerated struct {
 	schema.BaseSchema
 	Id              int64     `json:"id" db:"id" validate:""`
-	WishListId      int64     `json:"wish_list_id" db:"wish_list_id" validate:"required"`
-	ProductId       int64     `json:"product_id" db:"product_id" validate:"required"`
+	WishListId      int64     `json:"wish_list_id" db:"wish_list_id" validate:""`
+	ProductId       int64     `json:"product_id" db:"product_id" validate:""`
 	VariantId       int64     `json:"variant_id" db:"variant_id" validate:""`
 	DesiredQuantity int32     `json:"desired_quantity" db:"desired_quantity" validate:""`
 	PriceWhenAdded  float64   `json:"price_when_added" db:"price_when_added" validate:""`

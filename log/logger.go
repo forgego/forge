@@ -164,14 +164,8 @@ func getStacktraceLevel(config *LoggingConfig, development bool) zapcore.Level {
 
 // isDevelopmentMode determines if we're in development mode
 func isDevelopmentMode(config *LoggingConfig) bool {
-	// Check if any console output with colored format is enabled
-	for _, output := range config.Outputs {
-		if output.Type == OutputConsole && output.Enabled {
-			if output.Format == FormatConsole || config.Format == FormatConsole {
-				return true
-			}
-		}
-	}
+	// Per-output console formatting does not turn a production logger into a
+	// development logger; production sampling still applies to every output.
 	return config.Format == FormatConsole
 }
 

@@ -12,8 +12,8 @@ import (
 type CategoryGenerated struct {
 	schema.BaseSchema
 	Id          int64     `json:"id" db:"id" validate:""`
-	Name        string    `json:"name" db:"name" validate:"required,max=200"`
-	Slug        string    `json:"slug" db:"slug" validate:"required,max=200"`
+	Name        string    `json:"name" db:"name" validate:"required,unique,max=200"`
+	Slug        string    `json:"slug" db:"slug" validate:"required,unique,max=200"`
 	Description string    `json:"description" db:"description" validate:""`
 	ParentId    int64     `json:"parent_id" db:"parent_id" validate:""`
 	ImageUrl    string    `json:"image_url" db:"image_url" validate:"max=500"`
@@ -67,8 +67,8 @@ var CategoryFieldsInstance = CategoryFields{
 type BrandGenerated struct {
 	schema.BaseSchema
 	Id          int64     `json:"id" db:"id" validate:""`
-	Name        string    `json:"name" db:"name" validate:"required,max=200"`
-	Slug        string    `json:"slug" db:"slug" validate:"required,max=200"`
+	Name        string    `json:"name" db:"name" validate:"required,unique,max=200"`
+	Slug        string    `json:"slug" db:"slug" validate:"required,unique,max=200"`
 	Description string    `json:"description" db:"description" validate:""`
 	LogoUrl     string    `json:"logo_url" db:"logo_url" validate:"max=500"`
 	WebsiteUrl  string    `json:"website_url" db:"website_url" validate:"max=500"`
@@ -117,13 +117,13 @@ type ProductGenerated struct {
 	schema.BaseSchema
 	Id               int64     `json:"id" db:"id" validate:""`
 	Name             string    `json:"name" db:"name" validate:"required,max=255"`
-	Slug             string    `json:"slug" db:"slug" validate:"required,max=255"`
-	Sku              string    `json:"sku" db:"sku" validate:"required,max=100"`
+	Slug             string    `json:"slug" db:"slug" validate:"required,unique,max=255"`
+	Sku              string    `json:"sku" db:"sku" validate:"required,unique,max=100"`
 	Description      string    `json:"description" db:"description" validate:"required"`
 	ShortDescription string    `json:"short_description" db:"short_description" validate:""`
-	CategoryId       int64     `json:"category_id" db:"category_id" validate:"required"`
+	CategoryId       int64     `json:"category_id" db:"category_id" validate:""`
 	BrandId          int64     `json:"brand_id" db:"brand_id" validate:""`
-	Price            float64   `json:"price" db:"price" validate:"required"`
+	Price            float64   `json:"price" db:"price" validate:""`
 	CostPrice        float64   `json:"cost_price" db:"cost_price" validate:""`
 	CompareAtPrice   float64   `json:"compare_at_price" db:"compare_at_price" validate:""`
 	StockQuantity    int32     `json:"stock_quantity" db:"stock_quantity" validate:""`
@@ -231,8 +231,8 @@ var ProductFieldsInstance = ProductFields{
 type ProductVariantGenerated struct {
 	schema.BaseSchema
 	Id               int64     `json:"id" db:"id" validate:""`
-	ProductId        int64     `json:"product_id" db:"product_id" validate:"required"`
-	Sku              string    `json:"sku" db:"sku" validate:"required,max=100"`
+	ProductId        int64     `json:"product_id" db:"product_id" validate:""`
+	Sku              string    `json:"sku" db:"sku" validate:"required,unique,max=100"`
 	Name             string    `json:"name" db:"name" validate:"required,max=255"`
 	Option1Name      string    `json:"option1_name" db:"option1_name" validate:"max=100"`
 	Option1Value     string    `json:"option1_value" db:"option1_value" validate:"max=100"`
@@ -331,7 +331,7 @@ var ProductVariantFieldsInstance = ProductVariantFields{
 type ProductImageGenerated struct {
 	schema.BaseSchema
 	Id           int64     `json:"id" db:"id" validate:""`
-	ProductId    int64     `json:"product_id" db:"product_id" validate:"required"`
+	ProductId    int64     `json:"product_id" db:"product_id" validate:""`
 	VariantId    int64     `json:"variant_id" db:"variant_id" validate:""`
 	ImageUrl     string    `json:"image_url" db:"image_url" validate:"required,max=500"`
 	ThumbnailUrl string    `json:"thumbnail_url" db:"thumbnail_url" validate:"max=500"`
@@ -383,8 +383,8 @@ var ProductImageFieldsInstance = ProductImageFields{
 type ProductAttributeGenerated struct {
 	schema.BaseSchema
 	Id           int64     `json:"id" db:"id" validate:""`
-	Name         string    `json:"name" db:"name" validate:"required,max=200"`
-	Code         string    `json:"code" db:"code" validate:"required,max=100"`
+	Name         string    `json:"name" db:"name" validate:"required,unique,max=200"`
+	Code         string    `json:"code" db:"code" validate:"required,unique,max=100"`
 	Type         string    `json:"type" db:"type" validate:"required,max=50"`
 	IsFilterable bool      `json:"is_filterable" db:"is_filterable" validate:""`
 	IsVisible    bool      `json:"is_visible" db:"is_visible" validate:""`
@@ -429,8 +429,8 @@ var ProductAttributeFieldsInstance = ProductAttributeFields{
 type ProductAttributeValueGenerated struct {
 	schema.BaseSchema
 	Id          int64     `json:"id" db:"id" validate:""`
-	ProductId   int64     `json:"product_id" db:"product_id" validate:"required"`
-	AttributeId int64     `json:"attribute_id" db:"attribute_id" validate:"required"`
+	ProductId   int64     `json:"product_id" db:"product_id" validate:""`
+	AttributeId int64     `json:"attribute_id" db:"attribute_id" validate:""`
 	Value       string    `json:"value" db:"value" validate:"required,max=500"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at" validate:""`
 }

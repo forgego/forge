@@ -11,18 +11,19 @@ A `Manager[T]` provides the primary database table interface for a given model `
 
 ## CRUD Operations
 
-### `Create(ctx context.Context, instance *T) (*T, error)`
+### `Create(ctx context.Context, instance *T) error`
 Inserts a new model instance into the database. Executes registered `BeforeCreate` and `AfterCreate` lifecycle hooks and populates the auto-generated primary key on `instance`.
 
 ```go
-product, err := ProductManager.Create(ctx, &Product{
+product := &Product{
     Name:  "Mechanical Keyboard",
     Price: 129.99,
-})
+}
+err := ProductManager.Create(ctx, product)
 ```
 
-### `Get(ctx context.Context, pk any) (*T, error)`
-Retrieves a single record by primary key. Returns `sql.ErrNoRows` (or `orm.ErrNotFound`) if no record exists.
+### `Get(ctx context.Context, id int64) (*T, error)`
+Retrieves a single record by integer primary key. Returns an error if no record exists.
 
 ```go
 product, err := ProductManager.Get(ctx, 42)
@@ -36,35 +37,35 @@ product.Price = 119.99
 err := ProductManager.Update(ctx, product)
 ```
 
-### `Delete(ctx context.Context, pk any) error`
-Removes a record from the database by primary key. Executes `BeforeDelete` and `AfterDelete` lifecycle hooks and enforces foreign key `CascadeType` policies (e.g. `CascadePROTECT`).
+### `Delete(ctx context.Context, instance *T) error`
+Removes the given record from the database. Executes `BeforeDelete` and `AfterDelete` lifecycle hooks.
 
 ```go
-err := ProductManager.Delete(ctx, 42)
+err := ProductManager.Delete(ctx, product)
 ```
 
 ---
 
 ## QuerySet Spawning Methods
 
-A Manager provides convenient shortcut methods that spawn a new `QuerySet[T]`:
+A Manager provides query shortcuts. `All` evaluates immediately; the others below create querysets:
 
-- `Manager.All() *QuerySet[T]`: Starts a query selecting all rows.
-- `Manager.Filter(conditions ...any) *QuerySet[T]`: Starts a query with initial `WHERE` filters.
-- `Manager.Exclude(conditions ...any) *QuerySet[T]`: Starts a query excluding matching rows.
-- `Manager.OrderBy(fields ...string) *QuerySet[T]`: Starts a query with ordering.
-- `Manager.SelectRelated(fields ...string) *QuerySet[T]`: Starts a query with eager-loaded relations.
-- `Manager.QuerySet() *QuerySet[T]`: Spawns a clean, unconstrained `QuerySet[T]`.
+- `Manager.All(ctx context.Context) ([]*T, error)`: Executes a query selecting all rows.
+- `Manager.Filter(expr Expression) (QuerySet[T], error)`: Starts a query with one `WHERE` expression.
+- `Manager.Exclude(expr Expression) QuerySet[T]`: Starts a query excluding matching rows.
+- `Manager.OrderBy(fields ...any) QuerySet[T]`: Starts a query with ordering.
+- `Manager.SelectRelated(relations ...any) QuerySet[T]`: Starts a query with eager-loaded relations.
+- `Manager.QuerySet() QuerySet[T]`: Spawns a clean, unconstrained queryset.
 
 ---
 
 ## Bulk Operations
 
-### `BulkCreate(ctx context.Context, instances []*T, batchSize int) error`
-Performs multi-row batch inserts with a configurable chunk size to stay within database query parameter limits.
+### `BulkCreate(ctx context.Context, instances []*T) error`
+Performs a multi-row insert. The API has no batch-size argument.
 
 ```go
-err := ProductManager.BulkCreate(ctx, batchProducts, 500)
+err := ProductManager.BulkCreate(ctx, batchProducts)
 ```
 
 ---
@@ -78,8 +79,8 @@ type CustomProductManager struct {
     *orm.Manager[Product]
 }
 
-func (m *CustomProductManager) InStockOnly() *orm.QuerySet[Product] {
-    return m.Filter(ProductExpr.InStock.Eq(true), ProductExpr.Stock.Gt(0))
+func (m *CustomProductManager) InStockOnly() (orm.QuerySet[Product], error) {
+    return m.Filter(orm.And(ProductExpr.InStock.Eq(true), ProductExpr.Stock.Gt(0)))
 }
 ```
 

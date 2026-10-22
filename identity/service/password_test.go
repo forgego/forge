@@ -36,7 +36,7 @@ func setupPasswordServiceTest(t *testing.T) (PasswordService, *db.DB, context.Co
 
 	// Use default password policy
 	policy := config.DefaultIdentityConfig().PasswordPolicy
-	service := NewPasswordService(userRepo, tokenRepo, policy)
+	service := NewPasswordServiceWithNotifier(userRepo, tokenRepo, policy, &testPasswordResetNotifier{})
 	ctx := context.Background()
 	return service, testDB, ctx
 }
@@ -263,7 +263,7 @@ func TestPasswordService_ResetPassword(t *testing.T) {
 		require.NoError(t, err)
 
 		err = service.ResetPassword(ctx, rawToken, "NewPassword123!")
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "expired")
 	})
 

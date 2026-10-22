@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -14,24 +15,43 @@ import (
 	forgeerrors "github.com/forgego/forge/errors"
 	forgehttp "github.com/forgego/forge/server"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type accessCheckQueryset struct {
 	unusedUpdateOperation
 	unusedDeleteOperation
-	items []*accessCheckModel
+	items        []*accessCheckModel
+	offsetCalled bool
+	limitCalled  bool
+	offset       int
+	limit        int
 }
 
 func (q *accessCheckQueryset) All(context.Context) ([]*accessCheckModel, error) {
-	return q.items, nil
+	start := q.offset
+	if start > len(q.items) {
+		start = len(q.items)
+	}
+	end := len(q.items)
+	if q.limitCalled && start+q.limit < end {
+		end = start + q.limit
+	}
+	return q.items[start:end], nil
 }
 
 func (q *accessCheckQueryset) Count(context.Context) (int64, error) {
 	return int64(len(q.items)), nil
 }
 
-func (q *accessCheckQueryset) Offset(int) *accessCheckQueryset { return q }
-func (q *accessCheckQueryset) Limit(int) *accessCheckQueryset  { return q }
+func (q *accessCheckQueryset) Offset(n int) *accessCheckQueryset {
+	q.offsetCalled, q.offset = true, n
+	return q
+}
+func (q *accessCheckQueryset) Limit(n int) *accessCheckQueryset {
+	q.limitCalled, q.limit = true, n
+	return q
+}
 
 func (q *accessCheckQueryset) Create(context.Context, interface{}) error { return nil }
 
@@ -179,6 +199,80 @@ func TestBaseViewSetWithoutAccessClassesKeepsListResponse(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, response.Code)
 	assert.JSONEq(t, `{"count":1,"results":[{"id":1}]}`, response.Body.String())
+}
+
+func TestListWithNonObjectPermissionsUsesQuerysetPagination(t *testing.T) {
+	for _, tc := range []struct {
+		name           string
+		setPermissions func(*BaseViewSet, *testing.T)
+	}{
+		{"explicit", func(vs *BaseViewSet, _ *testing.T) {
+			vs.Permissions = []permissions.Permission{permissions.NewAllowAny(), permissions.NewIsAuthenticatedOrReadOnly(), permissions.NewIsOwnerOrReadOnly("")}
+		}},
+		{"default", func(_ *BaseViewSet, t *testing.T) {
+			saved := GetSettings()
+			t.Cleanup(func() { SetSettings(saved) })
+			SetDefaultPermissions(permissions.NewAllowAny())
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			qs := &accessCheckQueryset{items: []*accessCheckModel{{ID: 1}, {ID: 2}, {ID: 3}}}
+			vs := NewBaseViewSet(newAccessCheckSerializer, qs, &accessCheckModel{})
+			tc.setPermissions(vs, t)
+			response := serveAccessCheckRequest(vs, http.MethodGet, "/api/items/?page=2&page_size=1")
+			require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+			assert.JSONEq(t, `{"count":3,"next":"http://example.com/api/items/?page=3&page_size=1","previous":"http://example.com/api/items/?page=1&page_size=1","results":[{"id":2}]}`, response.Body.String())
+			assert.True(t, qs.offsetCalled)
+			assert.True(t, qs.limitCalled)
+			assert.Equal(t, 1, qs.offset)
+			assert.Equal(t, 1, qs.limit)
+		})
+	}
+}
+
+type hideSecondObjectPermission struct{}
+
+func (hideSecondObjectPermission) HasPermission(*http.Request, permissions.ViewSet) bool { return true }
+func (hideSecondObjectPermission) HasObjectPermission(_ *http.Request, _ permissions.ViewSet, object interface{}) bool {
+	return object.(*accessCheckModel).ID != 2
+}
+func (hideSecondObjectPermission) GetMessage() string { return "hidden" }
+func (hideSecondObjectPermission) GetCode() string    { return "permission_denied" }
+
+func TestListOmitsDeniedObjectsAndPaginatesAuthorizedRows(t *testing.T) {
+	vs := NewBaseViewSet(newAccessCheckSerializer,
+		&accessCheckQueryset{items: []*accessCheckModel{{ID: 1}, {ID: 2}, {ID: 3}}}, &accessCheckModel{})
+	vs.Permissions = []permissions.Permission{permissions.NewAllowAny(), hideSecondObjectPermission{}}
+	qs := vs.Queryset.(*accessCheckQueryset)
+	for _, tc := range []struct {
+		path           string
+		id             float64
+		next, previous bool
+	}{
+		{"/api/items/?page=1&page_size=1", 1, true, false},
+		{"/api/items/?page=2&page_size=1", 3, false, true},
+	} {
+		t.Run(tc.path, func(t *testing.T) {
+			response := serveAccessCheckRequest(vs, http.MethodGet, tc.path)
+			require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+			var body struct {
+				Count    int                      `json:"count"`
+				Results  []map[string]interface{} `json:"results"`
+				Next     *string                  `json:"next"`
+				Previous *string                  `json:"previous"`
+			}
+			require.NoError(t, json.Unmarshal(response.Body.Bytes(), &body))
+			assert.Equal(t, 2, body.Count)
+			require.Len(t, body.Results, 1)
+			assert.Equal(t, tc.id, body.Results[0]["id"])
+			assert.Equal(t, tc.next, body.Next != nil)
+			assert.Equal(t, tc.previous, body.Previous != nil)
+			assert.False(t, qs.offsetCalled)
+			assert.False(t, qs.limitCalled)
+		})
+	}
+	denied := serveAccessCheckRequest(vs, http.MethodGet, "/api/items/2")
+	assert.Equal(t, http.StatusForbidden, denied.Code)
 }
 
 func TestViewSetConfigPassesAccessClassesToBaseViewSet(t *testing.T) {

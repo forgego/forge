@@ -87,17 +87,26 @@ func (c *GenerateCommand) Execute(ctx *core.Context, args []string) error {
 		for _, entry := range entries {
 			if entry.IsDir() {
 				appPath := filepath.Join(modelsDir, entry.Name())
-				// Check for models.go
-				if _, err := os.Stat(filepath.Join(appPath, "models.go")); err == nil {
-					// Found an app with models
-					targetOutput := outputDir
-					if targetOutput == "" || targetOutput == "models" {
-						targetOutput = appPath // Colocate generated files
-					} else {
-						targetOutput = filepath.Join(targetOutput, entry.Name())
+				// Check for models.go; a present but unreadable file must not
+				// disappear from an all-app generation run.
+				modelsPath := filepath.Join(appPath, "models.go")
+				if _, err := os.Lstat(modelsPath); err != nil {
+					if os.IsNotExist(err) {
+						continue
 					}
-					pending = append(pending, pendingApp{appPath: appPath, targetOutput: targetOutput, name: entry.Name()})
+					return fmt.Errorf("failed to inspect %s: %w", modelsPath, err)
 				}
+				if _, err := os.Stat(modelsPath); err != nil {
+					return fmt.Errorf("failed to inspect %s: %w", modelsPath, err)
+				}
+				// Found an app with models
+				targetOutput := outputDir
+				if targetOutput == "" || targetOutput == "models" {
+					targetOutput = appPath // Colocate generated files
+				} else {
+					targetOutput = filepath.Join(targetOutput, entry.Name())
+				}
+				pending = append(pending, pendingApp{appPath: appPath, targetOutput: targetOutput, name: entry.Name()})
 			}
 		}
 

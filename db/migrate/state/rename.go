@@ -86,6 +86,30 @@ func (s *InMemoryState) applyRenameColumn(c *core.RenameColumn) {
 	}
 }
 
+func (s *InMemoryState) applyRenameConstraint(c *core.RenameConstraint) error {
+	table := s.state.Tables[c.Table]
+	if table == nil {
+		return fmt.Errorf("table %s does not exist", c.Table)
+	}
+	if constraint := table.Constraints[c.OldName]; constraint != nil {
+		delete(table.Constraints, c.OldName)
+		constraint.Name = c.NewName
+		table.Constraints[c.NewName] = constraint
+		return nil
+	}
+	if fk := table.ForeignKeys[c.OldName]; fk != nil {
+		delete(table.ForeignKeys, c.OldName)
+		fk.Name = c.NewName
+		table.ForeignKeys[c.NewName] = fk
+		return nil
+	}
+	// Table/column renames already normalize framework-generated FK names.
+	if table.Constraints[c.NewName] != nil || table.ForeignKeys[c.NewName] != nil {
+		return nil
+	}
+	return fmt.Errorf("constraint %s does not exist on table %s", c.OldName, c.Table)
+}
+
 // foreignKeyName is the name the SQL builder gives a foreign key.
 func foreignKeyName(table, column string) string {
 	return fmt.Sprintf("fk_%s_%s", table, column)

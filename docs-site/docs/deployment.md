@@ -297,6 +297,10 @@ forge migrate up
 ./smoke-check.sh https://app.example.com /admin
 ```
 
+If a pending migration deletes data, `migrate up` lists its file and operation
+and exits before applying any pending migration. After reviewing the SQL and
+backup, run `forge migrate up --allow-destructive` to proceed.
+
 Keep migrations backward compatible with the running binary where you can
 (add columns and tables first, remove them in a later release), so the old
 binary keeps working if you have to switch back.

@@ -34,14 +34,16 @@ commit, and pass/fail/skip counts):
 
 ### Now
 
-- [ ] Responses are rendered through the configured serializer's declared
-      fields, not raw model tags.
-- [ ] Persistence and hook errors map to stable categories (400 / 404 / 500)
-      without leaking internal messages.
-- [ ] Viewset data-access configuration is validated at registration, not
-      discovered by reflection at request time.
-- [ ] External consumer journey test against PostgreSQL (CRUD, permission
-      denial, validation, migration recovery).
+- [x] Serializer response fields, categorized persistence/hook errors,
+      registration-time viewset checks and an external PostgreSQL consumer
+      journey implemented in #289, with follow-up fixes in #295 and #297.
+      Capability acceptance remains governed by the
+      [support contract](../docs-site/docs/status.md), not these checkboxes.
+- [ ] Complete release publication: #299 prepared v0.2.0, but the tag and
+      successful public install smoke are still outstanding as of 2026-10-20.
+- [ ] Resolve remaining migration type/option and SQL round-trip gaps in #292
+      with explicit compatibility and upgrade decisions.
+- [ ] Resolve the unpatched docs-site `braces` dependency audit finding.
 - [ ] TODO/FIXME burn-down across admin, ORM/schema/migrations,
       API/server reliability edges.
 - [x] Password-hash guard (`strings.HasPrefix(hash,"$2a$")`)

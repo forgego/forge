@@ -65,19 +65,19 @@ func (c *AddModelCommand) Execute(ctx *core.Context, args []string) error {
 		tableName = pluralizeModelName(modelName)
 	}
 
-	// Interactive field generation
-	fields, err := promptForFields()
-	if err != nil {
-		return fmt.Errorf("failed to get fields: %w", err)
-	}
-
 	// Check dry-run
 	dryRun, _ := ctx.Cmd.Flags().GetBool("dry-run")
 	if dryRun {
 		fmt.Printf("Dry-run mode - would create model %s in app %s\n", modelName, appName)
 		fmt.Printf("Table name: %s\n", tableName)
-		fmt.Printf("Fields: %d\n", len(fields))
+		fmt.Println("Fields: chosen interactively when applied")
 		return nil
+	}
+
+	// Interactive field generation
+	fields, err := promptForFields()
+	if err != nil {
+		return fmt.Errorf("failed to get fields: %w", err)
 	}
 
 	// Generate model code

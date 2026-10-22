@@ -152,7 +152,14 @@ func mapFieldTypeToSQL(field generator.FieldDefinition, isSQLite, isPostgres boo
 		return sqlType
 	}
 
-	switch field.Type {
+	// These functional constructors are recorded with a Field suffix. Resolve
+	// their declared SQL types instead of falling back to their Go storage types.
+	fieldType := field.Type
+	switch fieldType {
+	case "StringField", "DecimalField", "JSONField", "DateField":
+		fieldType = strings.TrimSuffix(fieldType, "Field")
+	}
+	switch fieldType {
 	case "Decimal":
 		maxDigits := 10
 		decimalPlaces := 2
@@ -162,7 +169,7 @@ func mapFieldTypeToSQL(field generator.FieldDefinition, isSQLite, isPostgres boo
 		if dp, ok := field.Options["decimal_places"].(int); ok && dp >= 0 {
 			decimalPlaces = dp
 		}
-		return fmt.Sprintf("NUMERIC(%d, %d)", maxDigits, decimalPlaces)
+		return fmt.Sprintf("NUMERIC(%d,%d)", maxDigits, decimalPlaces)
 
 	case "JSON":
 		if isPostgres {

@@ -42,6 +42,39 @@ func TestFieldExpression_ToSQL(t *testing.T) {
 	}
 }
 
+func TestTypedFieldNotIn(t *testing.T) {
+	field := NewField[int64]("id", "products")
+	for _, tc := range []struct {
+		values   []int64
+		wantSQL  string
+		wantArgs []interface{}
+	}{
+		{[]int64{1, 3}, `"products"."id" NOT IN ($1, $2)`, []interface{}{int64(1), int64(3)}},
+		{nil, "1=1", []interface{}{}},
+	} {
+		builder := NewSQLBuilder()
+		got, _, err := field.NotIn(tc.values...).ToSQL(builder)
+		require.NoError(t, err)
+		assert.Equal(t, tc.wantSQL, got)
+		assert.Equal(t, tc.wantArgs, builder.Args())
+	}
+}
+
+func TestTypedFieldNullLookups(t *testing.T) {
+	field := NewField[string]("deleted_at", "products")
+	for _, tc := range []struct {
+		expr ComparisonExpression[string]
+		want string
+	}{
+		{field.IsNull(), `"products"."deleted_at" IS NULL`},
+		{field.IsNotNull(), `"products"."deleted_at" IS NOT NULL`},
+	} {
+		got, _, err := tc.expr.ToSQL(NewSQLBuilder())
+		require.NoError(t, err)
+		assert.Equal(t, tc.want, got)
+	}
+}
+
 func TestFieldExpression_ComparisonMethods(t *testing.T) {
 	priceField := NewField[float64]("price", "books")
 

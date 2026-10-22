@@ -294,6 +294,7 @@ func BuildUpdateSQL(instance interface{}, tableName, idField string, placeholder
 
 	// Iterate schema fields first, then get values only for those fields
 	schemaFields := schemaInstance.Fields()
+	fkColumns := foreignKeyColumns(schemaInstance)
 
 	var setParts []string
 	var values []interface{}
@@ -333,6 +334,12 @@ func BuildUpdateSQL(instance interface{}, tableName, idField string, placeholder
 		// (zero value) must not overwrite the stored creation time.
 		if schemaField.AutoNowAdd && reflect.ValueOf(fieldValue).IsZero() {
 			continue
+		}
+		if !schemaField.Required && (fkColumns[strings.ToLower(columnName)] || schemaField.Type == schema.TypeForeignKey || schemaField.Type == schema.TypeOneToOne) {
+			value := reflect.ValueOf(fieldValue)
+			if !value.IsValid() || value.IsZero() {
+				fieldValue = nil
+			}
 		}
 
 		// Include field in UPDATE

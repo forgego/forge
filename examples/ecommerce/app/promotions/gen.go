@@ -13,10 +13,10 @@ type PromotionGenerated struct {
 	schema.BaseSchema
 	Id               int64     `json:"id" db:"id" validate:""`
 	Name             string    `json:"name" db:"name" validate:"required,max=200"`
-	Code             string    `json:"code" db:"code" validate:"max=50"`
+	Code             string    `json:"code" db:"code" validate:"unique,max=50"`
 	Description      string    `json:"description" db:"description" validate:""`
 	DiscountType     string    `json:"discount_type" db:"discount_type" validate:"required,max=20"`
-	DiscountValue    float64   `json:"discount_value" db:"discount_value" validate:"required"`
+	DiscountValue    float64   `json:"discount_value" db:"discount_value" validate:""`
 	MinPurchase      float64   `json:"min_purchase" db:"min_purchase" validate:""`
 	MaxDiscount      float64   `json:"max_discount" db:"max_discount" validate:""`
 	StartDate        time.Time `json:"start_date" db:"start_date" validate:"required"`
@@ -94,7 +94,7 @@ var PromotionFieldsInstance = PromotionFields{
 type PromotionRuleGenerated struct {
 	schema.BaseSchema
 	Id          int64     `json:"id" db:"id" validate:""`
-	PromotionId int64     `json:"promotion_id" db:"promotion_id" validate:"required"`
+	PromotionId int64     `json:"promotion_id" db:"promotion_id" validate:""`
 	RuleType    string    `json:"rule_type" db:"rule_type" validate:"required,max=50"`
 	Field       string    `json:"field" db:"field" validate:"required,max=100"`
 	Operator    string    `json:"operator" db:"operator" validate:"required,max=20"`
@@ -213,7 +213,7 @@ var BannerFieldsInstance = BannerFields{
 type NewsletterSubscriptionGenerated struct {
 	schema.BaseSchema
 	Id             int64     `json:"id" db:"id" validate:""`
-	Email          string    `json:"email" db:"email" validate:"required,max=255"`
+	Email          string    `json:"email" db:"email" validate:"required,unique,max=255"`
 	FirstName      string    `json:"first_name" db:"first_name" validate:"max=100"`
 	LastName       string    `json:"last_name" db:"last_name" validate:"max=100"`
 	CustomerId     int64     `json:"customer_id" db:"customer_id" validate:""`
@@ -274,11 +274,11 @@ var NewsletterSubscriptionFieldsInstance = NewsletterSubscriptionFields{
 type PromotionUsageGenerated struct {
 	schema.BaseSchema
 	Id             int64     `json:"id" db:"id" validate:""`
-	PromotionId    int64     `json:"promotion_id" db:"promotion_id" validate:"required"`
-	CustomerId     int64     `json:"customer_id" db:"customer_id" validate:"required"`
-	OrderId        int64     `json:"order_id" db:"order_id" validate:"required"`
+	PromotionId    int64     `json:"promotion_id" db:"promotion_id" validate:""`
+	CustomerId     int64     `json:"customer_id" db:"customer_id" validate:""`
+	OrderId        int64     `json:"order_id" db:"order_id" validate:""`
 	UsedAt         time.Time `json:"used_at" db:"used_at" validate:"required"`
-	DiscountAmount float64   `json:"discount_amount" db:"discount_amount" validate:"required"`
+	DiscountAmount float64   `json:"discount_amount" db:"discount_amount" validate:""`
 	CreatedAt      time.Time `json:"created_at" db:"created_at" validate:""`
 }
 

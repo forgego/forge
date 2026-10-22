@@ -3,8 +3,73 @@ package state
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	codegen "github.com/forgego/forge/codegen"
+	"github.com/forgego/forge/db/migrate/core"
 )
+
+func TestApplyRejectsUnhandledChanges(t *testing.T) {
+	for _, change := range []core.Change{&core.UnknownChange{SQL: "CREATE MATERIALIZED VIEW report AS SELECT 1"}, &core.RunSQL{SQL: "ALTER TABLE users ADD COLUMN x INT"}} {
+		err := NewInMemoryState().Apply([]core.Change{change})
+		if err == nil {
+			t.Fatalf("Apply(%T) unexpectedly succeeded", change)
+		}
+	}
+}
+
+func TestApplyModifiesIndexState(t *testing.T) {
+	manager := NewInMemoryState()
+	manager.GetState().Tables["users"] = &TableState{Name: "users", Indexes: map[string]*IndexState{"old": {Name: "old", Fields: []string{"name"}}}}
+	err := manager.Apply([]core.Change{&core.ModifyIndex{Table: "users", OldIndex: codegen.IndexDefinition{Name: "old"}, NewIndex: codegen.IndexDefinition{Name: "new", Fields: []string{"email"}, Unique: true}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	indexes := manager.GetState().Tables["users"].Indexes
+	if indexes["old"] != nil || indexes["new"] == nil || !indexes["new"].Unique {
+		t.Fatalf("indexes = %+v", indexes)
+	}
+}
+
+func TestLoadRejectsUnreadableMigration(t *testing.T) {
+	dir := t.TempDir()
+	name := "000001_missing.up.sql"
+	if err := os.Symlink(filepath.Join(dir, "gone"), filepath.Join(dir, name)); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadStateFromFiles(dir)
+	if err == nil || !strings.Contains(err.Error(), name) {
+		t.Fatalf("load error = %v, want file name", err)
+	}
+}
+
+func TestGetStateDoesNotHideReplayFailure(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Symlink(filepath.Join(dir, "gone"), filepath.Join(dir, "000001_missing.up.sql")); err != nil {
+		t.Fatal(err)
+	}
+	loader := NewFileStateLoader(dir)
+	if got := loader.GetState(); got != nil {
+		t.Fatalf("GetState returned an empty success state after replay failure: %+v", got)
+	}
+}
+
+func TestLoadRejectsUnknownSchemaChange(t *testing.T) {
+	dir := writeMigrations(t, map[string]string{"000001_bad.up.sql": `CREATE MATERIALIZED VIEW report AS SELECT 1;`})
+	_, err := LoadStateFromFiles(dir)
+	if err == nil || !strings.Contains(err.Error(), "000001_bad.up.sql") {
+		t.Fatalf("load error = %v, want file name", err)
+	}
+}
+
+func TestLoadRejectsUnresolvedDeferredChange(t *testing.T) {
+	dir := writeMigrations(t, map[string]string{"000001_bad.up.sql": `CREATE INDEX missing_idx ON missing_table (id);`})
+	_, err := LoadStateFromFiles(dir)
+	if err == nil || !strings.Contains(err.Error(), "000001_bad.up.sql") {
+		t.Fatalf("load error = %v, want file name", err)
+	}
+}
 
 func writeMigrations(t *testing.T, files map[string]string) string {
 	t.Helper()

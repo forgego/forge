@@ -30,7 +30,7 @@ func (r *sessionRepository) Create(ctx context.Context, session *models.UserSess
 		RETURNING id
 	`
 
-	now := time.Now()
+	now := time.Now().UTC()
 	if session.LastActivity.IsZero() {
 		session.LastActivity = now
 	}
@@ -43,9 +43,9 @@ func (r *sessionRepository) Create(ctx context.Context, session *models.UserSess
 		session.SessionKey,
 		session.IPAddress,
 		session.UserAgent,
-		session.LastActivity,
-		session.CreatedAt,
-		session.ExpiresAt,
+		session.LastActivity.UTC(),
+		session.CreatedAt.UTC(),
+		utcTimestamp(session.ExpiresAt),
 		session.IsRememberMe,
 	).Scan(&session.ID)
 
@@ -141,8 +141,8 @@ func (r *sessionRepository) Update(ctx context.Context, session *models.UserSess
 
 	result, err := r.db.ExecContext(ctx, query,
 		session.SessionKey,
-		session.LastActivity,
-		session.ExpiresAt,
+		session.LastActivity.UTC(),
+		utcTimestamp(session.ExpiresAt),
 	)
 
 	if err != nil {
@@ -159,6 +159,10 @@ func (r *sessionRepository) Update(ctx context.Context, session *models.UserSess
 	}
 
 	return nil
+}
+
+func (r *sessionRepository) TouchLastActivity(ctx context.Context, key string, at time.Time) error {
+	return execOne(ctx, r.db.ExecContext, `UPDATE user_sessions SET last_activity = $1 WHERE session_key = $2`, at.UTC(), key)
 }
 
 // Delete deletes a session by session key
@@ -196,9 +200,9 @@ func (r *sessionRepository) DeleteByUserID(ctx context.Context, userID int64) er
 
 // DeleteExpired deletes all expired sessions
 func (r *sessionRepository) DeleteExpired(ctx context.Context) error {
-	query := `DELETE FROM user_sessions WHERE expires_at IS NOT NULL AND expires_at < NOW()`
+	query := `DELETE FROM user_sessions WHERE expires_at IS NOT NULL AND expires_at < $1`
 
-	_, err := r.db.ExecContext(ctx, query)
+	_, err := r.db.ExecContext(ctx, query, time.Now().UTC())
 	if err != nil {
 		return fmt.Errorf("failed to delete expired sessions: %w", err)
 	}

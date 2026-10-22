@@ -6,7 +6,7 @@ RUN npm ci
 COPY admin/ui/web/ ./
 RUN npm run build
 
-FROM golang:1.27.1-alpine AS builder
+FROM golang:1.27.3-alpine AS builder
 RUN apk add --no-cache gcc musl-dev
 WORKDIR /src
 COPY go.mod go.sum ./

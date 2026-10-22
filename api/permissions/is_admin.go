@@ -10,6 +10,8 @@ import (
 // Assumes user has an IsAdmin() bool method or IsAdmin field
 type IsAdminUser struct{}
 
+func (*IsAdminUser) HasObjectRules(*http.Request) bool { return false }
+
 // NewIsAdminUser creates a new IsAdminUser permission
 func NewIsAdminUser() *IsAdminUser {
 	return &IsAdminUser{}

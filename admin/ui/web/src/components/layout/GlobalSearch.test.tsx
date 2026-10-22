@@ -56,6 +56,17 @@ describe("GlobalSearch", () => {
     expect(screen.getByText("Orders")).toBeInTheDocument();
   });
 
+  it("opens the command palette with Ctrl+K and closes it with Escape", () => {
+    render(<GlobalSearch models={models as any} />);
+
+    fireEvent.keyDown(document, { key: "k", ctrlKey: true });
+    expect(screen.getByRole("dialog", { name: "Global search" })).toBeInTheDocument();
+    expect(screen.getByTestId("global-search-input")).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Global search" })).not.toBeInTheDocument();
+  });
+
   it("filters the model list as the user types", () => {
     render(<GlobalSearch models={models as any} />);
     fireEvent.click(screen.getByTestId("global-search-trigger"));

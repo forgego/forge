@@ -44,6 +44,24 @@ func TestValidRelativeLinkPasses(t *testing.T) {
 	}
 }
 
+func TestLocalWorkingNotesDoNotEnterPublicDocumentationCheck(t *testing.T) {
+	root := t.TempDir()
+	writeFixture(t, root, "README.md", "# Public docs\n")
+	for _, rel := range []string{
+		"docs/design/tasks/module-at-root.md",
+		"docs/design/admin-ui-tasks.md",
+		"docs/design/backend-tasks.md",
+		"docs/design/backend-handoff.md",
+	} {
+		writeFixture(t, root, rel, "[historical path](missing.md)\n")
+	}
+	writeFixture(t, root, "docs/design/admin-ui-system.md", "[missing public guide](missing.md)\n")
+	problems := checkFixture(t, root)
+	if len(problems) != 1 || problems[0].file != "docs/design/admin-ui-system.md" {
+		t.Fatalf("expected only the public design guide to be checked, got %v", problems)
+	}
+}
+
 func TestMissingRelativeLinkReportedWithLineNumber(t *testing.T) {
 	root := t.TempDir()
 	writeFixture(t, root, "README.md", "# Title\n\nIntro line.\nSee [gone](docs/nope.md).\n")

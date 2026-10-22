@@ -41,11 +41,11 @@ type jsonEmbeddedModel struct {
 }
 
 func (jsonEmbeddedModel) Fields() []schema.Field {
-	return []schema.Field{{Name: "metadata", DBColumn: "metadata_json", Type: schema.TypeJSON}}
+	return []schema.Field{{Name: "metadata", DBColumn: "metadata_json", Type: schema.TypeJSON, Serialize: true}}
 }
 
 func (jsonDBTagModel) Fields() []schema.Field {
-	return []schema.Field{{Name: "metadata", DBColumn: "metadata_json", Type: schema.TypeJSON}}
+	return []schema.Field{{Name: "metadata", DBColumn: "metadata_json", Type: schema.TypeJSON, Serialize: true}}
 }
 
 func (jsonRoundTripModel) Fields() []schema.Field {

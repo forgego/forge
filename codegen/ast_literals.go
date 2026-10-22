@@ -78,6 +78,9 @@ func (p *ASTParser) extractBoolArgAt(call *ast.CallExpr, index int) *bool {
 
 // extractStringFromExpr extracts a string value from an AST expression
 func (p *ASTParser) extractStringFromExpr(expr ast.Expr) string {
+	if value, ok := p.schemaConstantString(expr); ok {
+		return value
+	}
 	if lit, ok := expr.(*ast.BasicLit); ok && lit.Kind == token.STRING {
 		// Remove quotes
 		if len(lit.Value) >= 2 {

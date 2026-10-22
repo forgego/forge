@@ -71,7 +71,7 @@ type Post struct {
 func (Post) Fields() []schema.Field {
 	fields := []schema.Field{
 		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
-		schema.StringField("title", schema.Required(), schema.MaxLength(200)),
+		schema.StringField("title", schema.Required(), schema.MaxLength(200), schema.DBIndex()),
 		schema.StringField("slug", schema.Required(), schema.MaxLength(200)),
 		schema.StringField("status", schema.Required(), schema.MaxLength(20), schema.Default("draft")),
 		schema.Int64Field("author_id", schema.Required()),
@@ -97,6 +97,7 @@ func (Post) Meta() schema.Meta {
 func (Post) Relations() []schema.Relation {
 	return []schema.Relation{
 		schema.ForeignKeyField("author_id", "Author", schema.OnDelete(schema.CascadeCASCADE), schema.RelatedName("posts")),
+		schema.ManyToManyField("editors", "Author", schema.Through("blog_post_editors")),
 	}
 }
 

@@ -1,14 +1,17 @@
 package project
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/forgego/forge/cli/core"
 	"github.com/forgego/forge/cli/templates"
+	"github.com/forgego/forge/internal/safepath"
 	"github.com/spf13/cobra"
 )
 
@@ -103,7 +106,7 @@ func (c *AddHandlerCommand) Execute(ctx *core.Context, args []string) error {
 	}
 
 	// Render handler code
-	handlerCode, err := templates.RenderTemplate("handlers.go.tmpl", templateData)
+	handlerCode, err := renderHandlerTemplate(templateData)
 	if err != nil {
 		return fmt.Errorf("failed to render handler template: %w", err)
 	}
@@ -127,4 +130,30 @@ func (c *AddHandlerCommand) Execute(ctx *core.Context, args []string) error {
 	fmt.Printf("  Method: %s, Path: %s\n", method, path)
 
 	return nil
+}
+
+// renderHandlerTemplate supplies the route path under both names used by
+// existing handler templates, including project overrides.
+func renderHandlerTemplate(data templates.TemplateData) ([]byte, error) {
+	path := filepath.Join(".forge", "templates", "handlers.go.tmpl")
+	content, err := safepath.ReadFile(filepath.Join(".", ".forge", "templates"), path)
+	if os.IsNotExist(err) {
+		content, err = templates.ReadTemplate("handlers.go.tmpl")
+	}
+	if err != nil {
+		return nil, err
+	}
+	view := struct {
+		templates.TemplateData
+		Path string
+	}{data, data.HandlerPath}
+	tmpl, err := template.New("handler").Parse(string(content))
+	if err != nil {
+		return nil, err
+	}
+	var out bytes.Buffer
+	if err := tmpl.Execute(&out, view); err != nil {
+		return nil, err
+	}
+	return out.Bytes(), nil
 }

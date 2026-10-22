@@ -21,6 +21,19 @@ func NewTokenRepository(database *db.DB) TokenRepository {
 	return &tokenRepository{db: database}
 }
 
+func (r *tokenRepository) SharesUserTransaction(users UserRepository) bool {
+	u, ok := users.(*userRepository)
+	return ok && r.db == u.db
+}
+
+// SharesBuiltInTokenTransaction requires the concrete built-in SQL token store.
+// A custom wrapper may inherit SharesUserTransaction while overriding token
+// consumption, so its inherited claim alone is insufficient.
+func SharesBuiltInTokenTransaction(users UserRepository, tokens TokenRepository) bool {
+	t, ok := tokens.(*tokenRepository)
+	return ok && t.SharesUserTransaction(users)
+}
+
 // CreateEmailVerificationToken creates an email verification token
 func (r *tokenRepository) CreateEmailVerificationToken(ctx context.Context, token *models.EmailVerificationToken) error {
 	query := `
@@ -30,7 +43,7 @@ func (r *tokenRepository) CreateEmailVerificationToken(ctx context.Context, toke
 		RETURNING id
 	`
 
-	now := time.Now()
+	now := time.Now().UTC()
 	if token.CreatedAt.IsZero() {
 		token.CreatedAt = now
 	}
@@ -39,8 +52,8 @@ func (r *tokenRepository) CreateEmailVerificationToken(ctx context.Context, toke
 		token.UserID,
 		token.Token,
 		token.Email,
-		token.CreatedAt,
-		token.ExpiresAt,
+		token.CreatedAt.UTC(),
+		token.ExpiresAt.UTC(),
 	).Scan(&token.ID)
 
 	if err != nil {
@@ -88,10 +101,10 @@ func (r *tokenRepository) getEmailVerificationTokenByHash(ctx context.Context, t
 		SELECT id, user_id, token, email, created_at, expires_at, verified_at
 		FROM email_verification_tokens
 		WHERE verified_at IS NULL
-		  AND expires_at > NOW()
+		  AND expires_at > $1
 	`
 
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.QueryContext(ctx, query, time.Now().UTC())
 	if err != nil {
 		return nil, fmt.Errorf("failed to query email verification tokens: %w", err)
 	}
@@ -146,9 +159,9 @@ func (r *tokenRepository) DeleteEmailVerificationToken(ctx context.Context, toke
 
 // MarkEmailVerificationTokenUsed marks an email verification token as used by ID
 func (r *tokenRepository) MarkEmailVerificationTokenUsed(ctx context.Context, tokenID int64) error {
-	query := `UPDATE email_verification_tokens SET verified_at = $1 WHERE id = $2`
+	query := `UPDATE email_verification_tokens SET verified_at = $1 WHERE id = $2 AND verified_at IS NULL AND expires_at > $1`
 
-	now := time.Now()
+	now := time.Now().UTC()
 	result, err := r.db.ExecContext(ctx, query, now, tokenID)
 	if err != nil {
 		return fmt.Errorf("failed to mark email verification token as used: %w", err)
@@ -175,7 +188,7 @@ func (r *tokenRepository) CreatePasswordResetToken(ctx context.Context, token *m
 		RETURNING id
 	`
 
-	now := time.Now()
+	now := time.Now().UTC()
 	if token.CreatedAt.IsZero() {
 		token.CreatedAt = now
 	}
@@ -183,8 +196,8 @@ func (r *tokenRepository) CreatePasswordResetToken(ctx context.Context, token *m
 	err := r.db.QueryRowContext(ctx, query,
 		token.UserID,
 		token.Token,
-		token.CreatedAt,
-		token.ExpiresAt,
+		token.CreatedAt.UTC(),
+		token.ExpiresAt.UTC(),
 	).Scan(&token.ID)
 
 	if err != nil {
@@ -230,10 +243,10 @@ func (r *tokenRepository) getPasswordResetTokenByHash(ctx context.Context, token
 		SELECT id, user_id, token, created_at, expires_at, used_at
 		FROM password_reset_tokens
 		WHERE used_at IS NULL
-		  AND expires_at > NOW()
+		  AND expires_at > $1
 	`
 
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.QueryContext(ctx, query, time.Now().UTC())
 	if err != nil {
 		return nil, fmt.Errorf("failed to query password reset tokens: %w", err)
 	}
@@ -287,19 +300,14 @@ func (r *tokenRepository) DeletePasswordResetToken(ctx context.Context, token st
 
 // DeleteExpiredTokens deletes all expired tokens
 func (r *tokenRepository) DeleteExpiredTokens(ctx context.Context) error {
-	// Delete expired email verification tokens
-	query1 := `DELETE FROM email_verification_tokens WHERE expires_at < NOW() AND verified_at IS NULL`
-	_, err := r.db.ExecContext(ctx, query1)
-	if err != nil {
-		return fmt.Errorf("failed to delete expired email verification tokens: %w", err)
-	}
-
-	// Delete expired password reset tokens
-	query2 := `DELETE FROM password_reset_tokens WHERE expires_at < NOW() AND used_at IS NULL`
-	_, err = r.db.ExecContext(ctx, query2)
-	if err != nil {
-		return fmt.Errorf("failed to delete expired password reset tokens: %w", err)
-	}
-
-	return nil
+	return r.db.WithTx(ctx, func(tx *db.Tx) error {
+		now := time.Now().UTC()
+		if _, err := tx.ExecContext(ctx, `DELETE FROM email_verification_tokens WHERE expires_at < $1 AND verified_at IS NULL`, now); err != nil {
+			return fmt.Errorf("failed to delete expired email verification tokens: %w", err)
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM password_reset_tokens WHERE expires_at < $1 AND used_at IS NULL`, now); err != nil {
+			return fmt.Errorf("failed to delete expired password reset tokens: %w", err)
+		}
+		return nil
+	})
 }

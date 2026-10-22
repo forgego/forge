@@ -9,8 +9,8 @@ image: /social-card.png
 Forge does not generate an OpenAPI description of your API yet. The
 `github.com/forgego/forge/api/docs` package serves an OpenAPI 3.0 document that
 carries only the `info` block: `paths` and `components.schemas` are empty,
-because viewsets, serializers and routes are not introspected. There is no
-Swagger UI and no CLI command that exports a specification.
+because viewsets, serializers and routes are not introspected. The example below
+shows how to serve the JSON document from your application.
 
 ## Serving the document
 

@@ -5,15 +5,18 @@ import (
 	"reflect"
 
 	"github.com/forgego/forge/orm"
+	"github.com/forgego/forge/schema"
+	validation "github.com/forgego/forge/validate"
 )
 
 // TypedSerializer provides type-safe serialization for a model type
 type TypedSerializer[T any] struct {
-	fields   TypedFields[T]
-	data     map[string]interface{}
-	errors   map[string][]string
-	valid    bool
-	instance *T
+	fields    TypedFields[T]
+	data      map[string]interface{}
+	errors    map[string][]string
+	valid     bool
+	instance  *T
+	configErr error
 }
 
 // TypedFields represents type-safe field definitions
@@ -22,11 +25,14 @@ type TypedFields[T any] map[string]TypedField[T]
 // TypedField represents a single typed field in a serializer
 type TypedField[T any] struct {
 	fieldExpr    orm.FieldExpression[interface{}]
+	fieldIndex   []int
 	required     bool
 	readOnly     bool
 	writeOnly    bool
 	validators   []Validator
 	defaultValue interface{}
+	hasDefault   bool
+	schemaField  *schema.Field
 }
 
 // NewTypedSerializer creates a new type-safe serializer
@@ -78,6 +84,7 @@ func (tf TypedField[T]) WriteOnly() TypedField[T] {
 // Default sets a default value
 func (tf TypedField[T]) Default(value interface{}) TypedField[T] {
 	tf.defaultValue = value
+	tf.hasDefault = true
 	return tf
 }
 
@@ -89,6 +96,13 @@ func (ts *TypedSerializer[T]) AddField(name string, field TypedField[T]) *TypedS
 
 // Deserialize deserializes data into a model instance (type-safe)
 func (ts *TypedSerializer[T]) Deserialize(data map[string]interface{}, instance *T) error {
+	if instance == nil {
+		ts.valid = false
+		return fmt.Errorf("instance is nil")
+	}
+	if data == nil {
+		data = make(map[string]interface{})
+	}
 	ts.data = data
 	ts.instance = instance
 
@@ -105,7 +119,12 @@ func (ts *TypedSerializer[T]) Deserialize(data map[string]interface{}, instance 
 func (ts *TypedSerializer[T]) Validate() error {
 	ts.errors = make(map[string][]string)
 	ts.valid = true
+	if ts.configErr != nil {
+		ts.valid = false
+		return ts.configErr
+	}
 
+	var schemaValidator *validation.FieldValidator
 	for name, field := range ts.fields {
 		if field.readOnly {
 			continue
@@ -113,20 +132,46 @@ func (ts *TypedSerializer[T]) Validate() error {
 
 		value, exists := ts.data[name]
 		if !exists {
-			if field.required {
+			if field.hasDefault {
+				value = field.defaultValue
+				ts.data[name] = value
+			} else if field.required {
 				ts.addError(name, "This field is required.")
 				continue
+			} else {
+				continue
 			}
-			// Use default if available
-			if field.defaultValue != nil {
-				ts.data[name] = field.defaultValue
-			}
+		}
+		if isNilValue(value) && field.required {
+			ts.addError(name, "This field is required.")
+			continue
+		}
+		destination, err := resolveTypedField(ts.instance, field)
+		if err != nil {
+			ts.addError(name, err.Error())
+			continue
+		}
+		converted, err := valueForField(value, destination.Type())
+		if err != nil {
+			ts.addError(name, err.Error())
+			continue
+		}
+		if !destination.CanSet() {
+			ts.addError(name, "model field cannot be set")
 			continue
 		}
 
 		// Run validators
 		for _, validator := range field.validators {
-			if err := validator.Validate(value); err != nil {
+			if err := validator.Validate(converted.Interface()); err != nil {
+				ts.addError(name, err.Error())
+			}
+		}
+		if field.schemaField != nil && !isNilValue(value) {
+			if schemaValidator == nil {
+				schemaValidator = validation.NewFieldValidator(validation.NewValidator())
+			}
+			if err := schemaValidator.ValidateField(*field.schemaField, converted.Interface()); err != nil {
 				ts.addError(name, err.Error())
 			}
 		}
@@ -140,28 +185,38 @@ func (ts *TypedSerializer[T]) Validate() error {
 	return nil
 }
 
+func isNilValue(value interface{}) bool {
+	if value == nil {
+		return true
+	}
+	v := reflect.ValueOf(value)
+	switch v.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+		return v.IsNil()
+	}
+	return false
+}
+
 // Serialize serializes a model instance to a map (type-safe)
 func (ts *TypedSerializer[T]) Serialize(instance *T) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-
-	// Use reflection to get field values
-	v := reflect.ValueOf(instance)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
+	if ts.configErr != nil {
+		return nil, ts.configErr
 	}
+	if instance == nil {
+		return nil, fmt.Errorf("instance is nil")
+	}
+	result := make(map[string]interface{})
 
 	for name, field := range ts.fields {
 		if field.writeOnly {
 			continue
 		}
 
-		// Get field value using field expression path
-		fieldName := field.fieldExpr.Path()
-		fieldValue := v.FieldByName(fieldName)
-
-		if fieldValue.IsValid() && fieldValue.CanInterface() {
-			result[name] = fieldValue.Interface()
+		fieldValue, err := resolveTypedField(instance, field)
+		if err != nil {
+			return nil, fmt.Errorf("field %s: %w", name, err)
 		}
+		result[name] = fieldValue.Interface()
 	}
 
 	return result, nil
@@ -171,11 +226,6 @@ func (ts *TypedSerializer[T]) Serialize(instance *T) (map[string]interface{}, er
 func (ts *TypedSerializer[T]) populateInstance() error {
 	if ts.instance == nil {
 		return fmt.Errorf("instance is nil")
-	}
-
-	v := reflect.ValueOf(ts.instance)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
 	}
 
 	for name, field := range ts.fields {
@@ -188,18 +238,17 @@ func (ts *TypedSerializer[T]) populateInstance() error {
 			continue
 		}
 
-		// Set field value
-		fieldName := field.fieldExpr.Path()
-		fieldValue := v.FieldByName(fieldName)
-
-		if fieldValue.IsValid() && fieldValue.CanSet() {
-			valueReflect := reflect.ValueOf(value)
-			if valueReflect.Type().AssignableTo(fieldValue.Type()) {
-				fieldValue.Set(valueReflect)
-			} else if valueReflect.Type().ConvertibleTo(fieldValue.Type()) {
-				fieldValue.Set(valueReflect.Convert(fieldValue.Type()))
-			}
+		fieldValue, err := resolveTypedField(ts.instance, field)
+		if err != nil {
+			ts.valid = false
+			return fmt.Errorf("field %s: %w", name, err)
 		}
+		converted, err := valueForField(value, fieldValue.Type())
+		if err != nil {
+			ts.valid = false
+			return fmt.Errorf("field %s: %w", name, err)
+		}
+		fieldValue.Set(converted)
 	}
 
 	return nil

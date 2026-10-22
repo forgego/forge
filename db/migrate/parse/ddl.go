@@ -245,7 +245,8 @@ var (
 	// renameColumnRegex matches ALTER TABLE t RENAME [COLUMN] a TO b. A
 	// RENAME CONSTRAINT does not match, because CONSTRAINT is not followed
 	// by TO.
-	renameColumnRegex = regexp.MustCompile(`(?is)^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?["']?(\w+)["']?\s+RENAME\s+(?:COLUMN\s+)?["']?(\w+)["']?\s+TO\s+["']?(\w+)["']?\s*;?\s*$`)
+	renameColumnRegex     = regexp.MustCompile(`(?is)^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?["']?(\w+)["']?\s+RENAME\s+(?:COLUMN\s+)?["']?(\w+)["']?\s+TO\s+["']?(\w+)["']?\s*;?\s*$`)
+	renameConstraintRegex = regexp.MustCompile(`(?is)^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?["']?(\w+)["']?\s+RENAME\s+CONSTRAINT\s+["']?(\w+)["']?\s+TO\s+["']?(\w+)["']?\s*;?\s*$`)
 )
 
 // parseRename parses a hand-written ALTER TABLE .. RENAME TO or RENAME
@@ -256,6 +257,9 @@ func parseRename(sql string) core.Change {
 	sql = strings.TrimSpace(sql)
 	if matches := renameTableRegex.FindStringSubmatch(sql); matches != nil {
 		return &core.RenameTable{OldName: matches[1], NewName: matches[2]}
+	}
+	if matches := renameConstraintRegex.FindStringSubmatch(sql); matches != nil {
+		return &core.RenameConstraint{Table: matches[1], OldName: matches[2], NewName: matches[3]}
 	}
 	if matches := renameColumnRegex.FindStringSubmatch(sql); matches != nil && !strings.EqualFold(matches[2], "CONSTRAINT") {
 		return &core.RenameColumn{Table: matches[1], OldName: matches[2], NewName: matches[3]}

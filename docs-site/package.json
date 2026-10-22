@@ -18,7 +18,7 @@
     "install:yarn": "yarn install --frozen-lockfile",
     "install:npm": "npm ci"
   },
-  "dependencies": {
+  "devDependencies": {
     "@docusaurus/core": "^3.10.2",
     "@docusaurus/preset-classic": "^3.10.2",
     "@docusaurus/plugin-sitemap": "^3.10.2",
@@ -26,12 +26,8 @@
     "clsx": "^2.1.1",
     "prism-react-renderer": "^2.4.1",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
-  },
-  "peerDependencies": {
-    "@docusaurus/theme-classic": "^3.10.2"
-  },
-  "devDependencies": {
+    "react-dom": "^19.3.0",
+    "@docusaurus/theme-classic": "^3.10.2",
     "@docusaurus/module-type-aliases": "^3.10.2",
     "@docusaurus/types": "^3.10.2"
   },
@@ -55,6 +51,21 @@
     "serialize-javascript": "^7.1.1",
     "sockjs": {
       "uuid": "^11.1.1"
+    },
+    "tinypool": "^2.2.0",
+    "postcss-selector-parser": "^7.1.7",
+    "follow-redirects": "^1.16.1",
+    "launch-editor": "^2.14.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "qs": "^6.16.0",
+      "serialize-javascript": "^7.1.1",
+      "sockjs>uuid": "^11.1.1",
+      "tinypool": "^2.2.0",
+      "postcss-selector-parser": "^7.1.7",
+      "follow-redirects": "^1.16.1",
+      "launch-editor": "^2.14.2"
     }
   }
 }

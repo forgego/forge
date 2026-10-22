@@ -12,8 +12,8 @@ import (
 type SupportTicketGenerated struct {
 	schema.BaseSchema
 	Id              int64     `json:"id" db:"id" validate:""`
-	TicketNumber    string    `json:"ticket_number" db:"ticket_number" validate:"required,max=50"`
-	CustomerId      int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	TicketNumber    string    `json:"ticket_number" db:"ticket_number" validate:"required,unique,max=50"`
+	CustomerId      int64     `json:"customer_id" db:"customer_id" validate:""`
 	Subject         string    `json:"subject" db:"subject" validate:"required,max=300"`
 	Description     string    `json:"description" db:"description" validate:"required"`
 	Status          string    `json:"status" db:"status" validate:"max=20"`
@@ -88,7 +88,7 @@ var SupportTicketFieldsInstance = SupportTicketFields{
 type SupportMessageGenerated struct {
 	schema.BaseSchema
 	Id         int64     `json:"id" db:"id" validate:""`
-	TicketId   int64     `json:"ticket_id" db:"ticket_id" validate:"required"`
+	TicketId   int64     `json:"ticket_id" db:"ticket_id" validate:""`
 	SenderType string    `json:"sender_type" db:"sender_type" validate:"required,max=20"`
 	SenderId   int64     `json:"sender_id" db:"sender_id" validate:""`
 	SenderName string    `json:"sender_name" db:"sender_name" validate:"max=200"`
@@ -137,9 +137,9 @@ var SupportMessageFieldsInstance = SupportMessageFields{
 type ReturnRequestGenerated struct {
 	schema.BaseSchema
 	Id             int64     `json:"id" db:"id" validate:""`
-	ReturnNumber   string    `json:"return_number" db:"return_number" validate:"required,max=50"`
-	OrderId        int64     `json:"order_id" db:"order_id" validate:"required"`
-	CustomerId     int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	ReturnNumber   string    `json:"return_number" db:"return_number" validate:"required,unique,max=50"`
+	OrderId        int64     `json:"order_id" db:"order_id" validate:""`
+	CustomerId     int64     `json:"customer_id" db:"customer_id" validate:""`
 	Reason         string    `json:"reason" db:"reason" validate:"required,max=50"`
 	Description    string    `json:"description" db:"description" validate:""`
 	Status         string    `json:"status" db:"status" validate:"max=20"`
@@ -225,7 +225,7 @@ var ReturnRequestFieldsInstance = ReturnRequestFields{
 type LiveChatSessionGenerated struct {
 	schema.BaseSchema
 	Id           int64     `json:"id" db:"id" validate:""`
-	SessionId    string    `json:"session_id" db:"session_id" validate:"required,max=100"`
+	SessionId    string    `json:"session_id" db:"session_id" validate:"required,unique,max=100"`
 	CustomerId   int64     `json:"customer_id" db:"customer_id" validate:""`
 	AgentId      int64     `json:"agent_id" db:"agent_id" validate:""`
 	Status       string    `json:"status" db:"status" validate:"max=20"`
@@ -351,7 +351,7 @@ type AttachmentGenerated struct {
 	schema.BaseSchema
 	Id           int64     `json:"id" db:"id" validate:""`
 	EntityType   string    `json:"entity_type" db:"entity_type" validate:"required,max=50"`
-	EntityId     int64     `json:"entity_id" db:"entity_id" validate:"required"`
+	EntityId     int64     `json:"entity_id" db:"entity_id" validate:""`
 	FileName     string    `json:"file_name" db:"file_name" validate:"required,max=255"`
 	FileUrl      string    `json:"file_url" db:"file_url" validate:"required,max=500"`
 	FileSize     int64     `json:"file_size" db:"file_size" validate:""`
@@ -402,9 +402,9 @@ var AttachmentFieldsInstance = AttachmentFields{
 type ReturnItemGenerated struct {
 	schema.BaseSchema
 	Id              int64     `json:"id" db:"id" validate:""`
-	ReturnRequestId int64     `json:"return_request_id" db:"return_request_id" validate:"required"`
-	OrderItemId     int64     `json:"order_item_id" db:"order_item_id" validate:"required"`
-	Quantity        int32     `json:"quantity" db:"quantity" validate:"required"`
+	ReturnRequestId int64     `json:"return_request_id" db:"return_request_id" validate:""`
+	OrderItemId     int64     `json:"order_item_id" db:"order_item_id" validate:""`
+	Quantity        int32     `json:"quantity" db:"quantity" validate:""`
 	Reason          string    `json:"reason" db:"reason" validate:"max=50"`
 	Condition       string    `json:"condition" db:"condition" validate:"max=50"`
 	RefundAmount    float64   `json:"refund_amount" db:"refund_amount" validate:""`
@@ -458,7 +458,7 @@ type StatusChangeGenerated struct {
 	schema.BaseSchema
 	Id          int64     `json:"id" db:"id" validate:""`
 	EntityType  string    `json:"entity_type" db:"entity_type" validate:"required,max=50"`
-	EntityId    int64     `json:"entity_id" db:"entity_id" validate:"required"`
+	EntityId    int64     `json:"entity_id" db:"entity_id" validate:""`
 	FromStatus  string    `json:"from_status" db:"from_status" validate:"max=20"`
 	ToStatus    string    `json:"to_status" db:"to_status" validate:"required,max=20"`
 	ChangedBy   int64     `json:"changed_by" db:"changed_by" validate:""`
@@ -506,7 +506,7 @@ var StatusChangeFieldsInstance = StatusChangeFields{
 type ChatMessageGenerated struct {
 	schema.BaseSchema
 	Id         int64     `json:"id" db:"id" validate:""`
-	SessionId  int64     `json:"session_id" db:"session_id" validate:"required"`
+	SessionId  int64     `json:"session_id" db:"session_id" validate:""`
 	SenderType string    `json:"sender_type" db:"sender_type" validate:"required,max=20"`
 	SenderId   int64     `json:"sender_id" db:"sender_id" validate:""`
 	Message    string    `json:"message" db:"message" validate:"required"`

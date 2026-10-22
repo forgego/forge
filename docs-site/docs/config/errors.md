@@ -21,7 +21,7 @@ image: /social-card.png
 ## Sanitization
 
 - Hide database errors
-- Hide stack traces
+- Sanitized error messages always strip recognized stack traces. The `errors.sanitization.hide_stack_traces` setting is loaded but does not currently change that behavior; the claim that it can show stack traces is removed.
 - Redact PII
 
 ## Idempotency

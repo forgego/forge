@@ -61,7 +61,7 @@ func (r *userRepository) Create(ctx context.Context, user *models.User) error {
 		RETURNING id
 	`
 
-	now := time.Now()
+	now := time.Now().UTC()
 	if user.DateJoined.IsZero() {
 		user.DateJoined = now
 	}
@@ -92,9 +92,9 @@ func (r *userRepository) Create(ctx context.Context, user *models.User) error {
 		user.Website,
 		user.Location,
 		user.Avatar,
-		user.DateJoined,
-		user.CreatedAt,
-		user.UpdatedAt,
+		user.DateJoined.UTC(),
+		user.CreatedAt.UTC(),
+		user.UpdatedAt.UTC(),
 	).Scan(&user.ID)
 
 	if err != nil {
@@ -273,7 +273,7 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string) (*m
 
 // Update updates an existing user
 func (r *userRepository) Update(ctx context.Context, user *models.User) error {
-	user.UpdatedAt = time.Now()
+	user.UpdatedAt = time.Now().UTC()
 
 	query := `
 		UPDATE users SET
@@ -308,15 +308,15 @@ func (r *userRepository) Update(ctx context.Context, user *models.User) error {
 		user.Website,
 		user.Location,
 		user.Avatar,
-		user.PasswordChangedAt,
-		user.PasswordExpiresAt,
+		utcTimestamp(user.PasswordChangedAt),
+		utcTimestamp(user.PasswordExpiresAt),
 		user.MustChangePassword,
-		user.LockedAt,
+		utcTimestamp(user.LockedAt),
 		user.LockedReason,
 		user.FailedLoginAttempts,
-		user.LastFailedLoginAt,
-		user.EmailVerifiedAt,
-		user.LastLogin,
+		utcTimestamp(user.LastFailedLoginAt),
+		utcTimestamp(user.EmailVerifiedAt),
+		utcTimestamp(user.LastLogin),
 		user.UpdatedAt,
 	)
 
@@ -340,7 +340,7 @@ func (r *userRepository) Update(ctx context.Context, user *models.User) error {
 func (r *userRepository) Delete(ctx context.Context, id int64) error {
 	query := `UPDATE users SET deleted_at = $1 WHERE id = $2 AND deleted_at IS NULL`
 
-	now := time.Now()
+	now := time.Now().UTC()
 	result, err := r.db.ExecContext(ctx, query, now, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)

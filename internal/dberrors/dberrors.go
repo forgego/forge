@@ -55,7 +55,7 @@ func Classify(err error) (Violation, bool) {
 		switch string(pgErr.Code) {
 		case "23505":
 			return Violation{Kind: Unique, Field: field}, true
-		case "23503":
+		case "23503", "23001":
 			return Violation{Kind: ForeignKey, Field: field}, true
 		case "23502":
 			return Violation{Kind: NotNull, Field: field}, true
@@ -82,6 +82,14 @@ func Classify(err error) (Violation, bool) {
 			return Violation{Kind: Unique, Field: field}, true
 		case sqlite3.ErrConstraintForeignKey:
 			return Violation{Kind: ForeignKey, Field: field}, true
+		case sqlite3.ErrConstraintTrigger:
+			// SQLite reports ON DELETE RESTRICT as SQLITE_CONSTRAINT_TRIGGER
+			// instead of SQLITE_CONSTRAINT_FOREIGNKEY. Distinguish it from
+			// application-defined trigger failures by its native message.
+			if liteErr.Error() == "FOREIGN KEY constraint failed" {
+				return Violation{Kind: ForeignKey, Field: field}, true
+			}
+			return Violation{Kind: Check, Field: field}, true
 		case sqlite3.ErrConstraintNotNull:
 			return Violation{Kind: NotNull, Field: field}, true
 		default:

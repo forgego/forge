@@ -1,6 +1,6 @@
 module github.com/forgego/forge
 
-go 1.26.0
+go 1.26.10
 
 retract (
 	v1.0.1 // Contains only the retraction of v1.0.0.
@@ -10,6 +10,7 @@ retract (
 // Keep JavaScript dependency trees out of ./... package patterns.
 ignore (
 	./admin/ui/web/node_modules
+	./forge/admin/ui/web/node_modules
 	./docs-site
 )
 

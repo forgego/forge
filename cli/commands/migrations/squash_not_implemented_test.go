@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"os"
 	"testing"
 
 	"github.com/forgego/forge/cli/core"
@@ -25,5 +26,12 @@ func TestSquashCommand_Execute_NotImplemented(t *testing.T) {
 	}
 	if !forgeerrors.IsNotImplemented(err) {
 		t.Fatalf("expected NotImplementedError from SquashCommand.Execute, got: %v", err)
+	}
+	entries, err := os.ReadDir(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("unimplemented squash wrote %d files", len(entries))
 	}
 }

@@ -12,14 +12,14 @@ From these schema definitions, Forge automatically generates:
 - Strongly typed model structs
 - Compile-time checked QuerySet expression trees (`orm.Q`)
 - Deterministic database migrations
-- Instant React 19 Admin UI configuration
-- REST API serializers and OpenAPI 3.0 documentation
+- Schema metadata that the Admin UI uses after a model is registered (model generation does not emit admin configuration; the older claim that it does is removed)
+- REST API serializers and ViewSets (model generation does not emit OpenAPI paths or schemas)
 
 ---
 
 ## The Model Contract
 
-Any model struct embeds `schema.BaseSchema` and implements the following methods:
+Any model struct embeds its generated fields type and implements the following methods. This example uses functional constructors supported by Go and generation:
 
 ```go
 package models
@@ -30,25 +30,25 @@ import (
 )
 
 type Product struct {
-    schema.BaseSchema
+    ProductGenerated
 }
 
 func (Product) Fields() []schema.Field {
     return []schema.Field{
-        schema.Int64("id").Primary().AutoIncrement(),
-        schema.String("sku").MaxLength(64).Unique().DBIndex(),
-        schema.String("name").MaxLength(255).Required(),
-        schema.Decimal("price", 10, 2).Required(),
-        schema.Float64("tax_rate").DBDefault("0.10"),
-        schema.GeneratedColumn("price_with_tax", "price * (1 + tax_rate)", true),
-        schema.Bool("in_stock").DBDefault("true"),
+        schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+        schema.StringField("sku", schema.MaxLength(64), schema.Unique()),
+        schema.StringField("name", schema.MaxLength(255), schema.Required()),
+        schema.DecimalField("price", schema.MaxDigits(10), schema.DecimalPlaces(2), schema.Required()),
+        schema.Float64Field("tax_rate", schema.DBDefault("0.10")),
+        schema.BoolField("in_stock", schema.DBDefault("true")),
+        schema.Int64Field("category_id", schema.Optional()),
+        schema.TimeField("created_at", schema.AutoNowAdd()),
     }
 }
 
 func (Product) Relations() []schema.Relation {
     return []schema.Relation{
-        schema.ForeignKey("category_id", "Category", schema.CascadeSET_NULL).
-            RelatedName("products"),
+        schema.ForeignKeyField("category_id", "Category", schema.OnDelete(schema.CascadeSET_NULL), schema.RelatedName("products")),
     }
 }
 
@@ -70,27 +70,9 @@ func (Product) Hooks() *schema.ModelHooks {
 
 ---
 
-## Dual Syntax: Builder & Functional Options
+## Functional Field Options
 
-Forge provides two equivalent, idiomatic styles for defining fields. Use whichever best fits your team's style guide:
-
-:::warning Use the functional style for code that must compile
-The `schema` package does not currently define the builder-chain constructors
-(`schema.String(...)`, `.Build()`), so a model package written in that style
-does not compile, even though generation can read it. The functional
-constructors (`schema.StringField(name, options...)`) compile, and
-[the supported DSL fixture](#supported-schema-dsl) uses them.
-:::
-
-### 1. Fluent Builder Style (Recommended)
-
-```go
-schema.String("email").MaxLength(255).Required().Unique().DBIndex()
-schema.Decimal("balance", 12, 2).Required().MinValue(0.0)
-schema.Time("created_at").AutoNowAdd()
-```
-
-### 2. Functional Options Style
+Use `schema.*Field(name, options...)` constructors. The builder-chain examples once shown here do not compile against the current `schema` package.
 
 ```go
 schema.StringField("email",
@@ -116,34 +98,30 @@ schema.TimeField("created_at", schema.AutoNowAdd())
 
 Forge includes first-class support for all common relational and modern data types:
 
-| Field Type | Go Under-the-Hood | SQL Type (PostgreSQL / SQLite) | Builder Constructor |
+| Field Type | Go field | SQL Type (PostgreSQL / SQLite) | Constructor |
 | :--- | :--- | :--- | :--- |
-| `Int64` | `int64` | `BIGINT` / `INTEGER` | `schema.Int64(name)` |
-| `Int32` | `int32` | `INTEGER` | `schema.Int32(name)` |
-| `String` | `string` | `VARCHAR(n)` | `schema.String(name)` |
-| `Text` | `string` | `TEXT` | `schema.Text(name)` |
-| `Bool` | `bool` | `BOOLEAN` / `INTEGER` | `schema.Bool(name)` |
-| `Time` / `DateTime` | `time.Time` | `TIMESTAMP WITH TIME ZONE` | `schema.Time(name)` / `schema.DateTime(name)` |
-| `Date` | `time.Time` | `DATE` | `schema.Date(name)` |
-| `Float64` / `Float32` | `float64` / `float32` | `DOUBLE PRECISION` / `REAL` | `schema.Float64(name)` |
-| `Decimal` | `string` / `shopspring.Decimal` | `NUMERIC(p, s)` / `DECIMAL` | `schema.Decimal(name, digits, places)` |
-| `Email` | `string` (validated email format) | `VARCHAR(254)` | `schema.Email(name)` |
-| `URL` | `string` (validated URL format) | `VARCHAR(2048)` | `schema.URL(name)` |
-| `UUID` | `string` / `uuid.UUID` | `UUID` / `VARCHAR(36)` | `schema.UUID(name)` |
-| `JSON` | `[]byte` / `any` | `JSONB` / `JSON` / `TEXT` | `schema.JSON(name)` |
-| `Bytes` | `[]byte` | `BYTEA` / `BLOB` | `schema.Bytes(name)` |
+| `Int64` | `int64` | `BIGINT` / `INTEGER` | `schema.Int64Field(name, options...)` |
+| `Int32` | `int32` | `INTEGER` | `schema.Int32Field(name, options...)` |
+| `String` | `string` | `VARCHAR(n)` with `MaxLength(n)`, otherwise `TEXT` | `schema.StringField(name, options...)` |
+| `Text` | `string` | `TEXT` | `schema.TextField(name, options...)` |
+| `Bool` | `bool` | `BOOLEAN` / `INTEGER` | `schema.BoolField(name, options...)` |
+| `Time` / `DateTime` | `time.Time` | `TIMESTAMP` | `schema.TimeField(name, options...)` / `schema.DateTimeField(name, options...)` |
+| `Date` | `time.Time` | `DATE` | `schema.DateField(name, options...)` |
+| `Float64` / `Float32` | `float64` / `float32` | `DOUBLE PRECISION` / `REAL` | `schema.Float64Field(name, options...)` |
+| `Decimal` | `float64` | `NUMERIC(p, s)` | `schema.DecimalField(name, options...)` |
+| `Email` | `string` (validated email format) | `TEXT` by default | `schema.EmailField(name, options...)` |
+| `URL` | `string` (validated URL format) | `TEXT` by default | `schema.URLField(name, options...)` |
+| `UUID` | `string` | `TEXT` | `schema.UUIDField(name, options...)` |
+| `JSON` | `[]byte` | `JSONB` / `TEXT` | `schema.JSONField(name, options...)` |
+| `Bytes` | `[]byte` | `BYTEA` / `BLOB` | `schema.BytesField(name, options...)` |
 
 ---
 
 ## Generated Columns
 
-Forge natively supports **Database Generated Columns** (stored or virtual computed columns). The database computes and indexes values automatically:
+`schema.GeneratedColumn(expr, stored)` is a field option, but source generation does not yet carry it into migrations. Define the column in a manual migration if you need it:
 
 ```go
-// Stored generated column (PostgreSQL STORED, SQLite GENERATED ALWAYS AS ... STORED)
-schema.GeneratedColumn("price_with_tax", "price * (1 + tax_rate)", true)
-
-// Functional syntax:
 schema.DecimalField("price_with_tax",
     schema.GeneratedColumn("price * (1 + tax_rate)", true),
 )
@@ -162,13 +140,13 @@ schema.StringField("title",
     schema.DBDefault("'Untitled'"),        // Database-level SQL default expression
     schema.DBCollation("en_US.utf8"),       // Collation for collation-sensitive sorting
     schema.DBComment("Public headline"),   // Table column comment
-    schema.DBIndex(),                      // Create B-Tree index
+    schema.DBIndex(),                      // Metadata only; use Meta.Indexes for a migration index
 )
 ```
 
 ### Choices & Enums
 
-Add human-friendly enumerated values:
+`ChoicesOpts` attaches human-friendly values at runtime. Source generation currently reports it as an unsupported helper, so omit it from models used by `forge generate`:
 
 ```go
 schema.StringField("status",
@@ -241,23 +219,19 @@ columns you name.
 
 ## Relationships & Cascade Behaviors
 
-Forge handles `ForeignKey`, `OneToOne`, and `ManyToMany` with configurable referential actions:
+Forge generates foreign-key constraints for `ForeignKeyField` and `OneToOneField`. `ManyToManyField` describes a relation, but migration generation does not create its through table; create that table manually:
 
 ```go
 func (Order) Relations() []schema.Relation {
     return []schema.Relation{
         // Many-to-One: Foreign Key with cascade protection
-        schema.ForeignKey("customer_id", "Customer", schema.CascadePROTECT).
-            RelatedName("orders"),
+        schema.ForeignKeyField("customer_id", "Customer", schema.OnDelete(schema.CascadePROTECT), schema.RelatedName("orders")),
 
         // One-to-One: Profile linked to User with cascade deletion
-        schema.OneToOne("profile_id", "CustomerProfile", schema.CascadeCASCADE).
-            RelatedName("customer"),
+        schema.OneToOneField("profile_id", "CustomerProfile", schema.OnDelete(schema.CascadeCASCADE), schema.RelatedName("customer")),
 
         // Many-to-Many: Order items linked via through table
-        schema.ManyToMany("tags", "Tag").
-            Through("order_tags").
-            RelatedName("orders"),
+        schema.ManyToManyField("tags", "Tag", schema.Through("order_tags"), schema.RelatedName("orders")),
     }
 }
 ```
@@ -343,21 +317,21 @@ Supported forms:
   and `RelatedName`. Also declare the key column (for example `author_id`) in `Fields()`,
   or no foreign key is created.
 - **Meta:** literal `TableName`, `VerboseName`, `VerboseNamePlural`, `OrderBy`, `Indexes`
-  as `schema.Index{...}` literals, and `Constraints` as `schema.Constraint{...}` literals,
+  as `schema.Index{...}` literals or `schema.IndexOn` / `schema.UniqueIndexOn` with
+  literal name/field arguments, and `Constraints` as `schema.Constraint{...}` literals,
   either `CHECK` with a `Condition` or `UNIQUE` with `Fields`.
 - **Hooks:** `schema.NewModelHooks().With...(...)`.
 
 Generation reads the following forms without warning, but `makemigrations` does not
 apply them yet: `DBIndex()` (use `Meta.Indexes`), `UniqueTogether` (use a `UNIQUE`
-constraint), and `ManyToManyField` (no join table is created). `MaxLength` validates
-input but does not change the column type. `schema.ChoicesOpts(...)` and
-`schema.IndexOn(...)` are helper calls, so generation reports them.
+constraint), and `ManyToManyField` (no join table is created). `MaxLength` controls
+`VARCHAR(n)` for a `StringField` column. `schema.ChoicesOpts(...)` is still an
+unsupported helper call and produces a diagnostic. Arbitrary metadata expressions
+also produce diagnostics; automatic migration generation refuses any reported
+unsupported expression rather than diffing a partial schema.
 
-Today the functional constructors map to PostgreSQL columns by their Go type. For
-example, `StringField` becomes `TEXT`, `DecimalField` becomes `DOUBLE PRECISION`,
-`JSONField` becomes `BYTEA`, and `DateField`, `TimeField` and `DateTimeField` become
-`TIMESTAMP`. The mapping table above does not reflect this yet. The fixture test pins the
-mapping, so any change to it is deliberate and ships with an upgrade migration.
+Functional constructors map to their declared schema type. Existing databases created
+with the older Go-type fallback need an explicit migration before relying on the new types.
 
 ### Strict mode
 
@@ -422,8 +396,8 @@ Each model with API generation needs:
 
 - exactly one primary key, named `id`, declared as an auto-increment `int64` field in `Fields()`;
 - a writable `int64` ID: a declared `ID`/`Id` field, an embedded `<Model>Generated`, or
-  `GetID`/`SetID` methods declared on the model itself. Methods promoted from another
-  embedded helper type are not detected today, even though they satisfy `orm.ModelWithID`.
+  `GetID`/`SetID` methods declared on or promoted into the model. Pointer-embedded helpers
+  are not detected.
 
 Generation stops with an error naming the model when either is missing.
 
@@ -433,8 +407,7 @@ Generated endpoints follow the schema:
 - Non-editable fields are ignored in create and update bodies.
 - A list request without `ordering` uses the model's `Meta().OrderBy`, or the primary key when
   none is set. Ordering fields that are hidden (`Serialize(false)`) are dropped, so a
-  `Meta().OrderBy` built only from hidden fields currently leaves the list unordered, and paging
-  through it can repeat or skip rows; keep at least one visible field in `Meta().OrderBy`.
+  `Meta().OrderBy` built only from hidden fields falls back to the primary key.
 - The request body must be a JSON object; `null` or any other value returns 400.
 - `Time` and `DateTime` fields are returned as RFC 3339 timestamps (`2006-01-02T15:04:05Z07:00`) and `Date` fields as `2006-01-02`, the layouts requests accept.
 

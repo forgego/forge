@@ -13,6 +13,7 @@ import (
 
 	"github.com/forgego/forge/cli/core"
 	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/db/migrate/checksum"
 	"github.com/forgego/forge/db/migrate/verify"
 	"github.com/spf13/cobra"
 )
@@ -88,7 +89,7 @@ func (c *FakeCommand) Execute(ctx *core.Context, args []string) error {
 	}
 
 	// Validate migration exists
-	if err := c.validateMigrationExists(migrationsPath, versionStr); err != nil {
+	if err := c.validateMigrationExists(migrationsPath, uint(version)); err != nil {
 		return err
 	}
 
@@ -345,15 +346,14 @@ func (c *FakeCommand) findMigrationsForTables(migrationsPath string, tables []st
 }
 
 // validateMigrationExists validates that a migration file exists
-func (c *FakeCommand) validateMigrationExists(migrationsPath string, versionStr string) error {
-	pattern := filepath.Join(migrationsPath, versionStr+"_*.up.sql")
-	matches, err := filepath.Glob(pattern)
+func (c *FakeCommand) validateMigrationExists(migrationsPath string, version uint) error {
+	files, err := checksum.IndexMigrationFiles(migrationsPath)
 	if err != nil {
 		return fmt.Errorf("failed to scan migrations directory: %w", err)
 	}
 
-	if len(matches) == 0 {
-		return fmt.Errorf("migration version %s does not exist", versionStr)
+	if files[version].Up == "" {
+		return fmt.Errorf("migration version %d does not exist", version)
 	}
 
 	return nil

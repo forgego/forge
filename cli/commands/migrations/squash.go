@@ -20,11 +20,11 @@ func NewSquashCommand() *SquashCommand {
 func (c *SquashCommand) Definition() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "squash <start_version> <end_version> <name>",
-		Short: "Squash migrations into a single migration",
-		Long:  "Combine multiple migrations from start_version to end_version into a single migration. The old migrations will be marked as replaced.",
+		Short: "Migration squashing is not implemented yet",
+		Long:  "Migration squashing is not implemented yet.",
 		Args:  cobra.ExactArgs(3),
 	}
-	cmd.Flags().String("path", "./migrations", "Path to migrations directory")
+	cmd.Flags().String("path", "./migrations", "Reserved migration directory path (squash is not implemented yet)")
 	return cmd
 }
 

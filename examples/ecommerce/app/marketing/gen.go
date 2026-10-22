@@ -12,11 +12,11 @@ import (
 type CouponGenerated struct {
 	schema.BaseSchema
 	Id                    int64     `json:"id" db:"id" validate:""`
-	Code                  string    `json:"code" db:"code" validate:"required,max=50"`
+	Code                  string    `json:"code" db:"code" validate:"required,unique,max=50"`
 	Name                  string    `json:"name" db:"name" validate:"required,max=200"`
 	Description           string    `json:"description" db:"description" validate:""`
 	DiscountType          string    `json:"discount_type" db:"discount_type" validate:"required,max=20"`
-	DiscountValue         float64   `json:"discount_value" db:"discount_value" validate:"required"`
+	DiscountValue         float64   `json:"discount_value" db:"discount_value" validate:""`
 	MinimumPurchaseAmount float64   `json:"minimum_purchase_amount" db:"minimum_purchase_amount" validate:""`
 	MaximumDiscountAmount float64   `json:"maximum_discount_amount" db:"maximum_discount_amount" validate:""`
 	UsageLimit            int32     `json:"usage_limit" db:"usage_limit" validate:""`
@@ -109,10 +109,10 @@ var CouponFieldsInstance = CouponFields{
 type CouponUsageGenerated struct {
 	schema.BaseSchema
 	Id             int64     `json:"id" db:"id" validate:""`
-	CouponId       int64     `json:"coupon_id" db:"coupon_id" validate:"required"`
-	OrderId        int64     `json:"order_id" db:"order_id" validate:"required"`
-	CustomerId     int64     `json:"customer_id" db:"customer_id" validate:"required"`
-	DiscountAmount float64   `json:"discount_amount" db:"discount_amount" validate:"required"`
+	CouponId       int64     `json:"coupon_id" db:"coupon_id" validate:""`
+	OrderId        int64     `json:"order_id" db:"order_id" validate:""`
+	CustomerId     int64     `json:"customer_id" db:"customer_id" validate:""`
+	DiscountAmount float64   `json:"discount_amount" db:"discount_amount" validate:""`
 	CreatedAt      time.Time `json:"created_at" db:"created_at" validate:""`
 }
 
@@ -149,12 +149,12 @@ var CouponUsageFieldsInstance = CouponUsageFields{
 type ReviewGenerated struct {
 	schema.BaseSchema
 	Id                       int64     `json:"id" db:"id" validate:""`
-	ProductId                int64     `json:"product_id" db:"product_id" validate:"required"`
-	CustomerId               int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	ProductId                int64     `json:"product_id" db:"product_id" validate:""`
+	CustomerId               int64     `json:"customer_id" db:"customer_id" validate:""`
 	OrderId                  int64     `json:"order_id" db:"order_id" validate:""`
 	Title                    string    `json:"title" db:"title" validate:"required,max=255"`
 	Content                  string    `json:"content" db:"content" validate:"required"`
-	Rating                   int32     `json:"rating" db:"rating" validate:"required"`
+	Rating                   int32     `json:"rating" db:"rating" validate:""`
 	IsVerifiedPurchase       bool      `json:"is_verified_purchase" db:"is_verified_purchase" validate:""`
 	Status                   string    `json:"status" db:"status" validate:"required,max=20"`
 	IsFeatured               bool      `json:"is_featured" db:"is_featured" validate:""`
@@ -231,7 +231,7 @@ var ReviewFieldsInstance = ReviewFields{
 type ReviewImageGenerated struct {
 	schema.BaseSchema
 	Id           int64     `json:"id" db:"id" validate:""`
-	ReviewId     int64     `json:"review_id" db:"review_id" validate:"required"`
+	ReviewId     int64     `json:"review_id" db:"review_id" validate:""`
 	ImageUrl     string    `json:"image_url" db:"image_url" validate:"required,max=500"`
 	ThumbnailUrl string    `json:"thumbnail_url" db:"thumbnail_url" validate:"max=500"`
 	AltText      string    `json:"alt_text" db:"alt_text" validate:"max=255"`
@@ -274,9 +274,9 @@ var ReviewImageFieldsInstance = ReviewImageFields{
 type ReviewHelpfulnessGenerated struct {
 	schema.BaseSchema
 	Id         int64     `json:"id" db:"id" validate:""`
-	ReviewId   int64     `json:"review_id" db:"review_id" validate:"required"`
+	ReviewId   int64     `json:"review_id" db:"review_id" validate:""`
 	CustomerId int64     `json:"customer_id" db:"customer_id" validate:""`
-	IsHelpful  bool      `json:"is_helpful" db:"is_helpful" validate:"required"`
+	IsHelpful  bool      `json:"is_helpful" db:"is_helpful" validate:""`
 	IpAddress  string    `json:"ip_address" db:"ip_address" validate:"max=45"`
 	CreatedAt  time.Time `json:"created_at" db:"created_at" validate:""`
 }
@@ -314,8 +314,8 @@ var ReviewHelpfulnessFieldsInstance = ReviewHelpfulnessFields{
 type ProductQuestionGenerated struct {
 	schema.BaseSchema
 	Id                 int64     `json:"id" db:"id" validate:""`
-	ProductId          int64     `json:"product_id" db:"product_id" validate:"required"`
-	CustomerId         int64     `json:"customer_id" db:"customer_id" validate:"required"`
+	ProductId          int64     `json:"product_id" db:"product_id" validate:""`
+	CustomerId         int64     `json:"customer_id" db:"customer_id" validate:""`
 	Question           string    `json:"question" db:"question" validate:"required"`
 	Answer             string    `json:"answer" db:"answer" validate:""`
 	AnsweredAt         time.Time `json:"answered_at" db:"answered_at" validate:""`

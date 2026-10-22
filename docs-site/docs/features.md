@@ -12,9 +12,9 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 
 ### Schema System
 - Define models with fields, relations, metadata, and lifecycle hooks
-- **Dual Syntax**: Fluent builder constructors (`schema.String("name")`) and functional options (`schema.StringField("name", ...)`)
+- **Field Constructors**: Functional options constructors (`schema.StringField("name", ...)`)
 - **Field types**: integers (Int64, Int32), strings, text, booleans, dates, times, timestamps, floats (Float64, Float32), fixed-point decimals, email, URL, UUID, JSON/JSONB, and binary bytes
-- **Generated Columns**: First-class support for SQL computed columns (`schema.GeneratedColumn("expr", stored)`)
+- **Generated Columns**: Field metadata for SQL computed columns (`schema.GeneratedColumn("expr", stored)`); create the column in a manual migration because source generation does not yet emit its DDL.
 - **Database options**: custom column names (`DBColumn`), SQL default expressions (`DBDefault`), collation (`DBCollation`), column comments (`DBComment`), tablespace (`DBTablespace`), and index flags (`DBIndex`)
 - **Choices & Enums**: Permitted value-label sets with `schema.Choices` and `schema.NewChoice`
 - **Referential Integrity & Cascades**: `CascadeCASCADE`, `CascadePROTECT`, `CascadeSET_NULL`, `CascadeSET_DEFAULT`, `CascadeDO_NOTHING`
@@ -36,7 +36,7 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 - Eager loading via `SelectRelated` (SQL JOINs) and `PrefetchRelated` (batched queries)
 
 ### Database Layer & Migrations
-- PostgreSQL (tested) and SQLite (experimental) with connection pooling
+- PostgreSQL (tested) and SQLite (experimental); both use Go's `database/sql` pool settings. Pool option behavior is covered in-process on SQLite.
 - **AST-Driven Migrations**: Introspects Go AST code to detect model diffs automatically
 - Cryptographic SHA-256 checksums on all migration files to detect drift
 - Recovery with `forge migrate recover --verify`, `forge migrate recover --clean` and `forge migrate force <version>`
@@ -113,7 +113,6 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 - Auto-generated forms from models
 - Field widgets (text, select, date picker, etc.)
 - Form validation
-- Fieldsets
 - Related object selection and inline relations
 
 ### Admin Features
@@ -134,8 +133,8 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 
 ### Serializers
 - Typed serializers for models
-- Enhanced serializers with relations
-- Nested serializers
+- Populated relations serialize as nested JSON objects
+- Configurable nested serializer fields are not implemented
 - Read-only and write-only fields
 - Custom field serialization
 - Validation rules
@@ -274,7 +273,7 @@ Request IDs, error handling, logging, sessions and CSRF are installed by `server
 - `forge migrate status` - Check migration state
 - `forge migrate rollback` - Roll back the last applied migration
 - `forge migrate recover`, `forge migrate force` - Recover from a dirty or altered history
-- `forge migrate squash` - Not implemented yet
+- `forge migrate squash` - Command exists, but execution returns a not-implemented error; it does not produce a migration.
 
 ### User Management
 - `forge createsuperuser` - Create admin user
@@ -285,7 +284,7 @@ Request IDs, error handling, logging, sessions and CSRF are installed by `server
 - `forge add api` - Generate API viewset
 - `forge add handler` - Create request handler
 - `forge add model` - Add new model
-- `forge add service` - Create service layer
+- `forge add service` - Create a service interface and implementation. `--inject` adds a manual dependency wiring placeholder; it does not wire dependencies automatically.
 
 ### Development Tools
 - `forge shell` - Interactive Go shell

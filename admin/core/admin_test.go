@@ -423,3 +423,29 @@ func TestListObjects_FiltersOrderingPagination(t *testing.T) {
 		})
 	}
 }
+
+// Admin forms are generated from models
+func TestAdminFormsAreGeneratedFromModels(t *testing.T) {
+	admin := setupListObjectsDB(t)
+	ctx := context.Background()
+
+	meta, err := admin.GetMetadata(ctx, nil)
+	require.NoError(t, err)
+	require.NotNil(t, meta)
+
+	// Fields for forms are auto-generated from model schema fields
+	fieldMap := make(map[string]FieldMetadata)
+	for _, f := range meta.Fields {
+		fieldMap[f.Name] = f
+	}
+
+	require.Contains(t, fieldMap, "id")
+	require.Contains(t, fieldMap, "name")
+	require.Contains(t, fieldMap, "email")
+	require.Contains(t, fieldMap, "role")
+
+	assert.Equal(t, "number", fieldMap["id"].Widget)
+	assert.Equal(t, "text", fieldMap["name"].Widget)
+	assert.True(t, fieldMap["name"].Required)
+	assert.False(t, fieldMap["email"].Required)
+}

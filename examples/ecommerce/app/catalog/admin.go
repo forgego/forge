@@ -109,8 +109,7 @@ func RegisterAdmin(ctx context.Context) {
 				Confirmation: "Are you sure you want to activate the selected categories?",
 				Handler: func(ctx context.Context, instances []*Category) error {
 					for _, category := range instances {
-						category.IsActive = true
-						if err := CategoryObjects.Update(ctx, category); err != nil {
+						if err := CategoryObjects.UpdateFields(ctx, category.Id, orm.UpdateMap{"is_active": true}); err != nil {
 							return err
 						}
 					}
@@ -124,8 +123,7 @@ func RegisterAdmin(ctx context.Context) {
 				Confirmation: "Are you sure you want to deactivate the selected categories?",
 				Handler: func(ctx context.Context, instances []*Category) error {
 					for _, category := range instances {
-						category.IsActive = false
-						if err := CategoryObjects.Update(ctx, category); err != nil {
+						if err := CategoryObjects.UpdateFields(ctx, category.Id, orm.UpdateMap{"is_active": false}); err != nil {
 							return err
 						}
 					}

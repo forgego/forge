@@ -9,6 +9,8 @@ import (
 	"github.com/forgego/forge/cli/core"
 	"github.com/forgego/forge/db/migrate"
 	migratecore "github.com/forgego/forge/db/migrate/core"
+	"github.com/forgego/forge/db/migrate/parse"
+	"github.com/forgego/forge/internal/safepath"
 	"github.com/spf13/cobra"
 )
 
@@ -32,8 +34,8 @@ func (c *MakeMigrationsCommand) Definition() *cobra.Command {
 	cmd.Flags().String("models", "./models", "Directory containing model definitions (used with --auto)")
 	cmd.Flags().Bool("auto", false, "Generate SQL from models automatically")
 	cmd.Flags().Bool("empty", false, "Create an empty migration file")
-	cmd.Flags().Bool("merge", false, "Enable fixing of migration conflicts")
-	cmd.Flags().Bool("verbose", false, "Enable verbose output including parse errors and warnings")
+	cmd.Flags().Bool("merge", false, "Create a merge template for a version gap")
+	cmd.Flags().Bool("verbose", false, "Reserved for future diagnostic output")
 	return cmd
 }
 
@@ -81,7 +83,7 @@ func (c *MakeMigrationsCommand) Execute(ctx *core.Context, args []string) error 
 	}
 
 	if merge {
-		// Handle merge conflicts
+		// Create a merge template for the first detected version gap.
 		conflicts, err := detectConflicts(migrationsDir)
 		if err != nil {
 			return fmt.Errorf("failed to detect conflicts: %w", err)
@@ -150,6 +152,22 @@ func (c *MakeMigrationsCommand) Execute(ctx *core.Context, args []string) error 
 		fmt.Fprintf(out, "✓ Generated migration files with SQL from models:\n")
 		for _, path := range written {
 			fmt.Fprintf(out, "  %s\n", path)
+		}
+		for _, path := range written {
+			if !strings.HasSuffix(path, ".up.sql") {
+				continue
+			}
+			content, err := safepath.ReadFile(migrationsDir, path)
+			if err != nil {
+				return fmt.Errorf("failed to read generated migration %s: %w", path, err)
+			}
+			operations, err := parse.DestructiveOperations(string(content))
+			if err != nil {
+				return fmt.Errorf("failed to inspect generated migration %s: %w", path, err)
+			}
+			for _, operation := range operations {
+				fmt.Fprintf(out, "Warning: %s contains destructive operation %s\n", filepath.Base(path), operation)
+			}
 		}
 	} else if empty {
 		// Create empty migration files

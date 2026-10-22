@@ -118,7 +118,7 @@ func nextSeqVersion(migrationsDir string, seqDigits int) (string, error) {
 	return version, nil
 }
 
-// detectConflicts detects migration conflicts (multiple migrations with the same parent)
+// detectConflicts finds version gaps for which a merge template can be made.
 func detectConflicts(migrationsDir string) ([]Conflict, error) {
 	// Find all migration files
 	pattern := filepath.Join(migrationsDir, "*_*.up.sql")
@@ -181,7 +181,7 @@ type Conflict struct {
 	Version2 string
 }
 
-// createMergeMigration creates a merge migration that depends on both conflicting migrations
+// createMergeMigration creates a commented template naming both versions.
 func createMergeMigration(migrationsDir, name string, conflict Conflict) (upPath, downPath string, err error) {
 	const seqDigits = 6
 

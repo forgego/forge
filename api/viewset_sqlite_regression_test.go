@@ -125,3 +125,35 @@ func TestBaseViewSet_Create_MapsSQLiteUniqueViolationToConflict(t *testing.T) {
 	assert.NotContains(t, body, "api_items")
 	assert.NotContains(t, body, "sqlite")
 }
+
+// A generated viewset embeds BaseViewSet and passes its generated ORM manager
+// directly to it. Exercise that route with an actual protected child row.
+func TestGeneratedShapeViewSet_DestroyProtectedParentReturns400(t *testing.T) {
+	database, err := db.NewDBWithDriver("sqlite3", filepath.Join(t.TempDir(), "commerce.sqlite")+"?_foreign_keys=on", db.WithMaxOpenConns(1))
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, database.Close()) })
+	_, err = database.Exec(`CREATE TABLE api_items (id INTEGER PRIMARY KEY, email TEXT NOT NULL);
+		CREATE TABLE order_lines (id INTEGER PRIMARY KEY, product_id INTEGER NOT NULL REFERENCES api_items(id) ON DELETE RESTRICT);
+		INSERT INTO api_items (id, email) VALUES (1, 'product@example.com');
+		INSERT INTO order_lines (id, product_id) VALUES (1, 1);`)
+	require.NoError(t, err)
+
+	manager := orm.MustNewManager[apiSQLiteModel]("api_items")
+	manager.SetDB(database)
+	viewset := &generatedShapeViewSet{BaseViewSet: NewBaseViewSet(newAPISQLiteSerializer, manager, &apiSQLiteModel{})}
+	router := NewRouter("/api/v1")
+	router.Register("products", viewset)
+	handler := forgehttp.NewRouter()
+	router.RegisterRoutes(handler)
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodDelete, "/api/v1/products/1", nil))
+	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), "in_use")
+	assert.NotContains(t, rec.Body.String(), "order_lines")
+	var count int
+	require.NoError(t, database.QueryRow(`SELECT count(*) FROM api_items WHERE id = 1`).Scan(&count))
+	assert.Equal(t, 1, count)
+}
+
+type generatedShapeViewSet struct{ *BaseViewSet }

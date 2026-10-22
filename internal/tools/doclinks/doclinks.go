@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/forgego/forge/internal/safepath"
 )
 
 // problem is a single missing link target.
@@ -81,18 +83,27 @@ func collectFiles(root string) ([]string, error) {
 			if err != nil {
 				return err
 			}
+			rel, err := filepath.Rel(absRoot, path)
+			if err != nil {
+				return err
+			}
+			rel = filepath.ToSlash(rel)
 			if d.IsDir() {
+				// DOCUMENTATION-POLICY.md keeps these historical drafts local.
+				if rel == "docs/design/tasks" {
+					return filepath.SkipDir
+				}
 				if path != treePath && (strings.HasPrefix(d.Name(), ".") || d.Name() == "node_modules" || d.Name() == "dist" || d.Name() == "build") {
 					return filepath.SkipDir
 				}
 				return nil
 			}
+			switch rel {
+			case "docs/design/admin-ui-tasks.md", "docs/design/backend-tasks.md", "docs/design/backend-handoff.md":
+				return nil
+			}
 			if strings.HasSuffix(d.Name(), ".md") {
-				rel, err := filepath.Rel(absRoot, path)
-				if err != nil {
-					return err
-				}
-				add(filepath.ToSlash(rel))
+				add(rel)
 			}
 			return nil
 		}); err != nil {
@@ -335,7 +346,7 @@ func extractLinks(line string) []string {
 
 // checkFile scans a single file for missing link targets.
 func checkFile(absRoot, absPath string) ([]problem, error) {
-	data, err := os.ReadFile(absPath)
+	data, err := safepath.ReadFile(absRoot, absPath)
 	if err != nil {
 		return nil, err
 	}

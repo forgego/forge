@@ -64,6 +64,7 @@ func FromUser(user *models.User) *UserSerializer {
 
 // Validate validates the serializer data
 func (s *UserSerializer) Validate() error {
+	_ = s.BaseSerializer.Validate()
 	// Username validation
 	username := s.GetString("username")
 	if username == "" {

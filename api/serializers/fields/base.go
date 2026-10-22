@@ -63,6 +63,10 @@ func (f *BaseField) IsWriteOnly() bool {
 	return f.WriteOnly
 }
 
+// DefaultValue exposes the configured default to serializers without changing
+// the Field interface used by custom field implementations.
+func (f *BaseField) DefaultValue() interface{} { return f.Default }
+
 // ToRepresentation converts internal value to representation (default implementation)
 func (f *BaseField) ToRepresentation(value interface{}) (interface{}, error) {
 	return value, nil

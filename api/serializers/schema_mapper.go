@@ -1,6 +1,8 @@
 package serializers
 
 import (
+	"fmt"
+
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
 )
@@ -9,17 +11,8 @@ import (
 // This automatically maps schema fields to serializer fields
 func FromSchema[T any](schemaInstance schema.Schema) *TypedSerializer[T] {
 	serializer := NewTypedSerializer[T]()
-
-	// Get model schema from ORM (for future use)
-	_, err := orm.GetModelSchema[T]()
-	if err != nil {
-		// Return empty serializer if schema not found
-		return serializer
-	}
-
-	// Get field accessor
-	accessor, err := orm.NewFieldAccessor[T]()
-	if err != nil {
+	if isNilValue(schemaInstance) {
+		serializer.configErr = fmt.Errorf("schema is nil")
 		return serializer
 	}
 
@@ -32,15 +25,21 @@ func FromSchema[T any](schemaInstance schema.Schema) *TypedSerializer[T] {
 		}
 
 		// Create field expression based on field type
-		typedField, err := createTypedFieldFromSchema[T](field, accessor)
+		typedField, err := createTypedFieldFromSchema[T](field)
 		if err != nil {
-			// Skip fields that can't be created
-			continue
+			serializer.configErr = err
+			return serializer
 		}
 
 		// Apply schema constraints
 		if field.Required {
 			typedField = typedField.Required()
+		}
+		if !field.Editable || field.PrimaryKey || field.AutoIncrement || field.Generated || field.AutoNow || field.AutoNowAdd {
+			typedField = typedField.ReadOnly()
+		}
+		if !field.Serialize {
+			typedField = typedField.WriteOnly()
 		}
 
 		// Add to serializer
@@ -52,15 +51,16 @@ func FromSchema[T any](schemaInstance schema.Schema) *TypedSerializer[T] {
 
 // createTypedFieldFromSchema creates a typed field from a schema field
 // Returns an error if the field cannot be created
-func createTypedFieldFromSchema[T any](schemaField schema.Field, accessor *orm.FieldAccessor[T]) (TypedField[T], error) {
-	// Create field expression based on field type
-	// This is a simplified version - in practice, you'd map each schema field type
-	fieldExpr, err := orm.FieldFor[T, interface{}](accessor, schemaField.Name)
-	if err != nil {
-		return TypedField[T]{}, err
+func createTypedFieldFromSchema[T any](schemaField schema.Field) (TypedField[T], error) {
+	resolved, ok := schema.ResolveField(new(T), schemaField)
+	if !ok {
+		return TypedField[T]{}, fmt.Errorf("schema field %q has no exported model field", schemaField.Name)
 	}
-
-	typedField := Field[T, interface{}](fieldExpr)
+	typedField := Field[T](orm.NewField[interface{}](schemaField.Name, ""))
+	typedField.fieldIndex = resolved.StructField.Index
+	validationField := schemaField
+	validationField.Required = false // Presence is checked separately; zero values are valid input.
+	typedField.schemaField = &validationField
 
 	// Apply schema options
 	if schemaField.Default != nil {

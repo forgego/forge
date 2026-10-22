@@ -4,35 +4,36 @@ import "strings"
 
 // Common validation tags for framework use
 const (
-	TagRequired      = "required"
-	TagEmail         = "email"
-	TagMin           = "min"
-	TagMax           = "max"
-	TagLen           = "len"
-	TagNumeric       = "numeric"
-	TagAlpha         = "alpha"
-	TagAlphanum      = "alphanum"
-	TagURL           = "url"
-	TagUUID          = "uuid"
-	TagGTE           = "gte" // Greater than or equal
-	TagLTE           = "lte" // Less than or equal
-	TagGT            = "gt"  // Greater than
-	TagLT            = "lt"  // Less than
-	TagOneOf         = "oneof"
-	TagSlug          = "slug"
-	TagPhone         = "phone"
-	TagIP            = "ip"
-	TagIPv4          = "ipv4"
-	TagIPv6          = "ipv6"
-	TagMAC           = "mac"
-	TagJSON          = "json"
-	TagBase64        = "base64"
-	TagHostname      = "hostname"
-	TagFQDN          = "fqdn"
-	TagURI           = "uri"
-	TagChoices       = "choices"
-	TagDecimalDigits = "decimal_max_digits"
-	TagDecimalPlaces = "decimal_places"
+	TagRequired       = "required"
+	TagSchemaRequired = "schema_required" // Schema presence: zero and false are valid values.
+	TagEmail          = "email"
+	TagMin            = "min"
+	TagMax            = "max"
+	TagLen            = "len"
+	TagNumeric        = "numeric"
+	TagAlpha          = "alpha"
+	TagAlphanum       = "alphanum"
+	TagURL            = "url"
+	TagUUID           = "uuid"
+	TagGTE            = "gte" // Greater than or equal
+	TagLTE            = "lte" // Less than or equal
+	TagGT             = "gt"  // Greater than
+	TagLT             = "lt"  // Less than
+	TagOneOf          = "oneof"
+	TagSlug           = "slug"
+	TagPhone          = "phone"
+	TagIP             = "ip"
+	TagIPv4           = "ipv4"
+	TagIPv6           = "ipv6"
+	TagMAC            = "mac"
+	TagJSON           = "json"
+	TagBase64         = "base64"
+	TagHostname       = "hostname"
+	TagFQDN           = "fqdn"
+	TagURI            = "uri"
+	TagChoices        = "choices"
+	TagDecimalDigits  = "decimal_max_digits"
+	TagDecimalPlaces  = "decimal_places"
 )
 
 // FieldTags maps field types to default validation tags

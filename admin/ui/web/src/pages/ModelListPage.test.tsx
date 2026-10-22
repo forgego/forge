@@ -131,6 +131,41 @@ describe("ModelListPage", () => {
     expect(bulkDeleteBtn).toHaveTextContent("Delete (2)");
   });
 
+  it("keeps row selections while navigating between table pages", () => {
+    useModelListMock.mockImplementation((_model: string, params: { page: number }) => ({
+      data: {
+        count: 4, total_pages: 2, page: params.page, page_size: 2,
+        results: params.page === 1
+          ? [{ id: 1, title: "First" }, { id: 2, title: "Second" }]
+          : [{ id: 3, title: "Third" }, { id: 4, title: "Fourth" }],
+      },
+      isLoading: false, error: null,
+    }));
+    render(<QueryClientProvider client={queryClient}><ModelListPage /></QueryClientProvider>);
+
+    fireEvent.click(screen.getByTestId("select-1"));
+    fireEvent.click(screen.getByTestId("pagination-next"));
+    expect(screen.getByText("1 selected")).toBeInTheDocument();
+    expect(screen.getByTestId("select-all")).not.toBeChecked();
+    fireEvent.click(screen.getByTestId("select-all"));
+    expect(screen.getByText("3 selected")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("pagination-prev"));
+    expect(screen.getByTestId("select-1")).toBeChecked();
+    expect(screen.getByTestId("select-2")).not.toBeChecked();
+  });
+
+  it("confirms Delete Selected with the current selection count", () => {
+    render(<QueryClientProvider client={queryClient}><ModelListPage /></QueryClientProvider>);
+    fireEvent.click(screen.getByTestId("select-1"));
+    fireEvent.click(screen.getByTestId("bulk-delete-button"));
+    expect(screen.getByTestId("bulk-delete-dialog")).toHaveTextContent("Delete 1 Product");
+    expect(screen.getByTestId("bulk-delete-dialog")).toHaveTextContent("delete 1 selected records");
+    fireEvent.click(screen.getByTestId("bulk-delete-dialog-cancel"));
+    fireEvent.click(screen.getByTestId("select-2"));
+    fireEvent.click(screen.getByTestId("bulk-delete-button"));
+    expect(screen.getByTestId("bulk-delete-dialog")).toHaveTextContent("Delete 2 Products");
+  });
+
   it("toggles column sorting when header sort buttons are clicked", () => {
     render(
       <QueryClientProvider client={queryClient}>
