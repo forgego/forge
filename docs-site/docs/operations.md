@@ -47,3 +47,13 @@ The runner guarantees transaction boundaries, but the callback owns its
 domain-specific validation, state checks, and any required target-row locking.
 Use the database's appropriate locking strategy where concurrent updates could
 violate an invariant.
+
+## REST adapter
+
+`api.OperationAction` provides a JSON `POST` handler for an operation. Supply
+an `OperationActorResolver` that reads the authenticated principal from the
+request context and adapts it to `operation.Actor`; a missing principal must
+resolve to no actor so the runner denies the call. Register the returned
+handler with `Router.Action`. Invalid JSON, denied calls, and execution errors
+use the API's problem error response format. Successful calls return the
+operation result as JSON.
