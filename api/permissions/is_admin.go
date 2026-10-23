@@ -3,7 +3,7 @@ package permissions
 import (
 	"net/http"
 
-	"github.com/forgego/forge/api/authentication"
+	"github.com/forgego/forge/identity/principal"
 )
 
 // IsAdminUser requires the user to be an admin
@@ -19,7 +19,18 @@ func NewIsAdminUser() *IsAdminUser {
 
 // HasPermission checks if the user is authenticated and is an admin
 func (p *IsAdminUser) HasPermission(r *http.Request, view ViewSet) bool {
-	user, ok := authentication.GetUserFromRequest(r)
+	if actor, ok := principal.PrincipalFromContext(r.Context()); ok {
+		if actor.Kind != principal.KindUser || actor.ID == "" {
+			return false
+		}
+		for _, role := range actor.Roles() {
+			if role == "staff" || role == "superuser" || role == "admin" {
+				return true
+			}
+		}
+		return false
+	}
+	user, ok := activeLegacyUser(r)
 	if !ok {
 		return false
 	}

@@ -3,8 +3,6 @@ package permissions
 import (
 	"net/http"
 	"reflect"
-
-	"github.com/forgego/forge/api/authentication"
 )
 
 // IsOwnerOrReadOnly allows read access to all users
@@ -35,7 +33,7 @@ func (p *IsOwnerOrReadOnly) HasPermission(r *http.Request, view ViewSet) bool {
 		return true
 	}
 	// Require authentication for write operations
-	_, ok := authentication.GetUserFromRequest(r)
+	_, ok := authenticatedRequestUser(r)
 	return ok
 }
 
@@ -47,7 +45,7 @@ func (p *IsOwnerOrReadOnly) HasObjectPermission(r *http.Request, view ViewSet, o
 	}
 
 	// Get authenticated user
-	user, ok := authentication.GetUserFromRequest(r)
+	user, ok := authenticatedRequestUser(r)
 	if !ok {
 		return false
 	}

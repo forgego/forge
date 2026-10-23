@@ -207,7 +207,7 @@ func newSecureScaffoldRouter(store *secureScaffoldUserStore) *forgehttp.Router {
 		store,
 		&secureScaffoldUser{},
 	)
-	staff := &secureScaffoldUser{ID: 1, Username: "admin", IsStaff: true}
+	staff := &secureScaffoldUser{ID: 1, Username: "admin", IsActive: true, IsStaff: true}
 	viewset.Authentication = []authentication.Authentication{
 		authentication.NewJWTAuthentication(secureScaffoldSigningKey, func(authentication.JWTClaims) (interface{}, error) {
 			return staff, nil
@@ -296,7 +296,7 @@ func TestGeneratedUsersAPICreateUpdateDeleteRequireStaff(t *testing.T) {
 
 func TestGeneratedUsersAPIListNeverExposesPassword(t *testing.T) {
 	store := &secureScaffoldUserStore{items: []*secureScaffoldUser{
-		{ID: 1, Username: "admin", Password: "$2a$10$supersecrethashvalue00000000000000000000001", IsStaff: true},
+		{ID: 1, Username: "admin", Password: "$2a$10$supersecrethashvalue00000000000000000000001", IsActive: true, IsStaff: true},
 	}}
 	handler := newSecureScaffoldRouter(store)
 	resp := serveSecureScaffold(handler, http.MethodGet, "/api/v1/users/", "", secureScaffoldAuthHeader(t))

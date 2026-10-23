@@ -19,6 +19,7 @@ import (
 	"github.com/forgego/forge/admin/core"
 	"github.com/forgego/forge/admin/ui"
 	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/identity/repository"
 	"github.com/forgego/forge/server"
 	"github.com/forgego/forge/stores"
 	"github.com/forgego/forge/stores/adminstore"
@@ -35,6 +36,7 @@ type Site struct {
 	registry           *core.Registry
 	uiConfig           UIConfig
 	loginAuthenticator rest.LoginAuthenticator
+	userStore          rest.AdminUserStore
 	// history and apiStores are set by UseDatabaseStores.
 	history   core.HistoryManager
 	apiStores rest.Stores
@@ -43,6 +45,12 @@ type Site struct {
 // SetLoginAuthenticator sets the custom login authenticator for the admin site.
 func (s *Site) SetLoginAuthenticator(a rest.LoginAuthenticator) {
 	s.loginAuthenticator = a
+}
+
+// SetUserStore configures the identity records used to authorize admin API tokens.
+func (s *Site) SetUserStore(users rest.AdminUserStore) *Site {
+	s.userStore = users
+	return s
 }
 
 // UISource defines where the Admin UI assets come from
@@ -241,6 +249,13 @@ func (s *Site) Handler() http.Handler {
 
 	// 1. Register API Routes
 	apiRouter := rest.NewRouter(s.registry)
+	users := s.userStore
+	if users == nil && s.db != nil {
+		users = repository.NewUserRepository(s.db)
+	}
+	if users != nil {
+		apiRouter.SetUserRepository(users)
+	}
 	if s.loginAuthenticator != nil {
 		apiRouter.SetLoginAuthenticator(s.loginAuthenticator)
 	}

@@ -52,6 +52,16 @@ func TestPrincipalFromUserRequiresUsableAccount(t *testing.T) {
 	}
 }
 
+func TestPrincipalFromUserUsesUsernameWhenIDIsZero(t *testing.T) {
+	p, err := FromUser(&models.User{Username: "ops", IsActive: true})
+	if err != nil {
+		t.Fatalf("FromUser() error = %v", err)
+	}
+	if p.ID != "ops" {
+		t.Fatalf("principal ID = %q, want username ops", p.ID)
+	}
+}
+
 func TestPrincipalContextAndBuiltins(t *testing.T) {
 	p := Anonymous()
 	ctx := WithPrincipal(context.Background(), p)

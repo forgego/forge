@@ -4,13 +4,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/forgego/forge/admin/api/rest"
 	"github.com/forgego/forge/admin/core"
 	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/identity/models"
+	"github.com/forgego/forge/identity/repository"
 	"github.com/forgego/forge/schema"
 	"github.com/forgego/forge/stores"
 	"github.com/forgego/forge/stores/storestest"
@@ -22,6 +26,27 @@ type storeNote struct {
 	schema.BaseSchema
 	ID    int64  `db:"id" json:"id"`
 	Title string `db:"title" json:"title"`
+}
+
+type siteTestUsers struct{}
+
+func (siteTestUsers) GetByUsername(_ context.Context, username string) (*models.User, error) {
+	if username != "admin" {
+		return nil, repository.ErrUserNotFound
+	}
+	return &models.User{ID: 1, Username: username, IsActive: true, IsStaff: true, IsSuperuser: true}, nil
+}
+
+type unavailableSiteUsers struct{}
+
+func (unavailableSiteUsers) GetByUsername(context.Context, string) (*models.User, error) {
+	return nil, errors.New("identity table is unavailable")
+}
+
+type inactiveSiteUsers struct{}
+
+func (inactiveSiteUsers) GetByUsername(_ context.Context, username string) (*models.User, error) {
+	return &models.User{ID: 1, Username: username, IsStaff: true, IsSuperuser: true}, nil
 }
 
 func (storeNote) Meta() schema.Meta { return schema.Meta{TableName: "store_notes"} }
@@ -48,6 +73,7 @@ func createNotesTable(t *testing.T, database *db.DB) {
 func storeSite(t *testing.T, database *db.DB) *httptest.Server {
 	t.Helper()
 	site := NewSite("stores")
+	site.SetUserStore(siteTestUsers{})
 	// Registered before the stores are chosen, as init() registrations are.
 	_, err := RegisterWithSite(site, &core.Config[storeNote]{})
 	require.NoError(t, err)
@@ -132,6 +158,34 @@ func TestSite_UseDatabaseStoresRequiresMigratedDatabase(t *testing.T) {
 	require.ErrorIs(t, site.UseStores(ctx, "database"), stores.ErrNotMigrated)
 }
 
+func TestSite_ConfiguredCredentialPrincipalUsesLoginIdentitySource(t *testing.T) {
+	t.Setenv("FORGE_ADMIN_USERNAME", "configured-admin")
+	t.Setenv("FORGE_ADMIN_PASSWORD", "secret")
+
+	for _, tc := range []struct {
+		name  string
+		users rest.AdminUserStore
+		want  int
+	}{
+		{name: "identity store unavailable", users: unavailableSiteUsers{}, want: http.StatusOK},
+		{name: "inactive identity row", users: inactiveSiteUsers{}, want: http.StatusUnauthorized},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			site := NewSite("configured")
+			site.SetUserStore(tc.users)
+			server := httptest.NewServer(site.Handler())
+			defer server.Close()
+
+			status, body := adminCall(t, server.URL, http.MethodPost, "/api/login", "", map[string]string{
+				"username": "configured-admin", "password": "secret",
+			})
+			require.Equal(t, http.StatusOK, status, "%v", body)
+			status, body = adminCall(t, server.URL, http.MethodGet, "/api/config", body["token"].(string), nil)
+			assert.Equal(t, tc.want, status, "%v", body)
+		})
+	}
+}
+
 type recordingHistory struct{ entries []core.LogEntry }
 
 func (h *recordingHistory) LogAction(_ context.Context, entry core.LogEntry) error {
@@ -178,6 +232,7 @@ func TestSite_UseStoresMemoryUndoesDatabaseStores(t *testing.T) {
 	database, _ := storestest.Backends()[0].OpenMigrated(t)
 	createNotesTable(t, database)
 	site := NewSite("stores")
+	site.SetUserStore(siteTestUsers{})
 	_, err := RegisterWithSite(site, &core.Config[storeNote]{})
 	require.NoError(t, err)
 	site.SetDB(database)

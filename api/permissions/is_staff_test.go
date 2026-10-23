@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/forgego/forge/api/authentication"
+	"github.com/forgego/forge/identity/principal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,6 +42,19 @@ func TestIsStaffUser(t *testing.T) {
 			view := &MockViewSet{Action: "list"}
 			if tt.user != nil {
 				authentication.SetUserOnRequest(req, tt.user)
+				roles := []string(nil)
+				if u, ok := tt.user.(*staffTestUser); ok {
+					if u.Staff {
+						roles = append(roles, "staff")
+					}
+					if u.Superuser {
+						roles = append(roles, "superuser")
+					}
+					if u.Admin {
+						roles = append(roles, "admin")
+					}
+				}
+				req = req.WithContext(principal.WithPrincipal(req.Context(), principal.Principal{ID: "1", Kind: principal.KindUser, RoleNames: roles}))
 			}
 			assert.Equal(t, tt.expected, perm.HasPermission(req, view))
 			assert.Equal(t, tt.expected, perm.HasObjectPermission(req, view, nil))

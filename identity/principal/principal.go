@@ -5,6 +5,7 @@ package principal
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/forgego/forge/identity/models"
 )
@@ -62,7 +63,11 @@ func FromUser(user *models.User) (Principal, error) {
 	if user.IsSuperuser {
 		roles = append(roles, "superuser")
 	}
-	return Principal{ID: fmt.Sprint(user.ID), Kind: KindUser, DisplayName: user.GetDisplayName(), RoleNames: roles}, nil
+	id := fmt.Sprint(user.ID)
+	if user.ID == 0 && user.Username != "" {
+		id = user.Username
+	}
+	return Principal{ID: id, Kind: KindUser, DisplayName: user.GetDisplayName(), RoleNames: roles}, nil
 }
 
 // FromBackend adapts common custom authentication backend values. Values that
@@ -71,15 +76,90 @@ func FromBackend(user interface{}) (Principal, bool) {
 	if accountStateError(user) != nil {
 		return Principal{}, false
 	}
-	idProvider, ok := user.(interface{ GetID() string })
-	if !ok || idProvider.GetID() == "" {
+	id := backendID(user)
+	if id == "" || backendAccountDisabled(user) {
 		return Principal{}, false
 	}
-	p := Principal{ID: idProvider.GetID(), Kind: KindUser}
+	p := Principal{ID: id, Kind: KindUser}
+	for _, role := range []struct{ name, member string }{{"staff", "IsStaff"}, {"superuser", "IsSuperuser"}, {"admin", "IsAdmin"}} {
+		if backendBool(user, role.member) {
+			p.RoleNames = append(p.RoleNames, role.name)
+		}
+	}
 	if named, ok := user.(interface{ GetDisplayName() string }); ok {
 		p.DisplayName = named.GetDisplayName()
+	} else if field := backendField(user, "Username"); field.IsValid() && field.Kind() == reflect.String {
+		p.DisplayName = field.String()
 	}
 	return p, true
+}
+
+func backendValue(user interface{}) reflect.Value {
+	v := reflect.ValueOf(user)
+	if v.IsValid() && v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return reflect.Value{}
+		}
+		v = v.Elem()
+	}
+	return v
+}
+
+func backendField(user interface{}, name string) reflect.Value {
+	v := backendValue(user)
+	if v.IsValid() && v.Kind() == reflect.Struct {
+		return v.FieldByName(name)
+	}
+	return reflect.Value{}
+}
+
+func backendID(user interface{}) string {
+	if idProvider, ok := user.(interface{ GetID() string }); ok {
+		return idProvider.GetID()
+	}
+	if idProvider, ok := user.(interface{ GetID() int64 }); ok {
+		return fmt.Sprint(idProvider.GetID())
+	}
+	field := backendField(user, "ID")
+	if !field.IsValid() {
+		// Generated model fields use Go's conventional "Id" spelling when
+		// the schema field is named "id".
+		field = backendField(user, "Id")
+	}
+	if field.IsValid() && field.CanInterface() {
+		return fmt.Sprint(field.Interface())
+	}
+	return ""
+}
+
+func backendAccountDisabled(user interface{}) bool {
+	active := backendField(user, "IsActive")
+	if active.IsValid() && active.Kind() == reflect.Bool && !active.Bool() {
+		return true
+	}
+	locked := backendField(user, "IsLocked")
+	return locked.IsValid() && locked.Kind() == reflect.Bool && locked.Bool()
+}
+
+func backendBool(user interface{}, name string) bool {
+	v := reflect.ValueOf(user)
+	if !v.IsValid() {
+		return false
+	}
+	if m := v.MethodByName(name); m.IsValid() && m.Type().NumIn() == 0 && m.Type().NumOut() == 1 && m.Type().Out(0).Kind() == reflect.Bool {
+		return m.Call(nil)[0].Bool()
+	}
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return false
+		}
+		v = v.Elem()
+	}
+	if v.Kind() != reflect.Struct {
+		return false
+	}
+	field := v.FieldByName(name)
+	return field.IsValid() && field.Kind() == reflect.Bool && field.Bool()
 }
 
 // Anonymous creates an anonymous principal.
