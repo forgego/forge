@@ -73,6 +73,7 @@ func Middleware(logger *Logger) func(http.Handler) http.Handler {
 				zap.String("path", sanitizeLogString(r.URL.Path)),
 				zap.String("query", sanitizeLogString(redactQuery(r.URL.RawQuery))),
 				zap.Int("status", ww.status()),
+				zap.Int("bytes", ww.written()),
 				zap.Duration("duration", duration),
 				zap.String("ip", sanitizeLogString(r.RemoteAddr)),
 				zap.String("user_agent", sanitizeLogString(r.UserAgent())),
@@ -98,91 +99,67 @@ func Middleware(logger *Logger) func(http.Handler) http.Handler {
 type loggingResponseWriter interface {
 	http.ResponseWriter
 	status() int
+	written() int
 	Unwrap() http.ResponseWriter
 }
 
-// responseWriter wraps http.ResponseWriter to capture status code
+// responseWriter wraps http.ResponseWriter to capture response metadata and
+// centralize optional HTTP writer capability forwarding.
 type responseWriter struct {
 	http.ResponseWriter
-	statusCode int
+	statusCode   int
+	bytesWritten int
+	wroteHeader  bool
 }
 
 func (rw *responseWriter) WriteHeader(code int) {
+	if rw.wroteHeader {
+		return
+	}
+	rw.wroteHeader = true
 	rw.statusCode = code
 	rw.ResponseWriter.WriteHeader(code)
 }
 
+func (rw *responseWriter) Write(p []byte) (int, error) {
+	n, err := rw.ResponseWriter.Write(p)
+	rw.bytesWritten += n
+	return n, err
+}
+
 func (rw *responseWriter) status() int {
+	if rw.statusCode == 0 {
+		return http.StatusOK
+	}
 	return rw.statusCode
 }
+
+func (rw *responseWriter) written() int { return rw.bytesWritten }
 
 func (rw *responseWriter) Unwrap() http.ResponseWriter {
 	return rw.ResponseWriter
 }
 
-type responseWriterFlusher struct {
-	*responseWriter
-}
-
-func (rw *responseWriterFlusher) Flush() {
+func (rw *responseWriter) Flush() {
 	if flusher, ok := rw.ResponseWriter.(http.Flusher); ok {
 		flusher.Flush()
 	}
 }
 
-func (rw *responseWriterFlusher) Unwrap() http.ResponseWriter {
-	return rw.ResponseWriter
-}
-
-type responseWriterHijacker struct {
-	*responseWriter
-}
-
-func (rw *responseWriterHijacker) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+func (rw *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	if hijacker, ok := rw.ResponseWriter.(http.Hijacker); ok {
 		return hijacker.Hijack()
 	}
 	return nil, nil, fmt.Errorf("hijacker not supported: %w", http.ErrNotSupported)
 }
 
-func (rw *responseWriterHijacker) Unwrap() http.ResponseWriter {
-	return rw.ResponseWriter
-}
-
-type responseWriterFlusherHijacker struct {
-	*responseWriter
-}
-
-func (rw *responseWriterFlusherHijacker) Flush() {
-	if flusher, ok := rw.ResponseWriter.(http.Flusher); ok {
-		flusher.Flush()
+func (rw *responseWriter) Push(target string, opts *http.PushOptions) error {
+	if pusher, ok := rw.ResponseWriter.(http.Pusher); ok {
+		return pusher.Push(target, opts)
 	}
-}
-
-func (rw *responseWriterFlusherHijacker) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	if hijacker, ok := rw.ResponseWriter.(http.Hijacker); ok {
-		return hijacker.Hijack()
-	}
-	return nil, nil, fmt.Errorf("hijacker not supported: %w", http.ErrNotSupported)
-}
-
-func (rw *responseWriterFlusherHijacker) Unwrap() http.ResponseWriter {
-	return rw.ResponseWriter
+	return http.ErrNotSupported
 }
 
 func wrapResponseWriter(w http.ResponseWriter) loggingResponseWriter {
-	base := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
-	_, isFlusher := w.(http.Flusher)
-	_, isHijacker := w.(http.Hijacker)
-
-	switch {
-	case isFlusher && isHijacker:
-		return &responseWriterFlusherHijacker{responseWriter: base}
-	case isFlusher:
-		return &responseWriterFlusher{responseWriter: base}
-	case isHijacker:
-		return &responseWriterHijacker{responseWriter: base}
-	default:
-		return base
-	}
+	return &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 }

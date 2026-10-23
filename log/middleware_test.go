@@ -47,6 +47,12 @@ func TestRedactQuery(t *testing.T) {
 			wontSub: []string{"=x"},
 		},
 		{
+			name:    "mixed case and duplicate sensitive names redacted",
+			input:   "ToKeN=first&token=second&API_KEY=third&page=2",
+			wantSub: []string{"ToKeN=REDACTED", "token=REDACTED", "API_KEY=REDACTED", "page=2"},
+			wontSub: []string{"first", "second", "third"},
+		},
+		{
 			name:  "all sensitive keys redacted",
 			input: "api_key=1&apikey=2&key=3&token=4&access_token=5&refresh_token=6&password=7&secret=8&signature=9&session=10&session_key=11&other=visible",
 			wantSub: []string{
@@ -111,8 +117,51 @@ func TestMiddleware_RedactsQueryInLog(t *testing.T) {
 	assert.NotContains(t, logOutput, "superSecretKey123")
 }
 
+func TestMiddleware_DoesNotLogSensitiveHeaders(t *testing.T) {
+	buf := &bytes.Buffer{}
+	core := zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), zapcore.AddSync(buf), zapcore.DebugLevel)
+	logger := &Logger{Logger: zap.New(core)}
+	req := httptest.NewRequest(http.MethodGet, "/resource", nil)
+	req.Header.Set("Authorization", "Bearer authorization-secret")
+	req.Header.Add("Cookie", "session=cookie-secret")
+	req.Header.Set("Set-Cookie", "session=set-cookie-secret")
+	Middleware(logger)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})).ServeHTTP(httptest.NewRecorder(), req)
+	for _, secret := range []string{"authorization-secret", "cookie-secret", "set-cookie-secret"} {
+		assert.NotContains(t, buf.String(), secret)
+	}
+}
+
+func TestMiddleware_RecordsStatusAndByteCount(t *testing.T) {
+	buf := &bytes.Buffer{}
+	core := zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), zapcore.AddSync(buf), zapcore.DebugLevel)
+	logger := &Logger{Logger: zap.New(core)}
+	Middleware(logger)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte("hello"))
+	})).ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+	assert.Contains(t, buf.String(), `"status":201`)
+	assert.Contains(t, buf.String(), `"bytes":5`)
+}
+
 type flusherHijackerRecorder struct {
 	*httptest.ResponseRecorder
+}
+
+type capabilityWriter struct {
+	*httptest.ResponseRecorder
+	flushed  bool
+	hijacked bool
+	pushed   string
+}
+
+func (w *capabilityWriter) Flush() { w.flushed = true }
+func (w *capabilityWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	w.hijacked = true
+	return nil, nil, nil
+}
+func (w *capabilityWriter) Push(target string, _ *http.PushOptions) error {
+	w.pushed = target
+	return nil
 }
 
 func (f *flusherHijackerRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
@@ -155,4 +204,18 @@ func TestMiddleware_ResponseWriterFlusherAndHijacker(t *testing.T) {
 	assert.True(t, rec.Flushed)
 	assert.Error(t, directHijackErr)
 	assert.Error(t, rcHijackErr)
+}
+
+func TestMiddleware_ForwardsWriterCapabilities(t *testing.T) {
+	underlying := &capabilityWriter{ResponseRecorder: httptest.NewRecorder()}
+	Middleware(NewNopLogger())(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.(http.Flusher).Flush()
+		_, _, err := w.(http.Hijacker).Hijack()
+		require.NoError(t, err)
+		require.NoError(t, w.(http.Pusher).Push("/asset", nil))
+		require.Same(t, underlying, w.(interface{ Unwrap() http.ResponseWriter }).Unwrap())
+	})).ServeHTTP(underlying, httptest.NewRequest(http.MethodGet, "/", nil))
+	assert.True(t, underlying.flushed)
+	assert.True(t, underlying.hijacked)
+	assert.Equal(t, "/asset", underlying.pushed)
 }
