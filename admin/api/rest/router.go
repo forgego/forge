@@ -180,18 +180,29 @@ func (r *Router) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		if r.users == nil {
-			respondError(w, http.StatusUnauthorized, "authentication_required", "Admin user could not be resolved", nil)
-			return
+		var user *models.User
+		var userErr error
+		if r.users != nil {
+			user, userErr = r.users.GetByUsername(req.Context(), username)
 		}
-		user, err := r.users.GetByUsername(req.Context(), username)
-		if errors.Is(err, repository.ErrUserNotFound) || user == nil && err == nil {
-			respondError(w, http.StatusUnauthorized, "authentication_required", "Admin user could not be resolved", nil)
-			return
-		}
-		if err != nil {
+		if user != nil && userErr != nil {
 			respondError(w, http.StatusServiceUnavailable, "user_store_unavailable", "Could not resolve the admin user", nil)
 			return
+		}
+		if user == nil {
+			// Configured credentials are an independent admin identity source.
+			// They remain usable when the identity table is absent or unavailable,
+			// while a resolved identity row always takes precedence (including an
+			// inactive or non-staff row, which must not be bypassed).
+			user = configuredCredentialUser(username)
+			if user == nil {
+				if errors.Is(userErr, repository.ErrUserNotFound) || userErr == nil {
+					respondError(w, http.StatusUnauthorized, "authentication_required", "Admin user could not be resolved", nil)
+				} else {
+					respondError(w, http.StatusServiceUnavailable, "user_store_unavailable", "Could not resolve the admin user", nil)
+				}
+				return
+			}
 		}
 		principalValue, err := principal.FromUser(user)
 		if err != nil {

@@ -117,6 +117,11 @@ func backendID(user interface{}) string {
 		return fmt.Sprint(idProvider.GetID())
 	}
 	field := backendField(user, "ID")
+	if !field.IsValid() {
+		// Generated model fields use Go's conventional "Id" spelling when
+		// the schema field is named "id".
+		field = backendField(user, "Id")
+	}
 	if field.IsValid() && field.CanInterface() {
 		return fmt.Sprint(field.Interface())
 	}

@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/forgego/forge/api/authentication"
 	"github.com/forgego/forge/identity/principal"
 )
 
@@ -17,6 +18,30 @@ func authenticatedPrincipal(r *http.Request) (present, authenticated bool) {
 		return false, false
 	}
 	return true, p.Kind == principal.KindUser && p.ID != ""
+}
+
+// activeLegacyUser returns a legacy request user only when it explicitly
+// reports an active account. Principal-aware authentication normally handles
+// this check before storing the user; this is a fail-closed compatibility path.
+func activeLegacyUser(r *http.Request) (interface{}, bool) {
+	user, ok := authentication.GetUserFromRequest(r)
+	if !ok {
+		return nil, false
+	}
+	active, found := boolMember(user, "IsActive")
+	return user, found && active
+}
+
+// authenticatedRequestUser prefers the trusted principal installed by
+// authentication and applies the active-account rule to legacy-only contexts.
+func authenticatedRequestUser(r *http.Request) (interface{}, bool) {
+	if present, authenticated := authenticatedPrincipal(r); present {
+		if !authenticated {
+			return nil, false
+		}
+		return authentication.GetUserFromRequest(r)
+	}
+	return activeLegacyUser(r)
 }
 
 // getMethod gets a method by name using reflection

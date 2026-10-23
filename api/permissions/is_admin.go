@@ -3,7 +3,6 @@ package permissions
 import (
 	"net/http"
 
-	"github.com/forgego/forge/api/authentication"
 	"github.com/forgego/forge/identity/principal"
 )
 
@@ -31,7 +30,7 @@ func (p *IsAdminUser) HasPermission(r *http.Request, view ViewSet) bool {
 		}
 		return false
 	}
-	user, ok := authentication.GetUserFromRequest(r)
+	user, ok := activeLegacyUser(r)
 	if !ok {
 		return false
 	}

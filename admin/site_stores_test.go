@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/forgego/forge/admin/api/rest"
 	"github.com/forgego/forge/admin/core"
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/identity/models"
@@ -33,6 +35,18 @@ func (siteTestUsers) GetByUsername(_ context.Context, username string) (*models.
 		return nil, repository.ErrUserNotFound
 	}
 	return &models.User{ID: 1, Username: username, IsActive: true, IsStaff: true, IsSuperuser: true}, nil
+}
+
+type unavailableSiteUsers struct{}
+
+func (unavailableSiteUsers) GetByUsername(context.Context, string) (*models.User, error) {
+	return nil, errors.New("identity table is unavailable")
+}
+
+type inactiveSiteUsers struct{}
+
+func (inactiveSiteUsers) GetByUsername(_ context.Context, username string) (*models.User, error) {
+	return &models.User{ID: 1, Username: username, IsStaff: true, IsSuperuser: true}, nil
 }
 
 func (storeNote) Meta() schema.Meta { return schema.Meta{TableName: "store_notes"} }
@@ -142,6 +156,34 @@ func TestSite_UseDatabaseStoresRequiresMigratedDatabase(t *testing.T) {
 
 	site.SetDB(storestest.Open(t, "sqlite3", storestest.SQLitePath(t)))
 	require.ErrorIs(t, site.UseStores(ctx, "database"), stores.ErrNotMigrated)
+}
+
+func TestSite_ConfiguredCredentialPrincipalUsesLoginIdentitySource(t *testing.T) {
+	t.Setenv("FORGE_ADMIN_USERNAME", "configured-admin")
+	t.Setenv("FORGE_ADMIN_PASSWORD", "secret")
+
+	for _, tc := range []struct {
+		name  string
+		users rest.AdminUserStore
+		want  int
+	}{
+		{name: "identity store unavailable", users: unavailableSiteUsers{}, want: http.StatusOK},
+		{name: "inactive identity row", users: inactiveSiteUsers{}, want: http.StatusUnauthorized},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			site := NewSite("configured")
+			site.SetUserStore(tc.users)
+			server := httptest.NewServer(site.Handler())
+			defer server.Close()
+
+			status, body := adminCall(t, server.URL, http.MethodPost, "/api/login", "", map[string]string{
+				"username": "configured-admin", "password": "secret",
+			})
+			require.Equal(t, http.StatusOK, status, "%v", body)
+			status, body = adminCall(t, server.URL, http.MethodGet, "/api/config", body["token"].(string), nil)
+			assert.Equal(t, tc.want, status, "%v", body)
+		})
+	}
 }
 
 type recordingHistory struct{ entries []core.LogEntry }

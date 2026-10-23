@@ -2,8 +2,6 @@ package permissions
 
 import (
 	"net/http"
-
-	"github.com/forgego/forge/api/authentication"
 )
 
 // IsAuthenticated requires authentication
@@ -21,7 +19,7 @@ func (p *IsAuthenticated) HasPermission(r *http.Request, view ViewSet) bool {
 	if present, authenticated := authenticatedPrincipal(r); present {
 		return authenticated
 	}
-	_, ok := authentication.GetUserFromRequest(r)
+	_, ok := activeLegacyUser(r)
 	return ok
 }
 

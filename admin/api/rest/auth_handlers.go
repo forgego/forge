@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/forgego/forge/identity/models"
 	"github.com/forgego/forge/netutil"
 )
 
@@ -188,6 +189,22 @@ func adminCredentials() (string, string) {
 	password := strings.TrimRight(os.Getenv("FORGE_ADMIN_PASSWORD"), "\r\n")
 
 	return username, password
+}
+
+// configuredCredentialUser resolves the identity source used by the built-in
+// environment credential login. A token for this username can only be issued
+// after the configured username and password have both been verified.
+func configuredCredentialUser(username string) *models.User {
+	configuredUsername, configuredPassword := adminCredentials()
+	if configuredUsername == "" || configuredPassword == "" || username != configuredUsername {
+		return nil
+	}
+	return &models.User{
+		Username:    configuredUsername,
+		IsActive:    true,
+		IsStaff:     true,
+		IsSuperuser: true,
+	}
 }
 
 func secureEqual(a, b string) bool {
