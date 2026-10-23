@@ -47,6 +47,21 @@ authenticated user.
 
 ## Setup example
 
+### Rotating JWT signing keys
+
+Set `security.secret_key` and `security.secret_key_id` to the new current key
+and its public identifier. Add each retired key to
+`security.previous_secret_keys` with its `id`, secret `key`, and RFC3339
+`verify_until` deadline. Tokens include a `kid`; verification selects only that
+key, rejects unknown IDs, and accepts a previous key only before its deadline.
+New tokens must be signed with the current key. Set
+`security.token_max_lifetime` to the maximum issued token lifetime and retain a
+previous key for at least that long after switching issuers. Remove expired
+keys after the overlap. Never log these secret values.
+
+Changing `security.csrf_secret_key` invalidates outstanding CSRF form tokens;
+users may need to reload forms before submitting them.
+
 ```go
 identitySystem, err := identity.SetupIdentitySystem(db, nil)
 if err != nil {
