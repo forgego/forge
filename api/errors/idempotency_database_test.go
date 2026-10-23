@@ -3,6 +3,7 @@ package errors
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -85,5 +86,20 @@ func TestDatabaseStoreReclaimsExpiredClaim(t *testing.T) {
 	won, err = store.Claim("key", time.Minute)
 	if err != nil || !won {
 		t.Fatalf("reclaim = %v, %v", won, err)
+	}
+}
+
+func TestDatabaseStoreGetReturnsExpiredCleanupError(t *testing.T) {
+	store := newSQLiteIdempotencyStore(t)
+	if _, err := store.Claim("key", -time.Second); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.db.Exec(`CREATE TRIGGER reject_expired_delete BEFORE DELETE ON "idempotency_keys" BEGIN SELECT RAISE(ABORT, 'delete rejected'); END`); err != nil {
+		t.Fatal(err)
+	}
+
+	response, err := store.Get("key")
+	if response != nil || err == nil || !strings.Contains(err.Error(), "delete expired idempotency key") || !strings.Contains(err.Error(), "delete rejected") {
+		t.Fatalf("Get = (%v, %v), want wrapped expired-key deletion error", response, err)
 	}
 }

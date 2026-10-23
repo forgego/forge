@@ -197,6 +197,8 @@ func (s *DatabaseStore) EnsureSchema(ctx context.Context) error {
 	if s == nil || s.db == nil {
 		return fmt.Errorf("idempotency database is not configured")
 	}
+	// table is validated by validSQLIdentifier; values are bound parameters.
+	// nosemgrep: go.lang.security.audit.database.string-formatted-query.string-formatted-query, go.lang.security.audit.database.string-formatted-query
 	_, err := s.db.ExecContext(ctx, fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s" (key TEXT PRIMARY KEY, response_json TEXT, expires_at TIMESTAMP NOT NULL)`, s.table))
 	return err
 }
@@ -208,6 +210,8 @@ func (s *DatabaseStore) Claim(key string, ttl time.Duration) (bool, error) {
 	if s == nil || s.db == nil {
 		return false, fmt.Errorf("idempotency database is not configured")
 	}
+	// table is validated by validSQLIdentifier; values are bound parameters.
+	// nosemgrep: go.lang.security.audit.database.string-formatted-query.string-formatted-query, go.lang.security.audit.database.string-formatted-query
 	query := fmt.Sprintf(`INSERT INTO "%s" (key, response_json, expires_at) VALUES (%s, NULL, %s) ON CONFLICT (key) DO UPDATE SET response_json = NULL, expires_at = excluded.expires_at WHERE "%s".expires_at <= %s`, s.table, s.placeholder(1), s.placeholder(2), s.table, s.placeholder(3))
 	result, err := s.db.Exec(query, key, time.Now().Add(ttl), time.Now())
 	if err != nil {
@@ -224,12 +228,18 @@ func (s *DatabaseStore) Get(key string) (*CachedResponse, error) {
 	}
 	var payload sql.NullString
 	var expires time.Time
+	// table is validated by validSQLIdentifier; values are bound parameters.
+	// nosemgrep: go.lang.security.audit.database.string-formatted-query.string-formatted-query, go.lang.security.audit.database.string-formatted-query
 	err := s.db.QueryRow(fmt.Sprintf(`SELECT response_json, expires_at FROM "%s" WHERE key = %s`, s.table, s.placeholder(1)), key).Scan(&payload, &expires)
 	if err != nil {
 		return nil, err
 	}
 	if time.Now().After(expires) {
-		_, _ = s.db.Exec(fmt.Sprintf(`DELETE FROM "%s" WHERE key = %s`, s.table, s.placeholder(1)), key)
+		// table is validated by validSQLIdentifier; values are bound parameters.
+		// nosemgrep: go.lang.security.audit.database.string-formatted-query.string-formatted-query, go.lang.security.audit.database.string-formatted-query
+		if _, err := s.db.Exec(fmt.Sprintf(`DELETE FROM "%s" WHERE key = %s`, s.table, s.placeholder(1)), key); err != nil {
+			return nil, fmt.Errorf("delete expired idempotency key: %w", err)
+		}
 		return nil, fmt.Errorf("key expired")
 	}
 	if !payload.Valid {
@@ -251,6 +261,8 @@ func (s *DatabaseStore) Set(key string, response *CachedResponse, ttl time.Durat
 	if err != nil {
 		return err
 	}
+	// table is validated by validSQLIdentifier; values are bound parameters.
+	// nosemgrep: go.lang.security.audit.database.string-formatted-query.string-formatted-query, go.lang.security.audit.database.string-formatted-query
 	query := fmt.Sprintf(`INSERT INTO "%s" (key, response_json, expires_at) VALUES (%s, %s, %s) ON CONFLICT (key) DO UPDATE SET response_json = excluded.response_json, expires_at = excluded.expires_at`, s.table, s.placeholder(1), s.placeholder(2), s.placeholder(3))
 	_, err = s.db.Exec(query, key, string(data), time.Now().Add(ttl))
 	return err
@@ -261,6 +273,8 @@ func (s *DatabaseStore) Delete(key string) error {
 	if s == nil || s.db == nil {
 		return fmt.Errorf("idempotency database is not configured")
 	}
+	// table is validated by validSQLIdentifier; values are bound parameters.
+	// nosemgrep: go.lang.security.audit.database.string-formatted-query.string-formatted-query, go.lang.security.audit.database.string-formatted-query
 	_, err := s.db.Exec(fmt.Sprintf(`DELETE FROM "%s" WHERE key = %s`, s.table, s.placeholder(1)), key)
 	return err
 }
@@ -270,6 +284,8 @@ func (s *DatabaseStore) Cleanup() error {
 	if s == nil || s.db == nil {
 		return fmt.Errorf("idempotency database is not configured")
 	}
+	// table is validated by validSQLIdentifier; values are bound parameters.
+	// nosemgrep: go.lang.security.audit.database.string-formatted-query.string-formatted-query, go.lang.security.audit.database.string-formatted-query
 	_, err := s.db.Exec(fmt.Sprintf(`DELETE FROM "%s" WHERE expires_at <= %s`, s.table, s.placeholder(1)), time.Now())
 	return err
 }
