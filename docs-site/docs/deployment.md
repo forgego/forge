@@ -236,7 +236,7 @@ This state stays in process memory whatever `server.stores` says:
 | --- | --- |
 | `server.RateLimitByIP` / `RateLimitByUser` middleware | Per process; reset on restart. |
 | A throttle given its own store with `WithStore` | Whatever that store does. |
-| `api/caching` cache, idempotency keys | Per process; lost on restart. |
+| `api/caching` in-memory response cache, idempotency keys | Per process; lost on restart. Shared or query caching is planned, not available. |
 | Secrets generated at startup (non-production only) | New values each start, so existing cookies stop working. |
 
 These survive a restart in any configuration because they live in
@@ -265,9 +265,9 @@ test starts two instances on one PostgreSQL database and checks each of these
 
 Every instance must use the same database and the same
 `FORGE_SECURITY_*` secrets. The per-process state listed under
-[shared state](#shared-state) (the `RateLimitByIP` middleware, caches,
-idempotency keys) stays per instance. With `server.stores: memory`, more than
-one instance is not supported: admin users are signed out when a request lands
+[shared state](#shared-state) (the `RateLimitByIP` middleware, in-memory response
+caches, idempotency keys) stays per instance. With `server.stores: memory`, more
+than one instance is not supported: admin users are signed out when a request lands
 on the other instance, limits are per instance and history is split.
 
 Run migrations from one place only. `forge migrate up` holds a PostgreSQL

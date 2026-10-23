@@ -140,6 +140,10 @@ Forge needs Go 1.26 or later.
 
 ## Start a project
 
+Applying migrations to SQLite is experimental. Use `--database postgres` for
+anything you deploy; see the [deployment guide](https://forgego.github.io/forge/docs/deployment/)
+before going to production.
+
 ```bash
 forge new myapp --database sqlite --template simple --docker=false
 cd myapp
@@ -149,10 +153,7 @@ forge makemigrations initial --auto --models ./app/blog
 forge migrate up
 ```
 
-SQLite keeps this example self-contained, but applying migrations to SQLite
-is experimental. Use `--database postgres` for anything you deploy, and see the
-[deployment guide](https://forgego.github.io/forge/docs/deployment/) before
-going to production. The
+SQLite keeps this example self-contained. The
 [quickstart](https://forgego.github.io/forge/docs/quickstart/) covers the next
 steps, and `forge --help` lists every command.
 

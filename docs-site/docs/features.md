@@ -29,6 +29,7 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 ### Type-Safe ORM
 - QuerySet API for filtering, ordering, slicing, and aggregating data
 - Manager for CRUD operations with full type safety
+- Primary keys are restricted to `int64`; UUID, string and composite keys are unsupported.
 - Generated field expressions for compile-time validation
 - IDE autocomplete for all queries and field access
 - Prevent SQL injection and runtime errors
@@ -69,9 +70,9 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 - Reverse relation queries
 
 ### Aggregations
-- `AggregateValues()` - Compute Count, Sum, Avg, Min and Max over a QuerySet (ungrouped)
+- Scalar `AggregateValues()` supports Count, Sum, Avg, Min and Max over a QuerySet (ungrouped).
 - `Annotate()` - Add computed fields
-- Not implemented yet: grouped aggregates (`GROUP BY`) and custom aggregate functions
+- Scalar aggregates (`Count`, `Sum`, `Avg`, `Min`, `Max`) are supported. Grouped/custom aggregates and QuerySet `Union`, `Intersection`, `Difference` are unsupported.
 
 ### Bulk Operations
 - `BulkCreate()` - Insert multiple records
@@ -273,7 +274,7 @@ Request IDs, error handling, logging, sessions and CSRF are installed by `server
 - `forge migrate status` - Check migration state
 - `forge migrate rollback` - Roll back the last applied migration
 - `forge migrate recover`, `forge migrate force` - Recover from a dirty or altered history
-- `forge migrate squash` - Command exists, but execution returns a not-implemented error; it does not produce a migration.
+- `forge migrate squash` - Not implemented yet; execution returns a not-implemented error and does not produce a migration.
 
 ### User Management
 - `forge createsuperuser` - Create admin user
@@ -284,7 +285,7 @@ Request IDs, error handling, logging, sessions and CSRF are installed by `server
 - `forge add api` - Generate API viewset
 - `forge add handler` - Create request handler
 - `forge add model` - Add new model
-- `forge add service` - Create a service interface and implementation. `--inject` adds a manual dependency wiring placeholder; it does not wire dependencies automatically.
+- `forge add service` - Create a service interface and implementation. `--inject` writes a manual dependency wiring placeholder comment only; it does not wire dependencies automatically.
 
 ### Development Tools
 - `forge shell` - Interactive Go shell

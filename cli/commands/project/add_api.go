@@ -33,7 +33,7 @@ func (c *AddAPICommand) Definition() *cobra.Command {
 	cmd.Flags().String("app", "", "App name (auto-detected if in app directory)")
 	cmd.Flags().String("model", "", "Model name for the API")
 	cmd.Flags().String("resource", "", "URL resource path (default: resource-name)")
-	cmd.Flags().Bool("graphql", false, "Append a GraphQL resolver placeholder (does not implement GraphQL support)")
+	cmd.Flags().Bool("graphql", false, "Write a placeholder comment only; GraphQL is not supported")
 	cmd.Flags().Bool("dry-run", false, "Preview changes without writing files")
 	return cmd
 }
@@ -78,6 +78,9 @@ func (c *AddAPICommand) Execute(ctx *core.Context, args []string) error {
 	}
 
 	graphql, _ := ctx.Cmd.Flags().GetBool("graphql")
+	if graphql {
+		fmt.Fprintln(os.Stderr, "GraphQL is not supported; --graphql writes a placeholder comment only.")
+	}
 
 	// Check dry-run
 	dryRun, _ := ctx.Cmd.Flags().GetBool("dry-run")

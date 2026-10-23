@@ -79,7 +79,7 @@ func newLoggerFromConfig(config *LoggingConfig, hooks ...Hook) (*Logger, error) 
 			core, closer = createFileCore(encoder, level, output.File)
 			closers = append(closers, closer)
 		case OutputRemote:
-			return nil, forgeerrors.NewNotImplementedError("log remote output")
+			return nil, forgeerrors.NewNotImplementedError("remote log output is unsupported")
 		default:
 			continue
 		}
