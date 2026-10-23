@@ -35,6 +35,7 @@ type Product struct {
 	ID        int64  `+"`json:\"id\" db:\"id\"`"+`
 	Name      string `+"`json:\"name\" db:\"name\"`"+`
 	CreatedAt string `+"`json:\"created_at\" db:\"created_at\"`"+`
+	Token     string `+"`json:\"-\" db:\"token_hash\"`"+`
 }
 
 func (Product) Fields() []schema.Field {
@@ -42,6 +43,7 @@ func (Product) Fields() []schema.Field {
 		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
 		schema.StringField("name", schema.Required()),
 		schema.StringField("created_at", schema.Editable(false)),
+		{Name: "token", DBColumn: "token_hash", Type: schema.TypeString, Editable: true, Serialize: false},
 	}
 }
 `), 0o644))
@@ -71,6 +73,11 @@ func TestGeneratedAPI(t *testing.T) {
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "bogus") {
 		t.Fatalf("unknown key: got %d %s", rec.Code, rec.Body.String())
+	}
+	filtered := httptest.NewRecorder()
+	router.ServeHTTP(filtered, httptest.NewRequest(http.MethodGet, "/api/v1/products/?token__startswith=secret", nil))
+	if filtered.Code != http.StatusBadRequest || !strings.Contains(filtered.Body.String(), "invalid filter") {
+		t.Fatalf("hidden filter: got %d %s", filtered.Code, filtered.Body.String())
 	}
 	for _, echoed := range []string{"\"id\"", "created_at", "\"name\""} {
 		if strings.Contains(rec.Body.String(), echoed) {
