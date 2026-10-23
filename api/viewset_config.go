@@ -47,6 +47,9 @@ func NewConfigurableViewSet(config *ViewSetConfig) *ConfigurableViewSet {
 
 	// Create base viewset with nil queryset (will be handled dynamically)
 	base := NewBaseViewSet(serializerFactory, config.Queryset, config.Model)
+	if config.Filterable != nil {
+		base.Filterable = append([]string{}, config.Filterable...)
+	}
 	base.Authentication = config.Authentication
 	base.Permissions = config.Permissions
 	base.Throttles = config.Throttles

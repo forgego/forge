@@ -23,7 +23,9 @@ After `apiRouter := api.NewRouter("/api/v1")`, `apiRouter.Register("products", v
 | `PATCH` | `/api/v1/products/{id}` | `PartialUpdate` | Partial record field update. |
 | `DELETE` | `/api/v1/products/{id}` | `Destroy` | Delete record. |
 
-`List` accepts `page` and `page_size`, `ordering` (for example `?ordering=-price`), and a filter per serialized model field: `?is_featured=true`, or a lookup such as `?price__gte=10`, `?name__icontains=desk`, `?id__in=1,2,3` or `?deleted_at__isnull=true`.
+`List` accepts `page` and `page_size`, `ordering` (for example `?ordering=-price`), `search` and `format`. Filters are limited to serialized, filterable model fields and the supported lookups `exact`, `ne`, `gt`, `gte`, `lt`, `lte`, `contains`, `icontains`, `startswith`, `endswith`, `in` and `isnull`. Generated viewsets expose serialized schema fields as filterable by default. A configured viewset can set `Filterable` to its explicit field allowlist. Unknown fields, hidden fields and unsupported lookups return `400 Bad Request`; for example `?is_featured=true`, `?price__gte=10`, `?name__icontains=desk`, `?id__in=1,2,3` or `?deleted_at__isnull=true`.
+
+`PUT` replaces writable fields: omitted optional fields are reset to their declared default or zero value, while omitted required fields return `400`. Primary-key and read-only fields keep their stored values. `PATCH` changes only fields present in the request body.
 
 Set `ReadOnly` to serve only `List` and `Retrieve`; see [ViewSet Data Access](/docs/api/data-access/).
 

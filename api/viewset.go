@@ -72,6 +72,9 @@ type BaseViewSet struct {
 	Serializer func() Serializer
 	Queryset   interface{} // This would be a QuerySet in real implementation
 	Model      interface{}
+	// Filterable restricts list filters to the named model fields. When nil,
+	// serialized schema fields are filterable for backward compatibility.
+	Filterable []string
 	// ExcludeResponseFields holds additional response keys to remove. Schema
 	// fields with Serialize(false) are always excluded.
 	ExcludeResponseFields []string
@@ -224,6 +227,7 @@ func (vs *BaseViewSet) viewForRequest(r *http.Request) *BaseViewSet {
 		Serializer:                 vs.Serializer,
 		Queryset:                   vs.Queryset,
 		Model:                      vs.Model,
+		Filterable:                 vs.Filterable,
 		ExcludeResponseFields:      vs.ExcludeResponseFields,
 		ReadOnlyRequestFields:      vs.ReadOnlyRequestFields,
 		RejectUnknownRequestFields: vs.RejectUnknownRequestFields,
@@ -354,9 +358,13 @@ func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 	querysetValue = paginatableQueryset(querysetValue)
 
 	// Apply filtering from query params
-	qs, err := applyFilters(querysetValue, r, vs.Model)
+	qs, err := applyFilters(querysetValue, r, vs.Model, vs.Filterable)
 	if err != nil {
-		vs.listConfigurationError(w, r, err)
+		if _, ok := err.(*exceptions.ValidationError); ok {
+			vs.handleException(w, r, err)
+		} else {
+			vs.listConfigurationError(w, r, err)
+		}
 		return
 	}
 
@@ -698,7 +706,10 @@ func (vs *BaseViewSet) Retrieve(w http.ResponseWriter, r *http.Request) {
 	_ = forgehttp.SendJSON(w, http.StatusOK, serialized)
 }
 
-// Update handles PUT /resource/{id}/
+// Update handles PUT /resource/{id}/ as a full replacement of writable
+// fields. Omitted optional fields reset to their schema default or zero value;
+// omitted required fields fail validation. Primary-key and read-only values
+// remain unchanged.
 func (vs *BaseViewSet) Update(w http.ResponseWriter, r *http.Request) {
 	vs.update(w, r, "update")
 }
@@ -801,10 +812,14 @@ func (vs *BaseViewSet) update(w http.ResponseWriter, r *http.Request, action str
 	ignoredKeys = append(ignoredKeys, vs.ReadOnlyRequestFields...)
 
 	// PUT replaces the record, so it must carry every required writable
-	// field; otherwise the stored value would silently survive, as in PATCH.
+	// field; omitted optional fields are reset below. PATCH remains partial.
 	if action == "update" {
 		if missing := missingRequiredFields(instance, data, ignoredKeys, false); len(missing) > 0 {
 			vs.handleException(w, r, exceptions.NewValidationError(missing))
+			return
+		}
+		if err := resetOmittedWritableFields(instance, data, ignoredKeys); err != nil {
+			vs.handleException(w, r, validationErrorForPopulate(err))
 			return
 		}
 	}
@@ -872,7 +887,7 @@ func logRefetchFailure(r *http.Request, action string, id int64, err error) {
 	)
 }
 
-// PartialUpdate handles PATCH /resource/{id}/
+// PartialUpdate handles PATCH /resource/{id}/ and changes only supplied fields.
 func (vs *BaseViewSet) PartialUpdate(w http.ResponseWriter, r *http.Request) {
 	vs.update(w, r, "partial_update")
 }
@@ -1214,35 +1229,48 @@ func maybeConvertToQueryset(qs reflect.Value) reflect.Value {
 	return first
 }
 
-// applyFilters applies query parameter filters to queryset. It fails when a
-// Filter result, whose type may only be known now, cannot be filtered further.
-func applyFilters(qs reflect.Value, r *http.Request, model interface{}) (reflect.Value, error) {
+// applyFilters applies only declared, serializable model-field filters. It
+// returns a validation error for unknown fields or lookup names.
+func applyFilters(qs reflect.Value, r *http.Request, model interface{}, filterable []string) (reflect.Value, error) {
 	// Get filter parameters from query string
 	query := r.URL.Query()
 	qsType := qs.Type()
+
+	allowedFields := filterable
+	if allowedFields == nil {
+		allowedFields = FilterableFields(model)
+	}
+	type filterParam struct {
+		expression string
+		value      string
+	}
+	var filters []filterParam
+	for key, values := range query {
+		if len(values) == 0 || listControlParameter(key) {
+			continue
+		}
+		fieldName, lookup := parseLookup(key)
+		resolvedName, field, ok := resolveQueryField(model, fieldName)
+		if !ok || !field.Serialize || !filterNameAllowed(model, fieldName, allowedFields) {
+			return qs, filterParameterError(key, "field is not filterable")
+		}
+		if !filterLookupAllowed(lookup) {
+			return qs, filterParameterError(key, "unsupported lookup")
+		}
+		filters = append(filters, filterParam{
+			expression: strings.Join([]string{resolvedName, lookup}, "__"),
+			value:      values[0],
+		})
+	}
+
 	if err := checkListCall(qsType, "Filter"); err != nil {
 		return qs, err
 	}
-
-	// Get cached Filter method
 	filterMethod, hasFilter := globalCache.GetMethod(qsType, "Filter")
 
-	for key, values := range query {
-		if len(values) == 0 || key == "page" || key == "page_size" || key == "ordering" || key == "search" {
-			continue
-		}
-
+	for _, filter := range filters {
 		if hasFilter {
-			value := values[0]
-			fieldName, lookup := parseLookup(key)
-			if resolvedName, field, ok := resolveQueryField(model, fieldName); ok {
-				if !field.Serialize {
-					continue
-				}
-				fieldName = resolvedName
-			}
-
-			expr := buildFilterExpr(strings.Join([]string{fieldName, lookup}, "__"), value)
+			expr := buildFilterExpr(filter.expression, filter.value)
 			if expr != nil {
 				results := filterMethod.Func.Call([]reflect.Value{qs, reflect.ValueOf(expr)})
 				if len(results) > 0 {
