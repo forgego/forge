@@ -1,8 +1,12 @@
 version: 2
 updates:
-  # Go dependencies - root module
+  # Go dependencies - every module. One entry so a grouped bump updates the root,
+  # tests and examples/ecommerce modules (and their go.sum files) together.
   - package-ecosystem: "gomod"
-    directory: "/"
+    directories:
+      - "/"
+      - "/tests"
+      - "/examples/ecommerce"
     cooldown:
       default-days: 7
     schedule:
@@ -24,40 +28,6 @@ updates:
         update-types:
           - "minor"
           - "patch"
-
-  # Go dependencies - examples/ecommerce
-  - package-ecosystem: "gomod"
-    directory: "/examples/ecommerce"
-    cooldown:
-      default-days: 7
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "go"
-      - "examples"
-    commit-message:
-      prefix: "chore"
-      include: "scope"
-
-  # Go dependencies - tests
-  - package-ecosystem: "gomod"
-    directory: "/tests"
-    cooldown:
-      default-days: 7
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "go"
-      - "tests"
-    commit-message:
-      prefix: "chore"
-      include: "scope"
 
   # NPM dependencies - admin UI
   - package-ecosystem: "npm"
