@@ -47,3 +47,27 @@ The runner guarantees transaction boundaries, but the callback owns its
 domain-specific validation, state checks, and any required target-row locking.
 Use the database's appropriate locking strategy where concurrent updates could
 violate an invariant.
+
+## Admin action adapter
+
+`admin/core.OperationAction[In, Out]` connects a typed operation to an admin
+request. Supply the runner and operation once, then pass the decoded parameters
+and confirmation flag on each `Execute` call. Each call returns its own typed
+result; the adapter does not retain request data or results.
+
+```go
+action := core.OperationAction[ApproveInput, ApprovalResult]{
+    Runner: runner,
+    Operation: approveOperation,
+    RequiresConfirmation: true,
+}
+
+result, err := action.Execute(request.Context(), input, request.Confirmed)
+```
+
+The adapter reads the request principal with `api/core.PrincipalFromContext`
+and exposes its ID, kind, and permission snapshot as the operation actor. The
+runner checks the operation's required permission against that snapshot. A
+denied invocation returns `*core.ActionHTTPError` with status 403; a required
+but missing confirmation returns status 400 before the runner is called.
+Operation callback errors remain wrapped and discoverable with `errors.Is`.
