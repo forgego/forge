@@ -237,6 +237,35 @@ err := database.WithTx(ctx, func(tx *db.Tx) error {
 })
 ```
 
+The bound manager also provides `RawQuery` and `RawExec` for parameterized SQL
+that does not fit the QuerySet API. They use the manager's active connection,
+rebind `$1`, `$2`, ... placeholders for its dialect, and accept data values as
+arguments. A raw query made through a transaction-bound manager sees its
+uncommitted writes. Those writes remain invisible outside the transaction until
+commit, and are rolled back when the callback returns an error or panics. Using
+the bound manager after the callback ends returns the database driver's
+completed-transaction error.
+
+```go
+err := database.WithTx(ctx, func(tx *db.Tx) error {
+    orders := OrderObjects.WithTx(tx)
+    _, err := orders.RawExec(ctx,
+        "UPDATE orders SET status = $1 WHERE id = $2", "paid", orderID)
+    if err != nil {
+        return err
+    }
+
+    rows, err := orders.RawQuery(ctx,
+        "SELECT id, status FROM orders WHERE id = $1", orderID)
+    if err != nil {
+        return err
+    }
+    defer rows.Close()
+    // Scan rows before returning from the transaction callback.
+    return nil
+})
+```
+
 For partial rollback inside a transaction, use `tx.CreateSavepoint(name)` and
 `RollbackToSavepoint()`.
 

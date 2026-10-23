@@ -2,6 +2,7 @@ package orm
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"reflect"
 	"strings"
@@ -47,6 +48,20 @@ func (c *managerConn) dialect() (dialect.Dialect, error) {
 		return GetDialect(c.db)
 	}
 	return nil, fmt.Errorf("database connection not set")
+}
+
+// executionQuery returns the active execution handle and SQL rebound for its
+// driver. Keeping connection selection and placeholder handling together
+// ensures transaction-bound raw queries use the transaction too.
+func (c *managerConn) executionQuery(query string) (DBTX, string, error) {
+	dbtx, err := c.dbtx()
+	if err != nil {
+		return nil, "", err
+	}
+	if c.tx != nil {
+		return dbtx, c.tx.RebindPlaceholders(query), nil
+	}
+	return dbtx, c.db.RebindPlaceholders(query), nil
 }
 
 func (c *managerConn) raw() any {
@@ -114,11 +129,44 @@ func (m *Manager[T]) SetDB(database *db.DB) {
 	m.db = &managerConn{db: database}
 }
 
-// WithTx returns a copy bound to the transaction.
+// WithTx returns a copy bound to tx. Manager and QuerySet operations, including
+// RawQuery and RawExec, execute on that transaction. They see its uncommitted
+// writes, and use after the transaction ends returns the driver's transaction
+// completion error.
 func (m *Manager[T]) WithTx(tx *db.Tx) *Manager[T] {
 	clone := *m
 	clone.db = &managerConn{tx: tx}
 	return &clone
+}
+
+// RawQuery executes a parameterized SQL query through the manager's database
+// connection. When the manager is bound with WithTx, the query runs on that
+// transaction and uses its dialect's placeholders. Data values should be
+// passed through args rather than interpolated into query text.
+func (m *Manager[T]) RawQuery(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	if !m.hasDB() {
+		return nil, errors.NewConfigurationError("database connection not set", "db")
+	}
+	dbtx, query, err := m.db.executionQuery(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare raw query: %w", err)
+	}
+	return dbtx.QueryContext(ctx, query, args...)
+}
+
+// RawExec executes a parameterized SQL statement through the manager's
+// database connection. When the manager is bound with WithTx, the statement
+// runs on that transaction and uses its dialect's placeholders. Data values
+// should be passed through args rather than interpolated into query text.
+func (m *Manager[T]) RawExec(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	if !m.hasDB() {
+		return nil, errors.NewConfigurationError("database connection not set", "db")
+	}
+	dbtx, query, err := m.db.executionQuery(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare raw statement: %w", err)
+	}
+	return dbtx.ExecContext(ctx, query, args...)
 }
 
 func (m *Manager[T]) hasDB() bool {
