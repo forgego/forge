@@ -63,6 +63,9 @@ func TestManagerWithTxRawQueriesOnPostgres(t *testing.T) {
 		var name string
 		require.NoError(t, rows.Scan(&name))
 		require.Equal(t, "postgres-value", name)
+		if err := rows.Close(); err != nil {
+			return err
+		}
 
 		outside, err := manager.RawQuery(ctx,
 			"SELECT COUNT(*) FROM forge_tx_raw_records WHERE name = $1", "postgres-value")
