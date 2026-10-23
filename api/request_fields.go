@@ -245,3 +245,63 @@ func walkRequestFields(model interface{}, fn func(requestField)) {
 	}
 	walk(modelType, 0)
 }
+
+// resetOmittedWritableFields gives PUT replacement semantics while preserving
+// primary-key and read-only values loaded from storage. PATCH does not call it.
+func resetOmittedWritableFields(instance interface{}, data map[string]interface{}, ignoredKeys []string) error {
+	value := reflect.ValueOf(instance)
+	if !value.IsValid() || value.Kind() != reflect.Ptr || value.IsNil() {
+		return nil
+	}
+	value = value.Elem()
+	if value.Kind() != reflect.Struct {
+		return nil
+	}
+	ignored := make(map[string]bool, len(ignoredKeys))
+	for _, key := range ignoredKeys {
+		ignored[strings.ToLower(key)] = true
+	}
+	schemaFields := schemaFieldsByRequestName(instance)
+
+	var reset func(reflect.Value) error
+	reset = func(target reflect.Value) error {
+		for i := 0; i < target.NumField(); i++ {
+			structField := target.Type().Field(i)
+			if !structField.IsExported() {
+				continue
+			}
+			fieldValue := target.Field(i)
+			if structField.Anonymous {
+				switch fieldValue.Kind() {
+				case reflect.Struct:
+					if err := reset(fieldValue); err != nil {
+						return err
+					}
+				case reflect.Ptr:
+					if !fieldValue.IsNil() && fieldValue.Elem().Kind() == reflect.Struct {
+						if err := reset(fieldValue.Elem()); err != nil {
+							return err
+						}
+					}
+				}
+				continue
+			}
+			request := newRequestField(schemaFields, structField)
+			if !request.writable() || request.ignoredBy(instance, ignored) || (request.schema != nil && (!request.schema.Editable || isRequestReadOnly(*request.schema))) {
+				continue
+			}
+			if _, _, present := request.lookup(instance, data); present || !fieldValue.CanSet() {
+				continue
+			}
+			if request.schema != nil && request.schema.Default != nil && !schema.IsDatabaseFunctionDefault(request.schema.Default) {
+				if err := setFieldValue(fieldValue, request.schema.Default, request.schema); err != nil {
+					return &fieldError{Field: request.key, Message: err.Error()}
+				}
+				continue
+			}
+			fieldValue.Set(reflect.Zero(fieldValue.Type()))
+		}
+		return nil
+	}
+	return reset(value)
+}

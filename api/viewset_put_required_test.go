@@ -125,16 +125,18 @@ func TestCreate_ReadonlyFieldsSpellingIgnoresAliases(t *testing.T) {
 
 type putOptionalSlugModel struct {
 	schema.BaseSchema
-	ID    int64  `json:"id" db:"id"`
-	Title string `json:"title" db:"title"`
-	Slug  string `json:"slug" db:"slug"`
+	ID      int64  `json:"id" db:"id"`
+	Title   string `json:"title" db:"title"`
+	Slug    string `json:"slug" db:"slug"`
+	Caption string `json:"caption" db:"caption"`
 }
 
 func (putOptionalSlugModel) Fields() []schema.Field {
 	return []schema.Field{
 		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
 		schema.StringField("title", schema.Required()),
-		schema.StringField("slug"),
+		schema.StringField("slug", schema.Default("fallback")),
+		schema.StringField("caption"),
 	}
 }
 
@@ -147,6 +149,30 @@ func TestUpdatePut_UnwritableRequiredFieldsAreNotRequired(t *testing.T) {
 		rec := performSchemaInputRequest(t, handler, http.MethodPut, "/api/items/1", `{"title":"new"}`)
 		require.Equal(t, http.StatusOK, rec.Code, "strict=%v: %s", strict, rec.Body.String())
 		assert.Equal(t, "kept", mgr.items[1].(*putRequiredModel).Secret)
+	}
+}
+
+func TestUpdatePut_ReplacesOmittedWritableFieldsWhilePatchKeepsThem(t *testing.T) {
+	for _, method := range []string{http.MethodPut, http.MethodPatch} {
+		t.Run(method, func(t *testing.T) {
+			mgr := &putRequiredManager{items: map[int64]interface{}{1: &putOptionalSlugModel{ID: 1, Title: "old", Slug: "kept", Caption: "saved"}}}
+			vs := NewBaseViewSet(func() Serializer { return NewBaseSerializer(nil) }, mgr, &putOptionalSlugModel{})
+			router := NewRouter("/api")
+			router.Register("items", vs)
+			handler := forgehttp.NewRouter()
+			router.RegisterRoutes(handler)
+			rec := performSchemaInputRequest(t, handler, method, "/api/items/1", `{"title":"new"}`)
+			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+			stored := mgr.items[1].(*putOptionalSlugModel)
+			assert.Equal(t, "new", stored.Title)
+			if method == http.MethodPut {
+				assert.Equal(t, "fallback", stored.Slug, "PUT restores the schema default")
+				assert.Empty(t, stored.Caption, "PUT clears omitted writable fields")
+			} else {
+				assert.Equal(t, "kept", stored.Slug, "PATCH retains omitted writable fields")
+				assert.Equal(t, "saved", stored.Caption, "PATCH retains omitted writable fields")
+			}
+		})
 	}
 }
 

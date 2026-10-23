@@ -237,7 +237,7 @@ func TestRequestContract_NullOmittedAndZero(t *testing.T) {
 	}
 }
 
-func TestRequestContract_PutAndPatchApplyOnlyProvidedKeys(t *testing.T) {
+func TestRequestContract_PutReplacesAndPatchAppliesOnlyProvidedKeys(t *testing.T) {
 	for _, method := range []string{http.MethodPut, http.MethodPatch} {
 		mgr, handler := newContractHandler(contractOptions{strict: true})
 
@@ -245,9 +245,15 @@ func TestRequestContract_PutAndPatchApplyOnlyProvidedKeys(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		got := mgr.stored(1)
 		assert.Equal(t, "renamed", got.Title, method)
-		assert.Equal(t, int64(5), got.Count, "%s keeps omitted fields", method)
-		require.NotNil(t, got.Note)
-		assert.Equal(t, "old", got.Password, "%s keeps omitted write-only fields", method)
+		if method == http.MethodPut {
+			assert.Zero(t, got.Count, "PUT resets omitted fields")
+			assert.Nil(t, got.Note, "PUT resets omitted nullable fields")
+			assert.Empty(t, got.Password, "PUT resets omitted write-only fields")
+		} else {
+			assert.Equal(t, int64(5), got.Count, "PATCH keeps omitted fields")
+			require.NotNil(t, got.Note)
+			assert.Equal(t, "old", got.Password, "PATCH keeps omitted write-only fields")
+		}
 	}
 }
 

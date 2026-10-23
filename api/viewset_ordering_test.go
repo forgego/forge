@@ -58,6 +58,41 @@ func TestBaseViewSet_FilterAliasResolvesToDatabaseColumn(t *testing.T) {
 	assert.Equal(t, `"display_name" = $1`, sql)
 	assert.Equal(t, []interface{}{"chair"}, args)
 }
+
+func TestBaseViewSet_RejectsUnknownAndUnsupportedFilters(t *testing.T) {
+	for _, query := range []string{"?unknown=value", "?name__regex=value"} {
+		t.Run(query, func(t *testing.T) {
+			queryset := &orderingTestQuerySet{}
+			viewSet := NewBaseViewSet(func() Serializer { return NewBaseSerializer(nil) }, queryset, &orderingTestModel{})
+			recorder := httptest.NewRecorder()
+			viewSet.List(recorder, httptest.NewRequest(http.MethodGet, "/items/"+query, nil))
+
+			assert.Equal(t, http.StatusBadRequest, recorder.Code, recorder.Body.String())
+			assert.Contains(t, recorder.Body.String(), "filter")
+			assert.Zero(t, queryset.filterCalls)
+		})
+	}
+}
+
+func TestBaseViewSet_AllowsListControlQueryParameters(t *testing.T) {
+	queryset := &orderingTestQuerySet{}
+	viewSet := NewBaseViewSet(func() Serializer { return NewBaseSerializer(nil) }, queryset, &orderingTestModel{})
+	recorder := httptest.NewRecorder()
+	viewSet.List(recorder, httptest.NewRequest(http.MethodGet, "/items/?page=1&page_size=10&ordering=-name&search=desk&format=json", nil))
+
+	assert.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
+}
+
+func TestBaseViewSet_EnforcesExplicitFilterableFields(t *testing.T) {
+	queryset := &orderingTestQuerySet{}
+	viewSet := NewBaseViewSet(func() Serializer { return NewBaseSerializer(nil) }, queryset, &orderingTestModel{})
+	viewSet.Filterable = []string{"name"}
+	recorder := httptest.NewRecorder()
+	viewSet.List(recorder, httptest.NewRequest(http.MethodGet, "/items/?id=1", nil))
+
+	assert.Equal(t, http.StatusBadRequest, recorder.Code, recorder.Body.String())
+	assert.Zero(t, queryset.filterCalls)
+}
 func (qs *orderingTestQuerySet) All(context.Context) ([]*orderingTestModel, error) {
 	return nil, nil
 }
@@ -159,7 +194,8 @@ func TestBaseViewSet_HiddenFieldAliasesCannotFilterOrOrder(t *testing.T) {
 			filterVS := NewBaseViewSet(func() Serializer { return NewBaseSerializer(nil) }, filterQS, &hiddenQueryModel{})
 			filterRec := httptest.NewRecorder()
 			filterVS.List(filterRec, httptest.NewRequest(http.MethodGet, "/items/?"+alias+"=candidate", nil))
-			require.Equal(t, http.StatusOK, filterRec.Code, filterRec.Body.String())
+			require.Equal(t, http.StatusBadRequest, filterRec.Code, filterRec.Body.String())
+			assert.Contains(t, filterRec.Body.String(), "invalid filter")
 			assert.Zero(t, filterQS.filterCalls)
 
 			orderingQS := &orderingTestQuerySet{}
