@@ -3,7 +3,25 @@ package config
 import (
 	"testing"
 	"time"
+
+	"github.com/spf13/viper"
 )
+
+func TestLoadSettingsIncludesJWTKeyRotation(t *testing.T) {
+	cfg := &Config{Viper: viper.New()}
+	cfg.Set("security.secret_key_id", "current")
+	cfg.Set("security.token_max_lifetime", "12h")
+	cfg.Set("security.previous_secret_keys", []map[string]interface{}{{"id": "previous", "key": "previous-secret", "verify_until": "2030-01-02T03:04:05Z"}})
+	settings := LoadSettings(cfg)
+	if settings.Security.SecretKeyID != "current" || settings.Security.TokenMaxLifetime != 12*time.Hour {
+		t.Fatalf("rotation settings not loaded: %+v", settings.Security)
+	}
+	wantDeadline := time.Date(2030, 1, 2, 3, 4, 5, 0, time.UTC)
+	keys := settings.Security.PreviousSecretKeys
+	if len(keys) != 1 || keys[0].ID != "previous" || keys[0].Key != "previous-secret" || !keys[0].VerifyUntil.Equal(wantDeadline) {
+		t.Fatalf("previous key settings not loaded: %+v", keys)
+	}
+}
 
 func TestLoadSettings(t *testing.T) {
 	cfg := NewConfig()

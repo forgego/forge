@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -19,6 +20,10 @@ type JWTClaims map[string]interface{}
 type JWTAuthentication struct {
 	// SecretKey is the secret key for signing/verifying tokens
 	SecretKey []byte
+	// CurrentKeyID is written into tokens signed by SignToken.
+	CurrentKeyID string
+	// VerificationKeys are previous keys accepted only through VerifyUntil.
+	VerificationKeys []JWTVerificationKey
 	// UserLookup is a function that looks up a user from JWT claims
 	// Should return (user, nil) if found, (nil, error) if error
 	UserLookup func(claims JWTClaims) (interface{}, error)
@@ -27,13 +32,42 @@ type JWTAuthentication struct {
 	ValidateToken func(tokenString string, secretKey []byte) (JWTClaims, error)
 }
 
+// JWTVerificationKey is a previous JWT key accepted only until VerifyUntil.
+// Key material is never included in errors or logs.
+type JWTVerificationKey struct {
+	ID          string
+	Key         []byte
+	VerifyUntil time.Time
+}
+
 // NewJWTAuthentication creates a new JWT authentication instance
 func NewJWTAuthentication(secretKey []byte, userLookup func(claims JWTClaims) (interface{}, error)) *JWTAuthentication {
 	return &JWTAuthentication{
-		SecretKey:     secretKey,
-		UserLookup:    userLookup,
-		ValidateToken: validateJWTToken, // Default validation
+		SecretKey:  secretKey,
+		UserLookup: userLookup,
 	}
+}
+
+// NewJWTAuthenticationWithKeys configures a current signing key and previous,
+// verify-only keys. Previous keys are rejected at and after VerifyUntil.
+func NewJWTAuthenticationWithKeys(currentKeyID string, currentKey []byte, previous []JWTVerificationKey, userLookup func(JWTClaims) (interface{}, error)) *JWTAuthentication {
+	auth := NewJWTAuthentication(currentKey, userLookup)
+	auth.CurrentKeyID = currentKeyID
+	auth.VerificationKeys = append([]JWTVerificationKey(nil), previous...)
+	return auth
+}
+
+// SignToken signs claims with the current key and its key ID. Previous keys
+// configured for verification are never used to issue tokens.
+func (a *JWTAuthentication) SignToken(claims JWTClaims) (string, error) {
+	if len(a.SecretKey) == 0 {
+		return "", errors.New("JWT secret key is not configured")
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims(claims))
+	if a.CurrentKeyID != "" {
+		token.Header["kid"] = a.CurrentKeyID
+	}
+	return token.SignedString(a.SecretKey)
 }
 
 // validateJWTToken validates a JWT token signed with HS256.
@@ -65,6 +99,39 @@ func validateJWTToken(tokenString string, secretKey []byte) (JWTClaims, error) {
 	}
 
 	return JWTClaims(claims), nil
+}
+
+func validateJWTTokenWithKeys(tokenString string, currentID string, currentKey []byte, previous []JWTVerificationKey) (JWTClaims, error) {
+	parts := strings.Split(tokenString, ".")
+	if len(parts) != 3 {
+		return nil, errors.New("invalid JWT token")
+	}
+	var header struct {
+		KeyID string `json:"kid"`
+	}
+	decoded, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil || json.Unmarshal(decoded, &header) != nil {
+		return nil, errors.New("invalid JWT header")
+	}
+	if header.KeyID == "" {
+		if len(previous) > 0 || currentID != "" {
+			return nil, errors.New("JWT key ID is required")
+		}
+		return validateJWTToken(tokenString, currentKey)
+	}
+	if header.KeyID == currentID {
+		return validateJWTToken(tokenString, currentKey)
+	}
+	now := time.Now()
+	for _, key := range previous {
+		if key.ID == header.KeyID {
+			if !now.Before(key.VerifyUntil) {
+				return nil, errors.New("JWT signing key has expired")
+			}
+			return validateJWTToken(tokenString, key.Key)
+		}
+	}
+	return nil, errors.New("unknown JWT key ID")
 }
 
 func validateJWTClaimsPayload(tokenString string) error {
@@ -111,7 +178,13 @@ func (a *JWTAuthentication) Authenticate(r *http.Request) (*AuthResult, error) {
 		validateFunc = validateJWTToken
 	}
 
-	claims, err := validateFunc(tokenString, a.SecretKey)
+	var claims JWTClaims
+	var err error
+	if a.ValidateToken == nil && (a.CurrentKeyID != "" || len(a.VerificationKeys) > 0) {
+		claims, err = validateJWTTokenWithKeys(tokenString, a.CurrentKeyID, a.SecretKey, a.VerificationKeys)
+	} else {
+		claims, err = validateFunc(tokenString, a.SecretKey)
+	}
 	if err != nil {
 		return nil, err
 	}

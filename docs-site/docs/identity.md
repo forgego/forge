@@ -47,6 +47,28 @@ authenticated user.
 
 ## Setup example
 
+### Rotating JWT signing keys
+
+Set `security.secret_key` and `security.secret_key_id` to the new current key
+and its public identifier. Add each retired key to
+`security.previous_secret_keys` with its `id`, secret `key`, and RFC3339
+`verify_until` deadline. Tokens include a `kid`; verification selects only that
+key, rejects unknown IDs, and accepts a previous key only before its deadline.
+New tokens must be signed with the current key. Set
+`security.token_max_lifetime` to the maximum issued token lifetime and retain a
+previous key for at least that long after switching issuers. Remove expired
+keys after the overlap. Never log these secret values.
+
+The `forge auth` scaffold passes `settings.Security` to its JWT authenticator.
+When a key ID or previous key is configured, issued login tokens include the
+current `kid`; API authentication accepts a previous key only until its
+`verify_until` deadline. Without rotation keys, the scaffold keeps the existing
+single-key behavior. `security.token_max_lifetime` controls the lifetime of
+login tokens issued by the scaffold.
+
+Changing `security.csrf_secret_key` invalidates outstanding CSRF form tokens;
+users may need to reload forms before submitting them.
+
 ```go
 identitySystem, err := identity.SetupIdentitySystem(db, nil)
 if err != nil {

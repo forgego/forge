@@ -70,9 +70,22 @@ type DatabaseSettings struct {
 // SecuritySettings contains security-related settings
 type SecuritySettings struct {
 	SecretKey       string
+	SecretKeyID     string
 	CSRFSecretKey   string
 	SessionSecret   string
 	CSRFExemptPaths []string
+	// PreviousSecretKeys are verify-only JWT keys with an RFC3339 verify_until.
+	PreviousSecretKeys []PreviousSecretKeySettings
+	// TokenMaxLifetime bounds issued JWT lifetimes and the rotation overlap.
+	TokenMaxLifetime time.Duration
+}
+
+// PreviousSecretKeySettings describes a JWT key that may verify tokens until
+// VerifyUntil. Key material must not be logged.
+type PreviousSecretKeySettings struct {
+	ID          string    `mapstructure:"id"`
+	Key         string    `mapstructure:"key"`
+	VerifyUntil time.Time `mapstructure:"verify_until"`
 }
 
 // AdminSettings contains admin interface settings
@@ -126,10 +139,13 @@ func LoadSettings(cfg *Config) *Settings {
 			ConnMaxIdleTime: cfg.GetDuration("database.conn_max_idle_time", 2*time.Minute),
 		},
 		Security: SecuritySettings{
-			SecretKey:       cfg.GetString("security.secret_key", ""),
-			CSRFSecretKey:   cfg.GetString("security.csrf_secret_key", ""),
-			SessionSecret:   cfg.GetString("security.session_secret", ""),
-			CSRFExemptPaths: cfg.GetStringSlice("security.csrf_exempt_paths", nil),
+			SecretKey:          cfg.GetString("security.secret_key", ""),
+			SecretKeyID:        cfg.GetString("security.secret_key_id", ""),
+			CSRFSecretKey:      cfg.GetString("security.csrf_secret_key", ""),
+			SessionSecret:      cfg.GetString("security.session_secret", ""),
+			CSRFExemptPaths:    cfg.GetStringSlice("security.csrf_exempt_paths", nil),
+			PreviousSecretKeys: previousSecretKeys(cfg),
+			TokenMaxLifetime:   cfg.GetDuration("security.token_max_lifetime", 24*time.Hour),
 		},
 		Admin: AdminSettings{
 			Enabled:     cfg.GetBool("admin.enabled", true),
@@ -173,6 +189,23 @@ func LoadSettings(cfg *Config) *Settings {
 			},
 		},
 	}
+}
+
+func previousSecretKeys(cfg *Config) []PreviousSecretKeySettings {
+	var raw []struct {
+		ID          string `mapstructure:"id"`
+		Key         string `mapstructure:"key"`
+		VerifyUntil string `mapstructure:"verify_until"`
+	}
+	if err := cfg.UnmarshalKey("security.previous_secret_keys", &raw); err != nil {
+		return nil
+	}
+	keys := make([]PreviousSecretKeySettings, 0, len(raw))
+	for _, item := range raw {
+		deadline, _ := time.Parse(time.RFC3339, item.VerifyUntil)
+		keys = append(keys, PreviousSecretKeySettings{ID: item.ID, Key: item.Key, VerifyUntil: deadline})
+	}
+	return keys
 }
 
 // splitList flattens comma-separated entries so a list can come from an
