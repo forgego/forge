@@ -34,6 +34,22 @@ compatible with the existing repository interfaces.
 - Backends: password, token
 - Config: password policy, lockout, rate limits
 
+## Principals
+
+Forge carries the actor for a request as an `identity/principal.Principal`.
+Principals have an ID, a kind (`user`, `service`, `anonymous`, or `system`),
+a display name, and role and permission accessors. `principal.FromUser` adapts
+an active `models.User`; inactive or locked accounts return the same account
+state errors used during authentication. `principal.Anonymous` and
+`principal.System` create the corresponding non-user principals.
+
+`api/core.WithUser` continues to store the original backend user for existing
+callers and also adapts supported values into the request principal.
+`principal.PrincipalFromContext` retrieves that principal. Custom backend user
+values can be adapted when they implement `GetID() string`; a
+`GetDisplayName() string` method supplies their display name. An unsupported or
+inactive user is represented as anonymous in the principal context.
+
 ## User API access
 
 All `/api/users` routes require authentication. Listing users requires staff or
