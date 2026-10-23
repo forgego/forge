@@ -107,20 +107,7 @@ func (r *Registry) BuildRootCommand() *cobra.Command {
 	for _, cmd := range r.commands {
 		cobraCmd := cmd.Definition()
 		if cobraCmd != nil {
-			// Wrap RunE to use our Execute method
-			cobraCmd.RunE = func(c *cobra.Command, args []string) error {
-				ctx := NewContextWithConfig(cfg)
-				ctx.Cmd = c
-				// Try to create logger if needed
-				if ctx.Config != nil {
-					logger, err := createLogger(ctx.Config)
-					if err == nil {
-						ctx.WithLogger(logger)
-					}
-				}
-				// Execute using our interface
-				return cmd.Execute(ctx, args)
-			}
+			cobraCmd.RunE = commandRunE(cmd, cfg)
 			rootCmd.AddCommand(cobraCmd)
 		}
 	}
@@ -131,34 +118,14 @@ func (r *Registry) BuildRootCommand() *cobra.Command {
 		if groupCmd != nil {
 			// Wrap RunE for the group command itself (if it has one)
 			if groupCmd.RunE != nil {
-				groupCmd.RunE = func(c *cobra.Command, args []string) error {
-					ctx := NewContextWithConfig(cfg)
-					ctx.Cmd = c
-					if ctx.Config != nil {
-						logger, err := createLogger(ctx.Config)
-						if err == nil {
-							ctx.WithLogger(logger)
-						}
-					}
-					return group.Execute(ctx, args)
-				}
+				groupCmd.RunE = commandRunE(group, cfg)
 			}
 
 			// Add subcommands to the group
 			for _, subCmd := range group.Commands() {
 				subCobraCmd := subCmd.Definition()
 				if subCobraCmd != nil {
-					subCobraCmd.RunE = func(c *cobra.Command, args []string) error {
-						ctx := NewContextWithConfig(cfg)
-						ctx.Cmd = c
-						if ctx.Config != nil {
-							logger, err := createLogger(ctx.Config)
-							if err == nil {
-								ctx.WithLogger(logger)
-							}
-						}
-						return subCmd.Execute(ctx, args)
-					}
+					subCobraCmd.RunE = commandRunE(subCmd, cfg)
 					groupCmd.AddCommand(subCobraCmd)
 				}
 			}
@@ -168,6 +135,20 @@ func (r *Registry) BuildRootCommand() *cobra.Command {
 	}
 
 	return rootCmd
+}
+
+func commandRunE(cmd Command, cfg *config.Config) func(*cobra.Command, []string) error {
+	return func(c *cobra.Command, args []string) error {
+		ctx := NewContextWithConfig(cfg)
+		ctx.Cmd = c
+		if ctx.Config != nil {
+			logger, err := createLogger(ctx.Config)
+			if err == nil {
+				ctx.WithLogger(logger)
+			}
+		}
+		return cmd.Execute(ctx, args)
+	}
 }
 
 // Helper function to create logger
