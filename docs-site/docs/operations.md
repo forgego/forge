@@ -71,3 +71,13 @@ runner checks the operation's required permission against that snapshot. A
 denied invocation returns `*core.ActionHTTPError` with status 403; a required
 but missing confirmation returns status 400 before the runner is called.
 Operation callback errors remain wrapped and discoverable with `errors.Is`.
+
+## REST adapter
+
+`api.OperationAction` provides a JSON `POST` handler for an operation. Supply
+an `OperationActorResolver` that reads the authenticated principal from the
+request context and adapts it to `operation.Actor`; a missing principal must
+resolve to no actor so the runner denies the call. Register the returned
+handler with `Router.Action`. Invalid JSON, denied calls, and execution errors
+use the API's problem error response format. Successful calls return the
+operation result as JSON.

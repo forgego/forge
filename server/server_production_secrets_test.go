@@ -79,9 +79,7 @@ func TestProductionWithEmptySettingsSecurityFails(t *testing.T) {
 	t.Setenv("FORGE_SECURITY_SESSION_SECRET", testExplicitSessKey)
 	cfg := config.NewConfig()
 	require.Empty(t, cfg.GeneratedSecrets())
-	srv, err := NewServer(cfg, productionSettingsWith(config.SecuritySettings{}), nil)
-	require.NoError(t, err)
-	err = srv.validateProductionSecrets()
+	_, err := NewServer(cfg, productionSettingsWith(config.SecuritySettings{}), nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "security.secret_key")
 	require.Contains(t, err.Error(), "security.csrf_secret_key")
@@ -95,13 +93,13 @@ func TestProductionWithPlaceholderSettingsSecurityFails(t *testing.T) {
 	t.Setenv("FORGE_SECURITY_SESSION_SECRET", testExplicitSessKey)
 	cfg := config.NewConfig()
 	require.Empty(t, cfg.GeneratedSecrets())
-	srv, err := NewServer(cfg, productionSettingsWith(config.SecuritySettings{
+	_, err := NewServer(cfg, productionSettingsWith(config.SecuritySettings{
 		SecretKey:     "change-me-in-production-please",
 		CSRFSecretKey: "change-me-csrf",
 		SessionSecret: "secret",
 	}), nil)
-	require.NoError(t, err)
-	require.Error(t, srv.validateProductionSecrets())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "security.secret_key")
 }
 
 // Non-production environments are unaffected by secret validation.
@@ -151,15 +149,12 @@ func TestProductionRejectsDebug(t *testing.T) {
 
 	settings := productionSettingsWith(secureTestSecurity())
 	settings.App.Debug = true
-	srv, err := NewServer(cfg, settings, nil)
-	require.NoError(t, err)
-	err = srv.validateProductionSecrets()
+	_, err := NewServer(cfg, settings, nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "app.debug")
-	require.Error(t, srv.Start(), "Start must refuse to listen with debug in production")
 
 	settings.App.Debug = false
-	srv, err = NewServer(cfg, settings, nil)
+	srv, err := NewServer(cfg, settings, nil)
 	require.NoError(t, err)
 	require.NoError(t, srv.validateProductionSecrets())
 
@@ -174,9 +169,7 @@ func TestProductionReportsSecretsAndDebugTogether(t *testing.T) {
 	withCleanSecretEnv(t)
 	settings := productionSettingsWith(config.SecuritySettings{})
 	settings.App.Debug = true
-	srv, err := NewServer(config.NewConfig(), settings, nil)
-	require.NoError(t, err)
-	err = srv.validateProductionSecrets()
+	_, err := NewServer(config.NewConfig(), settings, nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "security.secret_key")
 	require.Contains(t, err.Error(), "app.debug")

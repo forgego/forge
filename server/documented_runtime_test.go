@@ -67,12 +67,9 @@ func TestOnlyTrustedProxiesSupplyForwardingHeaders(t *testing.T) {
 
 // Missing production secrets are rejected before binding a listener.
 func TestProductionRejectsMissingSecretsBeforeListening(t *testing.T) {
-	srv, err := NewServer(config.NewConfig(), productionSettingsWith(config.SecuritySettings{}), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := srv.Start(); err == nil || !strings.Contains(err.Error(), "production requires explicit") {
-		t.Fatalf("Start error=%v", err)
+	_, err := NewServer(config.NewConfig(), productionSettingsWith(config.SecuritySettings{}), nil)
+	if err == nil || !strings.Contains(err.Error(), "production requires explicit") {
+		t.Fatalf("NewServer error=%v", err)
 	}
 }
 
@@ -80,12 +77,9 @@ func TestProductionRejectsMissingSecretsBeforeListening(t *testing.T) {
 func TestProductionRejectsDebugBeforeListening(t *testing.T) {
 	s := productionSettingsWith(secureTestSecurity())
 	s.App.Debug = true
-	srv, err := NewServer(config.NewConfig(), s, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := srv.Start(); err == nil || !strings.Contains(err.Error(), "app.debug=false") {
-		t.Fatalf("Start error=%v", err)
+	_, err := NewServer(config.NewConfig(), s, nil)
+	if err == nil || !strings.Contains(err.Error(), "app.debug=false") {
+		t.Fatalf("NewServer error=%v", err)
 	}
 }
 

@@ -39,11 +39,6 @@ func main() {
 	uiConfig.Prefix = settings.Admin.Path
 	adminSite.WithUIConfig(uiConfig)
 	adminSite.SetDB(database)
-	// server.stores: database keeps the admin's tokens, login lockout,
-	// saved views and change history in the database (run forge migrate up).
-	if err := adminSite.UseStores(context.Background(), settings.Server.Stores); err != nil {
-		stdlog.Fatal(err)
-	}
 
 	// Initialize infrastructure (if using advanced template)
 	// infra.Initialize(cfg, logger)
@@ -53,6 +48,11 @@ func main() {
 	// are kept in the database passed here.
 	srv, err := server.NewServer(cfg, settings, logger, server.WithDatabase(database))
 	if err != nil {
+		stdlog.Fatal(err)
+	}
+	// server.stores: database keeps the admin's tokens, login lockout,
+	// saved views and change history in the database (run forge migrate up).
+	if err := adminSite.UseStores(context.Background(), settings.Server.Stores); err != nil {
 		stdlog.Fatal(err)
 	}
 
