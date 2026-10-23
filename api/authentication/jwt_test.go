@@ -39,6 +39,38 @@ func TestJWTAuthenticationAcceptsValidSignedToken(t *testing.T) {
 	assert.Equal(t, 1, lookupCalls)
 }
 
+func TestJWTKeyRotationVerifiesPreviousKeyOnlyBeforeDeadline(t *testing.T) {
+	current := []byte("current-secret-that-is-long-enough")
+	previous := []byte("previous-secret-that-is-long-enough")
+	deadline := time.Now().Add(time.Hour)
+	auth := NewJWTAuthenticationWithKeys("current", current, []JWTVerificationKey{{ID: "previous", Key: previous, VerifyUntil: deadline}}, func(JWTClaims) (interface{}, error) { return "user", nil })
+	oldToken := signedHS256TokenWithKID(t, "previous", previous, map[string]interface{}{"sub": "user", "exp": time.Now().Add(time.Hour).Unix()})
+	if _, err := auth.Authenticate(bearerRequest(oldToken)); err != nil {
+		t.Fatalf("previous key should verify before deadline: %v", err)
+	}
+	auth.VerificationKeys[0].VerifyUntil = time.Now().Add(-time.Second)
+	if _, err := auth.Authenticate(bearerRequest(oldToken)); err == nil {
+		t.Fatal("previous key verified after deadline")
+	}
+	unknown := signedHS256TokenWithKID(t, "unknown", previous, map[string]interface{}{"sub": "user", "exp": time.Now().Add(time.Hour).Unix()})
+	if _, err := auth.Authenticate(bearerRequest(unknown)); err == nil {
+		t.Fatal("unknown kid verified")
+	}
+}
+
+func TestJWTSigningUsesCurrentKeyAndKid(t *testing.T) {
+	current := []byte("current-secret-that-is-long-enough")
+	auth := NewJWTAuthenticationWithKeys("current", current, []JWTVerificationKey{{ID: "old", Key: []byte("previous-secret-that-is-long-enough"), VerifyUntil: time.Now().Add(time.Hour)}}, nil)
+	token, err := auth.SignToken(JWTClaims{"sub": "user", "exp": time.Now().Add(time.Hour).Unix()})
+	require.NoError(t, err)
+	var header map[string]interface{}
+	parts := strings.Split(token, ".")
+	require.Len(t, parts, 3)
+	require.NoError(t, json.Unmarshal(mustDecode(t, parts[0]), &header))
+	assert.Equal(t, "current", header["kid"])
+	assert.NoError(t, func() error { _, err := validateJWTToken(token, current); return err }())
+}
+
 func TestJWTAuthenticationRejectsInvalidTokensBeforeUserLookup(t *testing.T) {
 	secret := []byte("test-secret-that-is-long-enough")
 	validToken := signedHS256Token(t, secret, map[string]interface{}{
@@ -139,6 +171,24 @@ func bearerRequest(token string) *http.Request {
 func signedHS256Token(t *testing.T, secret []byte, claims map[string]interface{}) string {
 	t.Helper()
 	return signedToken(t, secret, "HS256", claims, sha256.New)
+}
+
+func signedHS256TokenWithKID(t *testing.T, kid string, secret []byte, claims map[string]interface{}) string {
+	t.Helper()
+	header := base64.RawURLEncoding.EncodeToString(mustJSON(t, map[string]string{"alg": "HS256", "typ": "JWT", "kid": kid}))
+	payload := base64.RawURLEncoding.EncodeToString(mustJSON(t, claims))
+	signingInput := header + "." + payload
+	mac := hmac.New(sha256.New, secret)
+	_, err := mac.Write([]byte(signingInput))
+	require.NoError(t, err)
+	return signingInput + "." + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+}
+
+func mustDecode(t *testing.T, value string) []byte {
+	t.Helper()
+	decoded, err := base64.RawURLEncoding.DecodeString(value)
+	require.NoError(t, err)
+	return decoded
 }
 
 func signedToken(t *testing.T, secret []byte, algorithm string, claims map[string]interface{}, hash func() hash.Hash) string {
