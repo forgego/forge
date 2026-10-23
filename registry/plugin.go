@@ -119,7 +119,9 @@ var globalPluginRegistry = &PluginRegistry{
 	apiPlugins:   []APIPlugin{},
 }
 
-// RegisterPlugin registers a plugin and applies its extensions
+// RegisterPlugin registers a plugin and applies its extensions. Admin and API
+// plugin hooks are not implemented; plugins implementing either interface are
+// rejected with an error.
 func RegisterPlugin(plugin Plugin) error {
 	if _, ok := plugin.(AdminPlugin); ok {
 		return forgeerrors.NewNotImplementedError("registry admin plugin extensions")

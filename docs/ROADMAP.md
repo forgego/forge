@@ -57,7 +57,7 @@ commit, and pass/fail/skip counts):
       `forge check`, `forge createsuperuser`, and `forge add app/model/api`).
 - [x] Migration recovery/checksum verification (`forge migrate recover`
       fail-loud + force/recover/verify implemented).
-- [ ] Caching: query/instance cache, Redis + in-memory backends.
+- [ ] Shared/query caching: query/instance cache with Redis and in-memory backends. The existing API response cache is in-memory and per process.
 - [ ] Query power: window functions, full-text search, raw SQL escape hatch.
 - [ ] Background tasks (queues/workers).
 - [x] Shared, durable stores for admin tokens, sessions, change history and

@@ -31,6 +31,9 @@ export PATH="$PATH:$(go env GOPATH)/bin"
 
 ## Step 2: Create a project
 
+Applying migrations to SQLite is experimental. Use PostgreSQL for anything
+you deploy; see the [deployment guide](/docs/deployment/) before production.
+
 ```bash
 forge new myapp --database sqlite --template simple --docker=false
 cd myapp
