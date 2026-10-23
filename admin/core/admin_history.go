@@ -113,16 +113,26 @@ func (a *Admin[T]) resolveUserID(user interface{}) interface{} {
 
 	// 1. Try common ID fields
 	if val.Kind() == reflect.Struct {
-		for _, name := range []string{"ID", "Id", "id", "UserID", "Username", "Email"} {
+		for _, name := range []string{"ID", "Id", "id", "UserID"} {
 			f := val.FieldByName(name)
-			if f.IsValid() {
+			if f.IsValid() && !isZeroID(f) {
 				return f.Interface()
+			}
+		}
+		for _, name := range []string{"Username", "Email"} {
+			f := val.FieldByName(name)
+			if f.IsValid() && f.Kind() == reflect.String && f.String() != "" {
+				return f.String()
 			}
 		}
 	}
 
 	// 2. Fallback to string representation
 	return fmt.Sprintf("%v", user)
+}
+
+func isZeroID(v reflect.Value) bool {
+	return (v.Kind() == reflect.Int || v.Kind() == reflect.Int8 || v.Kind() == reflect.Int16 || v.Kind() == reflect.Int32 || v.Kind() == reflect.Int64) && v.Int() == 0
 }
 
 func (a *Admin[T]) visibleHistoryChanges(changes string) string {

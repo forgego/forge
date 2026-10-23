@@ -63,7 +63,11 @@ func FromUser(user *models.User) (Principal, error) {
 	if user.IsSuperuser {
 		roles = append(roles, "superuser")
 	}
-	return Principal{ID: fmt.Sprint(user.ID), Kind: KindUser, DisplayName: user.GetDisplayName(), RoleNames: roles}, nil
+	id := fmt.Sprint(user.ID)
+	if user.ID == 0 && user.Username != "" {
+		id = user.Username
+	}
+	return Principal{ID: id, Kind: KindUser, DisplayName: user.GetDisplayName(), RoleNames: roles}, nil
 }
 
 // FromBackend adapts common custom authentication backend values. Values that
