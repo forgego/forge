@@ -53,14 +53,8 @@ func (s *authService) Authenticate(ctx context.Context, req *AuthenticateRequest
 		return nil, ErrInvalidCredentials
 	}
 
-	// Check if active (backend already checks this, but double-check for safety)
-	if !user.IsActive {
-		return nil, ErrUserInactive
-	}
-
-	// Check if locked (backend already checks this, but double-check for safety)
-	if user.IsLocked {
-		return nil, ErrUserLocked
+	if err := user.AccountStateError(); err != nil {
+		return nil, err
 	}
 
 	// Update last login
@@ -138,6 +132,13 @@ func (s *authService) GetSession(ctx context.Context, key string) (*models.UserS
 			return nil, fmt.Errorf("failed to delete expired session: %w", err)
 		}
 		return nil, fmt.Errorf("session expired")
+	}
+	user, err := s.userRepo.GetByID(ctx, session.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("session user not found: %w", err)
+	}
+	if err := user.AccountStateError(); err != nil {
+		return nil, err
 	}
 
 	return session, nil

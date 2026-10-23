@@ -70,14 +70,8 @@ func (b *tokenBackend) GetUser(ctx context.Context, identifier string) (*models.
 		return nil, repository.ErrUserNotFound
 	}
 
-	// Check if user is active
-	if !user.IsActive {
-		return nil, fmt.Errorf("user account is inactive")
-	}
-
-	// Check if user is locked
-	if user.IsLocked {
-		return nil, fmt.Errorf("user account is locked")
+	if err := user.AccountStateError(); err != nil {
+		return nil, err
 	}
 
 	return user, nil

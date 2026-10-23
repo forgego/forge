@@ -129,6 +129,9 @@ func (a *JWTAuthentication) Authenticate(r *http.Request) (*AuthResult, error) {
 	if user == nil {
 		return nil, nil
 	}
+	if err := validateAccountState(user); err != nil {
+		return nil, err
+	}
 
 	return NewAuthResult(user, tokenString), nil
 }

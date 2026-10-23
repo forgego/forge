@@ -1,9 +1,17 @@
 package models
 
 import (
+	"errors"
 	"time"
 
 	"github.com/forgego/forge/schema"
+)
+
+var (
+	// ErrUserInactive identifies a disabled account.
+	ErrUserInactive = errors.New("user account is inactive")
+	// ErrUserLocked identifies a locked account.
+	ErrUserLocked = errors.New("user account is locked")
 )
 
 // User represents a user in the system
@@ -61,6 +69,18 @@ type User struct {
 	CreatedAt  time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt  time.Time  `json:"updated_at" db:"updated_at"`
 	DeletedAt  *time.Time `json:"deleted_at" db:"deleted_at"` // Soft delete
+}
+
+// AccountStateError reports whether the account is allowed to authenticate.
+// Authentication backends should call this whenever they resolve a user.
+func (u *User) AccountStateError() error {
+	if u == nil || !u.IsActive {
+		return ErrUserInactive
+	}
+	if u.IsLocked {
+		return ErrUserLocked
+	}
+	return nil
 }
 
 // GetID returns the user's ID (implements ModelWithID)

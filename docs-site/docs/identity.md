@@ -15,6 +15,18 @@ forge includes a full identity system for user management and authentication.
 - Password policies, lockout, and rate limits
 - Middleware for auth requirements
 
+Inactive and locked accounts cannot authenticate through password login, token
+refresh, session lookup, or API authentication. Deactivating or locking an
+account revokes its existing sessions. `PasswordService.ChangePassword`
+revokes all of the user's sessions except the one named by
+`ChangePasswordRequest.CurrentSessionKey`; leave that field empty when the
+password change should end every session.
+
+Custom repositories that need the same atomic revocation must implement
+`repository.AccountStateMutations` and `repository.PasswordSessionMutations`.
+The built-in SQL repository implements both; older custom repositories remain
+compatible with the existing repository interfaces.
+
 ## Components
 
 - Repositories: user, session, token, permission, group

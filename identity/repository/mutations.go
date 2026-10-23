@@ -54,6 +54,10 @@ func (r *userRepository) UpdateEmailIfCurrent(ctx context.Context, userID int64,
 }
 
 func (r *userRepository) updateFields(ctx context.Context, userID int64, oldEmail string, fields map[string]any) error {
+	return updateUserFields(ctx, r.db.ExecContext, userID, oldEmail, fields)
+}
+
+func updateUserFields(ctx context.Context, exec func(context.Context, string, ...any) (sql.Result, error), userID int64, oldEmail string, fields map[string]any) error {
 	if len(fields) == 0 {
 		return nil
 	}
@@ -81,7 +85,27 @@ func (r *userRepository) updateFields(ctx context.Context, userID int64, oldEmai
 			query += " AND email_verified = FALSE"
 		}
 	}
-	return execOne(ctx, r.db.ExecContext, query, args...)
+	return execOne(ctx, exec, query, args...)
+}
+
+func (r *userRepository) SetAccountStateAndRevokeSessions(ctx context.Context, userID int64, fields map[string]any) error {
+	return r.db.WithTx(ctx, func(tx *db.Tx) error {
+		if err := updateUserFields(ctx, tx.ExecContext, userID, "", fields); err != nil {
+			return err
+		}
+		_, err := tx.ExecContext(ctx, `DELETE FROM user_sessions WHERE user_id = $1`, userID)
+		return err
+	})
+}
+
+func (r *userRepository) ChangePasswordAndRevokeOtherSessions(ctx context.Context, userID int64, oldHash, newHash, currentSessionKey string, at time.Time) error {
+	return r.db.WithTx(ctx, func(tx *db.Tx) error {
+		if err := execOne(ctx, tx.ExecContext, `UPDATE users SET password = $1, password_changed_at = $2, must_change_password = FALSE, updated_at = $2 WHERE id = $3 AND password = $4 AND deleted_at IS NULL`, newHash, at.UTC(), userID, oldHash); err != nil {
+			return err
+		}
+		_, err := tx.ExecContext(ctx, `DELETE FROM user_sessions WHERE user_id = $1 AND session_key <> $2`, userID, currentSessionKey)
+		return err
+	})
 }
 
 func (r *userRepository) ChangePasswordIfCurrent(ctx context.Context, userID int64, oldHash, newHash string, at time.Time) error {

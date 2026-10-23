@@ -59,7 +59,7 @@ func (a *StaffLoginAuthenticator) AuthenticateAdmin(ctx context.Context, usernam
 		}
 		return "", fmt.Errorf("staff login authenticate: %w", err)
 	}
-	if user == nil || !user.IsActive || user.IsLocked || (!user.IsStaff && !user.IsSuperuser) {
+	if user == nil || user.AccountStateError() != nil || (!user.IsStaff && !user.IsSuperuser) {
 		return "", &AdminLoginDeniedError{}
 	}
 	return user.Username, nil
