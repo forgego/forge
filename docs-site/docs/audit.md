@@ -14,3 +14,14 @@ The caller owns transaction boundaries; the sink never commits a transaction.
 `audit.Counter`, then permits the operation to continue. Fail-open should be
 selected explicitly. The audit table has no automatic retention policy; plan
 retention and database access controls for your deployment.
+
+Admin create, update, and delete run the model write and history write in one
+database transaction when the ORM manager has a database. The built-in database
+history store joins that transaction, so fail-closed history errors roll back
+the model write and fail-open errors allow it to commit. Custom
+`core.HistoryManager` implementations remain source-compatible. To participate
+in the same transaction, they can also implement
+`core.TransactionalHistoryManager`; other custom stores receive the legacy
+`LogAction` call while the model transaction is open. A non-transactional store
+cannot guarantee atomic history persistence with the model: its successful
+write may remain even if the model transaction later fails.

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	apicore "github.com/forgego/forge/api/core"
+	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/orm"
 	"github.com/forgego/forge/schema"
 	validation "github.com/forgego/forge/validate"
@@ -83,6 +84,24 @@ func (a *Admin[T]) validateData(data map[string]interface{}, partial bool) error
 }
 
 func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}) (interface{}, error) {
+	if database := a.manager.Database(); database != nil {
+		var result interface{}
+		err := database.WithTx(ctx, func(tx *db.Tx) error {
+			bound := *a
+			bound.manager = a.manager.WithTx(tx)
+			var err error
+			result, err = bound.createObject(ctx, tx, data)
+			return err
+		})
+		if err != nil {
+			return nil, err
+		}
+		return result, nil
+	}
+	return a.createObject(ctx, nil, data)
+}
+
+func (a *Admin[T]) createObject(ctx context.Context, tx *db.Tx, data map[string]interface{}) (interface{}, error) {
 	filtered, err := a.filterWritable(ctx, nil, true, data)
 	if err != nil {
 		return nil, err
@@ -128,7 +147,7 @@ func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}
 	objID := a.getObjectID(created)
 	repr := a.getObjectLabel(created)
 	changesJSON, _ := json.Marshal(filtered)
-	if err := a.writeHistory(ctx, user, fmt.Sprintf("%v", objID), repr, ActionAdd, string(changesJSON)); err != nil {
+	if err := a.writeHistoryWithTx(ctx, tx, user, fmt.Sprintf("%v", objID), repr, ActionAdd, string(changesJSON)); err != nil {
 		return nil, err
 	}
 
@@ -136,6 +155,24 @@ func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}
 }
 
 func (a *Admin[T]) UpdateObject(ctx context.Context, id interface{}, data map[string]interface{}) (interface{}, error) {
+	if database := a.manager.Database(); database != nil {
+		var result interface{}
+		err := database.WithTx(ctx, func(tx *db.Tx) error {
+			bound := *a
+			bound.manager = a.manager.WithTx(tx)
+			var err error
+			result, err = bound.updateObject(ctx, tx, id, data)
+			return err
+		})
+		if err != nil {
+			return nil, err
+		}
+		return result, nil
+	}
+	return a.updateObject(ctx, nil, id, data)
+}
+
+func (a *Admin[T]) updateObject(ctx context.Context, tx *db.Tx, id interface{}, data map[string]interface{}) (interface{}, error) {
 	intID, err := toInt64(id)
 	if err != nil {
 		return nil, err
@@ -182,7 +219,7 @@ func (a *Admin[T]) UpdateObject(ctx context.Context, id interface{}, data map[st
 	user, _ := apicore.UserFromContext(ctx)
 	repr := a.getObjectLabel(updated)
 	changesJSON, _ := json.Marshal(filtered)
-	if err := a.writeHistory(ctx, user, fmt.Sprintf("%v", intID), repr, ActionChange, string(changesJSON)); err != nil {
+	if err := a.writeHistoryWithTx(ctx, tx, user, fmt.Sprintf("%v", intID), repr, ActionChange, string(changesJSON)); err != nil {
 		return nil, err
 	}
 
@@ -190,6 +227,17 @@ func (a *Admin[T]) UpdateObject(ctx context.Context, id interface{}, data map[st
 }
 
 func (a *Admin[T]) DeleteObject(ctx context.Context, id interface{}) error {
+	if database := a.manager.Database(); database != nil {
+		return database.WithTx(ctx, func(tx *db.Tx) error {
+			bound := *a
+			bound.manager = a.manager.WithTx(tx)
+			return bound.deleteObject(ctx, tx, id)
+		})
+	}
+	return a.deleteObject(ctx, nil, id)
+}
+
+func (a *Admin[T]) deleteObject(ctx context.Context, tx *db.Tx, id interface{}) error {
 	intID, err := toInt64(id)
 	if err != nil {
 		return err
@@ -205,7 +253,7 @@ func (a *Admin[T]) DeleteObject(ctx context.Context, id interface{}) error {
 	}
 
 	user, _ := apicore.UserFromContext(ctx)
-	if err := a.writeHistory(ctx, user, fmt.Sprintf("%v", intID), repr, ActionDelete, ""); err != nil {
+	if err := a.writeHistoryWithTx(ctx, tx, user, fmt.Sprintf("%v", intID), repr, ActionDelete, ""); err != nil {
 		return err
 	}
 

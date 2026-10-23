@@ -13,6 +13,7 @@ import (
 
 	"github.com/forgego/forge/admin/api/rest"
 	"github.com/forgego/forge/admin/core"
+	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/stores"
 	"github.com/google/uuid"
 )
@@ -40,6 +41,22 @@ func (h *History) LogAction(ctx context.Context, entry core.LogEntry) error {
 		entry.Timestamp.UTC(), entry.UserID, entry.UserName, entry.ModelName, entry.ObjectID,
 		entry.ObjectRepr, string(entry.Action), entry.ChangeStats,
 	)
+	return err
+}
+
+// LogActionWithTx writes history through the caller's transaction.
+func (h *History) LogActionWithTx(ctx context.Context, tx *db.Tx, entry core.LogEntry) error {
+	if tx == nil {
+		return h.LogAction(ctx, entry)
+	}
+	if entry.Timestamp.IsZero() {
+		entry.Timestamp = h.stores.Now()
+	}
+	query := h.stores.DB().RebindPlaceholders(`INSERT INTO forge_admin_log
+		(action_time, user_id, user_name, model_name, object_id, object_repr, action, change_stats)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`)
+	_, err := tx.ExecContext(ctx, query, entry.Timestamp.UTC(), entry.UserID, entry.UserName,
+		entry.ModelName, entry.ObjectID, entry.ObjectRepr, string(entry.Action), entry.ChangeStats)
 	return err
 }
 

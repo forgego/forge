@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/forgego/forge/audit"
+	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/schema"
 	"github.com/google/uuid"
 	"reflect"
@@ -46,7 +47,25 @@ func (a *Admin[T]) LogAction(ctx context.Context, user interface{}, objectID str
 }
 
 func (a *Admin[T]) writeHistory(ctx context.Context, user interface{}, objectID string, repr string, action ActionType, changes string) error {
-	err := a.LogAction(ctx, user, objectID, repr, action, changes)
+	return a.writeHistoryWithTx(ctx, nil, user, objectID, repr, action, changes)
+}
+
+func (a *Admin[T]) writeHistoryWithTx(ctx context.Context, tx *db.Tx, user interface{}, objectID string, repr string, action ActionType, changes string) error {
+	if a.config.HistoryManager == nil {
+		return nil
+	}
+	entry := LogEntry{Timestamp: time.Now(), ModelName: a.name, ObjectID: objectID, ObjectRepr: repr,
+		Action: action, ChangeStats: a.visibleHistoryChanges(changes), UserID: fmt.Sprintf("%v", a.resolveUserID(user))}
+	var err error
+	if tx != nil {
+		if manager, ok := a.config.HistoryManager.(TransactionalHistoryManager); ok {
+			err = manager.LogActionWithTx(ctx, tx, entry)
+		} else {
+			err = a.config.HistoryManager.LogAction(ctx, entry)
+		}
+	} else {
+		err = a.config.HistoryManager.LogAction(ctx, entry)
+	}
 	correlationID := "admin-" + uuid.NewString()
 	return audit.HandleError(ctx, err, correlationID, a.config.AuditPolicy, audit.Options{Logger: a.config.AuditLogger, Counter: a.config.AuditFailures})
 }

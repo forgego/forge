@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 
 	"github.com/forgego/forge/admin/core"
+	"github.com/forgego/forge/db"
 )
 
 // HistoryManager is a compatibility helper for legacy configs.
@@ -55,6 +56,16 @@ func (m *HistoryManager) getMem() *core.MemoryHistoryManager {
 
 func (m *HistoryManager) LogAction(ctx context.Context, entry core.LogEntry) error {
 	return m.target().LogAction(ctx, entry)
+}
+
+// LogActionWithTx forwards to a transaction-aware backend when available.
+// Other backends retain the legacy LogAction behavior.
+func (m *HistoryManager) LogActionWithTx(ctx context.Context, tx *db.Tx, entry core.LogEntry) error {
+	target := m.target()
+	if transactional, ok := target.(core.TransactionalHistoryManager); ok {
+		return transactional.LogActionWithTx(ctx, tx, entry)
+	}
+	return target.LogAction(ctx, entry)
 }
 
 func (m *HistoryManager) GetHistory(ctx context.Context, modelName string, objectID string) ([]core.LogEntry, error) {

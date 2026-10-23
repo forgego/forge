@@ -44,5 +44,8 @@ The CSV and JSON export controls export rows matching the current search, filter
 Admin create, update, and delete return history write errors by default. Set
 `Config.AuditPolicy` to `audit.FailOpen` to log and count failures while allowing
 the mutation to continue. Configure `AuditLogger` and `AuditFailures` to collect
-diagnostics. A history manager that supports transactions should write through
-the same transaction as its model mutation to guarantee atomic persistence.
+diagnostics. With a configured ORM database, each mutation and its history write
+run in one transaction. The built-in database history store and custom managers
+implementing `core.TransactionalHistoryManager` join it. Legacy custom history
+managers still compile and are called inside the model transaction, but their
+separate writes cannot be rolled back if the database transaction later fails.

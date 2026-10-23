@@ -139,6 +139,15 @@ func (m *Manager[T]) WithTx(tx *db.Tx) *Manager[T] {
 	return &clone
 }
 
+// Database returns the configured database when this manager is not already
+// bound to a transaction. It returns nil for an unset or transaction-bound manager.
+func (m *Manager[T]) Database() *db.DB {
+	if m == nil || m.db == nil || m.db.tx != nil {
+		return nil
+	}
+	return m.db.db
+}
+
 // RawQuery executes a parameterized SQL query through the manager's database
 // connection. When the manager is bound with WithTx, the query runs on that
 // transaction and uses its dialect's placeholders. Data values should be
