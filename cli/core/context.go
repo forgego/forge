@@ -1,18 +1,30 @@
 package core
 
 import (
+	"context"
 	"github.com/forgego/forge/config"
 	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/identity/principal"
 	"github.com/forgego/forge/log"
 	"github.com/spf13/cobra"
 )
 
 // Context provides command execution context with shared dependencies
 type Context struct {
-	Config   *config.Config
-	Logger   *log.Logger
-	Database *db.DB
-	Cmd      *cobra.Command
+	Config    *config.Config
+	Logger    *log.Logger
+	Database  *db.DB
+	Cmd       *cobra.Command
+	Principal *principal.Principal
+}
+
+// PrincipalFromContext makes a principal already attached to a context
+// available to CLI command setup without changing authorization behavior.
+func (c *Context) PrincipalFromContext(ctx context.Context) *Context {
+	if p, ok := principal.PrincipalFromContext(ctx); ok {
+		c.Principal = &p
+	}
+	return c
 }
 
 // NewContext creates a new command context with default configuration.
