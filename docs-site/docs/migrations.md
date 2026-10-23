@@ -289,8 +289,9 @@ applies to a changed column, because SQLite has no `ALTER COLUMN`. See
 :::
 
 `forge makemigrations --verbose` is currently reserved and does not add generation
-warnings. `forge migrate squash` returns a not-implemented error for any selected
-`--path` and leaves the migration files untouched.
+warnings. `forge migrate squash` is not implemented yet and returns a
+not-implemented error for any selected `--path`; it leaves the migration files
+untouched.
 
 ---
 

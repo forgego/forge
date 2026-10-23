@@ -29,7 +29,7 @@ func (c *AddServiceCommand) Definition() *cobra.Command {
 	}
 	cmd.Flags().String("app", "", "App name (for app-level service)")
 	cmd.Flags().String("domain", "", "Domain name (for domain-level service)")
-	cmd.Flags().Bool("inject", false, "Add a dependency wiring placeholder (manual implementation required)")
+	cmd.Flags().Bool("inject", false, "Write a manual dependency wiring placeholder only; no automatic injection")
 	cmd.Flags().Bool("dry-run", false, "Preview changes without writing files")
 	return cmd
 }

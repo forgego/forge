@@ -50,7 +50,7 @@ The `release-gate` job runs every package serially against PostgreSQL with
 
 | Capability | Tier | Limits | Evidence |
 | --- | --- | --- | --- |
-| `int64` auto-increment primary key named `id` | Supported | The only key shape `Manager.Get` and the generated REST API accept. `forge generate --api` refuses any other key before writing files. | `TestValidateAPIModels_AcceptsOnlyInt64IDPrimaryKey`, `TestManager_WithTx_Commit` |
+| `int64` auto-increment primary key named `id` | Supported | Primary keys are restricted to int64; `Manager.Create` rejects non-integer keys and `Manager.Get` accepts int64. The generated REST API also requires this `id` shape. | `TestValidateAPIModels_AcceptsOnlyInt64IDPrimaryKey`, `TestManager_WithTx_Commit` |
 | UUID, string or composite primary keys | Not implemented | `Manager.Create` returns `NotImplemented` for non-integer keys; `Manager.Get` takes an `int64`. | [`orm/manager.go`](https://github.com/forgego/forge/blob/master/orm/manager.go) |
 | Schema DSL and `forge generate` | Partially tested | Generation reads your `Fields()`, `Meta()` and relation definitions from source without running them, so it understands only a subset of Go expressions and reports the ones it cannot evaluate. The [models guide](/docs/models/) lists that subset. Fixtures pin the supported subset: generation is byte-identical across runs, strict mode reports unsupported expressions with file and line, the generated fixture compiles, and its migration SQL matches the schema. | `codegen` (`TestSupportedDSL*`), `unit-tests` |
 | Custom field types (`schema.RegisterFieldType`) | Experimental | Registration works at runtime; generation and migrations do not know about custom types. | [`schema/registry.go`](https://github.com/forgego/forge/blob/master/schema/registry.go) |
@@ -64,12 +64,12 @@ The `release-gate` job runs every package serially against PostgreSQL with
 | `Manager.Create`, `BulkCreate`, `Update`, `Save`, `Delete`, `UpdateFields` | Supported | Integer primary keys only. | `TestORMCRUDWithRelations`, `TestManager_WithTx_*` |
 | `SelectRelated` (foreign key and one-to-one joins), `PrefetchRelated` (many-to-many and reverse relations) | Supported | Nothing reports access to a relation that was not loaded. | `TestSelectRelated_Integration`, `TestPrefetchRelated_Integration` |
 | Transactions: `db.WithTx`, `Manager.WithTx`, savepoints | Supported | One database. No distributed (2PC/XA) transactions. | `TestWithTx_*`, `TestManager_WithTx_*` |
-| `AggregateValues` with `Count`, `Sum`, `Avg`, `Min`, `Max` | Supported | Ungrouped only. Also tested on SQLite. | `TestAggregateValues*` in `orm/aggregates_test.go` |
+| Scalar `AggregateValues` with `Count`, `Sum`, `Avg`, `Min`, `Max` | Supported | Scalar aggregates are supported; grouped/custom aggregates and `Union`, `Intersection`, `Difference` are unsupported. Also tested on SQLite. | `TestAggregateValues*` in `orm/aggregates_test.go` |
 | `QuerySet.Update`, `UpdateBuilder`, `QuerySet.Delete`, `Exists` | Partially tested | `BulkUpdate` issues one `UPDATE` per entry. Mostly SQL-generation and SQLite tests. | `TestUpdateBuilder_Integration`, `orm/queryset_exists_test.go` |
 | `Values`, `ValuesList`, `Only`, `Defer`, `Select`, `Distinct`, `Reverse`, `Annotate` | Partially tested | SQL-generation tests; not exercised against PostgreSQL in the gate. | `orm/queryset_test.go`, `orm/annotations_test.go` |
 | Raw SQL | Supported | Use the `*sql.DB` embedded in `db.DB` directly (`database/sql`). There is no ORM raw-query API. | `database/sql` |
-| Grouped aggregates, `STDDEV`/`VARIANCE`, aggregates registered with `orm.RegisterAggregate`, aggregates across many-to-many paths, `Aggregate` chained into a row query | Not implemented | Rejected with `NotImplemented` before any SQL runs. | `orm/aggregates_test.go` |
-| `Union`, `Intersection`, `Difference` | Not implemented | Return `NotImplemented`. | `orm/queryset_not_implemented_test.go` |
+| Grouped/custom aggregates, `STDDEV`/`VARIANCE`, aggregates registered with `orm.RegisterAggregate`, aggregates across many-to-many paths, `Aggregate` chained into a row query | Not implemented | Scalar aggregates are supported; these cases are rejected with `NotImplemented` before any SQL runs. | `orm/aggregates_test.go` |
+| `Union`, `Intersection`, `Difference` | Not implemented | Return `NotImplemented`; these queryset set operations are unsupported. | `orm/queryset_not_implemented_test.go` |
 | Window functions, recursive CTEs, full-text search | Not implemented | Not modeled in the query DSL. Use raw SQL. | None |
 
 ## Migrations, API, admin and identity
