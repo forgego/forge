@@ -64,5 +64,5 @@ func configure() {
 	content := string(updated)
 	require.Contains(t, content, `"example.com/project/app/auth"`)
 	require.Contains(t, content, "auth.UserObjects.SetDB(database)")
-	require.Contains(t, content, "auth.RegisterAuthAPI(router, []byte(settings.Security.SecretKey))")
+	require.Contains(t, content, "auth.RegisterAuthAPIWithSecuritySettings(router, settings.Security)")
 }

@@ -155,9 +155,6 @@ func init() {
 import (
 	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"io"
@@ -169,6 +166,7 @@ import (
 	"github.com/forgego/forge/api"
 	"github.com/forgego/forge/api/authentication"
 	"github.com/forgego/forge/api/permissions"
+	"github.com/forgego/forge/config"
 	"github.com/forgego/forge/identity"
 	"github.com/forgego/forge/orm"
 	httplib "github.com/forgego/forge/server"
@@ -202,14 +200,31 @@ func authenticateUser(user *User, password string) bool {
 	return identity.CheckPasswordHash(password, user.Password)
 }
 
-// RegisterAuthAPI registers authentication API endpoints.
-// The signing key must be at least 32 bytes; routes are not registered otherwise.
-// Callers should read the key from config security.secret_key.
+// RegisterAuthAPI registers authentication API endpoints using the legacy
+// single-key configuration. Callers should read the key from security.secret_key.
 func RegisterAuthAPI(router *httplib.Router, signingKey []byte) error {
-	if len(signingKey) < 32 {
+	return RegisterAuthAPIWithSecuritySettings(router, config.SecuritySettings{SecretKey: string(signingKey), TokenMaxLifetime: AuthTokenLifetime})
+}
+
+// RegisterAuthAPIWithSecuritySettings registers authentication endpoints using
+// the configured current JWT key and any verify-only rotation keys. Previous
+// keys are never used to issue tokens and are accepted only before VerifyUntil.
+func RegisterAuthAPIWithSecuritySettings(router *httplib.Router, security config.SecuritySettings) error {
+	authenticator, err := newJWTAuthentication(security, lookupUserFromClaims)
+	if err != nil {
+		return err
+	}
+	lifetime := security.TokenMaxLifetime
+	if lifetime <= 0 {
+		lifetime = AuthTokenLifetime
+	}
+	return registerAuthAPI(router, authenticator, lifetime)
+}
+
+func registerAuthAPI(router *httplib.Router, authenticator *authentication.JWTAuthentication, tokenLifetime time.Duration) error {
+	if authenticator == nil || len(authenticator.SecretKey) < 32 {
 		return ErrInvalidSigningKey
 	}
-	signingKey = append([]byte(nil), signingKey...)
 	// Create viewset for users. The users endpoint requires JWT
 	// authentication and staff/superuser permission: without explicit
 	// authentication and permission classes an anonymous caller could list,
@@ -222,7 +237,7 @@ func RegisterAuthAPI(router *httplib.Router, signingKey []byte) error {
 		&User{},
 	)
 	viewset.Authentication = []authentication.Authentication{
-		authentication.NewJWTAuthentication(signingKey, lookupUserFromClaims),
+		authenticator,
 	}
 	viewset.Permissions = []permissions.Permission{
 		permissions.NewIsAuthenticated(),
@@ -235,9 +250,31 @@ func RegisterAuthAPI(router *httplib.Router, signingKey []byte) error {
 	apiRouter.RegisterRoutes(router)
 
 	// Register auth endpoints
-	router.Post("/api/v1/auth/login", handleLogin(signingKey))
+	router.Post("/api/v1/auth/login", handleLogin(authenticator, tokenLifetime))
 	router.Post("/api/v1/auth/logout", handleLogout)
 	return nil
+}
+
+func newJWTAuthentication(security config.SecuritySettings, userLookup func(authentication.JWTClaims) (interface{}, error)) (*authentication.JWTAuthentication, error) {
+	if len(security.SecretKey) < 32 {
+		return nil, ErrInvalidSigningKey
+	}
+	currentKey := []byte(security.SecretKey)
+	if security.SecretKeyID == "" && len(security.PreviousSecretKeys) == 0 {
+		return authentication.NewJWTAuthentication(currentKey, userLookup), nil
+	}
+	if security.SecretKeyID == "" {
+		return nil, errors.New("auth: security.secret_key_id is required when previous JWT keys are configured")
+	}
+	previous := make([]authentication.JWTVerificationKey, 0, len(security.PreviousSecretKeys))
+	for _, key := range security.PreviousSecretKeys {
+		previous = append(previous, authentication.JWTVerificationKey{
+			ID:          key.ID,
+			Key:         []byte(key.Key),
+			VerifyUntil: key.VerifyUntil,
+		})
+	}
+	return authentication.NewJWTAuthenticationWithKeys(security.SecretKeyID, currentKey, previous, userLookup), nil
 }
 
 // lookupUserFromClaims resolves the JWT subject back to a user for request
@@ -371,7 +408,7 @@ func (s *UserSerializer) WriteOnlyFields() []string {
 	return []string{"password"}
 }
 
-func handleLogin(signingKey []byte) http.HandlerFunc {
+func handleLogin(authenticator *authentication.JWTAuthentication, tokenLifetime time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -398,7 +435,7 @@ func handleLogin(signingKey []byte) http.HandlerFunc {
 		return
 	}
 
-	token, err := generateJWTToken(strconv.FormatInt(user.ID, 10), user.Username, signingKey)
+	token, err := generateJWTToken(strconv.FormatInt(user.ID, 10), user.Username, authenticator, tokenLifetime)
 	if err != nil {
 		http.Error(w, "invalid credentials", http.StatusUnauthorized)
 		return
@@ -422,28 +459,21 @@ func handleLogout(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func generateJWTToken(userID, username string, signingKey []byte) (string, error) {
-	if len(signingKey) < 32 {
+func generateJWTToken(userID, username string, authenticator *authentication.JWTAuthentication, tokenLifetime time.Duration) (string, error) {
+	if authenticator == nil || len(authenticator.SecretKey) < 32 {
 		return "", ErrInvalidSigningKey
 	}
+	if tokenLifetime <= 0 {
+		tokenLifetime = AuthTokenLifetime
+	}
 	now := time.Now()
-	headerJSON := []byte("{\"alg\":\"HS256\",\"typ\":\"JWT\"}")
-	payloadJSON, err := json.Marshal(map[string]any{
+	claims := authentication.JWTClaims{
 		"sub":      userID,
 		"username": username,
 		"iat":      now.Unix(),
-		"exp":      now.Add(AuthTokenLifetime).Unix(),
-	})
-	if err != nil {
-		return "", err
+		"exp":      now.Add(tokenLifetime).Unix(),
 	}
-	header := base64.RawURLEncoding.EncodeToString(headerJSON)
-	payload := base64.RawURLEncoding.EncodeToString(payloadJSON)
-	unsigned := header + "." + payload
-	mac := hmac.New(sha256.New, signingKey)
-	_, _ = mac.Write([]byte(unsigned))
-	signature := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
-	return unsigned + "." + signature, nil
+	return authenticator.SignToken(claims)
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {
@@ -546,7 +576,7 @@ func wireAuthAPI(projectRoot string) error {
 	authRoutes := adminRoutes + `
 
 		auth.UserObjects.SetDB(database)
-		if err := auth.RegisterAuthAPI(router, []byte(settings.Security.SecretKey)); err != nil {
+		if err := auth.RegisterAuthAPIWithSecuritySettings(router, settings.Security); err != nil {
 			stdlog.Fatal(err)
 		}`
 	content = strings.Replace(content, adminRoutes, authRoutes, 1)
