@@ -128,7 +128,9 @@ func (a *Admin[T]) CreateObject(ctx context.Context, data map[string]interface{}
 	objID := a.getObjectID(created)
 	repr := a.getObjectLabel(created)
 	changesJSON, _ := json.Marshal(filtered)
-	_ = a.LogAction(ctx, user, fmt.Sprintf("%v", objID), repr, ActionAdd, string(changesJSON))
+	if err := a.writeHistory(ctx, user, fmt.Sprintf("%v", objID), repr, ActionAdd, string(changesJSON)); err != nil {
+		return nil, err
+	}
 
 	return created, nil
 }
@@ -180,7 +182,9 @@ func (a *Admin[T]) UpdateObject(ctx context.Context, id interface{}, data map[st
 	user, _ := apicore.UserFromContext(ctx)
 	repr := a.getObjectLabel(updated)
 	changesJSON, _ := json.Marshal(filtered)
-	_ = a.LogAction(ctx, user, fmt.Sprintf("%v", intID), repr, ActionChange, string(changesJSON))
+	if err := a.writeHistory(ctx, user, fmt.Sprintf("%v", intID), repr, ActionChange, string(changesJSON)); err != nil {
+		return nil, err
+	}
 
 	return updated, nil
 }
@@ -201,7 +205,9 @@ func (a *Admin[T]) DeleteObject(ctx context.Context, id interface{}) error {
 	}
 
 	user, _ := apicore.UserFromContext(ctx)
-	_ = a.LogAction(ctx, user, fmt.Sprintf("%v", intID), repr, ActionDelete, "")
+	if err := a.writeHistory(ctx, user, fmt.Sprintf("%v", intID), repr, ActionDelete, ""); err != nil {
+		return err
+	}
 
 	return nil
 }
