@@ -2,6 +2,8 @@ package core
 
 import (
 	"context"
+	"github.com/forgego/forge/identity/models"
+	"github.com/forgego/forge/identity/principal"
 )
 
 // Context keys for storing API-specific values
@@ -20,7 +22,27 @@ const (
 
 // WithUser adds a user to the context
 func WithUser(ctx context.Context, user interface{}) context.Context {
-	return context.WithValue(ctx, UserKey, user)
+	ctx = context.WithValue(ctx, UserKey, user)
+	if modelUser, ok := user.(*models.User); ok {
+		if p, err := principal.FromUser(modelUser); err == nil {
+			return principal.WithPrincipal(ctx, p)
+		}
+		return principal.WithPrincipal(ctx, principal.Anonymous())
+	}
+	if p, ok := principal.FromBackend(user); ok {
+		return principal.WithPrincipal(ctx, p)
+	}
+	return principal.WithPrincipal(ctx, principal.Anonymous())
+}
+
+// WithPrincipal adds a principal to the request context.
+func WithPrincipal(ctx context.Context, p principal.Principal) context.Context {
+	return principal.WithPrincipal(ctx, p)
+}
+
+// PrincipalFromContext retrieves the request principal.
+func PrincipalFromContext(ctx context.Context) (principal.Principal, bool) {
+	return principal.PrincipalFromContext(ctx)
 }
 
 // UserFromContext retrieves the user from context
