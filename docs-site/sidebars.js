@@ -44,7 +44,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Platform',
-      items: ['filters', 'identity', 'server/overview', 'server/middleware', 'server/security', 'server/health'],
+      items: ['filters', 'identity', 'operations', 'server/overview', 'server/middleware', 'server/security', 'server/health'],
     },
     {
       type: 'category',
