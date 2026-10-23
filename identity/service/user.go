@@ -20,8 +20,8 @@ var (
 	ErrUsernameExists       = fmt.Errorf("username already exists")
 	ErrInvalidEmail         = fmt.Errorf("invalid email address")
 	ErrInvalidUsername      = fmt.Errorf("invalid username")
-	ErrUserInactive         = fmt.Errorf("user account is inactive")
-	ErrUserLocked           = fmt.Errorf("user account is locked")
+	ErrUserInactive         = models.ErrUserInactive
+	ErrUserLocked           = models.ErrUserLocked
 	ErrEmailNotVerified     = fmt.Errorf("email not verified")
 	ErrInvalidToken         = fmt.Errorf("invalid verification token")
 	ErrTokenExpired         = fmt.Errorf("verification token has expired")
@@ -162,6 +162,10 @@ func (s *userService) UpdateUser(ctx context.Context, id int64, req *UpdateUserR
 			now := time.Now()
 			user.LockedAt = &now
 			fields["locked_at"] = now
+			if req.LockedReason != nil {
+				user.LockedReason = *req.LockedReason
+				fields["locked_reason"] = *req.LockedReason
+			}
 		} else {
 			user.LockedAt = nil
 			user.LockedReason = ""
@@ -178,7 +182,9 @@ func (s *userService) UpdateUser(ctx context.Context, id int64, req *UpdateUserR
 	// Update in database
 	mutations, ok := s.userRepo.(repository.UserMutations)
 	var updateErr error
-	if ok {
+	if stateMutations, supportsStateMutation := s.userRepo.(repository.AccountStateMutations); supportsStateMutation && ((req.IsActive != nil && !*req.IsActive) || (req.IsLocked != nil && *req.IsLocked)) {
+		updateErr = stateMutations.SetAccountStateAndRevokeSessions(ctx, id, fields)
+	} else if ok {
 		if req.Email != nil {
 			if emailMutations, supportsCAS := s.userRepo.(repository.UserEmailMutations); supportsCAS {
 				updateErr = emailMutations.UpdateEmailIfCurrent(ctx, id, oldEmail, fields)
@@ -195,6 +201,20 @@ func (s *userService) UpdateUser(ctx context.Context, id int64, req *UpdateUserR
 		return nil, fmt.Errorf("failed to update user: %w", err)
 	}
 	return s.userRepo.GetByID(ctx, id)
+}
+
+// DeactivateUser disables an account and revokes all existing sessions.
+func (s *userService) DeactivateUser(ctx context.Context, id int64) error {
+	active := false
+	_, err := s.UpdateUser(ctx, id, &UpdateUserRequest{IsActive: &active})
+	return err
+}
+
+// LockUser locks an account and revokes all existing sessions.
+func (s *userService) LockUser(ctx context.Context, id int64, reason string) error {
+	locked := true
+	_, err := s.UpdateUser(ctx, id, &UpdateUserRequest{IsLocked: &locked, LockedReason: &reason})
+	return err
 }
 
 // DeleteUser deletes a user (soft delete)

@@ -94,6 +94,30 @@ func TestPasswordService_ChangePassword(t *testing.T) {
 	})
 }
 
+func TestPasswordService_ChangePasswordKeepsCurrentSession(t *testing.T) {
+	service, testDB, ctx := setupPasswordServiceTest(t)
+	defer testDB.Close()
+	users := repository.NewUserRepository(testDB)
+	sessions := repository.NewSessionRepository(testDB)
+	hash, err := utils.HashPassword("oldpassword")
+	require.NoError(t, err)
+	user := &models.User{Username: "session-user", Email: "session-user@example.com", Password: hash, IsActive: true}
+	require.NoError(t, users.Create(ctx, user))
+	for _, key := range []string{"current-session", "other-session"} {
+		require.NoError(t, sessions.Create(ctx, &models.UserSession{UserID: user.ID, SessionKey: key}))
+	}
+
+	require.NoError(t, service.ChangePassword(ctx, user.ID, &ChangePasswordRequest{
+		CurrentPassword:   "oldpassword",
+		NewPassword:       "NewPassword123!",
+		CurrentSessionKey: "current-session",
+	}))
+	_, err = sessions.GetByKey(ctx, "current-session")
+	require.NoError(t, err)
+	_, err = sessions.GetByKey(ctx, "other-session")
+	require.Error(t, err)
+}
+
 func TestPasswordService_ValidatePassword(t *testing.T) {
 	service, testDB, _ := setupPasswordServiceTest(t)
 	defer testDB.Close()

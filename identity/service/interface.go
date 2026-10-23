@@ -36,6 +36,14 @@ type UserService interface {
 	CreateEmailVerificationToken(ctx context.Context, userID int64, email string) (*models.EmailVerificationToken, error)
 }
 
+// AccountStateService manages account state without expanding the UserService contract.
+type AccountStateService interface {
+	// DeactivateUser disables an account and revokes its sessions atomically when supported.
+	DeactivateUser(ctx context.Context, id int64) error
+	// LockUser locks an account and revokes its sessions atomically when supported.
+	LockUser(ctx context.Context, id int64, reason string) error
+}
+
 // AuthService defines the interface for authentication business logic
 type AuthService interface {
 	// Authenticate authenticates a user with credentials
@@ -114,13 +122,14 @@ type CreateUserRequest struct {
 
 // UpdateUserRequest represents a request to update a user
 type UpdateUserRequest struct {
-	Email       *string
-	FirstName   *string
-	LastName    *string
-	IsActive    *bool
-	IsStaff     *bool
-	IsLocked    *bool
-	IsSuperuser *bool
+	Email        *string
+	FirstName    *string
+	LastName     *string
+	IsActive     *bool
+	IsStaff      *bool
+	IsLocked     *bool
+	IsSuperuser  *bool
+	LockedReason *string
 }
 
 // RegisterRequest represents a user registration request
@@ -151,6 +160,8 @@ type CreateSessionRequest struct {
 type ChangePasswordRequest struct {
 	CurrentPassword string
 	NewPassword     string
+	// CurrentSessionKey identifies the session that should remain active.
+	CurrentSessionKey string
 }
 
 // UserFilters contains filter criteria for user queries

@@ -15,8 +15,8 @@ import (
 // Predefined errors
 var (
 	ErrInvalidCredentials = fmt.Errorf("invalid credentials")
-	ErrUserInactive       = fmt.Errorf("user account is inactive")
-	ErrUserLocked         = fmt.Errorf("user account is locked")
+	ErrUserInactive       = models.ErrUserInactive
+	ErrUserLocked         = models.ErrUserLocked
 )
 
 var dummyPasswordHash = mustHash("forge-dummy-password")
@@ -66,13 +66,7 @@ func (b *passwordBackend) lookupUser(ctx context.Context, identifier string) (*m
 }
 
 func checkUserStatus(user *models.User) error {
-	if !user.IsActive {
-		return ErrUserInactive
-	}
-	if user.IsLocked {
-		return ErrUserLocked
-	}
-	return nil
+	return user.AccountStateError()
 }
 
 // Authenticate attempts to authenticate using username/email and password

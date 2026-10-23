@@ -261,6 +261,34 @@ func TestAuthService_GetSession(t *testing.T) {
 	})
 }
 
+func TestAuthService_GetSessionRejectsUnavailableUsers(t *testing.T) {
+	for _, state := range []struct {
+		name    string
+		active  bool
+		locked  bool
+		wantErr error
+	}{
+		{name: "inactive", active: false, wantErr: ErrUserInactive},
+		{name: "locked", active: true, locked: true, wantErr: ErrUserLocked},
+	} {
+		t.Run(state.name, func(t *testing.T) {
+			service, testDB, ctx := setupAuthServiceTest(t)
+			defer testDB.Close()
+			users := repository.NewUserRepository(testDB)
+			user := &models.User{Username: "blocked", Email: state.name + "@example.com", Password: "hash", IsActive: state.active, IsLocked: state.locked}
+			require.NoError(t, users.Create(ctx, user))
+			sessions := repository.NewSessionRepository(testDB)
+			key := "state-" + state.name
+			require.NoError(t, sessions.Create(ctx, &models.UserSession{UserID: user.ID, SessionKey: key}))
+
+			_, err := service.GetSession(ctx, key)
+			require.ErrorIs(t, err, state.wantErr)
+			_, err = service.RefreshSession(ctx, key)
+			require.ErrorIs(t, err, state.wantErr)
+		})
+	}
+}
+
 func TestAuthService_Logout(t *testing.T) {
 	service, testDB, ctx := setupAuthServiceTest(t)
 	defer testDB.Close()

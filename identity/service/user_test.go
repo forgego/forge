@@ -108,6 +108,34 @@ func TestUserService_Register(t *testing.T) {
 	})
 }
 
+func TestUserService_DeactivateAndLockRevokeSessions(t *testing.T) {
+	service, testDB, ctx := setupUserServiceTest(t)
+	defer testDB.Close()
+	users := repository.NewUserRepository(testDB)
+	sessions := repository.NewSessionRepository(testDB)
+	user := &models.User{Username: "state-user", Email: "state-user@example.com", Password: "hash", IsActive: true}
+	require.NoError(t, users.Create(ctx, user))
+	require.NoError(t, sessions.Create(ctx, &models.UserSession{UserID: user.ID, SessionKey: "deactivate-session"}))
+	accountStateService, ok := service.(AccountStateService)
+	require.True(t, ok)
+	require.NoError(t, accountStateService.DeactivateUser(ctx, user.ID))
+	stored, err := users.GetByID(ctx, user.ID)
+	require.NoError(t, err)
+	assert.False(t, stored.IsActive)
+	_, err = sessions.GetByKey(ctx, "deactivate-session")
+	assert.Error(t, err)
+
+	stored.IsActive = true
+	require.NoError(t, users.Update(ctx, stored))
+	require.NoError(t, sessions.Create(ctx, &models.UserSession{UserID: user.ID, SessionKey: "lock-session"}))
+	require.NoError(t, accountStateService.LockUser(ctx, user.ID, "admin lock"))
+	stored, err = users.GetByID(ctx, user.ID)
+	require.NoError(t, err)
+	assert.True(t, stored.IsLocked)
+	_, err = sessions.GetByKey(ctx, "lock-session")
+	assert.Error(t, err)
+}
+
 func TestUserService_CreateUser(t *testing.T) {
 	service, testDB, ctx := setupUserServiceTest(t)
 	defer testDB.Close()

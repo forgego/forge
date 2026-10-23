@@ -56,6 +56,9 @@ func (a *TokenAuthentication) Authenticate(r *http.Request) (*AuthResult, error)
 	if user == nil {
 		return nil, ErrInvalidToken // token supplied but not recognized: reject instead of falling through
 	}
+	if err := validateAccountState(user); err != nil {
+		return nil, err
+	}
 
 	// Success
 	return NewAuthResult(user, token), nil
