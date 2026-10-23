@@ -2,7 +2,9 @@ package core
 
 import (
 	"context"
+	"log/slog"
 
+	"github.com/forgego/forge/audit"
 	"github.com/forgego/forge/orm"
 )
 
@@ -29,7 +31,12 @@ type Config[T any] struct {
 	Icon              string
 	PageType          string // "list", "form", "list-form", "detail"
 	HistoryManager    HistoryManager
-	UIOverrides       map[string]string // Target (e.g. "list.actions") -> Component Name in React registry
+	// AuditPolicy controls how history write failures affect admin mutations. Zero value is fail-closed.
+	AuditPolicy audit.Policy
+	// AuditLogger and AuditFailures configure fail-open diagnostics and counting.
+	AuditLogger   *slog.Logger
+	AuditFailures *audit.Counter
+	UIOverrides   map[string]string // Target (e.g. "list.actions") -> Component Name in React registry
 
 	// List view configuration
 	ListDisplay         []Field

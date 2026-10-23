@@ -39,3 +39,10 @@ action := admin.Action[models.Order]{
 On the list page, row selections remain selected when you move between pages. Select all applies to the current page; clear selection removes all selected rows. Delete shows the current selection count in its confirmation dialog. While a bulk action runs, its button is disabled and shows a spinner. A successful action shows a success toast and clears the selection. A failed request shows an error toast and keeps the selected rows for retry.
 
 The CSV and JSON export controls export rows matching the current search, filters, and ordering. They do not export only the selected rows. CSV uses the model's configured list columns, excluding server-hidden fields; client-side column visibility does not change the export. The server fetches all matching pages before writing the CSV response, so the response is not streamed row by row.
+# Audit write failures
+
+Admin create, update, and delete return history write errors by default. Set
+`Config.AuditPolicy` to `audit.FailOpen` to log and count failures while allowing
+the mutation to continue. Configure `AuditLogger` and `AuditFailures` to collect
+diagnostics. A history manager that supports transactions should write through
+the same transaction as its model mutation to guarantee atomic persistence.

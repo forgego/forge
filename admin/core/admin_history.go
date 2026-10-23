@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/forgego/forge/audit"
 	"github.com/forgego/forge/schema"
+	"github.com/google/uuid"
 	"reflect"
 	"time"
 )
@@ -41,6 +43,12 @@ func (a *Admin[T]) LogAction(ctx context.Context, user interface{}, objectID str
 		return a.config.HistoryManager.LogAction(ctx, entry)
 	}
 	return nil
+}
+
+func (a *Admin[T]) writeHistory(ctx context.Context, user interface{}, objectID string, repr string, action ActionType, changes string) error {
+	err := a.LogAction(ctx, user, objectID, repr, action, changes)
+	correlationID := "admin-" + uuid.NewString()
+	return audit.HandleError(ctx, err, correlationID, a.config.AuditPolicy, audit.Options{Logger: a.config.AuditLogger, Counter: a.config.AuditFailures})
 }
 
 // resolveUserID tries to extract a string identifier from the user object
