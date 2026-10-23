@@ -117,7 +117,9 @@ func TestSessionStore_SharedBetweenInstances(t *testing.T) {
 
 func TestRateLimiter_CountsAtomicallyAcrossInstances(t *testing.T) {
 	forEachBackend(t, func(t *testing.T, backend storestest.Backend) {
-		a, b := twoInstances(t, backend, nil)
+		// Keep concurrent writes in one fixed window, regardless of machine load.
+		now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+		a, b := twoInstances(t, backend, func() time.Time { return now })
 		const limit = 7
 		// 40 concurrent writers queue on SQLite's single writer; this test
 		// is about exact counts, so no call may time out and fail open.
