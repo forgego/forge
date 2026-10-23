@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"github.com/forgego/forge/db"
 	"strings"
 	"sync"
 	"time"
@@ -32,6 +33,12 @@ const (
 type HistoryManager interface {
 	LogAction(ctx context.Context, entry LogEntry) error
 	GetHistory(ctx context.Context, modelName string, objectID string) ([]LogEntry, error)
+}
+
+// TransactionalHistoryManager is optionally implemented by history stores
+// that can write using the admin mutation's database transaction.
+type TransactionalHistoryManager interface {
+	LogActionWithTx(ctx context.Context, tx *db.Tx, entry LogEntry) error
 }
 
 // HistoryBackend is implemented by history managers that keep their
