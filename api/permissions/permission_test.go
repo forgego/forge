@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/forgego/forge/api/authentication"
+	"github.com/forgego/forge/identity/principal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,6 +46,7 @@ func TestAllowAny(t *testing.T) {
 	// Test with authenticated user
 	authUser := &MockUser{Authenticated: true}
 	authentication.SetUserOnRequest(req, authUser)
+	req = req.WithContext(principal.WithPrincipal(req.Context(), principal.Principal{ID: "1", Kind: principal.KindUser}))
 	assert.True(t, perm.HasPermission(req, view))
 }
 
@@ -55,6 +57,7 @@ func TestIsAuthenticated_Authenticated(t *testing.T) {
 
 	authUser := &MockUser{Authenticated: true}
 	authentication.SetUserOnRequest(req, authUser)
+	req = req.WithContext(principal.WithPrincipal(req.Context(), principal.Principal{ID: "1", Kind: principal.KindUser}))
 
 	assert.True(t, perm.HasPermission(req, view))
 	assert.True(t, perm.HasObjectPermission(req, view, nil))
@@ -103,6 +106,7 @@ func TestIsAuthenticatedOrReadOnly_WriteMethod_Authenticated(t *testing.T) {
 
 	authUser := &MockUser{Authenticated: true}
 	authentication.SetUserOnRequest(req, authUser)
+	req = req.WithContext(principal.WithPrincipal(req.Context(), principal.Principal{ID: "1", Kind: principal.KindUser}))
 
 	assert.True(t, perm.HasPermission(req, view))
 }
@@ -114,6 +118,7 @@ func TestIsAdminUser_Admin(t *testing.T) {
 
 	adminUser := &MockUser{Authenticated: true, Admin: true}
 	authentication.SetUserOnRequest(req, adminUser)
+	req = req.WithContext(principal.WithPrincipal(req.Context(), principal.Principal{ID: "1", Kind: principal.KindUser, RoleNames: []string{"admin"}}))
 
 	assert.True(t, perm.HasPermission(req, view))
 	assert.True(t, perm.HasObjectPermission(req, view, map[string]interface{}{"id": "1"}))
@@ -179,6 +184,7 @@ func TestCheckPermissions_AllPass(t *testing.T) {
 
 	authUser := &MockUser{Authenticated: true}
 	authentication.SetUserOnRequest(req, authUser)
+	req = req.WithContext(principal.WithPrincipal(req.Context(), principal.Principal{ID: "1", Kind: principal.KindUser}))
 
 	perms := []Permission{
 		NewIsAuthenticated(),

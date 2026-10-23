@@ -1,13 +1,18 @@
 package rest
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/forgego/forge/admin/core"
 	apicore "github.com/forgego/forge/api/core"
+	"github.com/forgego/forge/identity/models"
+	"github.com/forgego/forge/identity/principal"
+	"github.com/forgego/forge/identity/repository"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -24,12 +29,18 @@ type Router struct {
 	sessions      *adminSessionStore
 	loginLimiter  *loginLimiter
 	authenticator LoginAuthenticator
+	users         AdminUserStore
 
 	// The stores the handlers use. They default to the in-memory stores
 	// above; SetStores replaces them.
 	tokens        TokenStore
 	savedViews    SavedViewStore
 	loginAttempts LoginAttemptStore
+}
+
+// AdminUserStore resolves token subjects to current identity records.
+type AdminUserStore interface {
+	GetByUsername(context.Context, string) (*models.User, error)
 }
 
 // Stores are the stores the admin API keeps its state in. A nil field
@@ -70,6 +81,13 @@ func (r *Router) SetStores(stores Stores) *Router {
 	if stores.LoginAttempts != nil {
 		r.loginAttempts = stores.LoginAttempts
 	}
+	return r
+}
+
+// SetUserRepository configures the identity store used to resolve bearer-token
+// subjects before granting access to the admin API.
+func (r *Router) SetUserRepository(users AdminUserStore) *Router {
+	r.users = users
 	return r
 }
 
@@ -162,11 +180,41 @@ func (r *Router) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		user := map[string]interface{}{
-			"username": username,
-			"role":     "superuser",
+		var user *models.User
+		var userErr error
+		if r.users != nil {
+			user, userErr = r.users.GetByUsername(req.Context(), username)
+		}
+		if user != nil && userErr != nil {
+			respondError(w, http.StatusServiceUnavailable, "user_store_unavailable", "Could not resolve the admin user", nil)
+			return
+		}
+		if user == nil {
+			// Configured credentials are an independent admin identity source.
+			// They remain usable when the identity table is absent or unavailable,
+			// while a resolved identity row always takes precedence (including an
+			// inactive or non-staff row, which must not be bypassed).
+			user = configuredCredentialUser(username)
+			if user == nil {
+				if errors.Is(userErr, repository.ErrUserNotFound) || userErr == nil {
+					respondError(w, http.StatusUnauthorized, "authentication_required", "Admin user could not be resolved", nil)
+				} else {
+					respondError(w, http.StatusServiceUnavailable, "user_store_unavailable", "Could not resolve the admin user", nil)
+				}
+				return
+			}
+		}
+		principalValue, err := principal.FromUser(user)
+		if err != nil {
+			respondError(w, http.StatusUnauthorized, "authentication_required", "Admin user is unavailable", nil)
+			return
+		}
+		if !user.IsStaff && !user.IsSuperuser {
+			respondError(w, http.StatusForbidden, "permission_denied", "Staff access is required", nil)
+			return
 		}
 		ctx := apicore.WithUser(req.Context(), user)
+		ctx = apicore.WithPrincipal(ctx, principalValue)
 		next.ServeHTTP(w, req.WithContext(ctx))
 	})
 }

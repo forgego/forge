@@ -2,8 +2,6 @@ package permissions
 
 import (
 	"net/http"
-
-	"github.com/forgego/forge/api/authentication"
 )
 
 // IsAuthenticatedOrReadOnly allows read access to unauthenticated users
@@ -23,8 +21,11 @@ func (p *IsAuthenticatedOrReadOnly) HasPermission(r *http.Request, view ViewSet)
 	if IsSafeMethod(r.Method) {
 		return true
 	}
+	if present, authenticated := authenticatedPrincipal(r); present {
+		return authenticated
+	}
 	// Require authentication for write operations
-	_, ok := authentication.GetUserFromRequest(r)
+	_, ok := activeLegacyUser(r)
 	return ok
 }
 

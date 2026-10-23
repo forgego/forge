@@ -257,6 +257,7 @@ func TestRegisterRoutes_RequiresAuthenticationForProtectedEndpoints(t *testing.T
 	require.NoError(t, err)
 
 	apiRouter := NewRouter(registry)
+	apiRouter.SetUserRepository(adminTestUsers{"admin": {ID: 1, Username: "admin", IsActive: true, IsSuperuser: true}})
 	root := chi.NewRouter()
 	apiRouter.RegisterRoutes(root)
 
@@ -297,6 +298,7 @@ func TestRegisterRoutes_RejectsInvalidOrMalformedTokens(t *testing.T) {
 	require.NoError(t, err)
 
 	apiRouter := NewRouter(registry)
+	apiRouter.SetUserRepository(adminTestUsers{"admin": {ID: 1, Username: "admin", IsActive: true, IsSuperuser: true}})
 	root := chi.NewRouter()
 	apiRouter.RegisterRoutes(root)
 
@@ -937,6 +939,7 @@ func TestHandleLogout_RevokesSession(t *testing.T) {
 
 	registry := core.NewRegistry()
 	apiRouter := NewRouter(registry)
+	apiRouter.SetUserRepository(adminTestUsers{"admin": {ID: 1, Username: "admin", IsActive: true, IsSuperuser: true}})
 	root := chi.NewRouter()
 	apiRouter.RegisterRoutes(root)
 

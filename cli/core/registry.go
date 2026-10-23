@@ -1,10 +1,13 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
 	"github.com/forgego/forge/config"
+	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/identity/repository"
 	"github.com/forgego/forge/log"
 	"github.com/spf13/cobra"
 )
@@ -101,6 +104,7 @@ func (r *Registry) BuildRootCommand() *cobra.Command {
 		Short: "Forge framework CLI",
 		Long:  "Command-line interface for Forge framework",
 	}
+	rootCmd.PersistentFlags().String("as", "", "run business commands as an existing username")
 	cfg := config.NewConfig()
 
 	// Add all standalone commands
@@ -145,6 +149,17 @@ func commandRunE(cmd Command, cfg *config.Config) func(*cobra.Command, []string)
 			logger, err := createLogger(ctx.Config)
 			if err == nil {
 				ctx.WithLogger(logger)
+			}
+		}
+		username, err := c.Flags().GetString("as")
+		if err == nil && username != "" {
+			database, err := db.NewDBFromConfig(ctx.Config)
+			if err != nil {
+				return fmt.Errorf("open database to resolve --as user: %w", err)
+			}
+			defer database.Close()
+			if err := ctx.AssumeUser(context.Background(), repository.NewUserRepository(database), username); err != nil {
+				return err
 			}
 		}
 		return cmd.Execute(ctx, args)

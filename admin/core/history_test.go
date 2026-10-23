@@ -124,5 +124,6 @@ func TestAdmin_ResolveUserID(t *testing.T) {
 	assert.Equal(t, "anonymous", admin.resolveUserID(nil))
 	assert.Equal(t, int64(101), admin.resolveUserID(dummyUser{ID: 101, Username: "admin"}))
 	assert.Equal(t, int64(102), admin.resolveUserID(&dummyUser{ID: 102, Username: "staff"}))
+	assert.Equal(t, "ops", admin.resolveUserID(dummyUser{Username: "ops"}))
 	assert.Equal(t, "plain_string_user", admin.resolveUserID("plain_string_user"))
 }
