@@ -41,6 +41,11 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 	if settings == nil {
 		return nil, fmt.Errorf("server settings are nil")
 	}
+	// Fail before initializing shared stores or other startup dependencies so
+	// invalid production security configuration is the actionable error.
+	if err := (&Server{config: cfg, settings: settings}).validateProductionSecrets(); err != nil {
+		return nil, err
+	}
 
 	// Client IP resolution (rate limiting, admin login lockout) honors
 	// forwarding headers only from these peers. The list is process-wide and

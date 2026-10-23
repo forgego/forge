@@ -239,11 +239,9 @@ func TestServerStartRejectsGeneratedSecretsInProductionBeforeListening(t *testin
 		App:    config.AppSettings{Env: "PrOdUcTiOn"},
 		Server: config.ServerSettings{Host: "127.0.0.1", Port: fmt.Sprint(port)},
 	}
-	srv, err := NewServer(cfg, settings, nil)
-	require.NoError(t, err)
-
+	addr := net.JoinHostPort(settings.Server.Host, settings.Server.Port)
 	started := time.Now()
-	err = srv.Start()
+	_, err = NewServer(cfg, settings, nil)
 	require.Error(t, err)
 	require.Less(t, time.Since(started), time.Second)
 	for _, key := range cfg.GeneratedSecrets() {
@@ -251,7 +249,7 @@ func TestServerStartRejectsGeneratedSecretsInProductionBeforeListening(t *testin
 		assert.NotContains(t, err.Error(), cfg.GetString(key, ""))
 	}
 
-	probe, listenErr := net.Listen("tcp", srv.Addr)
+	probe, listenErr := net.Listen("tcp", addr)
 	require.NoError(t, listenErr, "server opened its listener before rejecting generated secrets")
 	require.NoError(t, probe.Close())
 }
