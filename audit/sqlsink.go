@@ -45,11 +45,7 @@ func (s *SQLSink) Record(ctx context.Context, tx DBTX, event Event) error {
 	}
 	var executor DBTX = s.database.DB
 	if tx != nil {
-		var ok bool
-		executor, ok = tx.(DBTX)
-		if !ok {
-			return fmt.Errorf("unsupported audit transaction %T", tx)
-		}
+		executor = tx
 	}
 	if event.OccurredAt.IsZero() {
 		event.OccurredAt = time.Now().UTC()
