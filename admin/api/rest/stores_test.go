@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/forgego/forge/admin/core"
+	"github.com/forgego/forge/identity/models"
+	"github.com/forgego/forge/identity/repository"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -59,6 +61,16 @@ func (r *recordingTokens) RevokeToken(_ context.Context, token string) error {
 	return nil
 }
 
+type adminTestUsers map[string]*models.User
+
+func (users adminTestUsers) GetByUsername(_ context.Context, username string) (*models.User, error) {
+	user, ok := users[username]
+	if !ok {
+		return nil, repository.ErrUserNotFound
+	}
+	return user, nil
+}
+
 func serveRouter(router *Router) http.Handler {
 	mux := chi.NewRouter()
 	router.RegisterRoutes(mux)
@@ -69,7 +81,9 @@ func TestRouterSetStores_HandlersUseTheConfiguredStores(t *testing.T) {
 	t.Setenv("FORGE_ADMIN_USERNAME", "admin")
 	t.Setenv("FORGE_ADMIN_PASSWORD", "secret")
 	tokens := &recordingTokens{issued: map[string]string{}}
-	router := NewRouter(core.NewRegistry()).SetStores(Stores{Tokens: tokens})
+	router := NewRouter(core.NewRegistry()).SetStores(Stores{Tokens: tokens}).SetUserRepository(adminTestUsers{
+		"admin": {ID: 1, Username: "admin", IsActive: true, IsStaff: true},
+	})
 	handler := serveRouter(router)
 
 	rec := httptest.NewRecorder()
@@ -85,6 +99,38 @@ func TestRouterSetStores_HandlersUseTheConfiguredStores(t *testing.T) {
 
 	_, ok := router.sessions.Validate("tok-admin")
 	assert.False(t, ok, "the in-memory token store is no longer used")
+}
+
+func TestAdminMiddlewareResolvesAndAuthorizesCurrentUserBeforeWrites(t *testing.T) {
+	users := adminTestUsers{
+		"inactive": {ID: 1, Username: "inactive", IsActive: false, IsSuperuser: true},
+		"locked":   {ID: 2, Username: "locked", IsActive: true, IsLocked: true, IsStaff: true},
+		"member":   {ID: 3, Username: "member", IsActive: true},
+	}
+	for _, tc := range []struct {
+		name       string
+		username   string
+		wantStatus int
+	}{
+		{name: "unknown user", username: "missing", wantStatus: http.StatusUnauthorized},
+		{name: "inactive user", username: "inactive", wantStatus: http.StatusUnauthorized},
+		{name: "locked user", username: "locked", wantStatus: http.StatusUnauthorized},
+		{name: "non staff user", username: "member", wantStatus: http.StatusForbidden},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			admin := &mockAdmin{modelName: "items", moduleAllowed: true}
+			registry := core.NewRegistry()
+			require.NoError(t, registry.Register(admin))
+			tokens := &recordingTokens{issued: map[string]string{"token": tc.username}}
+			router := NewRouter(registry).SetStores(Stores{Tokens: tokens}).SetUserRepository(users)
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/items/", bytes.NewBufferString(`{"name":"changed"}`))
+			req.Header.Set("Authorization", "Bearer token")
+			serveRouter(router).ServeHTTP(rec, req)
+			assert.Equal(t, tc.wantStatus, rec.Code, rec.Body.String())
+			assert.Empty(t, admin.createCalls, "denied admin request must not change the target row")
+		})
+	}
 }
 
 func TestRouterSetStores_StoreErrorsAreNotAuthenticationFailures(t *testing.T) {

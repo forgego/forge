@@ -39,6 +39,7 @@ func (a *Admin[T]) LogAction(ctx context.Context, user interface{}, objectID str
 			Action:      action,
 			ChangeStats: a.visibleHistoryChanges(changes),
 			UserID:      fmt.Sprintf("%v", a.resolveUserID(user)),
+			UserName:    a.resolveUserName(user),
 		}
 
 		return a.config.HistoryManager.LogAction(ctx, entry)
@@ -55,7 +56,7 @@ func (a *Admin[T]) writeHistoryWithTx(ctx context.Context, tx *db.Tx, user inter
 		return nil
 	}
 	entry := LogEntry{Timestamp: time.Now(), ModelName: a.name, ObjectID: objectID, ObjectRepr: repr,
-		Action: action, ChangeStats: a.visibleHistoryChanges(changes), UserID: fmt.Sprintf("%v", a.resolveUserID(user))}
+		Action: action, ChangeStats: a.visibleHistoryChanges(changes), UserID: fmt.Sprintf("%v", a.resolveUserID(user)), UserName: a.resolveUserName(user)}
 	var err error
 	if tx != nil {
 		if manager, ok := a.config.HistoryManager.(TransactionalHistoryManager); ok {
@@ -68,6 +69,25 @@ func (a *Admin[T]) writeHistoryWithTx(ctx context.Context, tx *db.Tx, user inter
 	}
 	correlationID := "admin-" + uuid.NewString()
 	return audit.HandleError(ctx, err, correlationID, a.config.AuditPolicy, audit.Options{Logger: a.config.AuditLogger, Counter: a.config.AuditFailures})
+}
+
+func (a *Admin[T]) resolveUserName(user interface{}) string {
+	if user == nil {
+		return ""
+	}
+	if named, ok := user.(interface{ GetDisplayName() string }); ok {
+		return named.GetDisplayName()
+	}
+	if values, ok := user.(map[string]interface{}); ok {
+		for _, key := range []string{"username", "name", "email"} {
+			if value, exists := values[key]; exists && value != nil {
+				if name := fmt.Sprintf("%v", value); name != "" {
+					return name
+				}
+			}
+		}
+	}
+	return ""
 }
 
 // resolveUserID tries to extract a string identifier from the user object

@@ -23,6 +23,9 @@ func (p *IsAuthenticatedOrReadOnly) HasPermission(r *http.Request, view ViewSet)
 	if IsSafeMethod(r.Method) {
 		return true
 	}
+	if present, authenticated := authenticatedPrincipal(r); present {
+		return authenticated
+	}
 	// Require authentication for write operations
 	_, ok := authentication.GetUserFromRequest(r)
 	return ok

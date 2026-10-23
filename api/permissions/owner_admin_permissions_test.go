@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/forgego/forge/api/authentication"
+	"github.com/forgego/forge/identity/principal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -170,6 +171,26 @@ func TestIsAdminUser_StaffAndSuperuser(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/admin", nil)
 			if tt.user != nil {
 				authentication.SetUserOnRequest(req, tt.user)
+				role := ""
+				switch u := tt.user.(type) {
+				case *w0UserWithStaff:
+					if u.IsStaff {
+						role = "staff"
+					}
+				case *w0UserWithSuperuser:
+					if u.IsSuperuser {
+						role = "superuser"
+					}
+				case *w0UserWithAdmin:
+					if u.IsAdmin {
+						role = "admin"
+					}
+				}
+				var roles []string
+				if role != "" {
+					roles = []string{role}
+				}
+				req = req.WithContext(principal.WithPrincipal(req.Context(), principal.Principal{ID: "1", Kind: principal.KindUser, RoleNames: roles}))
 			}
 			hasPerm := perm.HasPermission(req, view)
 			hasObjPerm := perm.HasObjectPermission(req, view, dummyObj)

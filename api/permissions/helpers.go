@@ -1,9 +1,23 @@
 package permissions
 
 import (
+	"net/http"
 	"reflect"
 	"strings"
+
+	"github.com/forgego/forge/identity/principal"
 )
+
+// authenticatedPrincipal reports whether principal-aware request context
+// explicitly identifies an authenticated user. A missing principal keeps the
+// legacy authentication adapter available to existing callers.
+func authenticatedPrincipal(r *http.Request) (present, authenticated bool) {
+	p, ok := principal.PrincipalFromContext(r.Context())
+	if !ok {
+		return false, false
+	}
+	return true, p.Kind == principal.KindUser && p.ID != ""
+}
 
 // getMethod gets a method by name using reflection
 func getMethod(obj interface{}, methodName string) reflect.Value {

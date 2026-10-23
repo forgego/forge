@@ -18,6 +18,9 @@ func NewIsAuthenticated() *IsAuthenticated {
 
 // HasPermission checks if the request is authenticated
 func (p *IsAuthenticated) HasPermission(r *http.Request, view ViewSet) bool {
+	if present, authenticated := authenticatedPrincipal(r); present {
+		return authenticated
+	}
 	_, ok := authentication.GetUserFromRequest(r)
 	return ok
 }

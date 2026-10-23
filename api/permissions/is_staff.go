@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/forgego/forge/api/authentication"
+	"github.com/forgego/forge/identity/principal"
 )
 
 // IsStaffUser requires the user to be staff or a superuser.
@@ -20,6 +21,17 @@ func NewIsStaffUser() *IsStaffUser {
 
 // HasPermission checks if the request user is staff or a superuser.
 func (p *IsStaffUser) HasPermission(r *http.Request, view ViewSet) bool {
+	if actor, ok := principal.PrincipalFromContext(r.Context()); ok {
+		if actor.Kind != principal.KindUser || actor.ID == "" {
+			return false
+		}
+		for _, role := range actor.Roles() {
+			if role == "staff" || role == "superuser" || role == "admin" {
+				return true
+			}
+		}
+		return false
+	}
 	user, ok := authentication.GetUserFromRequest(r)
 	if !ok {
 		return false

@@ -11,6 +11,8 @@ import (
 
 	"github.com/forgego/forge/admin/core"
 	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/identity/models"
+	"github.com/forgego/forge/identity/repository"
 	"github.com/forgego/forge/schema"
 	"github.com/forgego/forge/stores"
 	"github.com/forgego/forge/stores/storestest"
@@ -22,6 +24,15 @@ type storeNote struct {
 	schema.BaseSchema
 	ID    int64  `db:"id" json:"id"`
 	Title string `db:"title" json:"title"`
+}
+
+type siteTestUsers struct{}
+
+func (siteTestUsers) GetByUsername(_ context.Context, username string) (*models.User, error) {
+	if username != "admin" {
+		return nil, repository.ErrUserNotFound
+	}
+	return &models.User{ID: 1, Username: username, IsActive: true, IsStaff: true, IsSuperuser: true}, nil
 }
 
 func (storeNote) Meta() schema.Meta { return schema.Meta{TableName: "store_notes"} }
@@ -48,6 +59,7 @@ func createNotesTable(t *testing.T, database *db.DB) {
 func storeSite(t *testing.T, database *db.DB) *httptest.Server {
 	t.Helper()
 	site := NewSite("stores")
+	site.SetUserStore(siteTestUsers{})
 	// Registered before the stores are chosen, as init() registrations are.
 	_, err := RegisterWithSite(site, &core.Config[storeNote]{})
 	require.NoError(t, err)
@@ -178,6 +190,7 @@ func TestSite_UseStoresMemoryUndoesDatabaseStores(t *testing.T) {
 	database, _ := storestest.Backends()[0].OpenMigrated(t)
 	createNotesTable(t, database)
 	site := NewSite("stores")
+	site.SetUserStore(siteTestUsers{})
 	_, err := RegisterWithSite(site, &core.Config[storeNote]{})
 	require.NoError(t, err)
 	site.SetDB(database)

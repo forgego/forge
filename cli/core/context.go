@@ -2,9 +2,12 @@ package core
 
 import (
 	"context"
+	"fmt"
+
 	"github.com/forgego/forge/config"
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/identity/principal"
+	"github.com/forgego/forge/identity/repository"
 	"github.com/forgego/forge/log"
 	"github.com/spf13/cobra"
 )
@@ -35,8 +38,26 @@ func NewContext() *Context {
 // NewContextWithConfig creates a new command context from the CLI configuration.
 func NewContextWithConfig(cfg *config.Config) *Context {
 	return &Context{
-		Config: cfg,
+		Config:    cfg,
+		Principal: principalPointer(principal.System("cli")),
 	}
+}
+
+func principalPointer(p principal.Principal) *principal.Principal { return &p }
+
+// AssumeUser resolves an explicitly selected account and refuses identities
+// that cannot authenticate.
+func (c *Context) AssumeUser(ctx context.Context, users repository.UserRepository, username string) error {
+	user, err := users.GetByUsername(ctx, username)
+	if err != nil {
+		return fmt.Errorf("resolve CLI principal %q: %w", username, err)
+	}
+	p, err := principal.FromUser(user)
+	if err != nil {
+		return fmt.Errorf("resolve CLI principal %q: %w", username, err)
+	}
+	c.Principal = &p
+	return nil
 }
 
 // WithLogger sets the logger in the context
