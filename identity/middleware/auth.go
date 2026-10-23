@@ -128,7 +128,7 @@ func (m *AuthenticationMiddleware) authenticateRequest(ctx context.Context, r *h
 		if err == nil && !session.IsExpired() {
 			// Get user from session's user_id
 			user, err := m.userRepo.GetByID(ctx, session.UserID)
-			if err == nil && user != nil && user.IsActive && !user.IsLocked {
+			if err == nil && user != nil && user.AccountStateError() == nil {
 				return user, nil
 			}
 		}

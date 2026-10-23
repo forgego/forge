@@ -32,6 +32,17 @@ type UserEmailMutations interface {
 	UpdateEmailIfCurrent(ctx context.Context, userID int64, oldEmail string, fields map[string]any) error
 }
 
+// AccountStateMutations atomically updates account status and revokes sessions.
+type AccountStateMutations interface {
+	SetAccountStateAndRevokeSessions(ctx context.Context, userID int64, fields map[string]any) error
+}
+
+// PasswordSessionMutations atomically changes a password and revokes every
+// session except the session identified by currentSessionKey.
+type PasswordSessionMutations interface {
+	ChangePasswordAndRevokeOtherSessions(ctx context.Context, userID int64, oldHash, newHash, currentSessionKey string, at time.Time) error
+}
+
 // TokenTransactionRepository reports whether token writes and user mutations
 // share one transaction. The service only uses this claim for the built-in SQL
 // repositories; custom token stores use the fail-closed fallback unless they

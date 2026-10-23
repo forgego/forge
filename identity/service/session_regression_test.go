@@ -36,13 +36,19 @@ func (r *expiredSessionRepository) GetByKey(context.Context, string) (*models.Us
 	expires := time.Now().Add(-time.Hour)
 	return &models.UserSession{SessionKey: "key", ExpiresAt: &expires}, nil
 }
+
+type activeSessionUserRepository struct{ repository.UserRepository }
+
+func (activeSessionUserRepository) GetByID(context.Context, int64) (*models.User, error) {
+	return &models.User{ID: 1, IsActive: true}, nil
+}
 func (r *expiredSessionRepository) Delete(context.Context, string) error {
 	return errors.New("delete failed")
 }
 
 func TestRefreshSessionTouchesActivityWithoutWritingStaleExpiry(t *testing.T) {
 	r := &staleSessionRepository{}
-	s := NewAuthService(nil, r, nil)
+	s := NewAuthService(activeSessionUserRepository{}, r, nil)
 	_, err := s.RefreshSession(context.Background(), "key")
 	require.NoError(t, err)
 	require.Equal(t, 1, r.touches)

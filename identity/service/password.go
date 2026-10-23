@@ -58,7 +58,7 @@ func NewPasswordServiceWithNotifier(
 	}
 }
 
-// ChangePassword changes a user's password
+// ChangePassword changes a user's password and revokes the user's other sessions.
 func (s *passwordService) ChangePassword(ctx context.Context, userID int64, req *ChangePasswordRequest) error {
 	// Get user
 	user, err := s.userRepo.GetByID(ctx, userID)
@@ -84,7 +84,9 @@ func (s *passwordService) ChangePassword(ctx context.Context, userID int64, req 
 
 	mutations, ok := s.userRepo.(repository.UserMutations)
 	var updateErr error
-	if ok {
+	if passwordMutations, supportsRevocation := s.userRepo.(repository.PasswordSessionMutations); supportsRevocation {
+		updateErr = passwordMutations.ChangePasswordAndRevokeOtherSessions(ctx, userID, user.Password, hashedPassword, req.CurrentSessionKey, time.Now())
+	} else if ok {
 		updateErr = mutations.ChangePasswordIfCurrent(ctx, userID, user.Password, hashedPassword, time.Now())
 	} else {
 		now := time.Now()
