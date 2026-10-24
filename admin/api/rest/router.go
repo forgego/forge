@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/forgego/forge/admin/core"
 	apicore "github.com/forgego/forge/api/core"
@@ -33,6 +34,9 @@ type Router struct {
 	tokens        TokenStore
 	savedViews    SavedViewStore
 	loginAttempts LoginAttemptStore
+
+	extensionsMu sync.RWMutex
+	extensions   []ExtensionMetadata
 }
 
 // AdminUserStore resolves token subjects to current identity records.
@@ -73,6 +77,15 @@ func (r *Router) SetStores(stores Stores) *Router {
 	if stores.LoginAttempts != nil {
 		r.loginAttempts = stores.LoginAttempts
 	}
+	return r
+}
+
+// SetExtensions configures the admin extensions reported in metadata.
+func (r *Router) SetExtensions(exts []ExtensionMetadata) *Router {
+	r.extensionsMu.Lock()
+	defer r.extensionsMu.Unlock()
+	r.extensions = make([]ExtensionMetadata, len(exts))
+	copy(r.extensions, exts)
 	return r
 }
 

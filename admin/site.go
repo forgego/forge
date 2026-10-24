@@ -45,6 +45,9 @@ type Site struct {
 	storesErr     error
 	storesErrOnce sync.Once
 	logger        any
+
+	extensionsMu sync.RWMutex
+	extensions   []Extension
 }
 
 // SetLoginAuthenticator sets the custom login authenticator for the admin site.
@@ -254,6 +257,10 @@ func (s *Site) logStoresError(err error) {
 
 // Handler returns the HTTP handler for the admin site
 func (s *Site) Handler() http.Handler {
+	if err := s.ValidateExtensions(); err != nil {
+		panic(fmt.Sprintf("admin: invalid extension: %v", err))
+	}
+
 	if s.db != nil && (s.history == nil || s.apiStores.Tokens == nil) {
 		if err := s.UseDatabaseStores(context.Background()); err != nil {
 			s.storesErr = err
@@ -289,10 +296,25 @@ func (s *Site) Handler() http.Handler {
 	}
 	apiRouter.SetStores(s.apiStores)
 	apiRouter.WithAdminPrefix(s.uiConfig.Prefix)
+
+	var extInfos []rest.ExtensionMetadata
+	s.extensionsMu.RLock()
+	for _, ext := range s.extensions {
+		extInfos = append(extInfos, rest.ExtensionMetadata{
+			Name:    ext.Name,
+			Version: ext.Version,
+		})
+	}
+	s.extensionsMu.RUnlock()
+	apiRouter.SetExtensions(extInfos)
+
 	apiRouter.RegisterRoutes(r)
 
-	// 2. Serve Static UI Assets
+	// 2. Serve Extension Assets
 	prefix := normalizeAdminPrefix(s.uiConfig.Prefix)
+	s.mountExtensions(r, prefix)
+
+	// 3. Serve Static UI Assets
 
 	// Determine the route pattern
 	// Since we might be mounted, we should use a wildcard that matches everything passed to this handler
