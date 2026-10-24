@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -61,10 +62,13 @@ func (w *Writer) renderCombined(definitions []*ModelDefinition) ([]byte, error) 
 
 	// Create template functions
 	t := template.New("combined").Funcs(template.FuncMap{
-		"ToLower":  strings.ToLower,
-		"ToSnake":  utils.ToSnake,
-		"ToCamel":  utils.ToCamel,
-		"ToPascal": utils.ToPascal,
+		"ToLower":            strings.ToLower,
+		"ToSnake":            utils.ToSnake,
+		"ToCamel":            utils.ToCamel,
+		"ToPascal":           utils.ToPascal,
+		"SchemaFieldExpr":    schemaFieldExpression,
+		"SchemaRelationExpr": schemaRelationExpression,
+		"Quote":              strconv.Quote,
 	})
 
 	t, err := t.Parse(combinedTemplate)
@@ -80,6 +84,57 @@ func (w *Writer) renderCombined(definitions []*ModelDefinition) ([]byte, error) 
 	}
 
 	return executeTemplate(t, data)
+}
+
+func schemaFieldExpression(field FieldDefinition) string {
+	builder := strings.TrimSuffix(field.Type, "Field") + "Field"
+	options := make([]string, 0, 4)
+	if field.Required {
+		options = append(options, "schema.Required()")
+	} else {
+		options = append(options, "schema.Optional()")
+	}
+	if maxLength, ok := field.Options["max_length"].(int); ok && maxLength > 0 {
+		options = append(options, fmt.Sprintf("schema.MaxLength(%d)", maxLength))
+	}
+	if unique, ok := field.Options["unique"].(bool); ok && unique {
+		options = append(options, "schema.Unique()")
+	}
+	if defaultValue, ok := goLiteral(field.Default); ok {
+		options = append(options, "schema.Default("+defaultValue+")")
+	}
+	return fmt.Sprintf("schema.%s(%s, %s)", builder, strconv.Quote(field.Name), strings.Join(options, ", "))
+}
+
+func schemaRelationExpression(relation RelationDefinition) string {
+	builder := strings.TrimSuffix(relation.Type, "Field") + "Field"
+	options := make([]string, 0, 2)
+	if onDelete, ok := relation.Options["on_delete"].(string); ok && onDelete != "" {
+		options = append(options, "schema.OnDelete(schema.CascadeType("+strconv.Quote(onDelete)+"))")
+	}
+	if through, ok := relation.Options["through"].(string); ok && through != "" {
+		options = append(options, "schema.Through("+strconv.Quote(through)+")")
+	}
+	args := []string{strconv.Quote(relation.Name), strconv.Quote(relation.To)}
+	args = append(args, options...)
+	return fmt.Sprintf("schema.%s(%s)", builder, strings.Join(args, ", "))
+}
+
+func goLiteral(value interface{}) (string, bool) {
+	switch value := value.(type) {
+	case string:
+		return strconv.Quote(value), true
+	case bool:
+		return strconv.FormatBool(value), true
+	case int:
+		return strconv.Itoa(value), true
+	case int64:
+		return strconv.FormatInt(value, 10), true
+	case float64:
+		return strconv.FormatFloat(value, 'g', -1, 64), true
+	default:
+		return "", false
+	}
 }
 
 // usesTimePackage reports whether any generated field type refers to the time

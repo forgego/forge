@@ -20,6 +20,29 @@ type {{.Name}}Generated struct {
 {{- end }}
 }
 
+// Fields returns the canonical schema fields for {{.Name}}.
+func ({{.Name}}Generated) Fields() []schema.Field {
+	return []schema.Field{
+{{- range .Fields }}
+		{{ SchemaFieldExpr . }},
+{{- end }}
+	}
+}
+
+// Relations returns the canonical schema relations for {{.Name}}.
+func ({{.Name}}Generated) Relations() []schema.Relation {
+	return []schema.Relation{
+{{- range .Relations }}
+		{{ SchemaRelationExpr . }},
+{{- end }}
+	}
+}
+
+// Meta returns the table metadata for {{.Name}}.
+func ({{.Name}}Generated) Meta() schema.Meta {
+	return schema.Meta{TableName: {{ Quote .Meta.TableName }}}
+}
+
 // Validate validates the {{ .Name }} model
 func (m *{{ .Name }}) Validate() error {
 	validator := validate.NewValidator()
