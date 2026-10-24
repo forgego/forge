@@ -81,7 +81,7 @@ func TestRouterSetStores_HandlersUseTheConfiguredStores(t *testing.T) {
 	t.Setenv("FORGE_ADMIN_USERNAME", "admin")
 	t.Setenv("FORGE_ADMIN_PASSWORD", "secret")
 	tokens := &recordingTokens{issued: map[string]string{}}
-	router := NewRouter(core.NewRegistry()).SetStores(Stores{Tokens: tokens}).SetUserRepository(adminTestUsers{
+	router := NewRouter(core.NewRegistry()).SetStores(Stores{Tokens: tokens, LoginAttempts: newLoginLimiter()}).SetUserRepository(adminTestUsers{
 		"admin": {ID: 1, Username: "admin", IsActive: true, IsStaff: true},
 	})
 	handler := serveRouter(router)
@@ -97,8 +97,8 @@ func TestRouterSetStores_HandlersUseTheConfiguredStores(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	_, ok := router.sessions.Validate("tok-admin")
-	assert.False(t, ok, "the in-memory token store is no longer used")
+	_, ok, _ := tokens.ValidateToken(context.Background(), "tok-admin")
+	assert.True(t, ok, "the configured token store was used")
 }
 
 func TestAdminMiddlewareResolvesAndAuthorizesCurrentUserBeforeWrites(t *testing.T) {
@@ -152,10 +152,49 @@ func TestRouterSetStores_StoreErrorsAreNotAuthenticationFailures(t *testing.T) {
 	assert.Equal(t, http.StatusServiceUnavailable, rec.Code, "without lockout counts login is refused, not let through")
 }
 
-func TestRouterSetStores_NilFieldsKeepMemoryDefaults(t *testing.T) {
+func TestRouter_NilStoresReturn503(t *testing.T) {
+	t.Setenv("FORGE_ADMIN_USERNAME", "admin")
+	t.Setenv("FORGE_ADMIN_PASSWORD", "secret")
+
+	// 1. All stores nil: login returns 503
 	router := NewRouter(core.NewRegistry())
-	router.SetStores(Stores{})
-	assert.Same(t, router.sessions, router.tokens)
-	assert.Same(t, router.views, router.savedViews)
-	assert.Same(t, router.loginLimiter, router.loginAttempts)
+	handler := serveRouter(router)
+
+	loginReq := httptest.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString(`{"username":"admin","password":"secret"}`))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, loginReq)
+	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
+
+	// 2. Protected route with bearer token: returns 503 (token store is nil)
+	authedReq := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+	authedReq.Header.Set("Authorization", "Bearer sometoken")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, authedReq)
+	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
+
+	// 3. Logout with bearer token: returns 503 (token store is nil)
+	logoutReq := httptest.NewRequest(http.MethodPost, "/api/logout", nil)
+	logoutReq.Header.Set("Authorization", "Bearer sometoken")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, logoutReq)
+	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
+
+	// 4. Saved views with nil store returns 503
+	tokens := &recordingTokens{issued: map[string]string{"tok": "admin"}}
+	userStore := adminTestUsers{"admin": {ID: 1, Username: "admin", IsActive: true, IsStaff: true}}
+	routerWithTokens := NewRouter(core.NewRegistry()).SetStores(Stores{Tokens: tokens}).SetUserRepository(userStore)
+	handlerWithTokens := serveRouter(routerWithTokens)
+
+	viewReq := httptest.NewRequest(http.MethodGet, "/api/saved-views/items", nil)
+	viewReq.Header.Set("Authorization", "Bearer tok")
+	rec = httptest.NewRecorder()
+	handlerWithTokens.ServeHTTP(rec, viewReq)
+	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
+
+	// 5. Login attempts store nil but tokens configured: login still returns 503
+	routerOnlyTokens := NewRouter(core.NewRegistry()).SetStores(Stores{Tokens: tokens})
+	handlerOnlyTokens := serveRouter(routerOnlyTokens)
+	rec = httptest.NewRecorder()
+	handlerOnlyTokens.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString(`{"username":"admin","password":"secret"}`)))
+	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
 }

@@ -256,7 +256,7 @@ func TestRegisterRoutes_RequiresAuthenticationForProtectedEndpoints(t *testing.T
 	})
 	require.NoError(t, err)
 
-	apiRouter := NewRouter(registry)
+	apiRouter := newTestRouter(registry)
 	apiRouter.SetUserRepository(adminTestUsers{"admin": {ID: 1, Username: "admin", IsActive: true, IsSuperuser: true}})
 	root := chi.NewRouter()
 	apiRouter.RegisterRoutes(root)
@@ -297,7 +297,7 @@ func TestRegisterRoutes_RejectsInvalidOrMalformedTokens(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	apiRouter := NewRouter(registry)
+	apiRouter := newTestRouter(registry)
 	apiRouter.SetUserRepository(adminTestUsers{"admin": {ID: 1, Username: "admin", IsActive: true, IsSuperuser: true}})
 	root := chi.NewRouter()
 	apiRouter.RegisterRoutes(root)
@@ -319,7 +319,7 @@ func TestHandleLogin_DisabledWhenUnset(t *testing.T) {
 	t.Setenv("FORGE_ADMIN_USERNAME", "")
 	t.Setenv("FORGE_ADMIN_PASSWORD", "")
 
-	router := NewRouter(core.NewRegistry())
+	router := newTestRouter(core.NewRegistry())
 
 	req := httptest.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString(`{"username":"admin","password":"secret"}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -339,7 +339,7 @@ func TestHandleLogin_RejectsInvalidCredentials(t *testing.T) {
 	t.Setenv("FORGE_ADMIN_USERNAME", "admin")
 	t.Setenv("FORGE_ADMIN_PASSWORD", "secret")
 
-	router := NewRouter(core.NewRegistry())
+	router := newTestRouter(core.NewRegistry())
 
 	req := httptest.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString(`{"username":"admin","password":"wrong"}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -359,7 +359,7 @@ func TestHandleLogin_UsesConfiguredCredentials(t *testing.T) {
 	t.Setenv("FORGE_ADMIN_USERNAME", "ops-admin")
 	t.Setenv("FORGE_ADMIN_PASSWORD", "ops-secret")
 
-	router := NewRouter(core.NewRegistry())
+	router := newTestRouter(core.NewRegistry())
 
 	req := httptest.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString(`{"username":"ops-admin","password":"ops-secret"}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -938,7 +938,7 @@ func TestHandleLogout_RevokesSession(t *testing.T) {
 	t.Setenv("FORGE_ADMIN_PASSWORD", "secret")
 
 	registry := core.NewRegistry()
-	apiRouter := NewRouter(registry)
+	apiRouter := newTestRouter(registry)
 	apiRouter.SetUserRepository(adminTestUsers{"admin": {ID: 1, Username: "admin", IsActive: true, IsSuperuser: true}})
 	root := chi.NewRouter()
 	apiRouter.RegisterRoutes(root)
@@ -1049,7 +1049,7 @@ func registerViewableModel(t *testing.T, registry *core.Registry, admin *mockAdm
 func TestHandleSavedViewSave_CreatesViewWith201(t *testing.T) {
 	registry := core.NewRegistry()
 	registerViewableModel(t, registry, &mockAdmin{modelName: "products"})
-	router := NewRouter(registry)
+	router := newTestRouter(registry)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/saved-views/products", bytes.NewBufferString(`{"name":"Active","filters":{"active":"true"}}`))
 	req = withURLParams(req, map[string]string{"model": "products"})
@@ -1067,7 +1067,7 @@ func TestHandleSavedViewSave_CreatesViewWith201(t *testing.T) {
 func TestHandleSavedViewSave_UpsertsSameNameWith200(t *testing.T) {
 	registry := core.NewRegistry()
 	registerViewableModel(t, registry, &mockAdmin{modelName: "products"})
-	router := NewRouter(registry)
+	router := newTestRouter(registry)
 
 	save := func(body string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(http.MethodPost, "/api/saved-views/products", bytes.NewBufferString(body))
@@ -1092,7 +1092,7 @@ func TestHandleSavedViewSave_UpsertsSameNameWith200(t *testing.T) {
 func TestHandleSavedViewSave_RejectsMissingName(t *testing.T) {
 	registry := core.NewRegistry()
 	registerViewableModel(t, registry, &mockAdmin{modelName: "products"})
-	router := NewRouter(registry)
+	router := newTestRouter(registry)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/saved-views/products", bytes.NewBufferString(`{"filters":{}}`))
 	req = withURLParams(req, map[string]string{"model": "products"})
@@ -1105,7 +1105,7 @@ func TestHandleSavedViewSave_RejectsMissingName(t *testing.T) {
 func TestHandleSavedViewDelete_DeletesView(t *testing.T) {
 	registry := core.NewRegistry()
 	registerViewableModel(t, registry, &mockAdmin{modelName: "products"})
-	router := NewRouter(registry)
+	router := newTestRouter(registry)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/saved-views/products", bytes.NewBufferString(`{"name":"Temp"}`))
 	req = withURLParams(req, map[string]string{"model": "products"})

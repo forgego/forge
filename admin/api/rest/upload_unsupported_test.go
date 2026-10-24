@@ -154,7 +154,7 @@ func TestUploadUnsupported_ChiRouterEndpointsRejectMultipart(t *testing.T) {
 	}
 	require.NoError(t, registry.Register(admin))
 
-	apiRouter := NewRouter(registry)
+	apiRouter := newTestRouter(registry)
 	apiRouter.SetUserRepository(adminTestUsers{"admin": {ID: 1, Username: "admin", IsActive: true, IsSuperuser: true}})
 	token, err := apiRouter.tokens.IssueToken(context.Background(), "admin", 1*time.Hour)
 	require.NoError(t, err)

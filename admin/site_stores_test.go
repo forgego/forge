@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/forgego/forge/admin/api/rest"
@@ -170,6 +172,7 @@ func TestSite_ConfiguredCredentialPrincipalUsesLoginIdentitySource(t *testing.T)
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			site := NewSite("configured")
+			site.SetDB(storestest.OpenMemory(t))
 			site.SetUserStore(tc.users)
 			server := httptest.NewServer(site.Handler())
 			defer server.Close()
@@ -221,4 +224,94 @@ func TestSite_SharedHistoryKeepsExplicitHistoryManagers(t *testing.T) {
 	assert.Equal(t, "3", shared.entries[1].ObjectID)
 	assert.Equal(t, "alice", shared.entries[0].UserID, "a map user is recorded by username")
 	require.Len(t, own.entries, 1, "a config's own HistoryManager is kept")
+}
+
+func TestSite_SetDBAppliesDatabaseStoresAutomatically(t *testing.T) {
+	t.Setenv("FORGE_ADMIN_USERNAME", "admin")
+	t.Setenv("FORGE_ADMIN_PASSWORD", "secret")
+
+	db := storestest.OpenMemory(t)
+	createNotesTable(t, db)
+
+	site := NewSite("autostores")
+	site.SetUserStore(siteTestUsers{})
+	_, err := RegisterWithSite(site, &core.Config[storeNote]{})
+	require.NoError(t, err)
+
+	// Apps only call SetDB; UseDatabaseStores is applied automatically.
+	site.SetDB(db)
+
+	server := httptest.NewServer(site.Handler())
+	defer server.Close()
+
+	status, body := adminCall(t, server.URL, http.MethodPost, "/api/login", "", map[string]string{
+		"username": "admin", "password": "secret",
+	})
+	require.Equal(t, http.StatusOK, status, "%v", body)
+	token := body["token"].(string)
+
+	status, _ = adminCall(t, server.URL, http.MethodGet, "/api/config", token, nil)
+	assert.Equal(t, http.StatusOK, status)
+}
+
+func TestSite_SetDBUnmigratedDatabaseReturns503(t *testing.T) {
+	database, err := db.NewDBWithDriver("sqlite3", ":memory:", db.WithMaxOpenConns(1), db.WithMaxIdleConns(1))
+	require.NoError(t, err)
+	defer database.Close()
+
+	site := NewSite("unmigrated")
+	site.SetDB(database)
+	require.Error(t, site.storesErr)
+
+	server := httptest.NewServer(site.Handler())
+	defer server.Close()
+
+	// Every request gets 503
+	status, body := adminCall(t, server.URL, http.MethodGet, "/api/config", "", nil)
+	assert.Equal(t, http.StatusServiceUnavailable, status)
+	assert.Equal(t, "admin stores unavailable: run forge migrate up", body["error"])
+
+	status, body = adminCall(t, server.URL, http.MethodPost, "/api/login", "", map[string]string{"username": "admin", "password": "x"})
+	assert.Equal(t, http.StatusServiceUnavailable, status)
+	assert.Equal(t, "admin stores unavailable: run forge migrate up", body["error"])
+
+	// Clear storesErr when a later UseDatabaseStores succeeds
+	storestest.Migrate(t, database)
+	require.NoError(t, site.UseDatabaseStores(context.Background()))
+	assert.NoError(t, site.storesErr)
+
+	// Handler now succeeds and doesn't return 503
+	recoveredServer := httptest.NewServer(site.Handler())
+	defer recoveredServer.Close()
+	status, body = adminCall(t, recoveredServer.URL, http.MethodGet, "/api/config", "", nil)
+	assert.Equal(t, http.StatusUnauthorized, status)
+	assert.NotEqual(t, "admin stores unavailable: run forge migrate up", body["error"])
+}
+
+func TestSite_HandlerLogsStoresErrorOnce(t *testing.T) {
+	var buf bytes.Buffer
+	prevWriter := log.Writer()
+	log.SetOutput(&buf)
+	defer log.SetOutput(prevWriter)
+
+	database, err := db.NewDBWithDriver("sqlite3", ":memory:", db.WithMaxOpenConns(1), db.WithMaxIdleConns(1))
+	require.NoError(t, err)
+	defer database.Close()
+
+	site := NewSite("unmigrated_log")
+	site.SetDB(database)
+
+	handler := site.Handler()
+	req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+	rec1 := httptest.NewRecorder()
+	handler.ServeHTTP(rec1, req)
+	assert.Equal(t, http.StatusServiceUnavailable, rec1.Code)
+
+	rec2 := httptest.NewRecorder()
+	handler.ServeHTTP(rec2, req)
+	assert.Equal(t, http.StatusServiceUnavailable, rec2.Code)
+
+	logged := buf.String()
+	assert.Contains(t, logged, "forge/admin: stores unavailable:")
+	assert.Equal(t, 1, strings.Count(logged, "forge/admin: stores unavailable:"))
 }

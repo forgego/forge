@@ -42,7 +42,8 @@ func loginKeys(req *http.Request, username string) (string, string) {
 
 func (r *Router) checkLoginRateLimit(w http.ResponseWriter, req *http.Request, ipKey, userKey string) bool {
 	if r.loginAttempts == nil {
-		return true
+		respondError(w, http.StatusServiceUnavailable, "login_limiter_unavailable", "Login limiter is not configured", nil)
+		return false
 	}
 	ctx := req.Context()
 	blockedIP, remIP, errIP := r.loginAttempts.Blocked(ctx, ipKey)
@@ -115,6 +116,10 @@ func (r *Router) authenticateAdmin(ctx context.Context, username, password strin
 }
 
 func (r *Router) issueAdminSession(w http.ResponseWriter, req *http.Request, username string) {
+	if r.tokens == nil {
+		respondError(w, http.StatusServiceUnavailable, "token_store_unavailable", "Token store is not configured", nil)
+		return
+	}
 	token, err := r.tokens.IssueToken(req.Context(), username, 24*time.Hour)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "login_failed", "Could not create session token", nil)
@@ -135,6 +140,11 @@ func (r *Router) handleLogin(w http.ResponseWriter, req *http.Request) {
 	username, password, err := decodeLoginPayload(req)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "invalid_body", "Invalid login payload", nil)
+		return
+	}
+
+	if r.tokens == nil {
+		respondError(w, http.StatusServiceUnavailable, "token_store_unavailable", "Token store is not configured", nil)
 		return
 	}
 
@@ -171,6 +181,11 @@ func (r *Router) handleLogout(w http.ResponseWriter, req *http.Request) {
 	token, err := bearerToken(req.Header.Get("Authorization"))
 	if err != nil {
 		respondError(w, http.StatusUnauthorized, "authentication_required", "Authentication required", nil)
+		return
+	}
+
+	if r.tokens == nil {
+		respondError(w, http.StatusServiceUnavailable, "token_store_unavailable", "Token store is not configured", nil)
 		return
 	}
 

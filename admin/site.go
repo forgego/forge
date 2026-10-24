@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"html"
 	"io/fs"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -38,8 +40,11 @@ type Site struct {
 	loginAuthenticator rest.LoginAuthenticator
 	userStore          rest.AdminUserStore
 	// history and apiStores are set by UseDatabaseStores.
-	history   core.HistoryManager
-	apiStores rest.Stores
+	history       core.HistoryManager
+	apiStores     rest.Stores
+	storesErr     error
+	storesErrOnce sync.Once
+	logger        any
 }
 
 // SetLoginAuthenticator sets the custom login authenticator for the admin site.
@@ -96,12 +101,22 @@ func (s *Site) WithUIConfig(config UIConfig) *Site {
 	return s
 }
 
-// SetDB sets the database connection for the site and all registered admins
+// SetDB sets the database connection for the site and all registered admins.
+// It automatically applies database stores (tokens, login lockout, saved views,
+// and change history) when given a database.
 func (s *Site) SetDB(database *db.DB) *Site {
 	s.db = database
 	// Propagate to existing admins
 	for _, admin := range s.registry.GetAll() {
 		admin.SetDB(database)
+	}
+	if database != nil {
+		if err := s.UseDatabaseStores(context.Background()); err != nil {
+			s.storesErr = err
+		}
+	} else {
+		s.storesErr = nil
+		s.storesErrOnce = sync.Once{}
 	}
 	return s
 }
@@ -121,12 +136,16 @@ func (s *Site) UseDatabaseStores(ctx context.Context) error {
 		return errors.New("admin: UseDatabaseStores needs a database; call SetDB first")
 	}
 	if err := stores.CheckMigrated(ctx, s.db); err != nil {
+		s.storesErr = err
 		return err
 	}
 	shared, err := stores.New(s.db)
 	if err != nil {
+		s.storesErr = err
 		return err
 	}
+	s.storesErr = nil
+	s.storesErrOnce = sync.Once{}
 	s.history = adminstore.NewHistory(shared)
 	s.apiStores = rest.Stores{
 		Tokens:        shared.AdminTokens(),
@@ -213,8 +232,47 @@ func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 	}
 }
 
+func (s *Site) logStoresError(err error) {
+	if s.logger != nil {
+		type printfLogger interface {
+			Printf(string, ...any)
+		}
+		type errLogger interface {
+			Error(string, ...any)
+		}
+		if pl, ok := s.logger.(printfLogger); ok {
+			pl.Printf("forge/admin: stores unavailable: %v", err)
+			return
+		}
+		if el, ok := s.logger.(errLogger); ok {
+			el.Error(fmt.Sprintf("forge/admin: stores unavailable: %v", err))
+			return
+		}
+	}
+	log.Printf("forge/admin: stores unavailable: %v", err)
+}
+
 // Handler returns the HTTP handler for the admin site
 func (s *Site) Handler() http.Handler {
+	if s.db != nil && (s.history == nil || s.apiStores.Tokens == nil) {
+		if err := s.UseDatabaseStores(context.Background()); err != nil {
+			s.storesErr = err
+		}
+	}
+	if s.storesErr != nil {
+		s.storesErrOnce.Do(func() {
+			s.logStoresError(s.storesErr)
+		})
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			s.storesErrOnce.Do(func() {
+				s.logStoresError(s.storesErr)
+			})
+			respondJSON(w, http.StatusServiceUnavailable, map[string]string{
+				"error": "admin stores unavailable: run forge migrate up",
+			})
+		})
+	}
+
 	r := chi.NewRouter()
 
 	// 1. Register API Routes
