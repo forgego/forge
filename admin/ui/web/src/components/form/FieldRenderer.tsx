@@ -1,3 +1,4 @@
+import React from "react";
 import { Input } from "../ui/input";
 import { Checkbox } from "../ui/checkbox";
 import { SearchableSelect } from "../ui/searchable-select";
@@ -7,6 +8,7 @@ import { useUIComponent } from "../../hooks/useUIComponent";
 import { fromDateTimeLocal, toDateTimeLocal } from "./datetime";
 import { resolveFieldKind, isIntegerField } from "./resolve-field-kind";
 import type { FieldRendererProps } from "./types";
+import { getFieldEditor } from "../../lib/extensions/api";
 
 // Override slot for a single field. Extracted as a component so the
 // useUIComponent hook call has a stable call order (calling it inside
@@ -63,6 +65,20 @@ export function FieldRenderer({
         metadata={metadata}
       />
     );
+  }
+
+  const customFieldEditor = metadata?.name
+    ? getFieldEditor(metadata.name, field.name)
+    : undefined;
+  if (customFieldEditor) {
+    return React.createElement(customFieldEditor, {
+      field,
+      value,
+      onChange,
+      relation,
+      mode,
+      metadata,
+    });
   }
 
   if (field.upload_supported === false) {

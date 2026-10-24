@@ -2,7 +2,7 @@ import { useMemo, type Dispatch, type SetStateAction } from "react";
 import { motion, LayoutGroup } from "framer-motion";
 import { Link } from "@tanstack/react-router";
 import { Button } from "../ui/button";
-import { LayoutDashboard, LogOut, Package, ChevronDown, Star, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+import { LayoutDashboard, LogOut, Package, ChevronDown, Star, ChevronLeft, ChevronRight, Search, X, Puzzle } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { ModelIcon } from "../ModelIcon";
 import { SidebarItem } from "./SidebarItem";
@@ -11,6 +11,7 @@ export interface SidebarProps {
   models: any[];
   groupByModel: { label: string; models: any[] }[];
   pluginSections: { id: string; label: string; entries: any[] }[];
+  extensionSections?: { id: string; label: string; entries: any[] }[];
   pinnedModels: string[]; togglePinnedModel: (modelName: string) => void;
   modelFilter: string; setModelFilter: Dispatch<SetStateAction<string>>;
   expandedSections: Record<string, boolean>; setExpandedSections: Dispatch<SetStateAction<Record<string, boolean>>>;
@@ -21,7 +22,7 @@ export interface SidebarProps {
 }
 
 export function Sidebar({
-  models, groupByModel, pluginSections, pinnedModels, togglePinnedModel,
+  models, groupByModel, pluginSections, extensionSections = [], pinnedModels, togglePinnedModel,
   modelFilter, setModelFilter, expandedSections, setExpandedSections,
   sidebarOpen, setSidebarOpen, sidebarCompact, setSidebarCompact,
   pathname, go, onLogout, logoutPending, prefersReducedMotion,
@@ -344,6 +345,64 @@ export function Sidebar({
                       aria-expanded={isExpanded}
                     >
                       <Package className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      {!sidebarCompact && <span className="truncate">{section.label}</span>}
+                      {!sidebarCompact && (
+                        <ChevronDown
+                          aria-hidden
+                          className={cn(
+                            "ml-auto h-3 w-3 transition-transform shrink-0",
+                            isExpanded && "rotate-180"
+                          )}
+                        />
+                      )}
+                    </button>
+                    {isExpanded && (
+                      <div className="space-y-1">
+                        {section.entries.map((entry: any, idx: number) => (
+                          <SidebarItem
+                            key={`${section.id}-${idx}`}
+                            item={entry}
+                            compact={sidebarCompact}
+                            pathname={pathname}
+                            onNavigate={go}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Extensions Section */}
+          {extensionSections.length > 0 && (
+            <div className="space-y-1">
+              {!sidebarCompact && (
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">
+                  Extensions
+                </h4>
+              )}
+              {extensionSections.map((section: any) => {
+                const isExpanded = expandedSections[section.id] ?? true;
+                return (
+                  <div key={section.id} className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedSections((prev) => ({
+                          ...prev,
+                          [section.id]: !isExpanded,
+                        }))
+                      }
+                      className={cn(
+                        "flex items-center w-full gap-2 px-3 py-2 rounded-md text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        sidebarCompact && "justify-center px-2"
+                      )}
+                      title={sidebarCompact ? section.label : undefined}
+                      aria-expanded={isExpanded}
+                    >
+                      <Puzzle className="h-3.5 w-3.5 shrink-0" aria-hidden />
                       {!sidebarCompact && <span className="truncate">{section.label}</span>}
                       {!sidebarCompact && (
                         <ChevronDown

@@ -18,6 +18,7 @@ import { Route as StyleGuideRouteImport } from './routes/style-guide'
 import { Route as ModelIndexRouteImport } from './routes/$model/index'
 import { Route as ModelIdRouteImport } from './routes/$model/$id'
 import { Route as ModelCreateRouteImport } from './routes/$model/create'
+import { Route as ExtSplatRouteImport } from './routes/ext/$'
 import { Route as ModelIdIndexRouteImport } from './routes/$model/$id/index'
 import { Route as ModelIdViewRouteImport } from './routes/$model/$id.view'
 import { Route as PluginsPluginIdPagesPageIdRouteImport } from './routes/plugins/$pluginId/pages/$pageId'
@@ -67,6 +68,11 @@ const ModelCreateRoute = ModelCreateRouteImport.update({
   path: '/create',
   getParentRoute: () => ModelRouteRoute,
 } as any)
+const ExtSplatRoute = ExtSplatRouteImport.update({
+  id: '/ext/$',
+  path: '/ext/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ModelIdIndexRoute = ModelIdIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/style-guide': typeof StyleGuideRoute
   '/$model/$id': typeof ModelIdRouteWithChildren
   '/$model/create': typeof ModelCreateRoute
+  '/ext/$': typeof ExtSplatRoute
   '/$model/': typeof ModelIndexRoute
   '/$model/$id/view': typeof ModelIdViewRoute
   '/$model/$id/': typeof ModelIdIndexRoute
@@ -105,6 +112,7 @@ export interface FileRoutesByTo {
   '/registry': typeof RegistryRoute
   '/style-guide': typeof StyleGuideRoute
   '/$model/create': typeof ModelCreateRoute
+  '/ext/$': typeof ExtSplatRoute
   '/$model': typeof ModelIndexRoute
   '/$model/$id/view': typeof ModelIdViewRoute
   '/$model/$id': typeof ModelIdIndexRoute
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   '/style-guide': typeof StyleGuideRoute
   '/$model/$id': typeof ModelIdRouteWithChildren
   '/$model/create': typeof ModelCreateRoute
+  '/ext/$': typeof ExtSplatRoute
   '/$model/': typeof ModelIndexRoute
   '/$model/$id/view': typeof ModelIdViewRoute
   '/$model/$id/': typeof ModelIdIndexRoute
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
     | '/style-guide'
     | '/$model/$id'
     | '/$model/create'
+    | '/ext/$'
     | '/$model/'
     | '/$model/$id/view'
     | '/$model/$id/'
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/registry'
     | '/style-guide'
     | '/$model/create'
+    | '/ext/$'
     | '/$model'
     | '/$model/$id/view'
     | '/$model/$id'
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/style-guide'
     | '/$model/$id'
     | '/$model/create'
+    | '/ext/$'
     | '/$model/'
     | '/$model/$id/view'
     | '/$model/$id/'
@@ -175,6 +187,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RegistryRoute: typeof RegistryRoute
   StyleGuideRoute: typeof StyleGuideRoute
+  ExtSplatRoute: typeof ExtSplatRoute
   PluginsPluginIdPagesPageIdRoute: typeof PluginsPluginIdPagesPageIdRoute
 }
 
@@ -243,6 +256,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModelCreateRouteImport
       parentRoute: typeof ModelRouteRoute
     }
+    '/ext/$': {
+      id: '/ext/$'
+      path: '/ext/$'
+      fullPath: '/ext/$'
+      preLoaderRoute: typeof ExtSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$model/$id/': {
       id: '/$model/$id/'
       path: '/'
@@ -303,6 +323,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RegistryRoute: RegistryRoute,
   StyleGuideRoute: StyleGuideRoute,
+  ExtSplatRoute: ExtSplatRoute,
   PluginsPluginIdPagesPageIdRoute: PluginsPluginIdPagesPageIdRoute,
 }
 export const routeTree = rootRouteImport

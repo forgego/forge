@@ -104,6 +104,7 @@ export interface Metadata {
   pagination: PaginationConfig;
   page_type?: string;
   ui_overrides?: Record<string, string>;
+  extensions?: ExtensionMetadata[];
 }
 
 export interface ModelListMetadata {
@@ -291,7 +292,14 @@ export interface MenuEntryMetadata {
   order?: number;
 }
 
+export interface ExtensionMetadata {
+  name: string;
+  entry: string;
+  version: number;
+}
+
 export interface MetadataResponse {
   models: ModelListMetadata[];
   plugins: PluginMetadata[];
+  extensions?: ExtensionMetadata[];
 }

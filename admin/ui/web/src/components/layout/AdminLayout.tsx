@@ -7,6 +7,9 @@ import { useShortcutHelp, ShortcutHelpDialog } from "../../hooks/useKeyboardShor
 import { isMenuEntryActive, findActiveMenuEntry } from "./nav-utils";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
+import { ExtensionErrorBanner } from "../../lib/extensions/ExtensionErrorBanner";
+import { getRegisteredPages } from "../../lib/extensions/api";
+import { loadExtensions } from "../../lib/extensions/loader";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { data: modelsData } = useModels();
@@ -58,6 +61,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     setSidebarOpen(false);
     navigate(params ? ({ to, params } as any) : ({ to } as any));
   }, [navigate]);
+
+  useEffect(() => {
+    if (modelsData?.extensions) {
+      loadExtensions(modelsData);
+    }
+  }, [modelsData]);
 
   const handleLogout = () => {
     logoutMutation.mutate(undefined, { onSettled: () => navigate({ to: "/login" }) });
@@ -148,6 +157,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     [plugins]
   );
 
+  const extensionSections = useMemo(() => {
+    const pages = getRegisteredPages().filter((page) => Boolean(page.nav));
+    if (pages.length === 0) return [];
+
+    const grouped = new Map<string, any[]>();
+    for (const page of pages) {
+      const groupLabel =
+        page.nav?.group ||
+        formatGroupLabel(page.name) ||
+        "Extensions";
+      const entries = grouped.get(groupLabel) || [];
+      entries.push({
+        label: page.nav?.label || page.title,
+        path: page.fullPath,
+        icon: page.nav?.icon,
+        order: page.nav?.order ?? 0,
+      });
+      grouped.set(groupLabel, entries);
+    }
+
+    return Array.from(grouped.entries()).map(([label, entries]) => ({
+      id: `ext-${label.toLowerCase().replace(/\s+/g, "-")}`,
+      label,
+      entries: entries.sort(
+        (a, b) => a.order - b.order || a.label.localeCompare(b.label)
+      ),
+    }));
+  }, [modelsData, location.pathname]);
+
   const activeModelSectionId = useMemo(() => {
     const activeModel = models.find((model: any) =>
       location.pathname.startsWith(`/${model.name}`)
@@ -171,6 +209,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return activePlugin ? `plugin-${activePlugin.name}` : null;
   }, [location.pathname, plugins]);
 
+  const activeExtensionSectionId = useMemo(() => {
+    if (!location.pathname.startsWith("/ext")) return null;
+    for (const section of extensionSections) {
+      if (
+        section.entries?.some((entry: any) =>
+          isMenuEntryActive(entry, location.pathname)
+        )
+      ) {
+        return section.id;
+      }
+    }
+    return null;
+  }, [location.pathname, extensionSections]);
+
   // eslint-disable-next-line react-hooks/preserve-manual-memoization -- module-level functions are stable, React Compiler cannot track them
   const activePluginInfo = useMemo(() => {
     for (const plugin of plugins) {
@@ -189,8 +241,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       ...prev,
       ...(activeModelSectionId ? { [activeModelSectionId]: true } : {}),
       ...(activePluginSectionId ? { [activePluginSectionId]: true } : {}),
+      ...(activeExtensionSectionId ? { [activeExtensionSectionId]: true } : {}),
     }));
-  }, [activeModelSectionId, activePluginSectionId]);
+  }, [activeModelSectionId, activePluginSectionId, activeExtensionSectionId]);
 
   const showPluginHeader = Boolean(activePluginInfo.plugin);
   const pluginLabel = activePluginInfo.plugin?.label || activePluginInfo.plugin?.name;
@@ -209,6 +262,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
       <Sidebar
         models={models} groupByModel={groupByModel} pluginSections={pluginSections}
+        extensionSections={extensionSections}
         pinnedModels={pinnedModels} togglePinnedModel={togglePinnedModel}
         modelFilter={modelFilter} setModelFilter={setModelFilter}
         expandedSections={expandedSections} setExpandedSections={setExpandedSections}
@@ -227,6 +281,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Content Area */}
         <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+            <ExtensionErrorBanner />
             <Breadcrumbs />
             {children}
           </div>
