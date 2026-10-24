@@ -155,6 +155,9 @@ type ErrorDetail struct {
 	Details map[string]interface{} `json:"details,omitempty"`
 }
 
+// MaxBulkActionIDs is the maximum number of IDs allowed in a bulk action request.
+const MaxBulkActionIDs = 1000
+
 // BulkActionRequest represents a bulk action request
 type BulkActionRequest struct {
 	IDs    []interface{}          `json:"ids"`
@@ -163,10 +166,11 @@ type BulkActionRequest struct {
 
 // BulkActionResponse represents a bulk action response
 type BulkActionResponse struct {
-	Success  bool              `json:"success"`
-	Affected int               `json:"affected"`
-	Message  string            `json:"message"`
-	Errors   []BulkActionError `json:"errors,omitempty"`
+	Success   bool              `json:"success"`
+	Affected  int               `json:"affected"`
+	Message   string            `json:"message"`
+	Errors    []BulkActionError `json:"errors,omitempty"`
+	Succeeded []int64           `json:"succeeded,omitempty"`
 }
 
 // BulkActionError represents an error for a specific item in bulk action

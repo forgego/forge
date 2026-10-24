@@ -2,25 +2,29 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	apicore "github.com/forgego/forge/api/core"
 )
 
-func (a *Admin[T]) ExecuteAction(ctx context.Context, actionName string, ids []interface{}, params map[string]interface{}) (interface{}, error) {
+// ErrActionNotFound is returned when an action is not registered on the admin model.
+var ErrActionNotFound = errors.New("action not found")
+
+func (a *Admin[T]) ExecuteAction(ctx context.Context, name string, ids []interface{}, params map[string]interface{}) (interface{}, error) {
 	_ = params
 
 	// Find action
 	var selectedAction *Action[T]
 	for _, action := range a.config.Actions {
-		if action.Name == actionName {
+		if action.Name == name {
 			selectedAction = &action
 			break
 		}
 	}
 
 	if selectedAction == nil {
-		return nil, fmt.Errorf("action %s not found", actionName)
+		return nil, fmt.Errorf("%w: %s", ErrActionNotFound, name)
 	}
 
 	user, _ := apicore.UserFromContext(ctx)
@@ -28,6 +32,7 @@ func (a *Admin[T]) ExecuteAction(ctx context.Context, actionName string, ids []i
 	// Fetch instances
 	instances := make([]*T, 0, len(ids))
 	actionErrors := make([]BulkActionError, 0)
+	var succeeded []int64
 	for _, id := range ids {
 		intID, err := toInt64(id)
 		if err != nil {
@@ -59,6 +64,7 @@ func (a *Admin[T]) ExecuteAction(ctx context.Context, actionName string, ids []i
 		}
 
 		instances = append(instances, instance)
+		succeeded = append(succeeded, intID)
 	}
 
 	if len(instances) == 0 {
@@ -80,9 +86,10 @@ func (a *Admin[T]) ExecuteAction(ctx context.Context, actionName string, ids []i
 	}
 
 	response := &BulkActionResponse{
-		Success:  len(actionErrors) == 0,
-		Affected: len(instances),
-		Message:  fmt.Sprintf("Successfully executed %s on %d objects", selectedAction.Label, len(instances)),
+		Success:   len(actionErrors) == 0,
+		Affected:  len(instances),
+		Message:   fmt.Sprintf("Successfully executed %s on %d objects", selectedAction.Label, len(instances)),
+		Succeeded: succeeded,
 	}
 	if len(actionErrors) > 0 {
 		response.Errors = actionErrors
