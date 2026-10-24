@@ -59,6 +59,18 @@ func (Product) Hooks() *schema.ModelHooks {
 5. `AfterUpdate(ctx, instance)` — Clear caches.
 6. `AfterSave(ctx, instance)` — Common post-save triggers.
 
+### Transactions and hook errors
+
+`Create` and `Update` do not open a transaction of their own. A hook that returns an error stops the call and the error is returned, but an `AfterCreate`, `AfterUpdate` or `AfterSave` error does not undo a write that already ran. To make a hook error roll the write back, run the call inside a transaction:
+
+```go
+err := database.WithTx(ctx, func(tx *db.Tx) error {
+    return orders.WithTx(tx).Create(ctx, order)
+})
+```
+
+For workflows that change several records, use `forge/operation`, which runs the whole operation in one transaction.
+
 ---
 
 ## Practical Example
