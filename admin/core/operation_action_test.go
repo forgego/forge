@@ -103,3 +103,16 @@ func TestOperationActionReturnsOperationError(t *testing.T) {
 		t.Fatalf("Execute() error = %v, want wrapped operation error", err)
 	}
 }
+
+func TestOperationActionConflictReturnsHTTPConflict(t *testing.T) {
+	runner, _ := operationActionFixture(t)
+	action := OperationAction[string, string]{Runner: runner, Operation: operation.Operation[string, string]{Name: "records.update", Permission: "records.add", Run: func(context.Context, operation.Transaction, operation.Actor, string) (string, []operation.Effect, error) {
+		return "", nil, errors.Join(errors.New("stale state"), operation.ErrConflict)
+	}}}
+	ctx := core.WithPrincipal(context.Background(), principal.Principal{ID: "user-1", Kind: principal.KindUser, PermissionNames: []string{"records.add"}})
+	_, err := action.Execute(ctx, "data", true)
+	var httpErr *ActionHTTPError
+	if !errors.As(err, &httpErr) || httpErr.StatusCode != 409 || !errors.Is(err, operation.ErrConflict) {
+		t.Fatalf("Execute() error = %v, want wrapped HTTP 409 conflict", err)
+	}
+}
