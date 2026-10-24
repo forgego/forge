@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	forgedb "github.com/forgego/forge/db"
+	"github.com/forgego/forge/stores"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -101,5 +103,51 @@ func TestDatabaseStoreGetReturnsExpiredCleanupError(t *testing.T) {
 	response, err := store.Get("key")
 	if response != nil || err == nil || !strings.Contains(err.Error(), "delete expired idempotency key") || !strings.Contains(err.Error(), "delete rejected") {
 		t.Fatalf("Get = (%v, %v), want wrapped expired-key deletion error", response, err)
+	}
+}
+
+func TestDatabaseStoreFrameworkMigrationsSQLite(t *testing.T) {
+	database, err := forgedb.NewDBWithDriver("sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = database.Close() })
+
+	if err := stores.Migrate(context.Background(), database); err != nil {
+		t.Fatalf("stores.Migrate: %v", err)
+	}
+
+	// Create store from *forgedb.DB without calling EnsureSchema
+	store, err := NewDatabaseStore(database, "")
+	if err != nil {
+		t.Fatalf("NewDatabaseStore: %v", err)
+	}
+
+	key := "test-migrated-key"
+	resp := &CachedResponse{
+		StatusCode: 200,
+		Headers:    map[string]string{"Content-Type": "application/json"},
+		Body:       []byte(`{"status":"ok"}`),
+		Timestamp:  time.Now(),
+	}
+
+	if err := store.Set(key, resp, 10*time.Minute); err != nil {
+		t.Fatalf("Set: %v", err)
+	}
+
+	got, err := store.Get(key)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.StatusCode != 200 || string(got.Body) != `{"status":"ok"}` {
+		t.Fatalf("unexpected cached response: %#v", got)
+	}
+
+	if err := store.Delete(key); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+
+	if _, err := store.Get(key); err == nil {
+		t.Fatalf("expected error getting deleted key")
 	}
 }
