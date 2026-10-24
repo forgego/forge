@@ -55,7 +55,7 @@ func TestWriteTemplate_SuccessReplacesContentAndPreservesPermissions(t *testing.
 	tmpDir := t.TempDir()
 	dest := filepath.Join(tmpDir, "success.go")
 
-	initialContent := []byte("// old content\n")
+	initialContent := []byte(generatedHeader + "\n// old content\n")
 	require.NoError(t, os.WriteFile(dest, initialContent, 0750))
 
 	succTmpl := template.Must(template.New("success").Parse("package {{.Package}}\n// new content\n"))
@@ -132,7 +132,7 @@ func TestWriteTemplate_RefusesToOverwriteReadOnlyFile(t *testing.T) {
 		t.Skip("read-only permission bits do not apply to root")
 	}
 	tmpDir := t.TempDir()
-	initialContent := []byte("// protected content\n")
+	initialContent := []byte(generatedHeader + "\n// protected content\n")
 
 	readOnly := filepath.Join(tmpDir, "protected.go")
 	require.NoError(t, os.WriteFile(readOnly, initialContent, 0444))
@@ -148,7 +148,7 @@ func TestWriteTemplate_RefusesToOverwriteReadOnlyFile(t *testing.T) {
 
 	// A regularly writable file in the same directory is still replaced.
 	writable := filepath.Join(tmpDir, "writable.go")
-	require.NoError(t, os.WriteFile(writable, []byte("// old\n"), 0644))
+	require.NoError(t, os.WriteFile(writable, []byte(generatedHeader+"\n// old\n"), 0644))
 	require.NoError(t, NewWriter().writeTemplate(tmpl, nil, writable))
 	content, readErr = os.ReadFile(writable)
 	require.NoError(t, readErr)
@@ -160,7 +160,7 @@ func TestWriteTemplate_UpdatesSymlinkTargetWithoutReplacingLink(t *testing.T) {
 	targetDir := filepath.Join(tmpDir, "generated")
 	require.NoError(t, os.Mkdir(targetDir, 0755))
 	target := filepath.Join(targetDir, "models.go")
-	require.NoError(t, os.WriteFile(target, []byte("old contents\n"), 0644))
+	require.NoError(t, os.WriteFile(target, []byte(generatedHeader+"\nold contents\n"), 0644))
 	link := filepath.Join(tmpDir, "gen.go")
 	require.NoError(t, os.Symlink(filepath.Join("generated", "models.go"), link))
 
@@ -179,8 +179,8 @@ func TestWriteCombinedAndAPI_SecondRenameFailureRestoresBothDestinations(t *test
 	tmpDir := t.TempDir()
 	genPath := filepath.Join(tmpDir, "gen.go")
 	apiPath := filepath.Join(tmpDir, "api_gen.go")
-	oldGen := []byte("old generated models\n")
-	oldAPI := []byte("old generated API\n")
+	oldGen := []byte(generatedHeader + "\nold generated models\n")
+	oldAPI := []byte(generatedHeader + "\nold generated API\n")
 	require.NoError(t, os.WriteFile(genPath, oldGen, 0640))
 	require.NoError(t, os.WriteFile(apiPath, oldAPI, 0600))
 
@@ -224,8 +224,8 @@ func TestWriteCombinedAndAPI_SecondRenameFailureRestoresBothDestinations(t *test
 
 func TestWriteCombinedAndAPI_SuccessRemovesDestinationBackups(t *testing.T) {
 	tmpDir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "gen.go"), []byte("old gen\n"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "api_gen.go"), []byte("old api\n"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "gen.go"), []byte(generatedHeader+"\nold gen\n"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "api_gen.go"), []byte(generatedHeader+"\nold api\n"), 0644))
 	definitions := []*ModelDefinition{{
 		Package: "models",
 		Name:    "Product",
