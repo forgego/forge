@@ -54,7 +54,7 @@ func SetupIdentitySystem(database *db.DB, userConfig *config.IdentityConfig) (*I
 	// Create services
 	emailSender := &service.LogEmailSender{}
 	userService := service.NewUserService(userRepo, tokenRepo, emailSender)
-	authService := service.NewAuthService(userRepo, sessionRepo, backendRegistry)
+	authService := service.NewAuthServiceWithConfig(userRepo, sessionRepo, backendRegistry, userConfig)
 	passwordService := service.NewPasswordService(userRepo, tokenRepo, userConfig.PasswordPolicy)
 	permissionService := service.NewPermissionService(permissionRepo, userRepo)
 

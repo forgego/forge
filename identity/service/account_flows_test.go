@@ -27,6 +27,78 @@ func (m *mockFailingSessionRepository) DeleteByUserID(ctx context.Context, userI
 	return m.SessionRepository.DeleteByUserID(ctx, userID)
 }
 
+// TestSignIn_NegativeCases tests failure modes and enumeration resistance for sign-in.
+func TestSignIn_NegativeCases(t *testing.T) {
+	service, testDB, ctx := setupAuthServiceTest(t)
+	defer testDB.Close()
+
+	userRepo := repository.NewUserRepository(testDB)
+	hashedPassword, err := utils.HashPassword("CorrectPassword123!")
+	require.NoError(t, err)
+
+	activeUser := &models.User{
+		Username: "signin_active_user",
+		Email:    "signin_active@example.com",
+		Password: hashedPassword,
+		IsActive: true,
+	}
+	require.NoError(t, userRepo.Create(ctx, activeUser))
+
+	inactiveUser := &models.User{
+		Username: "signin_inactive_user",
+		Email:    "signin_inactive@example.com",
+		Password: hashedPassword,
+		IsActive: false,
+	}
+	require.NoError(t, userRepo.Create(ctx, inactiveUser))
+
+	t.Run("wrong password returns invalid credentials", func(t *testing.T) {
+		_, err := service.Authenticate(ctx, &AuthenticateRequest{
+			UsernameOrEmail: activeUser.Username,
+			Password:        "WrongPassword123!",
+		})
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrInvalidCredentials)
+	})
+
+	t.Run("unknown user returns same invalid credentials error without enumeration", func(t *testing.T) {
+		// Non-existent username
+		_, errUnknownUsername := service.Authenticate(ctx, &AuthenticateRequest{
+			UsernameOrEmail: "completely_unknown_user",
+			Password:        "WrongPassword123!",
+		})
+		require.Error(t, errUnknownUsername)
+		assert.ErrorIs(t, errUnknownUsername, ErrInvalidCredentials)
+
+		// Non-existent email
+		_, errUnknownEmail := service.Authenticate(ctx, &AuthenticateRequest{
+			UsernameOrEmail: "nonexistent@example.com",
+			Password:        "WrongPassword123!",
+		})
+		require.Error(t, errUnknownEmail)
+		assert.ErrorIs(t, errUnknownEmail, ErrInvalidCredentials)
+
+		// Wrong password on existing user
+		_, errWrongPassword := service.Authenticate(ctx, &AuthenticateRequest{
+			UsernameOrEmail: activeUser.Username,
+			Password:        "WrongPassword123!",
+		})
+
+		// Both unknown user and wrong password must return identical error (no enumeration)
+		assert.Equal(t, errWrongPassword, errUnknownUsername)
+		assert.Equal(t, errWrongPassword, errUnknownEmail)
+	})
+
+	t.Run("inactive user returns invalid credentials without enumeration", func(t *testing.T) {
+		_, err := service.Authenticate(ctx, &AuthenticateRequest{
+			UsernameOrEmail: inactiveUser.Username,
+			Password:        "WrongPassword123!",
+		})
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrInvalidCredentials, "inactive user must not leak inactive status")
+	})
+}
+
 // TestSignOut_NegativeCases tests failure modes of signing out.
 func TestSignOut_NegativeCases(t *testing.T) {
 	service, testDB, ctx := setupAuthServiceTest(t)
@@ -295,6 +367,55 @@ func TestEmailVerification_NegativeCases(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, unverifiedUser.ID, u.ID)
 		assert.False(t, u.EmailVerified)
+	})
+
+	t.Run("unverified sign-in rejected when email verification is enabled", func(t *testing.T) {
+		_, authDB, authCtx := setupAuthServiceTest(t)
+		defer authDB.Close()
+
+		uRepo := repository.NewUserRepository(authDB)
+		sRepo := repository.NewSessionRepository(authDB)
+		backendReg := &mockBackendRegistry{userRepo: uRepo}
+		enabledAuthSvc := NewAuthService(uRepo, sRepo, backendReg, WithEmailVerificationRequired(true))
+
+		hashedPassword, hashErr := utils.HashPassword("Password123!")
+		require.NoError(t, hashErr)
+
+		unverifiedUser := &models.User{
+			Username:      "unverified_signin_user",
+			Email:         "unverified_signin@example.com",
+			Password:      hashedPassword,
+			IsActive:      true,
+			EmailVerified: false,
+		}
+		require.NoError(t, uRepo.Create(authCtx, unverifiedUser))
+
+		// Attempt sign-in with unverified user: rejected
+		_, err := enabledAuthSvc.Authenticate(authCtx, &AuthenticateRequest{
+			UsernameOrEmail: "unverified_signin@example.com",
+			Password:        "Password123!",
+		})
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrEmailNotVerified)
+
+		// Wrong password on unverified user returns ErrInvalidCredentials (no enumeration)
+		_, err = enabledAuthSvc.Authenticate(authCtx, &AuthenticateRequest{
+			UsernameOrEmail: "unverified_signin@example.com",
+			Password:        "WrongPassword123!",
+		})
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrInvalidCredentials)
+
+		// Once verified, sign-in succeeds
+		unverifiedUser.EmailVerified = true
+		require.NoError(t, uRepo.Update(authCtx, unverifiedUser))
+
+		u, err := enabledAuthSvc.Authenticate(authCtx, &AuthenticateRequest{
+			UsernameOrEmail: "unverified_signin@example.com",
+			Password:        "Password123!",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, unverifiedUser.ID, u.ID)
 	})
 
 	t.Run("expiry: expired email verification token is rejected", func(t *testing.T) {
