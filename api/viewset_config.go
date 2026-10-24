@@ -27,6 +27,7 @@ type ViewSetConfig struct {
 	// fields of the same name.
 	ReadOnly                   bool
 	RejectUnknownRequestFields bool
+	OperationOnlyFields        []string
 
 	// Internal viewset created lazily
 	viewSet *ConfigurableViewSet
@@ -56,6 +57,9 @@ func NewConfigurableViewSet(config *ViewSetConfig) *ConfigurableViewSet {
 	base.ErrorWriter = config.ErrorWriter
 	base.ReadOnly = config.ReadOnly
 	base.RejectUnknownRequestFields = config.RejectUnknownRequestFields
+	if config.OperationOnlyFields != nil {
+		base.OperationOnlyFields = append([]string{}, config.OperationOnlyFields...)
+	}
 
 	return &ConfigurableViewSet{
 		BaseViewSet: base,

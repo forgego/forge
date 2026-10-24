@@ -52,6 +52,8 @@ func TestViewForRequest_CopiesAllExportedFields(t *testing.T) {
 			fv.Set(reflect.ValueOf([]string{"password"}))
 		case "ReadOnlyRequestFields":
 			fv.Set(reflect.ValueOf([]string{"created_at"}))
+		case "OperationOnlyFields":
+			fv.Set(reflect.ValueOf([]string{"status"}))
 		case "Filterable":
 			fv.Set(reflect.ValueOf([]string{"name"}))
 		case "RejectUnknownRequestFields", "ReadOnly":

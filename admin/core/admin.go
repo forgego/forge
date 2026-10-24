@@ -126,6 +126,32 @@ func (a *Admin[T]) ConfigInterface() interface{} {
 	return a.config
 }
 
+// OperationOnlyFields returns field names that cannot be changed via generic writes.
+func (a *Admin[T]) OperationOnlyFields() []string {
+	var fields []string
+	if a != nil && a.config != nil && len(a.config.OperationOnlyFields) > 0 {
+		fields = append(fields, a.config.OperationOnlyFields...)
+	}
+	var zero T
+	fields = append(fields, schema.OperationOnlyFieldNames(zero)...)
+	return dedupeStrings(fields)
+}
+
+func dedupeStrings(items []string) []string {
+	if len(items) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(items))
+	seen := make(map[string]bool, len(items))
+	for _, item := range items {
+		if !seen[item] {
+			seen[item] = true
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
 // GetMetadata returns the metadata for this admin
 // This is called by API handlers to send to frontend.
 // Schema-derived parts are cached; per-request Permissions are computed

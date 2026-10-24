@@ -104,6 +104,7 @@ type Meta struct {
 	RequiredDBVendor   string            // Database vendor requirements
 	TableComment       string            // Table comment/description
 	TableOptions       map[string]string // Table-specific options (e.g., ENGINE for MySQL)
+	OperationOnlyFields []string          // Fields that can only be changed by authorized operations
 }
 
 // DefaultMeta returns a Meta with sensible defaults

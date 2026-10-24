@@ -39,10 +39,11 @@ type ValidationConfig struct {
 
 // PresentationConfig contains presentation/UI-related configuration
 type PresentationConfig struct {
-	VerboseName string // Human-readable name
-	HelpText    string // Help text for forms/admin
-	Editable    bool   // Control field editability in forms/admin
-	Serialize   bool   // Control field serialization in forms/API
+	VerboseName   string // Human-readable name
+	HelpText      string // Help text for forms/admin
+	Editable      bool   // Control field editability in forms/admin
+	Serialize     bool   // Control field serialization in forms/API
+	OperationOnly bool   // Control whether field is operation-only
 }
 
 // FieldOptions contains all field configuration organized by concern
@@ -89,6 +90,7 @@ func (o *FieldOptions) ApplyToField(f *Field) {
 	f.HelpText = o.Presentation.HelpText
 	f.Editable = o.Presentation.Editable
 	f.Serialize = o.Presentation.Serialize
+	f.OperationOnly = o.Presentation.OperationOnly
 }
 
 // NewFieldOptions creates a new FieldOptions with sensible defaults
