@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/forgego/forge/config"
+	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/log"
 	"github.com/forgego/forge/netutil"
 	"github.com/gorilla/csrf"
@@ -29,6 +30,7 @@ type Server struct {
 	config   *config.Config
 	settings *config.Settings
 	sessions *SessionManager
+	database *db.DB
 }
 
 // NewServer creates a new framework server. Pass WithDatabase with the
@@ -162,6 +164,7 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 		config:   cfg,
 		settings: settings,
 		sessions: sessionManager,
+		database: options.database,
 	}
 
 	return server, nil
@@ -354,9 +357,9 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		s.logger.Info("Shutting down server")
 	}
 
-	timeout := time.Duration(s.settings.Server.GracefulTimeout) * time.Second
-	if timeout == 0 {
-		timeout = 30 * time.Second // Default timeout
+	timeout := 30 * time.Second
+	if s.settings != nil && s.settings.Server.GracefulTimeout > 0 {
+		timeout = time.Duration(s.settings.Server.GracefulTimeout) * time.Second
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(ctx, timeout)
@@ -367,6 +370,12 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		if syncErr := ignoreSyncError(s.logger.Sync()); syncErr != nil && err == nil {
 			err = syncErr
 		}
+	}
+	if s.database != nil && err == nil {
+		if dbErr := s.database.Close(); dbErr != nil && err == nil {
+			err = dbErr
+		}
+		s.database = nil
 	}
 	return err
 }
