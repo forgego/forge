@@ -120,6 +120,9 @@ type PaginationConfig struct {
 	MaxPageSize int `json:"max_page_size"`
 }
 
+// MaxExportRows is the maximum number of rows allowed in a single export.
+const MaxExportRows = 10000
+
 // ModelListMetadata represents metadata for the model list endpoint
 type ModelListMetadata struct {
 	Name              string             `json:"name"`
