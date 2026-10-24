@@ -287,6 +287,11 @@ or change a foreign key or constraint of an existing table without rebuilding it
 `makemigrations` does not write that rebuild: it stops with an error instead. The same
 applies to a changed column, because SQLite has no `ALTER COLUMN`. See
 [Changes makemigrations cannot generate](#changes-makemigrations-cannot-generate).
+
+Locking also differs. On PostgreSQL, `forge migrate` holds an advisory lock, so a second
+concurrent run waits and then finds nothing pending (`TestConcurrentApplyIsSerialized`).
+On SQLite there is no advisory lock: concurrent runs rely on SQLite's own database write
+lock, and that case is not tested. Run one migration process at a time against a SQLite file.
 :::
 
 `forge makemigrations --verbose` is currently reserved and does not add generation
