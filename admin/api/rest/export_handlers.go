@@ -26,6 +26,15 @@ func (r *Router) handleExport(admin core.AdminInterface) http.HandlerFunc {
 			return
 		}
 
+		format := strings.ToLower(req.URL.Query().Get("format"))
+		if format == "" {
+			format = "json"
+		}
+		if format != "json" && format != "csv" {
+			respondError(w, http.StatusBadRequest, "invalid_format", "Unsupported export format", nil)
+			return
+		}
+
 		meta, err := admin.GetMetadata(ctx, user)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, "internal_error", err.Error(), nil)
@@ -65,6 +74,13 @@ func (r *Router) handleExport(admin core.AdminInterface) http.HandlerFunc {
 				return
 			}
 
+			if response.Count > core.MaxExportRows {
+				respondError(w, http.StatusBadRequest, "export_too_large",
+					fmt.Sprintf("export exceeds %d rows; narrow the filters", core.MaxExportRows),
+					map[string]interface{}{"count": response.Count, "limit": core.MaxExportRows})
+				return
+			}
+
 			items := interfaceSlice(response.Results)
 			if len(items) == 0 {
 				break
@@ -77,17 +93,18 @@ func (r *Router) handleExport(admin core.AdminInterface) http.HandlerFunc {
 					rowMap[field] = getMapValue(itemMap, field)
 				}
 				results = append(results, rowMap)
+				if len(results) > core.MaxExportRows {
+					respondError(w, http.StatusBadRequest, "export_too_large",
+						fmt.Sprintf("export exceeds %d rows; narrow the filters", core.MaxExportRows),
+						map[string]interface{}{"count": int64(len(results)), "limit": core.MaxExportRows})
+					return
+				}
 			}
 
 			if int64(params.Page)*int64(params.PageSize) >= response.Count || len(items) < params.PageSize {
 				break
 			}
 			params.Page++
-		}
-
-		format := strings.ToLower(req.URL.Query().Get("format"))
-		if format == "" {
-			format = "json"
 		}
 
 		switch format {
@@ -97,8 +114,6 @@ func (r *Router) handleExport(admin core.AdminInterface) http.HandlerFunc {
 			}
 		case "json":
 			respondJSON(w, http.StatusOK, results)
-		default:
-			respondError(w, http.StatusBadRequest, "invalid_format", "Unsupported export format", nil)
 		}
 	}
 }
