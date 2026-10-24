@@ -16,7 +16,7 @@ import (
 	"github.com/forgego/forge/tests/testhelpers"
 )
 
-func TestConcurrentApplyIsSerialised(t *testing.T) {
+func TestConcurrentApplyIsSerialized(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 
@@ -70,7 +70,7 @@ func TestConcurrentApplyIsSerialised(t *testing.T) {
 	close(start)
 	wg.Wait()
 
-	// The advisory lock serialises the runs: the second waits, then finds
+	// The advisory lock serializes the runs: the second waits, then finds
 	// nothing pending. Both succeed and the migration is applied once.
 	for i, res := range results {
 		require.NoError(t, res.err, "apply %d: %s", i, res.out)
