@@ -133,7 +133,7 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 	// Register health check endpoints
 	if settings.Server.HealthCheckPath != "" {
 		router.Get(settings.Server.HealthCheckPath, HealthHandler())
-		router.Get(settings.Server.HealthCheckPath+"/ready", ReadinessHandler())
+		router.Get(settings.Server.HealthCheckPath+"/ready", readinessHandler(options.database))
 		router.Get(settings.Server.HealthCheckPath+"/live", LivenessHandler())
 	}
 
