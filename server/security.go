@@ -87,7 +87,67 @@ func NewSessionManager(secretKey []byte, store ...scs.Store) *SessionManager {
 
 // Middleware returns the session middleware
 func (sm *SessionManager) Middleware() func(http.Handler) http.Handler {
-	return sm.SessionManager.LoadAndSave
+	return sm.LoadAndSave
+}
+
+// LoadAndSave provides session loading and saving middleware, ensuring that
+// any response setting or clearing the session cookie carries Cache-Control: no-store.
+func (sm *SessionManager) LoadAndSave(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sw := &sessionResponseWriter{
+			ResponseWriter: w,
+			cookieName:     sm.Cookie.Name,
+		}
+		sm.SessionManager.LoadAndSave(next).ServeHTTP(sw, r)
+	})
+}
+
+type sessionResponseWriter struct {
+	http.ResponseWriter
+	cookieName  string
+	wroteHeader bool
+}
+
+func (w *sessionResponseWriter) WriteHeader(code int) {
+	if !w.wroteHeader {
+		w.wroteHeader = true
+		if w.shouldApplyNoStore() {
+			w.Header().Set("Cache-Control", "no-store")
+		}
+	}
+	w.ResponseWriter.WriteHeader(code)
+}
+
+func (w *sessionResponseWriter) Write(b []byte) (int, error) {
+	if !w.wroteHeader {
+		w.WriteHeader(http.StatusOK)
+	}
+	return w.ResponseWriter.Write(b)
+}
+
+func (w *sessionResponseWriter) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
+}
+
+func (w *sessionResponseWriter) shouldApplyNoStore() bool {
+	cookies := w.Header().Values("Set-Cookie")
+	if len(cookies) == 0 {
+		if sc := w.Header().Get("Set-Cookie"); sc != "" {
+			cookies = []string{sc}
+		}
+	}
+	if len(cookies) == 0 {
+		return false
+	}
+	if w.cookieName == "" {
+		return true
+	}
+	for _, c := range cookies {
+		if strings.Contains(c, w.cookieName) {
+			return true
+		}
+	}
+	return false
 }
 
 // Get retrieves a value from the session
