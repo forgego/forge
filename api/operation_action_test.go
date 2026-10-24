@@ -50,10 +50,12 @@ func TestOperationAction(t *testing.T) {
 		wantStatus int
 		wantResult bool
 		wantRows   int
+		conflict   bool
 	}{
 		{name: "allowed", allowed: true, wantStatus: 200, wantResult: true, wantRows: 1},
 		{name: "denied", wantStatus: 403},
 		{name: "operation error", allowed: true, runErr: errors.New("failed"), wantStatus: 500},
+		{name: "conflict", allowed: true, runErr: errors.Join(errors.New("stale state"), operation.ErrConflict), wantStatus: http.StatusConflict, conflict: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			runner, database := operationActionRunner(t)

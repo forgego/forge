@@ -81,3 +81,10 @@ resolve to no actor so the runner denies the call. Register the returned
 handler with `Router.Action`. Invalid JSON, denied calls, and execution errors
 use the API's problem error response format. Successful calls return the
 operation result as JSON.
+
+## CLI adapter
+
+`cli/core.OperationCommand` decodes one JSON value from stdin, adapts the
+principal in the CLI context (defaulting to `System("cli")`), and writes
+successful results as JSON to stdout. Errors carry a stable category and exit
+code.

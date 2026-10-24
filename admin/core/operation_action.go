@@ -34,27 +34,17 @@ func (a OperationAction[In, Out]) Execute(ctx context.Context, params In, confir
 		return zero, &ActionHTTPError{StatusCode: 400, Err: errors.New("operation confirmation required")}
 	}
 	if actor, ok := api.PrincipalFromContext(ctx); ok {
-		ctx = operation.WithActor(ctx, principalActor{principal: actor})
+		ctx = operation.WithActor(ctx, principal.Actor(actor))
 	}
 	result, err := operation.Run(ctx, a.Runner, a.Operation, params)
 	if err != nil {
 		if errors.Is(err, operation.ErrDenied) {
 			return zero, &ActionHTTPError{StatusCode: 403, Err: err}
 		}
+		if errors.Is(err, operation.ErrConflict) {
+			return zero, &ActionHTTPError{StatusCode: 409, Err: err}
+		}
 		return zero, fmt.Errorf("run admin operation %q: %w", a.Operation.Name, err)
 	}
 	return result, nil
-}
-
-type principalActor struct{ principal principal.Principal }
-
-func (a principalActor) ID() string   { return a.principal.ID }
-func (a principalActor) Kind() string { return string(a.principal.Kind) }
-func (a principalActor) HasPermission(_ context.Context, permission string) (bool, error) {
-	for _, granted := range a.principal.Permissions() {
-		if granted == permission {
-			return true, nil
-		}
-	}
-	return false, nil
 }

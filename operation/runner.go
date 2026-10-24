@@ -14,6 +14,9 @@ import (
 var (
 	// ErrDenied indicates that an invocation has no authorized actor.
 	ErrDenied = errors.New("operation denied")
+	// ErrConflict marks optimistic-concurrency or state conflicts. Operation
+	// callbacks should wrap this sentinel when reporting those conflicts.
+	ErrConflict = errors.New("operation conflict")
 	// ErrInvalidOperation indicates that an operation is incomplete.
 	ErrInvalidOperation = errors.New("invalid operation")
 )
