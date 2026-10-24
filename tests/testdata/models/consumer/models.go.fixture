@@ -1,0 +1,46 @@
+package models
+
+import "github.com/forgego/forge/schema"
+
+type Customer struct{ CustomerGenerated }
+
+func (Customer) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.StringField("email", schema.Required(), schema.MaxLength(255), schema.Unique()),
+		schema.StringField("name", schema.Required(), schema.MaxLength(255)),
+		schema.BoolField("is_active", schema.Default(true)),
+	}
+}
+
+func (Customer) Meta() schema.Meta {
+	return schema.Meta{TableName: "customers", VerboseName: "Customer"}
+}
+
+func (Customer) Relations() []schema.Relation { return nil }
+
+func (Customer) Hooks() *schema.ModelHooks { return nil }
+
+type Order struct{ OrderGenerated }
+
+func (Order) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.StringField("order_number", schema.Required(), schema.MaxLength(50), schema.Unique()),
+		schema.Int64Field("customer_id", schema.Required()),
+		schema.DecimalField("total_amount", schema.Required()),
+		schema.StringField("status", schema.Required(), schema.MaxLength(50), schema.Default("pending")),
+	}
+}
+
+func (Order) Meta() schema.Meta {
+	return schema.Meta{TableName: "orders", VerboseName: "Order"}
+}
+
+func (Order) Relations() []schema.Relation {
+	return []schema.Relation{
+		schema.ForeignKeyField("customer_id", "Customer", schema.OnDelete(schema.CascadePROTECT)),
+	}
+}
+
+func (Order) Hooks() *schema.ModelHooks { return nil }
