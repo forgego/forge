@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/forgego/forge/identity/backends"
+	"github.com/forgego/forge/identity/config"
 	"github.com/forgego/forge/identity/models"
 	"github.com/forgego/forge/identity/repository"
 )
@@ -16,9 +17,20 @@ var ErrInvalidCredentials = fmt.Errorf("invalid credentials")
 
 // authService implements AuthService interface
 type authService struct {
-	userRepo        repository.UserRepository
-	sessionRepo     repository.SessionRepository
-	backendRegistry backends.BackendRegistry
+	userRepo                 repository.UserRepository
+	sessionRepo              repository.SessionRepository
+	backendRegistry          backends.BackendRegistry
+	requireEmailVerification bool
+}
+
+// AuthServiceOption configures an AuthService instance.
+type AuthServiceOption func(*authService)
+
+// WithEmailVerificationRequired configures whether email verification is required for authentication.
+func WithEmailVerificationRequired(required bool) AuthServiceOption {
+	return func(s *authService) {
+		s.requireEmailVerification = required
+	}
 }
 
 // NewAuthService creates a new authentication service
@@ -26,12 +38,31 @@ func NewAuthService(
 	userRepo repository.UserRepository,
 	sessionRepo repository.SessionRepository,
 	backendRegistry backends.BackendRegistry,
+	opts ...AuthServiceOption,
 ) AuthService {
-	return &authService{
+	svc := &authService{
 		userRepo:        userRepo,
 		sessionRepo:     sessionRepo,
 		backendRegistry: backendRegistry,
 	}
+	for _, opt := range opts {
+		opt(svc)
+	}
+	return svc
+}
+
+// NewAuthServiceWithConfig creates a new authentication service with identity configuration.
+func NewAuthServiceWithConfig(
+	userRepo repository.UserRepository,
+	sessionRepo repository.SessionRepository,
+	backendRegistry backends.BackendRegistry,
+	cfg *config.IdentityConfig,
+) AuthService {
+	var opts []AuthServiceOption
+	if cfg != nil && cfg.EmailVerificationRequired {
+		opts = append(opts, WithEmailVerificationRequired(true))
+	}
+	return NewAuthService(userRepo, sessionRepo, backendRegistry, opts...)
 }
 
 // Authenticate authenticates a user with credentials using the backend registry
@@ -55,6 +86,10 @@ func (s *authService) Authenticate(ctx context.Context, req *AuthenticateRequest
 
 	if err := user.AccountStateError(); err != nil {
 		return nil, err
+	}
+
+	if s.requireEmailVerification && !user.EmailVerified {
+		return nil, ErrEmailNotVerified
 	}
 
 	// Update last login
