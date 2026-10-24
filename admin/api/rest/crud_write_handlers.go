@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/forgego/forge/admin/core"
 	apicore "github.com/forgego/forge/api/core"
+	"github.com/forgego/forge/schema"
 	validation "github.com/forgego/forge/validate"
 	"github.com/go-chi/chi/v5"
 )
@@ -18,6 +20,52 @@ type bulkItemError struct {
 	Index   int    `json:"index"`
 	Code    string `json:"code"`
 	Message string `json:"message"`
+}
+
+func operationOnlyFieldsForAdmin(admin core.AdminInterface) []string {
+	if admin == nil {
+		return nil
+	}
+	var fields []string
+	if provider, ok := admin.(interface{ OperationOnlyFields() []string }); ok {
+		fields = append(fields, provider.OperationOnlyFields()...)
+	}
+	if cfg, ok := admin.ConfigInterface().(interface{ GetOperationOnlyFields() []string }); ok {
+		fields = append(fields, cfg.GetOperationOnlyFields()...)
+	}
+	if modelType := admin.ModelType(); modelType != nil {
+		for modelType.Kind() == reflect.Ptr {
+			modelType = modelType.Elem()
+		}
+		fields = append(fields, schema.OperationOnlyFieldNames(reflect.New(modelType).Interface())...)
+	}
+	return dedupeStrings(fields)
+}
+
+func dedupeStrings(items []string) []string {
+	if len(items) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(items))
+	seen := make(map[string]bool, len(items))
+	for _, item := range items {
+		lower := strings.ToLower(item)
+		if !seen[lower] {
+			seen[lower] = true
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+// UpdateHandler returns the update HTTP handler for admin
+func (r *Router) UpdateHandler(admin core.AdminInterface) http.HandlerFunc {
+	return r.handleUpdate(admin)
+}
+
+// ReplaceHandler returns the replace HTTP handler for admin
+func (r *Router) ReplaceHandler(admin core.AdminInterface) http.HandlerFunc {
+	return r.handleReplace(admin)
 }
 
 // handleCreate creates a new object
@@ -36,6 +84,10 @@ func (r *Router) handleCreate(admin core.AdminInterface) http.HandlerFunc {
 		var data map[string]interface{}
 		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
 			respondError(w, http.StatusBadRequest, "invalid_body", err.Error(), nil)
+			return
+		}
+
+		if !apicore.EnforceOperationOnlyFields(w, req, data, operationOnlyFieldsForAdmin(admin)) {
 			return
 		}
 
@@ -83,6 +135,10 @@ func (r *Router) handleUpdate(admin core.AdminInterface) http.HandlerFunc {
 		var data map[string]interface{}
 		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
 			respondError(w, http.StatusBadRequest, "invalid_body", err.Error(), nil)
+			return
+		}
+
+		if !apicore.EnforceOperationOnlyFields(w, req, data, operationOnlyFieldsForAdmin(admin)) {
 			return
 		}
 
@@ -134,6 +190,10 @@ func (r *Router) handleReplace(admin core.AdminInterface) http.HandlerFunc {
 		}
 		if len(data) == 0 {
 			respondError(w, http.StatusBadRequest, "invalid_body", "Request body must include at least one field", nil)
+			return
+		}
+
+		if !apicore.EnforceOperationOnlyFields(w, req, data, operationOnlyFieldsForAdmin(admin)) {
 			return
 		}
 
@@ -397,6 +457,10 @@ func (r *Router) handleBulkUpdate(admin core.AdminInterface) http.HandlerFunc {
 		}
 		if len(payload.Data) == 0 {
 			respondError(w, http.StatusBadRequest, "invalid_body", "Request body must include update data", nil)
+			return
+		}
+
+		if !apicore.EnforceOperationOnlyFields(w, req, payload.Data, operationOnlyFieldsForAdmin(admin)) {
 			return
 		}
 

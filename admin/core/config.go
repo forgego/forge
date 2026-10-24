@@ -60,6 +60,7 @@ type Config[T any] struct {
 	Fields                []string
 	Exclude               []string
 	ReadOnlyFields        []string
+	OperationOnlyFields   []string
 	PrepopulatedFields    map[string][]string
 	RawIDFields           []string
 	AutocompleteFields    []string
@@ -208,6 +209,14 @@ func (a Action[T]) WithIcon(icon string) Action[T] {
 func (a Action[T]) WithUIComponent(component string) Action[T] {
 	a.UIComponent = component
 	return a
+}
+
+// GetOperationOnlyFields returns the configured operation-only fields
+func (c *Config[T]) GetOperationOnlyFields() []string {
+	if c == nil {
+		return nil
+	}
+	return c.OperationOnlyFields
 }
 
 // Filter represents a manual filter definition

@@ -80,6 +80,8 @@ type BaseViewSet struct {
 	ExcludeResponseFields []string
 	// ReadOnlyRequestFields holds request keys ignored on create and update; nil accepts every field.
 	ReadOnlyRequestFields []string
+	// OperationOnlyFields holds fields that cannot be modified directly via generic updates.
+	OperationOnlyFields []string
 	// RejectUnknownRequestFields makes create and update fail with 400 when
 	// the request body has a key that is not a model field, a declared
 	// serializer field, or an ignored read-only key. False keeps the
@@ -230,6 +232,7 @@ func (vs *BaseViewSet) viewForRequest(r *http.Request) *BaseViewSet {
 		Filterable:                 vs.Filterable,
 		ExcludeResponseFields:      vs.ExcludeResponseFields,
 		ReadOnlyRequestFields:      vs.ReadOnlyRequestFields,
+		OperationOnlyFields:        vs.OperationOnlyFields,
 		RejectUnknownRequestFields: vs.RejectUnknownRequestFields,
 		ReadOnly:                   vs.ReadOnly,
 		Authentication:             vs.Authentication,
@@ -714,6 +717,42 @@ func (vs *BaseViewSet) Update(w http.ResponseWriter, r *http.Request) {
 	vs.update(w, r, "update")
 }
 
+func (vs *BaseViewSet) getOperationOnlyFields() []string {
+	var fields []string
+	if len(vs.OperationOnlyFields) > 0 {
+		fields = append(fields, vs.OperationOnlyFields...)
+	}
+	if vs.Model != nil {
+		fields = append(fields, schema.OperationOnlyFieldNames(vs.Model)...)
+	} else {
+		manager := vs.getManager()
+		if manager.IsValid() {
+			modelType := manager.Type()
+			for modelType.Kind() == reflect.Ptr {
+				modelType = modelType.Elem()
+			}
+			fields = append(fields, schema.OperationOnlyFieldNames(reflect.New(modelType).Interface())...)
+		}
+	}
+	return dedupeFieldStrings(fields)
+}
+
+func dedupeFieldStrings(items []string) []string {
+	if len(items) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(items))
+	seen := make(map[string]bool, len(items))
+	for _, item := range items {
+		lower := strings.ToLower(item)
+		if !seen[lower] {
+			seen[lower] = true
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
 func (vs *BaseViewSet) update(w http.ResponseWriter, r *http.Request, action string) {
 	r = withAction(r, action)
 	if !vs.checkRequest(w, r, action) || !vs.allowWrite(w, r) {
@@ -739,6 +778,10 @@ func (vs *BaseViewSet) update(w http.ResponseWriter, r *http.Request, action str
 	if err := forgehttp.GetJSONUseNumber(r, &data); err != nil || data == nil {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusBadRequest, "Invalid JSON")
+		return
+	}
+
+	if !core.EnforceOperationOnlyFields(w, r, data, vs.getOperationOnlyFields()) {
 		return
 	}
 

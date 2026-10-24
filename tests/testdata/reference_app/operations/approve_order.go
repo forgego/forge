@@ -28,6 +28,7 @@ var ApproveOrder = operation.Operation[ApproveOrderInput, ApproveOrderResult]{
 		Model:  "orders",
 		Source: "reference_app",
 	},
+	Fields: []string{"status"},
 	Run: func(ctx context.Context, tx operation.Transaction, actor operation.Actor, input ApproveOrderInput) (ApproveOrderResult, []operation.Effect, error) {
 		result, err := tx.ExecContext(ctx, `UPDATE orders SET status = 'approved', approved_by = ? WHERE id = ? AND status = 'pending'`, actor.ID(), input.OrderID)
 		if err != nil {

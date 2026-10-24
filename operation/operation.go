@@ -38,6 +38,7 @@ type Operation[In, Out any] struct {
 	Permission string
 	Run        RunFunc[In, Out]
 	Audit      AuditDetails
+	Fields     []string
 }
 
 // AuditDetails supplies optional information attached to the operation event.

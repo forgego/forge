@@ -81,29 +81,30 @@ type Permission struct {
 
 // Meta contains model metadata with ALL Django Meta options
 type Meta struct {
-	TableName          string
-	DefaultRelatedName string
-	VerboseName        string
-	VerboseNamePlural  string
-	AppLabel           string
-	DefaultManager     string
-	BaseManager        string // Custom base manager name
-	GetLatestBy        string // Field to use for latest() queries
-	DBTablespace       string // Default tablespace for model (PostgreSQL)
-	Constraints        []Constraint
-	UniqueTogether     [][]string
-	Indexes            []Index
-	Permissions        []Permission
-	OrderBy            []string
-	Proxy              bool
-	Abstract           bool
-	Managed            bool
-	SelectOnSave       bool
-	Swappable          string            // Swappable model support (Django-specific)
-	RequiredDBFeatures []string          // Database feature requirements
-	RequiredDBVendor   string            // Database vendor requirements
-	TableComment       string            // Table comment/description
-	TableOptions       map[string]string // Table-specific options (e.g., ENGINE for MySQL)
+	TableName           string
+	DefaultRelatedName  string
+	VerboseName         string
+	VerboseNamePlural   string
+	AppLabel            string
+	DefaultManager      string
+	BaseManager         string // Custom base manager name
+	GetLatestBy         string // Field to use for latest() queries
+	DBTablespace        string // Default tablespace for model (PostgreSQL)
+	Constraints         []Constraint
+	UniqueTogether      [][]string
+	Indexes             []Index
+	Permissions         []Permission
+	OrderBy             []string
+	Proxy               bool
+	Abstract            bool
+	Managed             bool
+	SelectOnSave        bool
+	Swappable           string            // Swappable model support (Django-specific)
+	RequiredDBFeatures  []string          // Database feature requirements
+	RequiredDBVendor    string            // Database vendor requirements
+	TableComment        string            // Table comment/description
+	TableOptions        map[string]string // Table-specific options (e.g., ENGINE for MySQL)
+	OperationOnlyFields []string          // Fields that can only be changed by authorized operations
 }
 
 // DefaultMeta returns a Meta with sensible defaults
