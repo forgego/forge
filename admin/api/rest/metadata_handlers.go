@@ -7,12 +7,22 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/forgego/forge/admin/core"
 	apicore "github.com/forgego/forge/api/core"
+	"github.com/forgego/forge/identity/models"
+	"github.com/forgego/forge/identity/principal"
 	"github.com/go-chi/chi/v5"
 )
+
+// ExtensionMetadata represents registered admin extension metadata.
+type ExtensionMetadata struct {
+	Name    string `json:"name"`
+	Entry   string `json:"entry"`
+	Version int    `json:"version"`
+}
 
 // handleConfig returns the admin configuration
 func (r *Router) handleConfig(w http.ResponseWriter, req *http.Request) {
@@ -73,9 +83,71 @@ func (r *Router) handleMetaList(w http.ResponseWriter, req *http.Request) {
 		})
 	}
 
-	respondJSON(w, http.StatusOK, map[string]interface{}{
+	response := map[string]interface{}{
 		"models": models,
-	})
+	}
+
+	if isStaffUser(ctx) {
+		r.extensionsMu.RLock()
+		exts := make([]ExtensionMetadata, 0, len(r.extensions))
+		adminBase := r.adminPrefix
+		if adminBase == "/" {
+			adminBase = ""
+		}
+		for _, ext := range r.extensions {
+			entry := ext.Entry
+			if entry == "" {
+				entry = fmt.Sprintf("%s/ext/%s/index.js", adminBase, ext.Name)
+			}
+			exts = append(exts, ExtensionMetadata{
+				Name:    ext.Name,
+				Entry:   entry,
+				Version: ext.Version,
+			})
+		}
+		r.extensionsMu.RUnlock()
+		response["extensions"] = exts
+	}
+
+	respondJSON(w, http.StatusOK, response)
+}
+
+func isStaffUser(ctx context.Context) bool {
+	if actor, ok := principal.PrincipalFromContext(ctx); ok {
+		if actor.Kind == principal.KindUser && actor.ID != "" {
+			for _, role := range actor.Roles() {
+				if role == "staff" || role == "superuser" || role == "admin" {
+					return true
+				}
+			}
+		}
+	}
+	user, ok := apicore.UserFromContext(ctx)
+	if !ok || user == nil {
+		return false
+	}
+	switch u := user.(type) {
+	case *models.User:
+		return u != nil && (u.IsStaff || u.IsSuperuser)
+	case models.User:
+		return u.IsStaff || u.IsSuperuser
+	}
+	val := reflect.ValueOf(user)
+	if val.Kind() == reflect.Ptr {
+		if val.IsNil() {
+			return false
+		}
+		val = val.Elem()
+	}
+	if val.Kind() == reflect.Struct {
+		for _, name := range []string{"IsStaff", "IsSuperuser", "IsAdmin"} {
+			f := val.FieldByName(name)
+			if f.IsValid() && f.Kind() == reflect.Bool && f.Bool() {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func adminEnvironment() string {

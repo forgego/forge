@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"github.com/forgego/forge/admin/core"
+	apicore "github.com/forgego/forge/api/core"
 	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/identity/models"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -220,6 +222,125 @@ func TestHandleMetaList_FallsBackToZeroWhenListFails(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
 	require.Len(t, payload.Models, 1)
 	assert.Equal(t, int64(0), payload.Models[0].Count)
+}
+
+func TestHandleMetaList_ExtensionsExposure(t *testing.T) {
+	registry := core.NewRegistry()
+	err := registry.Register(&mockAdmin{
+		modelName:     "products",
+		moduleAllowed: true,
+		metadata: &core.Metadata{
+			VerboseName:       "Product",
+			VerboseNamePlural: "Products",
+			Permissions:       core.PermissionMetadata{View: true},
+		},
+	})
+	require.NoError(t, err)
+
+	router := NewRouter(registry)
+	router.SetExtensions([]ExtensionMetadata{
+		{Name: "orders", Version: 1},
+	})
+
+	t.Run("unauthenticated metadata does not expose extensions", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/meta", nil)
+		rec := httptest.NewRecorder()
+
+		router.handleMetaList(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var payload map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
+		_, hasExtensions := payload["extensions"]
+		assert.False(t, hasExtensions, "unauthenticated request must not expose extensions")
+		assert.Contains(t, payload, "models")
+	})
+
+	t.Run("non-staff user does not expose extensions", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/meta", nil)
+		ctx := apicore.WithUser(req.Context(), &models.User{
+			ID:       2,
+			Username: "regular",
+			IsStaff:  false,
+		})
+		rec := httptest.NewRecorder()
+
+		router.handleMetaList(rec, req.WithContext(ctx))
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var payload map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
+		_, hasExtensions := payload["extensions"]
+		assert.False(t, hasExtensions, "non-staff user must not expose extensions")
+	})
+
+	t.Run("authenticated staff metadata lists registered extension", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/meta", nil)
+		ctx := apicore.WithUser(req.Context(), &models.User{
+			ID:       1,
+			Username: "admin",
+			IsStaff:  true,
+		})
+		rec := httptest.NewRecorder()
+
+		router.handleMetaList(rec, req.WithContext(ctx))
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var payload struct {
+			Models     []core.ModelListMetadata `json:"models"`
+			Extensions []ExtensionMetadata      `json:"extensions"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
+		require.Len(t, payload.Models, 1)
+		require.Len(t, payload.Extensions, 1)
+		assert.Equal(t, "orders", payload.Extensions[0].Name)
+		assert.Equal(t, "/admin/ext/orders/index.js", payload.Extensions[0].Entry)
+		assert.Equal(t, 1, payload.Extensions[0].Version)
+	})
+
+	t.Run("authenticated staff metadata has empty list when no extensions registered", func(t *testing.T) {
+		cleanRouter := NewRouter(registry)
+		req := httptest.NewRequest(http.MethodGet, "/api/meta", nil)
+		ctx := apicore.WithUser(req.Context(), &models.User{
+			ID:       1,
+			Username: "admin",
+			IsStaff:  true,
+		})
+		rec := httptest.NewRecorder()
+
+		cleanRouter.handleMetaList(rec, req.WithContext(ctx))
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var rawPayload map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &rawPayload))
+		assert.Equal(t, "[]", string(rawPayload["extensions"]))
+	})
+
+	t.Run("custom adminPrefix reflected in extension entry", func(t *testing.T) {
+		customRouter := NewRouter(registry)
+		customRouter.WithAdminPrefix("/custom-panel")
+		customRouter.SetExtensions([]ExtensionMetadata{
+			{Name: "orders", Version: 1},
+		})
+
+		req := httptest.NewRequest(http.MethodGet, "/api/meta", nil)
+		ctx := apicore.WithUser(req.Context(), &models.User{
+			ID:       1,
+			Username: "admin",
+			IsStaff:  true,
+		})
+		rec := httptest.NewRecorder()
+
+		customRouter.handleMetaList(rec, req.WithContext(ctx))
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var payload struct {
+			Extensions []ExtensionMetadata `json:"extensions"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
+		require.Len(t, payload.Extensions, 1)
+		assert.Equal(t, "/custom-panel/ext/orders/index.js", payload.Extensions[0].Entry)
+	})
 }
 
 func TestHandleConfig_UsesEnvironmentVariable(t *testing.T) {
