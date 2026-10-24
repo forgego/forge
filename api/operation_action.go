@@ -48,6 +48,10 @@ func OperationAction[In, Out any](runner *operation.Runner, op operation.Operati
 				apierrors.WriteError(w, r, apierrors.NewProblem(apierrors.ErrorTypeValidation, apierrors.CodeValidationError, http.StatusBadRequest, "Invalid operation", "The operation request is invalid"))
 				return
 			}
+			if errors.Is(err, operation.ErrConflict) {
+				apierrors.WriteError(w, r, apierrors.NewProblem(apierrors.ErrorTypeConflict, apierrors.CodeConflict, http.StatusConflict, "Operation conflict", "The operation conflicts with the current state"))
+				return
+			}
 			apierrors.WriteError(w, r, err)
 			return
 		}

@@ -8,6 +8,7 @@ import (
 	"reflect"
 
 	"github.com/forgego/forge/identity/models"
+	"github.com/forgego/forge/operation"
 )
 
 // Kind identifies the source and trust category of a principal.
@@ -31,6 +32,22 @@ type Principal struct {
 	RoleNames       []string
 	PermissionNames []string
 	accountStateErr error
+}
+
+// Actor adapts a Principal to the operation runner's authorization contract.
+func Actor(p Principal) operation.Actor { return principalActor{principal: p} }
+
+type principalActor struct{ principal Principal }
+
+func (a principalActor) ID() string   { return a.principal.ID }
+func (a principalActor) Kind() string { return string(a.principal.Kind) }
+func (a principalActor) HasPermission(_ context.Context, permission string) (bool, error) {
+	for _, granted := range a.principal.Permissions() {
+		if granted == permission {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // Roles returns a copy of the principal's roles.
