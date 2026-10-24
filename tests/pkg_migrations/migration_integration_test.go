@@ -16,10 +16,113 @@ import (
 )
 
 // TestMigrationApplySQLite tests migrations against SQLite using the migration system
-// NOTE: Currently skipped because migration generator uses config which defaults to postgres
-// TODO: Add support for specifying driver in migration generator
 func TestMigrationApplySQLite(t *testing.T) {
-	t.Skip("SQLite migration apply is unverified; see docs/DESIGN.md §21")
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	for key, value := range map[string]string{
+		"DRIVER": "sqlite",
+		"NAME":   dbPath,
+	} {
+		t.Setenv("FORGE_DATABASE_"+key, value)
+	}
+
+	// Create temporary directories
+	tempDir, cleanupTemp := testhelpers.TempDirInTests(t, "sqlite_migration_")
+	defer cleanupTemp()
+	modelsDir := filepath.Join(tempDir, "models")
+	migrationsDir := filepath.Join(tempDir, "migrations")
+	require.NoError(t, os.MkdirAll(modelsDir, 0755))
+	require.NoError(t, os.MkdirAll(migrationsDir, 0755))
+
+	// Create User model
+	userModel := `package models
+
+import "github.com/forgego/forge/schema"
+
+type User struct {
+	schema.BaseSchema
+}
+
+func (User) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("username").Required().MaxLength(150).Unique().Build(),
+		schema.String("email").Required().MaxLength(255).Unique().Build(),
+		schema.Bool("is_active").Default(true).Build(),
+		schema.DateTime("created_at").Build(),
+	}
+}
+
+func (User) Meta() schema.Meta {
+	return schema.Meta{TableName: "users"}
+}
+
+func (User) Relations() []schema.Relation {
+	return []schema.Relation{}
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(modelsDir, "user.go"), []byte(userModel), 0644))
+
+	// Create Post model with FK
+	postModel := `package models
+
+import "github.com/forgego/forge/schema"
+
+type Post struct {
+	schema.BaseSchema
+}
+
+func (Post) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64("id").Primary().AutoIncrement().Build(),
+		schema.String("title").Required().MaxLength(200).Build(),
+		schema.Text("content").Build(),
+		schema.Int64("user_id").Required().Build(),
+		schema.DateTime("created_at").Build(),
+	}
+}
+
+func (Post) Meta() schema.Meta {
+	return schema.Meta{TableName: "posts"}
+}
+
+func (Post) Relations() []schema.Relation {
+	return []schema.Relation{
+		schema.ForeignKey("user_id", "User").OnDelete("CASCADE").Build(),
+	}
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(modelsDir, "post.go"), []byte(postModel), 0644))
+
+	// Generate migrations using the migration system
+	gen, err := migrate.NewGenerator(modelsDir, migrationsDir)
+	require.NoError(t, err)
+
+	err = gen.GenerateMigrations("create_users_and_posts")
+	require.NoError(t, err)
+
+	// Apply migrations using the migration runner
+	database, err := db.NewDB(dbPath)
+	require.NoError(t, err)
+	defer database.Close()
+
+	runner, err := db.NewMigrationRunner(database, migrationsDir)
+	require.NoError(t, err)
+	defer runner.Close()
+
+	err = runner.Migrate(ctx)
+	require.NoError(t, err)
+
+	// Assert version, clean state, and tables exist
+	version, dirty, err := runner.Version(ctx)
+	require.NoError(t, err)
+	require.Equal(t, uint(1), version)
+	require.False(t, dirty)
+
+	testhelpers.AssertTableExists(ctx, t, database.DB, "sqlite", "users")
+	testhelpers.AssertTableExists(ctx, t, database.DB, "sqlite", "posts")
 }
 
 // TestMigrationApplyPostgres tests migrations against Postgres using the migration system

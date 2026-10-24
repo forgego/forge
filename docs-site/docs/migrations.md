@@ -275,8 +275,9 @@ Without `FORGE_REQUIRE_DB=1` the PostgreSQL tests skip when no database is reach
 it set, they fail instead.
 
 :::warning SQLite is experimental
-Applying migrations to SQLite is experimental, and the release gate does not cover it.
-`TestMigrationApplySQLite` is the one broader integration test the gate allows to skip.
+Applying migrations to SQLite is experimental. The release gate runs one SQLite
+integration test, `TestMigrationApplySQLite`, which generates and applies a two-table
+migration to a file database.
 A basic generated table migration is tested in-process against SQLite, including apply,
 data access and rollback. That test does not establish support for arbitrary SQLite
 schema changes. On SQLite, a new

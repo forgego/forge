@@ -336,7 +336,7 @@ jobs:
         run: |
           set -o pipefail
           # Run package binaries serially (-p 1) because all packages share FORGE_TEST_DATABASE_URL and CleanupDB truncates tables.
-          go test -count=1 -p 1 -json ./... | "$RUNNER_TEMP/testreport" --out "$RUNNER_TEMP/tests-report.txt" --require-no-skip '^github.com/forgego/forge/tests/(integration|pkg_migrations|e2e)' --allow-skip 'tests/pkg_migrations$ ^TestMigrationApplySQLite$'
+          go test -count=1 -p 1 -json ./... | "$RUNNER_TEMP/testreport" --out "$RUNNER_TEMP/tests-report.txt" --require-no-skip '^github.com/forgego/forge/tests/(integration|pkg_migrations|e2e)'
 
       - name: Upload release evidence
         if: always()
