@@ -119,7 +119,7 @@ func main() {
 	r := buildEcommerceRouter(ctx, cfg, database)
 
 	adminPath := normalizePath(cfg.GetString("admin.path", "/admin"), "/admin")
-	srv, err := newEcommerceServer(cfg, r)
+	srv, err := newEcommerceServer(cfg, r, server.WithDatabase(database))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -141,11 +141,11 @@ func main() {
 // newEcommerceServer wraps handler in a Forge server configured from cfg, so
 // the example gets StartWithGracefulShutdown. The example builds its own
 // router and middleware stack, so it replaces the server's default handler.
-func newEcommerceServer(cfg *config.Config, handler http.Handler) (*server.Server, error) {
+func newEcommerceServer(cfg *config.Config, handler http.Handler, opts ...server.Option) (*server.Server, error) {
 	settings := config.LoadSettings(cfg)
 	settings.Server.Host = cfg.GetString("server.host", "localhost")
 	settings.Server.Port = cfg.GetString("server.port", "8020")
-	srv, err := server.NewServer(cfg, settings, nil)
+	srv, err := server.NewServer(cfg, settings, nil, opts...)
 	if err != nil {
 		return nil, err
 	}

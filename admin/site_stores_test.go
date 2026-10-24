@@ -78,7 +78,7 @@ func storeSite(t *testing.T, database *db.DB) *httptest.Server {
 	_, err := RegisterWithSite(site, &core.Config[storeNote]{})
 	require.NoError(t, err)
 	site.SetDB(database)
-	require.NoError(t, site.UseStores(context.Background(), "database"))
+	require.NoError(t, site.UseDatabaseStores(context.Background()))
 	ts := httptest.NewServer(site.Handler())
 	t.Cleanup(ts.Close)
 	return ts
@@ -151,11 +151,9 @@ func TestSite_UseDatabaseStoresRequiresMigratedDatabase(t *testing.T) {
 	ctx := context.Background()
 	site := NewSite("stores")
 	require.ErrorContains(t, site.UseDatabaseStores(ctx), "call SetDB first")
-	require.NoError(t, site.UseStores(ctx, "memory"), "memory needs no database")
-	require.ErrorContains(t, site.UseStores(ctx, "redis"), "invalid server.stores")
 
 	site.SetDB(storestest.Open(t, "sqlite3", storestest.SQLitePath(t)))
-	require.ErrorIs(t, site.UseStores(ctx, "database"), stores.ErrNotMigrated)
+	require.ErrorIs(t, site.UseDatabaseStores(ctx), stores.ErrNotMigrated)
 }
 
 func TestSite_ConfiguredCredentialPrincipalUsesLoginIdentitySource(t *testing.T) {
@@ -223,37 +221,4 @@ func TestSite_SharedHistoryKeepsExplicitHistoryManagers(t *testing.T) {
 	assert.Equal(t, "3", shared.entries[1].ObjectID)
 	assert.Equal(t, "alice", shared.entries[0].UserID, "a map user is recorded by username")
 	require.Len(t, own.entries, 1, "a config's own HistoryManager is kept")
-}
-
-func TestSite_UseStoresMemoryUndoesDatabaseStores(t *testing.T) {
-	t.Setenv("FORGE_ADMIN_USERNAME", "admin")
-	t.Setenv("FORGE_ADMIN_PASSWORD", "secret")
-	ctx := context.Background()
-	database, _ := storestest.Backends()[0].OpenMigrated(t)
-	createNotesTable(t, database)
-	site := NewSite("stores")
-	site.SetUserStore(siteTestUsers{})
-	_, err := RegisterWithSite(site, &core.Config[storeNote]{})
-	require.NoError(t, err)
-	site.SetDB(database)
-	require.NoError(t, site.UseStores(ctx, "database"))
-	require.NoError(t, site.UseStores(ctx, "memory"))
-
-	ts := httptest.NewServer(site.Handler())
-	t.Cleanup(ts.Close)
-	status, body := adminCall(t, ts.URL, http.MethodPost, "/api/login", "", map[string]string{"username": "admin", "password": "secret"})
-	require.Equal(t, http.StatusOK, status, "%v", body)
-	token := body["token"].(string)
-	status, body = adminCall(t, ts.URL, http.MethodPost, "/api/store_notes/", token, map[string]string{"title": "Local"})
-	require.Equal(t, http.StatusCreated, status, "%v", body)
-
-	for _, table := range []string{"forge_admin_tokens", "forge_admin_log"} {
-		var rows int
-		require.NoError(t, database.QueryRowContext(ctx, "SELECT count(*) FROM "+table).Scan(&rows))
-		assert.Zero(t, rows, "%s: memory stores must not write to the database", table)
-	}
-	id := fmt.Sprint(body["id"])
-	status, body = adminCall(t, ts.URL, http.MethodGet, "/api/store_notes/"+id+"/history", token, nil)
-	require.Equal(t, http.StatusOK, status, "%v", body)
-	assert.Contains(t, fmt.Sprint(body), "add", "history is kept in memory")
 }

@@ -33,7 +33,7 @@ func sqliteTableExists(t *testing.T, path, table string) bool {
 	return count == 1
 }
 
-func TestMigrateUp_AppliesFrameworkStoreTablesWhenStoresIsDatabase(t *testing.T) {
+func TestMigrateUp_AppliesFrameworkStoreTables(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "app.db")
 	migrations := filepath.Join(dir, "migrations")
@@ -42,7 +42,6 @@ func TestMigrateUp_AppliesFrameworkStoreTablesWhenStoresIsDatabase(t *testing.T)
 	require.NoError(t, os.WriteFile(filepath.Join(migrations, "000001_init.down.sql"), []byte("DROP TABLE widgets;"), 0o644))
 	t.Setenv("FORGE_DATABASE_DRIVER", "sqlite")
 	t.Setenv("FORGE_DATABASE_NAME", dbPath)
-	t.Setenv("FORGE_SERVER_STORES", "database")
 
 	out, err := runMigrateCommand(t, NewUpCommand().Definition(), "--path", migrations)
 	require.NoError(t, err, out)
@@ -57,23 +56,8 @@ func TestMigrateUp_AppliesFrameworkStoreTablesWhenStoresIsDatabase(t *testing.T)
 
 	out, err = runMigrateCommand(t, NewStatusCommand().Definition(), "--path", migrations)
 	require.NoError(t, err, out)
-	assert.Contains(t, out, "Framework store tables (server.stores: database): version 1 of 1, up to date")
+	assert.Contains(t, out, "Framework store tables: version 1 of 1, up to date")
 	assert.Contains(t, out, "Current Version: 1", "the application's version is tracked separately")
-}
-
-func TestMigrateUp_MemoryStoresLeaveFrameworkTablesOut(t *testing.T) {
-	dir := t.TempDir()
-	dbPath := filepath.Join(dir, "app.db")
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "000001_init.up.sql"), []byte("CREATE TABLE widgets (id INTEGER PRIMARY KEY);"), 0o644))
-	t.Setenv("FORGE_DATABASE_DRIVER", "sqlite")
-	t.Setenv("FORGE_DATABASE_NAME", dbPath)
-	t.Setenv("FORGE_SERVER_STORES", "")
-
-	out, err := runMigrateCommand(t, NewUpCommand().Definition(), "--path", dir)
-	require.NoError(t, err, out)
-	assert.True(t, sqliteTableExists(t, dbPath, "widgets"))
-	assert.False(t, sqliteTableExists(t, dbPath, "forge_sessions"), "server.stores defaults to memory")
-	assert.False(t, sqliteTableExists(t, dbPath, "forge_framework_migrations"))
 }
 
 func TestMigrateUp_FrameworkTablesWithoutApplicationMigrations(t *testing.T) {
@@ -81,7 +65,6 @@ func TestMigrateUp_FrameworkTablesWithoutApplicationMigrations(t *testing.T) {
 	dbPath := filepath.Join(dir, "app.db")
 	t.Setenv("FORGE_DATABASE_DRIVER", "sqlite")
 	t.Setenv("FORGE_DATABASE_NAME", dbPath)
-	t.Setenv("FORGE_SERVER_STORES", "database")
 
 	out, err := runMigrateCommand(t, NewUpCommand().Definition(), "--path", dir)
 	require.NoError(t, err, out)
@@ -90,19 +73,6 @@ func TestMigrateUp_FrameworkTablesWithoutApplicationMigrations(t *testing.T) {
 
 	out, err = runMigrateCommand(t, NewStatusCommand().Definition(), "--path", dir)
 	require.NoError(t, err, out)
-	assert.Contains(t, out, "Framework store tables (server.stores: database): version 1 of 1, up to date",
+	assert.Contains(t, out, "Framework store tables: version 1 of 1, up to date",
 		"the framework version shows even without application migrations")
-}
-
-func TestMigrateUp_RejectsUnknownStoresSetting(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("FORGE_DATABASE_DRIVER", "sqlite")
-	t.Setenv("FORGE_DATABASE_NAME", filepath.Join(dir, "app.db"))
-	t.Setenv("FORGE_SERVER_STORES", "redis")
-
-	_, err := runMigrateCommand(t, NewUpCommand().Definition(), "--path", dir)
-	require.ErrorContains(t, err, `invalid server.stores "redis"`)
-
-	_, err = runMigrateCommand(t, NewUpCommand().Definition(), "--path", dir, "--dry-run")
-	require.ErrorContains(t, err, `invalid server.stores "redis"`, "a dry run rejects what the real run rejects")
 }

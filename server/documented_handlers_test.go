@@ -12,12 +12,13 @@ import (
 	"testing"
 
 	"github.com/forgego/forge/config"
+	"github.com/forgego/forge/stores/storestest"
 	"github.com/spf13/viper"
 )
 
 func documentedServer(t *testing.T, settings *config.Settings) *Server {
 	t.Helper()
-	srv, err := NewServer(&config.Config{Viper: viper.New()}, settings, nil)
+	srv, err := NewServer(&config.Config{Viper: viper.New()}, settings, nil, WithDatabase(storestest.OpenMemory(t)))
 	if err != nil {
 		t.Fatal(err)
 	}

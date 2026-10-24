@@ -23,6 +23,7 @@ import (
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/stores"
 	"github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 var schemaCounter atomic.Uint64
@@ -114,6 +115,19 @@ func Migrate(t testing.TB, database *db.DB) {
 	if err := stores.Migrate(context.Background(), database); err != nil {
 		t.Fatalf("migrating framework store tables: %v", err)
 	}
+}
+
+// OpenMemory opens an in-memory SQLite database with framework store
+// migrations applied, and closes it when t ends.
+func OpenMemory(t testing.TB) *db.DB {
+	t.Helper()
+	database, err := db.NewDBWithDriver("sqlite3", ":memory:", db.WithMaxOpenConns(1), db.WithMaxIdleConns(1))
+	if err != nil {
+		t.Fatalf("connecting to in-memory sqlite3: %v", err)
+	}
+	t.Cleanup(func() { _ = database.Close() })
+	Migrate(t, database)
+	return database
 }
 
 // Backend is a database to run store tests against.

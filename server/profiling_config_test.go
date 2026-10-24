@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/forgego/forge/config"
+	"github.com/forgego/forge/stores/storestest"
 	"github.com/spf13/viper"
 	"net/http"
 	"net/http/httptest"
@@ -22,7 +23,7 @@ func TestProductionRejectsAppDebug(t *testing.T) {
 func TestProfilingRoutesRequireDebugAndEnableProfiling(t *testing.T) {
 	for _, tc := range []struct{ debug, profiling, allowed bool }{{false, false, false}, {true, false, false}, {false, true, false}, {true, true, true}} {
 		settings := &config.Settings{App: config.AppSettings{Env: "development", Debug: tc.debug}, Server: config.ServerSettings{EnableProfiling: tc.profiling, HealthCheckPath: "/health"}}
-		srv, err := NewServer(&config.Config{Viper: viper.New()}, settings, nil)
+		srv, err := NewServer(&config.Config{Viper: viper.New()}, settings, nil, WithDatabase(storestest.OpenMemory(t)))
 		if err != nil {
 			t.Fatal(err)
 		}

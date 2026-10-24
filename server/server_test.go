@@ -13,6 +13,7 @@ import (
 	"github.com/forgego/forge/config"
 	"github.com/forgego/forge/log"
 	"github.com/forgego/forge/netutil"
+	"github.com/forgego/forge/stores/storestest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -47,7 +48,7 @@ func TestNewServer_Initialization(t *testing.T) {
 	logger := log.NewNopLogger()
 
 	// Create server
-	server, err := NewServer(cfg, settings, logger)
+	server, err := NewServer(cfg, settings, logger, WithDatabase(storestest.OpenMemory(t)))
 	require.NoError(t, err)
 	require.NotNil(t, server)
 
@@ -96,7 +97,7 @@ func TestNewServer_Initialization(t *testing.T) {
 func TestServer_RegisterRoutes(t *testing.T) {
 	cfg := config.NewConfig()
 	settings := &config.Settings{}
-	server, err := NewServer(cfg, settings, nil)
+	server, err := NewServer(cfg, settings, nil, WithDatabase(storestest.OpenMemory(t)))
 	require.NoError(t, err)
 
 	server.RegisterRoutes(func(r *Router) {
@@ -118,7 +119,7 @@ func TestServer_Shutdown(t *testing.T) {
 			GracefulTimeout: 1,
 		},
 	}
-	server, err := NewServer(cfg, settings, nil)
+	server, err := NewServer(cfg, settings, nil, WithDatabase(storestest.OpenMemory(t)))
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -173,7 +174,7 @@ func TestServer_Shutdown_SyncsLogger(t *testing.T) {
 		Logger: zap.New(core),
 	}
 
-	server, err := NewServer(cfg, settings, logger)
+	server, err := NewServer(cfg, settings, logger, WithDatabase(storestest.OpenMemory(t)))
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -194,7 +195,7 @@ func TestServer_Shutdown_SyncsLogger(t *testing.T) {
 			Logger: zap.New(coreEINVAL),
 		}
 
-		serverEINVAL, err := NewServer(cfg, settings, loggerEINVAL)
+		serverEINVAL, err := NewServer(cfg, settings, loggerEINVAL, WithDatabase(storestest.OpenMemory(t)))
 		require.NoError(t, err)
 
 		ctx := context.Background()
@@ -257,7 +258,7 @@ func TestServerStartRejectsGeneratedSecretsInProductionBeforeListening(t *testin
 func TestServerDevelopmentDoesNotRejectGeneratedSecrets(t *testing.T) {
 	cfg := config.NewConfig()
 	settings := &config.Settings{App: config.AppSettings{Env: "development"}}
-	srv, err := NewServer(cfg, settings, nil)
+	srv, err := NewServer(cfg, settings, nil, WithDatabase(storestest.OpenMemory(t)))
 	require.NoError(t, err)
 	require.NoError(t, srv.validateProductionSecrets())
 }
@@ -350,7 +351,7 @@ func TestIsCSRFExemptPath(t *testing.T) {
 func TestNewServer_InfoEndpointOptIn(t *testing.T) {
 	get := func(t *testing.T, settings *config.Settings) int {
 		t.Helper()
-		srv, err := NewServer(config.NewConfig(), settings, nil)
+		srv, err := NewServer(config.NewConfig(), settings, nil, WithDatabase(storestest.OpenMemory(t)))
 		require.NoError(t, err)
 		w := httptest.NewRecorder()
 		srv.Handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/info", nil))
@@ -387,7 +388,7 @@ func TestNewServer_TrustedProxiesSetting(t *testing.T) {
 	cfg := config.NewConfig()
 	cfg.Set("server.trusted_proxies", []string{"10.0.0.0/8", "127.0.0.1"})
 	settings := config.LoadSettings(cfg)
-	_, err := NewServer(cfg, settings, nil)
+	_, err := NewServer(cfg, settings, nil, WithDatabase(storestest.OpenMemory(t)))
 	require.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -397,7 +398,7 @@ func TestNewServer_TrustedProxiesSetting(t *testing.T) {
 
 	// A later server with the default empty setting trusts no proxy.
 	empty := config.NewConfig()
-	_, err = NewServer(empty, config.LoadSettings(empty), nil)
+	_, err = NewServer(empty, config.LoadSettings(empty), nil, WithDatabase(storestest.OpenMemory(t)))
 	require.NoError(t, err)
 	assert.Empty(t, netutil.TrustedProxies())
 	assert.Equal(t, "10.1.2.3", netutil.ClientIP(req, netutil.TrustedProxies()))

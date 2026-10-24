@@ -31,9 +31,9 @@ type Server struct {
 	sessions *SessionManager
 }
 
-// NewServer creates a new framework server. With server.stores set to
-// database, pass WithDatabase: sessions and API throttling counters are then
-// kept in the database.
+// NewServer creates a new framework server. Pass WithDatabase with the
+// application database: sessions and API throttling counters are kept in the
+// database.
 func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger, opts ...Option) (*Server, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("server config is nil")
@@ -59,7 +59,7 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 	for _, opt := range opts {
 		opt(&options)
 	}
-	shared, err := sharedStores(settings, options)
+	shared, err := sharedStores(options)
 	if err != nil {
 		return nil, err
 	}
@@ -95,11 +95,9 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 	// Add session middleware if configured
 	var sessionManager *SessionManager
 	if settings.Security.SessionSecret != "" {
-		sessionManager = NewSessionManager([]byte(settings.Security.SessionSecret))
+		sessionManager = NewSessionManager([]byte(settings.Security.SessionSecret), shared.Sessions())
 		sessionManager.Cookie.Secure = secureCookies
-		if shared != nil {
-			sessionManager.Store = shared.Sessions()
-		}
+		sessionManager.Store = shared.Sessions()
 		router.Use(sessionManager.Middleware())
 	}
 

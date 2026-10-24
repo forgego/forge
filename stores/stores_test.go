@@ -38,16 +38,6 @@ func twoInstances(t *testing.T, backend storestest.Backend, clock func() time.Ti
 	return a, b
 }
 
-func TestParseKind(t *testing.T) {
-	for value, want := range map[string]string{"": "memory", "memory": "memory", " Database ": "database"} {
-		got, err := stores.ParseKind(value)
-		require.NoError(t, err)
-		assert.Equal(t, want, got, value)
-	}
-	_, err := stores.ParseKind("redis")
-	assert.ErrorContains(t, err, `invalid server.stores "redis"`)
-}
-
 func TestMigrate_CreatesTablesOnceAndKeepsTheConnectionOpen(t *testing.T) {
 	forEachBackend(t, func(t *testing.T, backend storestest.Backend) {
 		ctx := context.Background()

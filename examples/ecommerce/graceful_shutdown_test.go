@@ -10,6 +10,10 @@ import (
 	"time"
 
 	"github.com/forgego/forge/config"
+	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/server"
+	"github.com/forgego/forge/stores"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // The example must shut down gracefully: on SIGINT the in-flight request
@@ -37,7 +41,15 @@ func TestEcommerceServerDrainsInFlightRequestOnSignal(t *testing.T) {
 		}
 		_, _ = io.WriteString(w, "ok")
 	})
-	srv, err := newEcommerceServer(cfg, handler)
+	database, err := db.NewDBWithDriver("sqlite3", ":memory:", db.WithMaxOpenConns(1), db.WithMaxIdleConns(1))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	if err := stores.Migrate(t.Context(), database); err != nil {
+		t.Fatal(err)
+	}
+	srv, err := newEcommerceServer(cfg, handler, server.WithDatabase(database))
 	if err != nil {
 		t.Fatal(err)
 	}

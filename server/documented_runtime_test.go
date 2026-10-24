@@ -11,6 +11,7 @@ import (
 
 	"github.com/forgego/forge/config"
 	"github.com/forgego/forge/netutil"
+	"github.com/forgego/forge/stores/storestest"
 )
 
 // Metrics expose measured server uptime.
@@ -33,7 +34,7 @@ func TestMetricsHandlerReportsParseableUptime(t *testing.T) {
 func TestProductionEnablesSecureCookies(t *testing.T) {
 	settings := productionSettingsWith(secureTestSecurity())
 	settings.Server.HealthCheckPath = "/health"
-	srv, err := NewServer(config.NewConfig(), settings, nil)
+	srv, err := NewServer(config.NewConfig(), settings, nil, WithDatabase(storestest.OpenMemory(t)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +100,7 @@ func TestNewServerRegistersNoHealthCheckByDefault(t *testing.T) {
 	globalRegistry.mu.RLock()
 	before := len(globalRegistry.checkers)
 	globalRegistry.mu.RUnlock()
-	_, err := NewServer(config.NewConfig(), &config.Settings{App: config.AppSettings{Env: "test"}}, nil)
+	_, err := NewServer(config.NewConfig(), &config.Settings{App: config.AppSettings{Env: "test"}}, nil, WithDatabase(storestest.OpenMemory(t)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +115,7 @@ func TestNewServerRegistersNoHealthCheckByDefault(t *testing.T) {
 // Shutdown accepts a bounded context and completes with no active requests.
 func TestServerGracefulShutdownCompletesWithoutRequests(t *testing.T) {
 	s := &config.Settings{App: config.AppSettings{Env: "test"}}
-	srv, err := NewServer(config.NewConfig(), s, nil)
+	srv, err := NewServer(config.NewConfig(), s, nil, WithDatabase(storestest.OpenMemory(t)))
 	if err != nil {
 		t.Fatal(err)
 	}

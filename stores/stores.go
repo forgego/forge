@@ -11,46 +11,23 @@
 //   - admin saved views and change history: package stores/adminstore
 //
 // server.NewServer (with server.WithDatabase) and admin.Site.UseDatabaseStores
-// wire them in when server.stores is database.
+// wire them in.
 //
-// The tables are framework-owned migrations embedded in this package. With
-// server.stores set to database, `forge migrate up` applies them before the
-// application's migrations and records them in forge_framework_migrations,
-// separately from the application's schema_migrations. Call Migrate to apply
-// them from Go instead. Nothing creates tables at runtime.
+// The tables are framework-owned migrations embedded in this package. `forge migrate up`
+// applies them before the application's migrations and records them in
+// forge_framework_migrations, separately from the application's schema_migrations.
+// Call Migrate to apply them from Go instead. Nothing creates tables at runtime.
 package stores
 
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/forgego/forge/db"
 )
-
-// Setting values for server.stores.
-const (
-	// KindMemory keeps every store in process memory (the default).
-	KindMemory = "memory"
-	// KindDatabase keeps the stores in the application database.
-	KindDatabase = "database"
-)
-
-// ParseKind normalizes a server.stores value. An empty value is memory.
-func ParseKind(value string) (string, error) {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "", KindMemory:
-		return KindMemory, nil
-	case KindDatabase:
-		return KindDatabase, nil
-	default:
-		return "", fmt.Errorf("invalid server.stores %q: use %q or %q", value, KindDatabase, KindMemory)
-	}
-}
 
 // cleanupInterval is how often one process deletes expired rows from a
 // table. Cleanup runs inline on the write path, so no cron job is needed.

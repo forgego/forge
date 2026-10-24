@@ -109,10 +109,9 @@ func (s *Site) SetDB(database *db.DB) *Site {
 // UseDatabaseStores keeps the admin's bearer tokens, login lockout counts,
 // saved views and change history in the database set with SetDB, instead of
 // in process memory, so they survive a restart and are shared by every
-// instance using that database. It is what server.stores: database selects
-// in a project created by forge new. The framework store tables must exist
-// (forge migrate up with server.stores: database, or stores.Migrate);
-// otherwise it returns an error wrapping stores.ErrNotMigrated.
+// instance using that database. The framework store tables must exist
+// (forge migrate up, or stores.Migrate); otherwise it returns an error
+// wrapping stores.ErrNotMigrated.
 //
 // Registered models whose config leaves HistoryManager unset, or uses
 // admin.HistoryManager, write their history to the database; a model with
@@ -138,35 +137,6 @@ func (s *Site) UseDatabaseStores(ctx context.Context) error {
 		useSiteHistory(registered, s.history)
 	}
 	return nil
-}
-
-// UseStores applies a server.stores value: "database" calls
-// UseDatabaseStores, "memory" (or empty) calls UseMemoryStores.
-func (s *Site) UseStores(ctx context.Context, kind string) error {
-	parsed, err := stores.ParseKind(kind)
-	if err != nil {
-		return err
-	}
-	if parsed != stores.KindDatabase {
-		s.UseMemoryStores()
-		return nil
-	}
-	return s.UseDatabaseStores(ctx)
-}
-
-// UseMemoryStores keeps the admin's tokens, login lockout, saved views and
-// change history in process memory, undoing an earlier UseDatabaseStores:
-// handlers built afterwards get fresh in-memory stores, and each registered
-// model starts a fresh in-memory history.
-func (s *Site) UseMemoryStores() {
-	if s.history == nil {
-		return
-	}
-	s.history = nil
-	s.apiStores = rest.Stores{}
-	for _, registered := range s.registry.GetAll() {
-		useSiteHistory(registered, core.NewMemoryHistoryManager())
-	}
 }
 
 // The admin login lockout policy, the same as the in-memory default: five

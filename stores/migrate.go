@@ -70,8 +70,8 @@ func LatestVersion(driver string) (uint64, error) {
 }
 
 // Migrate applies the pending framework store migrations to database. It
-// is what `forge migrate up` runs when server.stores is database, and it is
-// safe to run again: applied migrations are skipped.
+// is what `forge migrate up` runs, and it is safe to run again: applied
+// migrations are skipped.
 func Migrate(ctx context.Context, database *db.DB) error {
 	return withMigrator(ctx, database, func(m *migrate.Migrate) error {
 		if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
@@ -109,7 +109,7 @@ func CheckMigrated(ctx context.Context, database *db.DB) error {
 	var dirty bool
 	row := database.QueryRowContext(ctx, "SELECT version, dirty FROM forge_framework_migrations LIMIT 1")
 	if err := row.Scan(&version, &dirty); err != nil {
-		return fmt.Errorf("%w (run `forge migrate up` with server.stores: database): %v", ErrNotMigrated, err)
+		return fmt.Errorf("%w (run `forge migrate up`): %v", ErrNotMigrated, err)
 	}
 	if dirty {
 		return fmt.Errorf("%w: version %d is dirty", ErrNotMigrated, version)

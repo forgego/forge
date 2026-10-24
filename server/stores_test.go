@@ -17,32 +17,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func storesSettings(kind string) *config.Settings {
+func storesSettings() *config.Settings {
 	return &config.Settings{
 		App:      config.AppSettings{Name: "stores", Env: "test"},
-		Server:   config.ServerSettings{Host: "127.0.0.1", Port: "0", Stores: kind},
+		Server:   config.ServerSettings{Host: "127.0.0.1", Port: "0"},
 		Security: config.SecuritySettings{SessionSecret: "test-session-secret-key-that-is-long-enough"},
 	}
 }
 
-func TestNewServer_DatabaseStoresNeedAMigratedDatabase(t *testing.T) {
+func TestNewServer_NeedsAMigratedDatabase(t *testing.T) {
 	cfg := config.NewConfig()
 
-	_, err := NewServer(cfg, storesSettings("database"), log.NewNopLogger())
-	require.ErrorContains(t, err, "pass server.WithDatabase(database)")
+	_, err := NewServer(cfg, storesSettings(), log.NewNopLogger())
+	require.ErrorContains(t, err, "run `forge migrate up`")
 
 	unmigrated := storestest.Open(t, "sqlite3", storestest.SQLitePath(t))
-	_, err = NewServer(cfg, storesSettings("database"), log.NewNopLogger(), WithDatabase(unmigrated))
+	_, err = NewServer(cfg, storesSettings(), log.NewNopLogger(), WithDatabase(unmigrated))
 	require.ErrorIs(t, err, stores.ErrNotMigrated)
-
-	_, err = NewServer(cfg, storesSettings("redis"), log.NewNopLogger(), WithDatabase(unmigrated))
-	require.ErrorContains(t, err, `invalid server.stores "redis"`)
-
-	for _, kind := range []string{"", "memory"} {
-		srv, err := NewServer(cfg, storesSettings(kind), log.NewNopLogger(), WithDatabase(unmigrated))
-		require.NoError(t, err, "memory stores never touch the database")
-		require.NotNil(t, srv.SessionManager())
-	}
+	require.ErrorContains(t, err, "run `forge migrate up`")
 }
 
 // sessionServer builds a server whose /put stores a value in the session
@@ -98,8 +90,8 @@ func TestNewServer_DatabaseStoresShareSessionsBetweenInstances(t *testing.T) {
 		t.Run(backend.Name, func(t *testing.T) {
 			first, dsn := backend.OpenMigrated(t)
 			second := storestest.Open(t, backend.Driver, dsn)
-			a := sessionServer(t, storesSettings("database"), WithDatabase(first))
-			b := sessionServer(t, storesSettings("database"), WithDatabase(second))
+			a := sessionServer(t, storesSettings(), WithDatabase(first))
+			b := sessionServer(t, storesSettings(), WithDatabase(second))
 
 			assert.Equal(t, "alice", sessionRoundTrip(t, a, b), "a session created on A is read on B")
 
@@ -110,21 +102,12 @@ func TestNewServer_DatabaseStoresShareSessionsBetweenInstances(t *testing.T) {
 	}
 }
 
-// Before #293 every instance kept sessions in its own memory; that stays
-// the behavior with server.stores: memory.
-func TestNewServer_MemoryStoresKeepSessionsPerInstance(t *testing.T) {
-	a := sessionServer(t, storesSettings("memory"))
-	b := sessionServer(t, storesSettings("memory"))
-	assert.Equal(t, "alice", sessionRoundTrip(t, a, a))
-	assert.Equal(t, "", sessionRoundTrip(t, a, b))
-}
-
 func TestNewServer_DatabaseStoresShareAPIThrottling(t *testing.T) {
 	t.Cleanup(func() { throttling.SetDefaultStoreFactory(nil) })
 	database, _ := storestest.Backends()[0].OpenMigrated(t)
 	throttle := throttling.NewAnonRateThrottle("2/min")
 
-	_, err := NewServer(config.NewConfig(), storesSettings("database"), log.NewNopLogger(), WithDatabase(database))
+	_, err := NewServer(config.NewConfig(), storesSettings(), log.NewNopLogger(), WithDatabase(database))
 	require.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -134,23 +117,4 @@ func TestNewServer_DatabaseStoresShareAPIThrottling(t *testing.T) {
 	require.NoError(t, database.QueryRowContext(context.Background(),
 		"SELECT hits FROM forge_rate_limits WHERE bucket = $1", "rate:api:anon/2/min:throttle_anon_10.0.0.9").Scan(&hits))
 	assert.Equal(t, 1, hits, "throttles without their own store count in the database")
-}
-
-func TestNewServer_MemoryStoresResetDatabaseThrottling(t *testing.T) {
-	t.Cleanup(func() { throttling.SetDefaultStoreFactory(nil) })
-	database, _ := storestest.Backends()[0].OpenMigrated(t)
-	throttle := throttling.NewAnonRateThrottle("2/min")
-
-	_, err := NewServer(config.NewConfig(), storesSettings("database"), log.NewNopLogger(), WithDatabase(database))
-	require.NoError(t, err)
-	_, err = NewServer(config.NewConfig(), storesSettings("memory"), log.NewNopLogger())
-	require.NoError(t, err)
-
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.RemoteAddr = "10.0.0.9:1234"
-	require.NoError(t, throttling.CheckThrottles(req, nil, []throttling.Throttle{throttle}))
-	var rows int
-	require.NoError(t, database.QueryRowContext(context.Background(),
-		"SELECT count(*) FROM forge_rate_limits").Scan(&rows))
-	assert.Zero(t, rows, "a memory server must not keep counting in an earlier server's database")
 }
