@@ -343,6 +343,22 @@ func (g *OpenAPIGenerator) Generate() *OpenAPISpec {
 			inputSchema.Required = required
 		}
 		spec.Components.Schemas[res+"Input"] = inputSchema
+
+		// List response schema: paginated results
+		spec.Components.Schemas[res+"List"] = &Schema{
+			Type: "object",
+			Properties: map[string]*Schema{
+				"count":    {Type: "integer"},
+				"next":     {Type: "string"},
+				"previous": {Type: "string"},
+				"results": {
+					Type: "array",
+					Items: &Schema{
+						Ref: "#/components/schemas/" + res,
+					},
+				},
+			},
+		}
 	}
 
 	// Build PathItems and operations in given route order
@@ -398,9 +414,9 @@ func (g *OpenAPIGenerator) Generate() *OpenAPISpec {
 			}
 		}
 
-		// Success response: 200 (201 for POST, 204 for DELETE) referencing response schema
+		// Success response: 200 (201 for POST create, 204 for DELETE) referencing response schema
 		successCode := "200"
-		if methodUpper == http.MethodPost {
+		if methodUpper == http.MethodPost && (route.Action == "create" || route.Action == "") {
 			successCode = "201"
 		} else if methodUpper == http.MethodDelete {
 			successCode = "204"
@@ -410,10 +426,14 @@ func (g *OpenAPIGenerator) Generate() *OpenAPISpec {
 			Description: http.StatusText(statusCodeInt(successCode)),
 		}
 		if route.Resource != "" {
+			ref := "#/components/schemas/" + route.Resource
+			if route.Action == "list" {
+				ref = "#/components/schemas/" + route.Resource + "List"
+			}
 			successResp.Content = map[string]*MediaType{
 				"application/json": {
 					Schema: &Schema{
-						Ref: "#/components/schemas/" + route.Resource,
+						Ref: ref,
 					},
 				},
 			}
