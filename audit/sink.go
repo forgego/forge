@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"log/slog"
 	"sync/atomic"
+
+	apierrors "github.com/forgego/forge/api/errors"
 )
 
 // DBTX is implemented by database connections and transactions.
@@ -41,6 +43,9 @@ func (c *Counter) Count() uint64 {
 
 // Record applies the audit failure policy. FailClosed is the default policy.
 func Record(ctx context.Context, sink Sink, tx DBTX, event Event, policy Policy, options Options) error {
+	if event.CorrelationID == "" && ctx != nil {
+		event.CorrelationID = apierrors.GetRequestIDFromContext(ctx)
+	}
 	if err := sink.Record(ctx, tx, event); err != nil {
 		return HandleError(ctx, err, event.CorrelationID, policy, options)
 	}
@@ -51,6 +56,9 @@ func Record(ctx context.Context, sink Sink, tx DBTX, event Event, policy Policy,
 func HandleError(ctx context.Context, err error, correlationID string, policy Policy, options Options) error {
 	if err == nil {
 		return nil
+	}
+	if correlationID == "" && ctx != nil {
+		correlationID = apierrors.GetRequestIDFromContext(ctx)
 	}
 	if policy != FailOpen {
 		return err

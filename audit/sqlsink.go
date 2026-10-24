@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	apierrors "github.com/forgego/forge/api/errors"
 	"github.com/forgego/forge/db"
 )
 
@@ -49,6 +50,9 @@ func (s *SQLSink) Record(ctx context.Context, tx DBTX, event Event) error {
 	}
 	if event.OccurredAt.IsZero() {
 		event.OccurredAt = time.Now().UTC()
+	}
+	if event.CorrelationID == "" && ctx != nil {
+		event.CorrelationID = apierrors.GetRequestIDFromContext(ctx)
 	}
 	query := `INSERT INTO forge_audit_events (occurred_at, actor_id, actor_kind, operation, model, object_id, object_repr, outcome, changes, correlation_id, source) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`
 	if _, err := executor.ExecContext(ctx, s.database.RebindPlaceholders(query), event.OccurredAt, event.ActorID, event.ActorKind, event.Operation, nullString(event.Model), nullString(event.ObjectID), nullString(event.ObjectRepr), event.Outcome, nullString(event.Changes), event.CorrelationID, event.Source); err != nil {

@@ -66,11 +66,8 @@ func GetRequestID(r *http.Request) string {
 
 // SetRequestID sets the request ID in the context
 func SetRequestID(r *http.Request, id string) *http.Request {
-	// errors package doesn't export WithRequestID (it's internal to GetRequestIDFromContext?)
-	// Wait, errors.GetRequestIDFromContext looks for RequestIDKey in its own package?
-	// Let's check errors package.
-	// For now, we assume we need to set it.
-	return r.WithContext(context.WithValue(r.Context(), RequestIDKey, id))
+	ctx := errors.WithRequestID(r.Context(), id)
+	return r.WithContext(context.WithValue(ctx, RequestIDKey, id))
 }
 
 // WithContext returns a new request with the given context

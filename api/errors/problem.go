@@ -21,6 +21,8 @@ type Problem struct {
 	Instance string `json:"instance,omitempty" xml:"instance,omitempty"`
 	// Code is an application-level error code (extension to RFC 7807)
 	Code string `json:"code,omitempty" xml:"code,omitempty"`
+	// RequestID is the request identifier (correlation ID)
+	RequestID string `json:"request_id,omitempty" xml:"request_id,omitempty"`
 	// Meta contains additional metadata (extension to RFC 7807)
 	Meta map[string]interface{} `json:"meta,omitempty" xml:"-"`
 	// Errors contains field-level validation errors (extension for validation errors)
@@ -57,6 +59,12 @@ func NewProblemFromError(err ProblemError, instance string) *Problem {
 // WithInstance sets the instance URI
 func (p *Problem) WithInstance(instance string) *Problem {
 	p.Instance = instance
+	return p
+}
+
+// WithRequestID sets the request/correlation ID
+func (p *Problem) WithRequestID(requestID string) *Problem {
+	p.RequestID = requestID
 	return p
 }
 
@@ -111,6 +119,15 @@ func getTypeURI(errType ErrorType) string {
 
 // WriteJSON writes the problem as JSON to the HTTP response
 func (p *Problem) WriteJSON(w http.ResponseWriter) error {
+	if p.RequestID == "" && w != nil {
+		if reqID := w.Header().Get(RequestIDHeader); reqID != "" {
+			p.RequestID = reqID
+			p.WithMeta("request_id", reqID)
+		}
+	}
+	if p.RequestID != "" && w != nil && w.Header().Get(RequestIDHeader) == "" {
+		w.Header().Set(RequestIDHeader, p.RequestID)
+	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(p.Status)
 	return json.NewEncoder(w).Encode(p)
@@ -118,6 +135,15 @@ func (p *Problem) WriteJSON(w http.ResponseWriter) error {
 
 // WriteXML writes the problem as XML to the HTTP response
 func (p *Problem) WriteXML(w http.ResponseWriter) error {
+	if p.RequestID == "" && w != nil {
+		if reqID := w.Header().Get(RequestIDHeader); reqID != "" {
+			p.RequestID = reqID
+			p.WithMeta("request_id", reqID)
+		}
+	}
+	if p.RequestID != "" && w != nil && w.Header().Get(RequestIDHeader) == "" {
+		w.Header().Set(RequestIDHeader, p.RequestID)
+	}
 	w.Header().Set("Content-Type", "application/problem+xml")
 	w.WriteHeader(p.Status)
 	w.Write([]byte(xml.Header))
@@ -126,6 +152,15 @@ func (p *Problem) WriteXML(w http.ResponseWriter) error {
 
 // Write writes the problem to the HTTP response based on Accept header
 func (p *Problem) Write(w http.ResponseWriter, r *http.Request) error {
+	if p.RequestID == "" && r != nil {
+		if reqID := GetRequestIDFromContext(r.Context()); reqID != "" {
+			p.RequestID = reqID
+			p.WithMeta("request_id", reqID)
+		} else if reqID := GetRequestIDFromRequest(r); reqID != "" {
+			p.RequestID = reqID
+			p.WithMeta("request_id", reqID)
+		}
+	}
 	accept := r.Header.Get("Accept")
 
 	// Default to JSON, but support XML if requested
