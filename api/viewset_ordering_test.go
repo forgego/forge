@@ -104,16 +104,16 @@ func (qs *orderingTestQuerySet) OrderBy(fields ...interface{}) interface{} {
 
 func TestBaseViewSet_ListAppliesStableDefaultOrdering(t *testing.T) {
 	tests := []struct {
-		name      string
-		model     *orderingTestModel
-		target    string
-		wantField string
+		name       string
+		model      *orderingTestModel
+		target     string
+		wantFields []interface{}
 	}{
-		{name: "model Meta ordering resolves schema name", model: &orderingTestModel{metaOrder: []string{"-name"}}, target: "/items/", wantField: "-display_name"},
-		{name: "primary key fallback uses database column", model: &orderingTestModel{}, target: "/items/", wantField: "item_id"},
-		{name: "explicit schema ordering resolves to column", model: &orderingTestModel{metaOrder: []string{"-name"}}, target: "/items/?ordering=name", wantField: "display_name"},
-		{name: "explicit JSON ordering resolves to column", model: &orderingTestModel{}, target: "/items/?ordering=-displayName", wantField: "-display_name"},
-		{name: "empty ordering fields fall back to primary key", model: &orderingTestModel{}, target: "/items/?ordering=,%20,", wantField: "item_id"},
+		{name: "model Meta ordering resolves schema name", model: &orderingTestModel{metaOrder: []string{"-name"}}, target: "/items/", wantFields: []interface{}{"-display_name"}},
+		{name: "primary key fallback uses database column", model: &orderingTestModel{}, target: "/items/", wantFields: []interface{}{"item_id"}},
+		{name: "explicit schema ordering resolves to column", model: &orderingTestModel{metaOrder: []string{"-name"}}, target: "/items/?ordering=name", wantFields: []interface{}{"display_name", "item_id"}},
+		{name: "explicit JSON ordering resolves to column", model: &orderingTestModel{}, target: "/items/?ordering=-displayName", wantFields: []interface{}{"-display_name", "item_id"}},
+		{name: "empty ordering fields fall back to primary key", model: &orderingTestModel{}, target: "/items/?ordering=,%20,", wantFields: []interface{}{"item_id"}},
 	}
 
 	for _, tt := range tests {
@@ -124,7 +124,7 @@ func TestBaseViewSet_ListAppliesStableDefaultOrdering(t *testing.T) {
 			vs.List(recorder, httptest.NewRequest(http.MethodGet, tt.target, nil))
 
 			require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
-			assert.Equal(t, []interface{}{tt.wantField}, qs.fields)
+			assert.Equal(t, tt.wantFields, qs.fields)
 		})
 	}
 }

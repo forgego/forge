@@ -32,6 +32,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// MaxRequestBodySize is the maximum allowed request body size for create and update requests (1 MiB).
+const MaxRequestBodySize = 1 << 20 // 1 MiB
+
 // ViewSet is the base interface for all viewsets
 type ViewSet interface {
 	// List handles GET /resource/
@@ -334,7 +337,7 @@ func (vs *BaseViewSet) allowObject(w http.ResponseWriter, r *http.Request, objec
 	return true
 }
 
-// List handles GET /resource/
+// List handles GET /resource/. A page_size above the configured maximum is clamped to the maximum.
 func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 	r = withAction(r, "list")
 	if !vs.checkRequest(w, r, "list") {
@@ -364,6 +367,8 @@ func (vs *BaseViewSet) List(w http.ResponseWriter, r *http.Request) {
 	qs, err := applyFilters(querysetValue, r, vs.Model, vs.Filterable)
 	if err != nil {
 		if _, ok := err.(*exceptions.ValidationError); ok {
+			vs.handleException(w, r, err)
+		} else if _, ok := err.(*exceptions.APIException); ok {
 			vs.handleException(w, r, err)
 		} else {
 			vs.listConfigurationError(w, r, err)
@@ -538,6 +543,27 @@ func allListRows(qs reflect.Value, ctx context.Context) ([]interface{}, error) {
 	return rows, nil
 }
 
+func decodeRequestBody(w http.ResponseWriter, r *http.Request, v interface{}) bool {
+	if r.ContentLength > MaxRequestBodySize {
+		_ = forgehttp.SendError(w, http.StatusRequestEntityTooLarge, "Request entity too large")
+		return false
+	}
+	if r.Body != nil {
+		r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
+	}
+	if err := forgehttp.GetJSONUseNumber(r, v); err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			_ = forgehttp.SendError(w, http.StatusRequestEntityTooLarge, "Request entity too large")
+			return false
+		}
+		// nolint:errcheck // HTTP response errors can't be handled meaningfully
+		_ = forgehttp.SendError(w, http.StatusBadRequest, "Invalid JSON")
+		return false
+	}
+	return true
+}
+
 // Create handles POST /resource/
 func (vs *BaseViewSet) Create(w http.ResponseWriter, r *http.Request) {
 	r = withAction(r, "create")
@@ -547,7 +573,10 @@ func (vs *BaseViewSet) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var data map[string]interface{}
-	if err := forgehttp.GetJSONUseNumber(r, &data); err != nil || data == nil {
+	if !decodeRequestBody(w, r, &data) {
+		return
+	}
+	if data == nil {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusBadRequest, "Invalid JSON")
 		return
@@ -775,7 +804,10 @@ func (vs *BaseViewSet) update(w http.ResponseWriter, r *http.Request, action str
 	}
 
 	var data map[string]interface{}
-	if err := forgehttp.GetJSONUseNumber(r, &data); err != nil || data == nil {
+	if !decodeRequestBody(w, r, &data) {
+		return
+	}
+	if data == nil {
 		// nolint:errcheck // HTTP response errors can't be handled meaningfully
 		_ = forgehttp.SendError(w, http.StatusBadRequest, "Invalid JSON")
 		return
@@ -1279,6 +1311,17 @@ func applyFilters(qs reflect.Value, r *http.Request, model interface{}, filterab
 	query := r.URL.Query()
 	qsType := qs.Type()
 
+	conditionCount := 0
+	for key, values := range query {
+		if len(values) == 0 || listControlParameter(key) {
+			continue
+		}
+		conditionCount += len(values)
+	}
+	if conditionCount > MaxFilterConditions {
+		return qs, exceptions.NewAPIException(http.StatusBadRequest, CodeFilterTooComplex, "filter too complex: maximum 20 filter conditions allowed", nil)
+	}
+
 	allowedFields := filterable
 	if allowedFields == nil {
 		allowedFields = FilterableFields(model)
@@ -1432,8 +1475,10 @@ func applyOrdering(qs reflect.Value, r *http.Request, model interface{}, default
 	}
 
 	rawFields := strings.Split(ordering, ",")
-	args := make([]reflect.Value, 0, len(rawFields)+1)
+	args := make([]reflect.Value, 0, len(rawFields)+2)
 	args = append(args, qs) // Add receiver
+	hasPK := false
+	pkName := primaryKeyOrdering(model)
 	for _, field := range rawFields {
 		field = strings.TrimSpace(field)
 		if field == "" {
@@ -1442,6 +1487,9 @@ func applyOrdering(qs reflect.Value, r *http.Request, model interface{}, default
 		descending := strings.HasPrefix(field, "-")
 		fieldName := strings.TrimLeft(field, "-")
 		if resolvedName, schemaField, ok := resolveQueryField(model, fieldName); ok {
+			if schemaField.PrimaryKey || resolvedName == pkName {
+				hasPK = true
+			}
 			if !schemaField.Serialize {
 				continue
 			}
@@ -1449,13 +1497,18 @@ func applyOrdering(qs reflect.Value, r *http.Request, model interface{}, default
 			if descending {
 				field = "-" + field
 			}
+		} else if fieldName == pkName || fieldName == "id" {
+			hasPK = true
 		}
 		args = append(args, reflect.ValueOf(field))
 	}
 	if len(args) <= 1 { // No fields survived visibility filtering.
 		// Internal pagination order may use a hidden key, but never the
 		// direction requested for a hidden field. This does not serialize it.
-		args = append(args, reflect.ValueOf(primaryKeyOrdering(model)))
+		args = append(args, reflect.ValueOf(pkName))
+	} else if r.URL.Query().Get("ordering") != "" && !hasPK && pkName != "" {
+		// Deterministic ordering: when the requested ordering does not include the primary key, append the primary key as a tiebreak.
+		args = append(args, reflect.ValueOf(pkName))
 	}
 	results := orderByMethod.Func.Call(args)
 	if len(results) > 0 {
