@@ -237,6 +237,16 @@ file from version control, and write a new migration for the change you intended
 databases migrated before checksums were recorded, `forge migrate baseline --adopt` records
 the current files. It never overwrites a mismatch.
 
+### Out-of-order migration files
+
+Migrations only move forward from the current version. A file whose version is lower than the
+current one but was never applied, which happens after merging two branches that each added a
+migration, would otherwise be skipped silently. `forge migrate status` lists such files under
+"Out-of-Order Migrations", and `forge migrate up` and `forge migrate to` refuse to run and name
+them. Renumber the file above the current version, then run `forge migrate up` again. Versions
+older than the first recorded checksum are treated as applied before checksums existed and are
+not flagged.
+
 ---
 
 ## What Is Verified
