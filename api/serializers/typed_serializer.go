@@ -12,11 +12,77 @@ import (
 // TypedSerializer provides type-safe serialization for a model type
 type TypedSerializer[T any] struct {
 	fields    TypedFields[T]
+	schema    schema.Schema
 	data      map[string]interface{}
 	errors    map[string][]string
 	valid     bool
 	instance  *T
 	configErr error
+}
+
+// SchemaMetadata describes the schema facts available to a REST serializer.
+// It is a read-only projection; validation and persistence remain owned by
+// their respective consumers.
+type SchemaMetadata struct {
+	Fields    []SchemaFieldMetadata    `json:"fields"`
+	Relations []SchemaRelationMetadata `json:"relations,omitempty"`
+}
+
+// SchemaFieldMetadata contains field constraints relevant to REST consumers.
+type SchemaFieldMetadata struct {
+	Name       string      `json:"name"`
+	Type       string      `json:"type"`
+	Required   bool        `json:"required"`
+	Unique     bool        `json:"unique"`
+	MaxLength  int         `json:"max_length,omitempty"`
+	Default    interface{} `json:"default,omitempty"`
+	HasDefault bool        `json:"has_default,omitempty"`
+}
+
+// SchemaRelationMetadata contains relation facts relevant to REST consumers.
+type SchemaRelationMetadata struct {
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	To       string `json:"to"`
+	OnDelete string `json:"on_delete,omitempty"`
+	Through  string `json:"through,omitempty"`
+}
+
+// SchemaMetadata returns the schema-derived field and relation facts used to
+// configure this serializer. Manually assembled serializers have empty schema
+// metadata.
+func (ts *TypedSerializer[T]) SchemaMetadata() SchemaMetadata {
+	metadata := SchemaMetadata{Fields: []SchemaFieldMetadata{}, Relations: []SchemaRelationMetadata{}}
+	if ts == nil || isNilValue(ts.schema) {
+		return metadata
+	}
+	for _, field := range ts.schema.Fields() {
+		maxLength := 0
+		if field.MaxLength != nil {
+			maxLength = *field.MaxLength
+		}
+		metadata.Fields = append(metadata.Fields, SchemaFieldMetadata{
+			Name: field.Name, Type: field.Type.String(), Required: field.Required,
+			Unique: field.Unique, MaxLength: maxLength, Default: serializerStaticDefault(field.Default), HasDefault: field.Default != nil,
+		})
+	}
+	for _, relation := range ts.schema.Relations() {
+		metadata.Relations = append(metadata.Relations, SchemaRelationMetadata{
+			Name: relation.Name, Type: relation.Type.String(), To: relation.To,
+			OnDelete: string(relation.OnDelete), Through: relation.Through,
+		})
+	}
+	return metadata
+}
+
+func serializerStaticDefault(value interface{}) interface{} {
+	if value == nil || schema.IsDatabaseFunctionDefault(value) {
+		return nil
+	}
+	if reflect.ValueOf(value).Kind() == reflect.Func {
+		return nil
+	}
+	return value
 }
 
 // TypedFields represents type-safe field definitions

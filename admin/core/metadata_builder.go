@@ -94,6 +94,7 @@ func buildFieldsMetadata(s schema.Schema) ([]FieldMetadata, error) {
 			Widget:       inferWidget(field),
 			DefaultValue: staticDefault(field.Default),
 			HasDefault:   field.Default != nil,
+			Unique:       field.Unique,
 		}
 
 		// Add field-specific metadata
@@ -174,6 +175,8 @@ func buildRelationsMetadata[T any](s schema.Schema, config *Config[T]) []Relatio
 			Type:         rel.Type.String(),
 			RelatedModel: rel.To,
 			RelatedField: rel.RelatedName,
+			OnDelete:     string(rel.OnDelete),
+			Through:      rel.Through,
 			Label:        getOrDefault("", "", rel.Name), // Relation struct has no VerboseName
 		}
 		if inlineConfig, ok := inlineConfigs[rel.Name]; ok {

@@ -69,6 +69,12 @@ import (
 	"github.com/forgego/forge/db"
 )
 func TestArticleQuery(t *testing.T) {
+	var titleOptional, contentOptional bool
+	for _, field := range (ArticleGenerated{}).Fields() {
+		if field.Name == "title" { titleOptional = !field.Required }
+		if field.Name == "content" { contentOptional = !field.Required }
+	}
+	if !titleOptional || !contentOptional { t.Fatalf("generated Fields() metadata lost optionality: title=%v content=%v", titleOptional, contentOptional) }
 	database, err := db.NewDBWithDriver("sqlite3", ":memory:", db.WithMaxOpenConns(1))
 	if err != nil { t.Fatal(err) }
 	defer database.Close()

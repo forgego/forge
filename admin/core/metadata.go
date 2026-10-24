@@ -47,6 +47,7 @@ type FieldMetadata struct {
 	HasDefault  bool        `json:"has_default,omitempty"`
 	MaxLength   int         `json:"max_length,omitempty"`
 	MinLength   int         `json:"min_length,omitempty"`
+	Unique      bool        `json:"unique,omitempty"`
 	MaxValue    interface{} `json:"max_value,omitempty"`
 	MinValue    interface{} `json:"min_value,omitempty"`
 	Accept      string      `json:"accept,omitempty"`       // For file uploads
@@ -74,6 +75,8 @@ type RelationMetadata struct {
 	Type         string                `json:"type"` // foreign_key, one_to_one, many_to_many
 	RelatedModel string                `json:"related_model"`
 	RelatedField string                `json:"related_field,omitempty"`
+	OnDelete     string                `json:"on_delete,omitempty"`
+	Through      string                `json:"through,omitempty"`
 	Label        string                `json:"label"`
 	Inline       *InlineRelationConfig `json:"inline,omitempty"`
 }

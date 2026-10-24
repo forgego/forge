@@ -15,6 +15,7 @@ func FromSchema[T any](schemaInstance schema.Schema) *TypedSerializer[T] {
 		serializer.configErr = fmt.Errorf("schema is nil")
 		return serializer
 	}
+	serializer.schema = schemaInstance
 
 	// Map schema fields to serializer fields
 	fields := schemaInstance.Fields()
