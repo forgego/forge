@@ -284,10 +284,18 @@ func (r *Router) handleAction(admin core.AdminInterface) http.HandlerFunc {
 			respondError(w, http.StatusBadRequest, "invalid_body", "Request body must include at least one ID", nil)
 			return
 		}
+		if len(request.IDs) > core.MaxBulkActionIDs {
+			respondError(w, http.StatusBadRequest, "too_many_ids", fmt.Sprintf("cannot execute action on more than %d items", core.MaxBulkActionIDs), nil)
+			return
+		}
 
 		// Call implementation
 		response, err := admin.ExecuteAction(ctx, actionName, request.IDs, request.Params)
 		if err != nil {
+			if errors.Is(err, core.ErrActionNotFound) {
+				respondError(w, http.StatusNotFound, "action_not_found", err.Error(), nil)
+				return
+			}
 			respondError(w, http.StatusInternalServerError, "action_failed", err.Error(), nil)
 			return
 		}
