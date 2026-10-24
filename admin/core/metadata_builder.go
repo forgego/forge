@@ -84,9 +84,16 @@ func buildFieldsMetadata(s schema.Schema) ([]FieldMetadata, error) {
 	result := make([]FieldMetadata, 0, len(fields))
 
 	for _, field := range fields {
+		fieldType := field.Type.String()
+		if field.CustomField != nil && field.CustomField.GetName() != "" {
+			fieldType = field.CustomField.GetName()
+		} else if strings.EqualFold(field.DBType, "file") || strings.EqualFold(field.DBType, "image") {
+			fieldType = strings.ToLower(field.DBType)
+		}
+
 		fieldMeta := FieldMetadata{
 			Name:         field.Name,
-			Type:         field.Type.String(),
+			Type:         fieldType,
 			Label:        getOrDefault(field.VerboseName, "", humanizeFieldLabel(field.Name)),
 			HelpText:     field.HelpText,
 			Required:     field.Required && !isAutoManaged(field),
@@ -95,6 +102,11 @@ func buildFieldsMetadata(s schema.Schema) ([]FieldMetadata, error) {
 			DefaultValue: staticDefault(field.Default),
 			HasDefault:   field.Default != nil,
 			Unique:       field.Unique,
+		}
+
+		if strings.EqualFold(fieldMeta.Type, "file") || strings.EqualFold(fieldMeta.Type, "image") {
+			uploadSupported := false
+			fieldMeta.UploadSupported = &uploadSupported
 		}
 
 		// Add field-specific metadata

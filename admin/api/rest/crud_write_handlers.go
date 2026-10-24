@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"mime"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -68,9 +69,26 @@ func (r *Router) ReplaceHandler(admin core.AdminInterface) http.HandlerFunc {
 	return r.handleReplace(admin)
 }
 
+func rejectMultipartUpload(w http.ResponseWriter, req *http.Request) bool {
+	ct := req.Header.Get("Content-Type")
+	if ct == "" {
+		return false
+	}
+	mediaType, _, err := mime.ParseMediaType(ct)
+	if (err == nil && mediaType == "multipart/form-data") || strings.HasPrefix(strings.ToLower(strings.TrimSpace(ct)), "multipart/form-data") {
+		respondError(w, http.StatusUnsupportedMediaType, "unsupported_capability", "File uploads are not supported by the admin API", nil)
+		return true
+	}
+	return false
+}
+
 // handleCreate creates a new object
 func (r *Router) handleCreate(admin core.AdminInterface) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
+		if rejectMultipartUpload(w, req) {
+			return
+		}
+
 		ctx := req.Context()
 		user, _ := apicore.UserFromContext(ctx)
 
@@ -105,6 +123,10 @@ func (r *Router) handleCreate(admin core.AdminInterface) http.HandlerFunc {
 // handleUpdate partially updates an object
 func (r *Router) handleUpdate(admin core.AdminInterface) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
+		if rejectMultipartUpload(w, req) {
+			return
+		}
+
 		ctx := req.Context()
 		user, _ := apicore.UserFromContext(ctx)
 		idStr := chi.URLParam(req, "id")
@@ -156,6 +178,10 @@ func (r *Router) handleUpdate(admin core.AdminInterface) http.HandlerFunc {
 // handleReplace fully replaces an object
 func (r *Router) handleReplace(admin core.AdminInterface) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
+		if rejectMultipartUpload(w, req) {
+			return
+		}
+
 		ctx := req.Context()
 		user, _ := apicore.UserFromContext(ctx)
 		idStr := chi.URLParam(req, "id")
