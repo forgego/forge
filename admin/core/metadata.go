@@ -6,9 +6,13 @@ import (
 	"github.com/forgego/forge/admin/components"
 )
 
+// AdminContractVersion defines the current version of the admin API contract.
+const AdminContractVersion = 1
+
 // Metadata represents the complete metadata for an admin model
 // This is what gets serialized to JSON for the frontend
 type Metadata struct {
+	ContractVersion   int                   `json:"contract_version"`
 	Name              string                `json:"name"`
 	VerboseName       string                `json:"verbose_name"`
 	VerboseNamePlural string                `json:"verbose_name_plural"`
