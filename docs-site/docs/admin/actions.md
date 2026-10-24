@@ -42,10 +42,15 @@ The CSV and JSON export controls export rows matching the current search, filter
 # Audit write failures
 
 Admin create, update, and delete return history write errors by default. Set
-`Config.AuditPolicy` to `audit.FailOpen` to log and count failures while allowing
-the mutation to continue. Configure `AuditLogger` and `AuditFailures` to collect
-diagnostics. With a configured ORM database, each mutation and its history write
-run in one transaction. The built-in database history store and custom managers
-implementing `core.TransactionalHistoryManager` join it. Legacy custom history
+`Config.AuditPolicy` to `audit.FailOpen` to log failures and let the mutation
+continue; `audit.FailClosed` is the default. Fail-open diagnostics include the
+request ID when one is available. `Config.AuditLogger` configures the logger,
+and `Config.AuditFailures` can point to a shared counter whose `Count()` method
+reports handled audit write failures.
+
+With a configured ORM database, each mutation and its history write run in one
+transaction. Fail-closed history errors roll back the model change. The built-in
+database history store and custom managers implementing
+`core.TransactionalHistoryManager` join that transaction. Legacy custom history
 managers still compile and are called inside the model transaction, but their
 separate writes cannot be rolled back if the database transaction later fails.
