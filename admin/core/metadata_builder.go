@@ -42,6 +42,7 @@ func buildMetadata[T any](s schema.Schema, config *Config[T], name string) (*Met
 
 	// Build metadata
 	metadata := &Metadata{
+		ContractVersion:   AdminContractVersion,
 		Name:              name,
 		VerboseName:       getOrDefault(config.VerboseName, meta.VerboseName, name),
 		VerboseNamePlural: getOrDefault(config.VerboseNamePlural, meta.VerboseNamePlural, name+"s"),

@@ -23,6 +23,8 @@ import type {
 } from "./types";
 import { withAdminPrefix, stripAdminPrefix } from "../lib/admin-prefix";
 
+export const ADMIN_CONTRACT_VERSION = 1;
+
 export class AdminAPIClient {
   private client: AxiosInstance;
   private baseURL: string;
@@ -93,7 +95,17 @@ export class AdminAPIClient {
 
   async getModelMetadata(model: string): Promise<Metadata> {
     const response = await this.client.get(`/meta/${model}`);
-    return response.data;
+    const metadata = response.data as Metadata;
+    if (
+      metadata?.contract_version !== undefined &&
+      metadata.contract_version !== null &&
+      metadata.contract_version !== ADMIN_CONTRACT_VERSION
+    ) {
+      throw new Error(
+        `Admin UI is incompatible with this server: server contract version ${metadata.contract_version}, UI contract version ${ADMIN_CONTRACT_VERSION}`
+      );
+    }
+    return metadata;
   }
 
   // CRUD endpoints

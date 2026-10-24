@@ -86,6 +86,7 @@ export interface PaginationConfig {
 }
 
 export interface Metadata {
+  contract_version?: number;
   name: string;
   verbose_name: string;
   verbose_name_plural: string;

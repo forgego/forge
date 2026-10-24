@@ -161,6 +161,7 @@ func (a *Admin[T]) GetMetadata(ctx context.Context, user interface{}) (*Metadata
 	if a.metadata != nil {
 		// Copy: never mutate the shared cache per-user
 		meta := *a.metadata
+		meta.ContractVersion = AdminContractVersion
 		meta.Permissions = a.getPermissionsMetadata(ctx, user)
 		return &meta, nil
 	}
@@ -170,6 +171,8 @@ func (a *Admin[T]) GetMetadata(ctx context.Context, user interface{}) (*Metadata
 	if err != nil {
 		return nil, err
 	}
+
+	meta.ContractVersion = AdminContractVersion
 
 	// Add permissions
 	meta.Permissions = a.getPermissionsMetadata(ctx, user)
