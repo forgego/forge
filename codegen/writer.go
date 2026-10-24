@@ -248,12 +248,35 @@ func prepareWrite(filename string, contents []byte) (*preparedWrite, error) {
 		}
 		writeFilename = resolved
 	}
-	if existing, err := os.ReadFile(writeFilename); err == nil {
-		if !hasGeneratedHeader(existing) {
-			return nil, fmt.Errorf("refusing to overwrite handwritten file %s: rename or delete it, or move your code to a non-generated file", filename)
+	root, err := os.OpenRoot(filepath.Dir(writeFilename))
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, fmt.Errorf("failed to inspect destination %s: %w", filename, err)
 		}
-	} else if !os.IsNotExist(err) {
-		return nil, fmt.Errorf("failed to inspect destination %s: %w", filename, err)
+	} else {
+		file, openErr := root.Open(filepath.Base(writeFilename))
+		if openErr == nil {
+			existing, readErr := io.ReadAll(file)
+			closeErr := file.Close()
+			if readErr != nil {
+				_ = root.Close()
+				return nil, fmt.Errorf("failed to inspect destination %s: %w", filename, readErr)
+			}
+			if closeErr != nil {
+				_ = root.Close()
+				return nil, fmt.Errorf("failed to inspect destination %s: %w", filename, closeErr)
+			}
+			if !hasGeneratedHeader(existing) {
+				_ = root.Close()
+				return nil, fmt.Errorf("refusing to overwrite handwritten file %s: rename or delete it, or move your code to a non-generated file", filename)
+			}
+		} else if !os.IsNotExist(openErr) {
+			_ = root.Close()
+			return nil, fmt.Errorf("failed to inspect destination %s: %w", filename, openErr)
+		}
+		if err := root.Close(); err != nil {
+			return nil, fmt.Errorf("failed to inspect destination %s: %w", filename, err)
+		}
 	}
 	if err := ensureDestinationWritable(writeFilename); err != nil {
 		return nil, err
