@@ -118,3 +118,119 @@ func TestSavedViews_SharedPerUserAndModel(t *testing.T) {
 		})
 	}
 }
+
+func TestSQLHistorySurvivesReopen(t *testing.T) {
+	ctx := context.Background()
+	backend := storestest.Backend{Name: "sqlite", Driver: "sqlite3", NewDSN: storestest.SQLitePath}
+	db1, dsn := backend.OpenMigrated(t)
+
+	s1, err := stores.New(db1)
+	require.NoError(t, err)
+	h1 := adminstore.NewHistory(s1)
+
+	order1 := core.LogEntry{
+		UserID:      "alice",
+		UserName:    "Alice",
+		ModelName:   "Order",
+		ObjectID:    "1",
+		ObjectRepr:  "Order #1",
+		Action:      core.ActionAdd,
+		ChangeStats: `{"status":"pending"}`,
+	}
+	order2 := core.LogEntry{
+		UserID:      "bob",
+		UserName:    "Bob",
+		ModelName:   "Order",
+		ObjectID:    "2",
+		ObjectRepr:  "Order #2",
+		Action:      core.ActionChange,
+		ChangeStats: `{"status":"shipped"}`,
+	}
+	customer := core.LogEntry{
+		UserID:      "alice",
+		UserName:    "Alice",
+		ModelName:   "Customer",
+		ObjectID:    "9",
+		ObjectRepr:  "Customer Acme",
+		Action:      core.ActionAdd,
+		ChangeStats: `{"name":"Acme"}`,
+	}
+
+	require.NoError(t, h1.LogAction(ctx, order1))
+	require.NoError(t, h1.LogAction(ctx, order2))
+	require.NoError(t, h1.LogAction(ctx, customer))
+
+	tx, err := db1.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	require.NoError(t, h1.LogActionWithTx(ctx, tx, core.LogEntry{
+		UserID:      "charlie",
+		UserName:    "Charlie",
+		ModelName:   "Order",
+		ObjectID:    "3",
+		ObjectRepr:  "Order #3",
+		Action:      core.ActionDelete,
+		ChangeStats: `{"status":"canceled"}`,
+	}))
+	require.NoError(t, tx.Rollback())
+
+	require.NoError(t, db1.Close())
+
+	db2 := storestest.Open(t, backend.Driver, dsn)
+	s2, err := stores.New(db2)
+	require.NoError(t, err)
+	h2 := adminstore.NewHistory(s2)
+
+	entries, err := h2.GetHistory(ctx, "order", "1")
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, order1.UserID, entries[0].UserID)
+	assert.Equal(t, order1.UserName, entries[0].UserName)
+	assert.Equal(t, order1.Action, entries[0].Action)
+	assert.Equal(t, order1.ObjectRepr, entries[0].ObjectRepr)
+	assert.Equal(t, order1.ChangeStats, entries[0].ChangeStats)
+
+	all, err := h2.GetHistory(ctx, "", "")
+	require.NoError(t, err)
+	require.Len(t, all, 3)
+	assert.Equal(t, customer.ObjectRepr, all[0].ObjectRepr)
+	assert.Equal(t, order2.ObjectRepr, all[1].ObjectRepr)
+	assert.Equal(t, order1.ObjectRepr, all[2].ObjectRepr)
+	assert.Greater(t, all[0].ID, all[1].ID)
+	assert.Greater(t, all[1].ID, all[2].ID)
+
+	rolledBack, err := h2.GetHistory(ctx, "order", "3")
+	require.NoError(t, err)
+	assert.Empty(t, rolledBack)
+
+	tx2, err := db2.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	require.NoError(t, h2.LogActionWithTx(ctx, tx2, core.LogEntry{
+		UserID:      "david",
+		UserName:    "David",
+		ModelName:   "Order",
+		ObjectID:    "4",
+		ObjectRepr:  "Order #4",
+		Action:      core.ActionAdd,
+		ChangeStats: `{"status":"draft"}`,
+	}))
+	require.NoError(t, tx2.Rollback())
+
+	rolledBack2, err := h2.GetHistory(ctx, "order", "4")
+	require.NoError(t, err)
+	assert.Empty(t, rolledBack2)
+
+	require.NoError(t, db2.Close())
+
+	db3 := storestest.Open(t, backend.Driver, dsn)
+	s3, err := stores.New(db3)
+	require.NoError(t, err)
+	h3 := adminstore.NewHistory(s3)
+
+	rolledBack3, err := h3.GetHistory(ctx, "order", "4")
+	require.NoError(t, err)
+	assert.Empty(t, rolledBack3)
+
+	all3, err := h3.GetHistory(ctx, "", "")
+	require.NoError(t, err)
+	assert.Len(t, all3, 3)
+}
