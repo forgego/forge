@@ -205,3 +205,182 @@ func TestMigrationRunner_SkipsVersionAboveMaxInt(t *testing.T) {
 	require.NoError(t, runner.validatePendingMigrations(ctx, 0))
 	require.NoError(t, runner.validatePendingMigrationChecksums(ctx, 0))
 }
+
+func TestMigrationRunner_OutOfOrderMigrationDetected(t *testing.T) {
+	database, err := NewDBWithDriver("sqlite3", filepath.Join(t.TempDir(), "test_ooo.db"))
+	require.NoError(t, err)
+	defer database.Close()
+
+	ctx := context.Background()
+	migrationsDir := t.TempDir()
+
+	// Create and apply migrations 1 and 3 (gap at version 2)
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000001_first.up.sql"), []byte("CREATE TABLE t1(id INTEGER);"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000001_first.down.sql"), []byte("DROP TABLE t1;"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000003_third.up.sql"), []byte("CREATE TABLE t3(id INTEGER);"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000003_third.down.sql"), []byte("DROP TABLE t3;"), 0o644))
+
+	runner, err := NewMigrationRunner(database, migrationsDir)
+	require.NoError(t, err)
+
+	require.NoError(t, runner.Migrate(ctx))
+
+	v, dirty, err := runner.Version(ctx)
+	require.NoError(t, err)
+	require.False(t, dirty)
+	require.Equal(t, uint(3), v)
+
+	// Add an unapplied migration whose version sorts below current version 3
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000002_second.up.sql"), []byte("CREATE TABLE t2(id INTEGER);"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000002_second.down.sql"), []byte("DROP TABLE t2;"), 0o644))
+
+	// Recreate runner to pick up newly added file
+	runner, err = NewMigrationRunner(database, migrationsDir)
+	require.NoError(t, err)
+
+	// Migrate must fail and report the out-of-order migration file
+	err = runner.Migrate(ctx)
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrOutOfOrderMigration)
+	require.ErrorContains(t, err, "000002_second.up.sql")
+
+	// GetDetailedStatus must report it under OutOfOrder, not Applied
+	detailed, err := runner.GetDetailedStatus(ctx)
+	require.NoError(t, err)
+	require.Contains(t, detailed.OutOfOrder, "[000002] second")
+	require.NotContains(t, detailed.Applied, "[000002] second")
+
+	// Database version must remain at 3
+	v, dirty, err = runner.Version(ctx)
+	require.NoError(t, err)
+	require.False(t, dirty)
+	require.Equal(t, uint(3), v)
+}
+
+func TestOutOfOrderVersions(t *testing.T) {
+	tests := []struct {
+		name           string
+		recorded       map[uint]bool
+		currentVersion uint
+		fileVersions   []uint
+		want           []uint
+	}{
+		{
+			name:           "recorded{3,4}, current 4, files 1..4 -> nil",
+			recorded:       map[uint]bool{3: true, 4: true},
+			currentVersion: 4,
+			fileVersions:   []uint{1, 2, 3, 4},
+			want:           nil,
+		},
+		{
+			name:           "recorded{1,2,4}, current 4, files 1..4 -> [3]",
+			recorded:       map[uint]bool{1: true, 2: true, 4: true},
+			currentVersion: 4,
+			fileVersions:   []uint{1, 2, 3, 4},
+			want:           []uint{3},
+		},
+		{
+			name:           "recorded{} -> nil",
+			recorded:       map[uint]bool{},
+			currentVersion: 4,
+			fileVersions:   []uint{1, 2, 3, 4},
+			want:           nil,
+		},
+		{
+			name:           "nil recorded -> nil",
+			recorded:       nil,
+			currentVersion: 4,
+			fileVersions:   []uint{1, 2, 3, 4},
+			want:           nil,
+		},
+		{
+			name:           "currentVersion 0 -> nil",
+			recorded:       map[uint]bool{1: true, 2: true},
+			currentVersion: 0,
+			fileVersions:   []uint{1, 2},
+			want:           nil,
+		},
+		{
+			name:           "multiple missing versions sorted ascending",
+			recorded:       map[uint]bool{1: true, 5: true},
+			currentVersion: 5,
+			fileVersions:   []uint{4, 2, 3, 1, 5},
+			want:           []uint{2, 3, 4},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := outOfOrderVersions(tt.recorded, tt.currentVersion, tt.fileVersions)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestLoadRecordedVersions_TableNotExist(t *testing.T) {
+	database, err := NewDBWithDriver("sqlite3", filepath.Join(t.TempDir(), "test_not_exist.db"))
+	require.NoError(t, err)
+	defer database.Close()
+
+	ctx := context.Background()
+	recorded, err := loadRecordedVersions(ctx, database, 5)
+	require.NoError(t, err)
+	require.NotNil(t, recorded)
+	require.Empty(t, recorded)
+}
+
+func TestLoadRecordedVersions_QueryErrorWrapped(t *testing.T) {
+	database, err := NewDBWithDriver("sqlite3", filepath.Join(t.TempDir(), "test_err.db"))
+	require.NoError(t, err)
+	require.NoError(t, database.Close())
+
+	ctx := context.Background()
+	_, err = loadRecordedVersions(ctx, database, 5)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "query migration checksum versions")
+}
+
+func TestMigrationRunner_PreChecksumDatabaseNotFlagged(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_pre_checksum.db")
+	database, err := NewDBWithDriver("sqlite3", dbPath)
+	require.NoError(t, err)
+	defer database.Close()
+
+	ctx := context.Background()
+	migrationsDir := t.TempDir()
+
+	// Create migration files 1, 2, 3
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000001_m1.up.sql"), []byte("CREATE TABLE m1(id INT);"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000001_m1.down.sql"), []byte("DROP TABLE m1;"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000002_m2.up.sql"), []byte("CREATE TABLE m2(id INT);"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000002_m2.down.sql"), []byte("DROP TABLE m2;"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000003_m3.up.sql"), []byte("CREATE TABLE m3(id INT);"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(migrationsDir, "000003_m3.down.sql"), []byte("DROP TABLE m3;"), 0o644))
+
+	// Simulate pre-checksum migration: apply migrations 1 and 2 manually with schema_migrations only
+	_, err = database.ExecContext(ctx, "CREATE TABLE schema_migrations (version uint64, dirty bool);")
+	require.NoError(t, err)
+	_, err = database.ExecContext(ctx, "INSERT INTO schema_migrations (version, dirty) VALUES (2, 0);")
+	require.NoError(t, err)
+	_, err = database.ExecContext(ctx, "CREATE TABLE m1(id INT);")
+	require.NoError(t, err)
+	_, err = database.ExecContext(ctx, "CREATE TABLE m2(id INT);")
+	require.NoError(t, err)
+
+	// Create forge_migration_checksums table with only version 2 recorded (minRecorded = 2, so version 1 is legacy pre-checksum)
+	_, err = database.ExecContext(ctx, sqliteMigrationChecksumsDDL)
+	require.NoError(t, err)
+	_, err = database.ExecContext(ctx, "INSERT INTO forge_migration_checksums (version, up_sha256) VALUES (2, 'hash2');")
+	require.NoError(t, err)
+
+	runner, err := NewMigrationRunner(database, migrationsDir)
+	require.NoError(t, err)
+
+	// Detailed status should not flag version 1 as out-of-order
+	detailed, err := runner.GetDetailedStatus(ctx)
+	require.NoError(t, err)
+	require.Empty(t, detailed.OutOfOrder)
+	require.Contains(t, detailed.Applied, "[000001] m1")
+	require.Contains(t, detailed.Applied, "[000002] m2")
+	require.Contains(t, detailed.Pending, "[000003] m3")
+}

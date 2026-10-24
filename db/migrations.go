@@ -25,6 +25,9 @@ import (
 // ErrChecksumBaselineBlocked is returned when migration execution is blocked by a baseline verification failure.
 var ErrChecksumBaselineBlocked = errors.New("checksum baseline verification blocked")
 
+// ErrOutOfOrderMigration is returned when an unapplied migration file has a version lower than the current database version.
+var ErrOutOfOrderMigration = errors.New("out-of-order migration detected")
+
 // verifyBaselineBeforeMigration checks the baseline for all applied versions and blocks
 // if any applied version is mismatched or missing against forge_migration_checksums.
 // Unverified versions do not block. Dirty state and lookup failures do not block here;
@@ -152,6 +155,127 @@ func (mr *MigrationRunner) verifyBaselineBeforeMigration(ctx context.Context, ex
 		}
 	}
 	return nil
+}
+
+func isTableNotExist(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "no such table") ||
+		strings.Contains(msg, "does not exist") ||
+		strings.Contains(msg, "undefined table")
+}
+
+// loadRecordedVersions queries forge_migration_checksums for versions <= currentVersion.
+// It returns an empty map and nil if the table does not exist.
+func loadRecordedVersions(ctx context.Context, q checksumExecutor, currentVersion uint) (map[uint]bool, error) {
+	rows, err := q.QueryContext(ctx, `SELECT version FROM forge_migration_checksums WHERE version <= $1`, currentVersion)
+	if err != nil {
+		if isTableNotExist(err) {
+			return make(map[uint]bool), nil
+		}
+		return nil, fmt.Errorf("query migration checksum versions: %w", err)
+	}
+	defer rows.Close()
+
+	recorded := make(map[uint]bool)
+	for rows.Next() {
+		var v uint
+		if err := rows.Scan(&v); err != nil {
+			return nil, fmt.Errorf("scan migration checksum version: %w", err)
+		}
+		recorded[v] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read migration checksum versions: %w", err)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, fmt.Errorf("close migration checksum rows: %w", err)
+	}
+	return recorded, nil
+}
+
+// outOfOrderVersions returns, sorted ascending, every file version v with
+// minRecorded < v < currentVersion and !recorded[v], where minRecorded is the
+// smallest key in recorded. If recorded is empty or currentVersion == 0, it returns nil.
+func outOfOrderVersions(recorded map[uint]bool, currentVersion uint, fileVersions []uint) []uint {
+	if len(recorded) == 0 || currentVersion == 0 {
+		return nil
+	}
+
+	var minRecorded uint
+	first := true
+	for v := range recorded {
+		if first || v < minRecorded {
+			minRecorded = v
+			first = false
+		}
+	}
+
+	var result []uint
+	seen := make(map[uint]bool)
+	for _, v := range fileVersions {
+		if v > minRecorded && v < currentVersion && !recorded[v] && !seen[v] {
+			seen[v] = true
+			result = append(result, v)
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i] < result[j] })
+	return result
+}
+
+// checkOutOfOrderMigrations verifies that all migration files with versions below the current
+// database version have already been applied according to forge_migration_checksums.
+// If any file below the current version is unapplied, it returns ErrOutOfOrderMigration naming the files.
+func (mr *MigrationRunner) checkOutOfOrderMigrations(ctx context.Context, executor checksumExecutor, currentVersion uint) error {
+	if currentVersion == 0 {
+		return nil
+	}
+
+	recorded, err := loadRecordedVersions(ctx, executor, currentVersion)
+	if err != nil {
+		return err
+	}
+	if len(recorded) == 0 {
+		return nil
+	}
+
+	index, err := indexMigrationFiles(mr.migrationsPath)
+	if err != nil {
+		index = mr.sourceIndex
+	}
+	if index == nil {
+		return nil
+	}
+
+	fileVersions := make([]uint, 0, len(index))
+	for v := range index {
+		fileVersions = append(fileVersions, v)
+	}
+
+	unappliedVersions := outOfOrderVersions(recorded, currentVersion, fileVersions)
+	if len(unappliedVersions) == 0 {
+		return nil
+	}
+
+	var files []string
+	for _, v := range unappliedVersions {
+		pair := index[v]
+		if pair.up != "" {
+			files = append(files, filepath.Base(pair.up))
+		} else if pair.down != "" {
+			files = append(files, filepath.Base(pair.down))
+		} else {
+			files = append(files, fmt.Sprintf("version %d", v))
+		}
+	}
+
+	return fmt.Errorf("%w: unapplied migration file(s) below current version %d: %s",
+		ErrOutOfOrderMigration, currentVersion, strings.Join(files, ", "))
 }
 
 // MigrationRunner handles migration execution using golang-migrate
@@ -340,6 +464,11 @@ func (mr *MigrationRunner) migrateWithChecksums(ctx context.Context, executor ch
 		return err
 	}
 
+	// Block if any migration file below current version has not been applied
+	if err := mr.checkOutOfOrderMigrations(ctx, executor, currentVersion); err != nil {
+		return err
+	}
+
 	// Validate checksums for pending migrations before applying
 	if err := mr.validatePendingMigrationChecksums(ctx, currentVersion); err != nil {
 		return fmt.Errorf("checksum validation failed: %w", err)
@@ -496,6 +625,11 @@ func (mr *MigrationRunner) migrateToWithChecksums(ctx context.Context, executor 
 
 	// Verify baseline before migrating: block if any applied version is mismatched or missing
 	if err := mr.verifyBaselineBeforeMigration(ctx, executor); err != nil {
+		return err
+	}
+
+	// Block if any migration file below current version has not been applied
+	if err := mr.checkOutOfOrderMigrations(ctx, executor, currentVersion); err != nil {
 		return err
 	}
 
@@ -686,6 +820,54 @@ func (mr *MigrationRunner) GetDetailedStatus(ctx context.Context) (*DetailedMigr
 			return nil, fmt.Errorf("failed to get status: %w", statusErr)
 		}
 		return fallbackDetailedMigrationStatus(status), nil
+	}
+
+	currentVer, _, verErr := mr.Version(ctx)
+	if verErr == nil && currentVer > 0 && mr.db != nil && mr.db.DB != nil {
+		recorded, err := loadRecordedVersions(ctx, mr.db, currentVer)
+		if err == nil && len(recorded) > 0 {
+			var fileVersions []uint
+			for _, list := range [][]execute.MigrationInfo{detailed.Applied, detailed.Pending} {
+				for _, mig := range list {
+					if v, parseErr := strconv.ParseUint(mig.Version, 10, 64); parseErr == nil {
+						fileVersions = append(fileVersions, uint(v))
+					}
+				}
+			}
+
+			oooList := outOfOrderVersions(recorded, currentVer, fileVersions)
+			if len(oooList) > 0 {
+				oooSet := make(map[uint]bool, len(oooList))
+				for _, v := range oooList {
+					oooSet[v] = true
+				}
+
+				partition := func(migs []execute.MigrationInfo) []execute.MigrationInfo {
+					var remaining []execute.MigrationInfo
+					for _, mig := range migs {
+						v, parseErr := strconv.ParseUint(mig.Version, 10, 64)
+						if parseErr == nil && oooSet[uint(v)] {
+							mig.Applied = false
+							detailed.OutOfOrder = append(detailed.OutOfOrder, mig)
+						} else {
+							remaining = append(remaining, mig)
+						}
+					}
+					return remaining
+				}
+
+				detailed.Applied = partition(detailed.Applied)
+				detailed.Pending = partition(detailed.Pending)
+
+				sort.Slice(detailed.OutOfOrder, func(i, j int) bool {
+					vi, _ := strconv.ParseUint(detailed.OutOfOrder[i].Version, 10, 64)
+					vj, _ := strconv.ParseUint(detailed.OutOfOrder[j].Version, 10, 64)
+					return vi < vj
+				})
+			}
+		} else if err != nil {
+			detailed.OutOfOrder = nil
+		}
 	}
 
 	// Convert execute.DetailedStatus to db.DetailedMigrationStatus
