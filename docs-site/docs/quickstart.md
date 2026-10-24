@@ -155,6 +155,57 @@ Open [http://localhost:8000/admin/](http://localhost:8000/admin/) to sign in
 and manage customers and orders. The command also accepts `--port` to override
 the configured port; for example, `forge runserver --port 8080`.
 
+## Use your own model
+
+`forge add app blog --example` creates `app/blog/models.go` with an `Example` model. Replace the example with your own model, for instance:
+
+
+```go title="app/blog/models.go"
+package blog
+
+import "github.com/forgego/forge/schema"
+
+type Article struct {
+	ArticleGenerated
+}
+
+func (Article) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.StringField("title", schema.Required(), schema.MaxLength(200)),
+		schema.TextField("body", schema.Required()),
+		schema.BoolField("published", schema.Default(false)),
+	}
+}
+
+func (Article) Meta() schema.Meta {
+	return schema.Meta{TableName: "articles", VerboseName: "Article"}
+}
+
+func (Article) Relations() []schema.Relation { return nil }
+
+func (Article) Hooks() *schema.ModelHooks { return nil }
+```
+
+Then run `forge generate --models ./app/blog --output ./app/blog`,
+`forge makemigrations initial --auto --models ./app/blog` and `forge migrate up`.
+
+With the generated code, queries are typed:
+
+```go
+f := blog.ArticleFieldsInstance
+
+qs, err := blog.ArticleObjects.Filter(f.Published.Eq(true))
+if err != nil {
+	return err
+}
+articles, err := qs.OrderBy(f.Id.Desc()).Limit(10).All(ctx)
+```
+
+See [ORM & QuerySets](/docs/orm) for filters, relations and aggregates.
+
+See [ORM & QuerySets](/docs/orm) for filters, relations and aggregates.
+
 ## Next steps
 
 - [Models & fields](/docs/models)
