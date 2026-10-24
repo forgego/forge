@@ -20,7 +20,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Admin',
-      items: ['admin/overview', 'admin/config', 'admin/actions', 'admin/filters', 'admin/ui'],
+      items: ['admin/overview', 'admin/config', 'admin/actions', 'admin/filters', 'admin/ui', 'admin/extensions'],
     },
     {
       type: 'category',
