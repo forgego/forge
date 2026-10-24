@@ -3,6 +3,7 @@ package orm
 import (
 	"context"
 	"errors"
+	"github.com/forgego/forge/db"
 	"reflect"
 	"testing"
 
@@ -67,7 +68,7 @@ func (r *hookOrderRollbackRecord) BeforeCreate(context.Context) error {
 }
 func (r *hookOrderRollbackRecord) AfterCreate(context.Context) error {
 	*r.events = append(*r.events, "after create")
-	return nil
+	return errors.New("hook error rollback")
 }
 func (r *hookOrderRollbackRecord) BeforeUpdate(context.Context) error {
 	*r.events = append(*r.events, "before update")
@@ -79,7 +80,7 @@ func (r *hookOrderRollbackRecord) AfterUpdate(context.Context) error {
 }
 func (r *hookOrderRollbackRecord) BeforeSave(context.Context) error {
 	*r.events = append(*r.events, "before save")
-	return errors.New("hook error rollback")
+	return nil
 }
 func (r *hookOrderRollbackRecord) AfterSave(context.Context) error {
 	*r.events = append(*r.events, "after save")
@@ -123,7 +124,11 @@ func TestHookErrorRollsBackInsert(t *testing.T) {
 	}
 	var events []string
 	r := &hookOrderRollbackRecord{Name: "rollback-test", events: &events}
-	if err := m.Create(context.Background(), r); err == nil {
+	ctx := context.Background()
+	txErr := database.WithTx(ctx, func(tx *db.Tx) error {
+		return m.WithTx(tx).Create(ctx, r)
+	})
+	if txErr == nil {
 		t.Fatal("expected error from hook, got nil")
 	}
 	var count int
