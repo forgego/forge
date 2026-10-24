@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -400,7 +401,41 @@ func TestAppIsolation(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, statusB, "user created on A must fail authentication on B: %s", bodyB)
 	})
 
-	// Health checks are not isolated yet: server/health.go keeps a process-wide registry (var globalRegistry). Tracked as a follow-up; add the subtest back when it is per-app.
+	t.Run("4_HealthIndependent", func(t *testing.T) {
+		serverA.server.Health().RegisterFunc("component_a", func(ctx context.Context) error {
+			return errors.New("degraded on A")
+		})
+		t.Cleanup(func() {
+			serverA.server.Health().Unregister("component_a")
+		})
+
+		statusA, bodyA := serverA.get(t, "/health/ready")
+		assert.Equal(t, http.StatusServiceUnavailable, statusA)
+		assert.Contains(t, bodyA, "not ready")
+		assert.Contains(t, bodyA, "component_a")
+
+		statusB, bodyB := serverB.get(t, "/health/ready")
+		assert.Equal(t, http.StatusOK, statusB)
+		assert.Contains(t, bodyB, "ready")
+		assert.NotContains(t, bodyB, "component_a")
+
+		// Also verify /health
+		statusHealthA, bodyHealthA := serverA.get(t, "/health")
+		assert.Equal(t, http.StatusServiceUnavailable, statusHealthA)
+		assert.Contains(t, bodyHealthA, "unhealthy")
+		assert.Contains(t, bodyHealthA, "component_a")
+
+		statusHealthB, bodyHealthB := serverB.get(t, "/health")
+		assert.Equal(t, http.StatusOK, statusHealthB)
+		assert.Contains(t, bodyHealthB, "healthy")
+		assert.NotContains(t, bodyHealthB, "component_a")
+
+		serverA.server.Health().Unregister("component_a")
+
+		statusAAfter, bodyAAfter := serverA.get(t, "/health/ready")
+		assert.Equal(t, http.StatusOK, statusAAfter)
+		assert.Contains(t, bodyAAfter, "ready")
+	})
 
 	t.Run("5_StoppingALeavesBServing", func(t *testing.T) {
 		serverA.shutdown(t)

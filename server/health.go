@@ -34,42 +34,103 @@ type HealthStatus struct {
 	Message   string            `json:"message,omitempty"`
 }
 
-// healthRegistry stores registered health checkers
-type healthRegistry struct {
+// HealthRegistry stores registered health checkers for an application.
+type HealthRegistry struct {
 	mu        sync.RWMutex
 	checkers  map[string]HealthChecker
 	startTime time.Time
 }
 
-var (
-	globalRegistry = &healthRegistry{
+// NewHealthRegistry creates an empty health check registry.
+func NewHealthRegistry() *HealthRegistry {
+	return &HealthRegistry{
 		checkers:  make(map[string]HealthChecker),
 		startTime: time.Now(),
 	}
+}
+
+// Register registers a health checker with a name.
+func (r *HealthRegistry) Register(name string, checker HealthChecker) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.checkers[name] = checker
+}
+
+// RegisterFunc registers a health check function with a name.
+func (r *HealthRegistry) RegisterFunc(name string, fn func(ctx context.Context) error) {
+	r.Register(name, HealthCheckFunc(fn))
+}
+
+// Unregister removes a health checker.
+func (r *HealthRegistry) Unregister(name string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.checkers, name)
+}
+
+// Uptime returns the duration since the health registry was created.
+func (r *HealthRegistry) Uptime() time.Duration {
+	if r == nil {
+		return 0
+	}
+	return time.Since(r.startTime)
+}
+
+func (r *HealthRegistry) snapshot() map[string]HealthChecker {
+	if r == nil {
+		return nil
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	cp := make(map[string]HealthChecker, len(r.checkers))
+	for k, v := range r.checkers {
+		cp[k] = v
+	}
+	return cp
+}
+
+var (
+	defaultHealthRegistry = NewHealthRegistry()
+	globalRegistry        = defaultHealthRegistry
 )
 
+// mergeCheckers combines two health checker snapshots. A checker in server
+// registry wins if both registries define the same name.
+func mergeCheckers(defaultCheckers, serverCheckers map[string]HealthChecker) map[string]HealthChecker {
+	merged := make(map[string]HealthChecker, len(defaultCheckers)+len(serverCheckers))
+	for k, v := range defaultCheckers {
+		merged[k] = v
+	}
+	for k, v := range serverCheckers {
+		merged[k] = v
+	}
+	return merged
+}
+
 // RegisterHealthCheck registers a health checker with a name
+//
+// Deprecated: use (*Server).Health() for per-app checks.
 func RegisterHealthCheck(name string, checker HealthChecker) {
-	globalRegistry.mu.Lock()
-	defer globalRegistry.mu.Unlock()
-	globalRegistry.checkers[name] = checker
+	defaultHealthRegistry.Register(name, checker)
 }
 
 // RegisterHealthCheckFunc registers a health check function
+//
+// Deprecated: use (*Server).Health() for per-app checks.
 func RegisterHealthCheckFunc(name string, fn func(ctx context.Context) error) {
-	RegisterHealthCheck(name, HealthCheckFunc(fn))
+	defaultHealthRegistry.RegisterFunc(name, fn)
 }
 
 // UnregisterHealthCheck removes a health checker
+//
+// Deprecated: use (*Server).Health() for per-app checks.
 func UnregisterHealthCheck(name string) {
-	globalRegistry.mu.Lock()
-	defer globalRegistry.mu.Unlock()
-	delete(globalRegistry.checkers, name)
+	defaultHealthRegistry.Unregister(name)
 }
 
 // GetUptime returns the server uptime
 func GetUptime() time.Duration {
-	return time.Since(globalRegistry.startTime)
+	return defaultHealthRegistry.Uptime()
 }
 
 // logCheckFailure records why a check failed. Values are quoted so a
@@ -80,16 +141,20 @@ func logCheckFailure(kind, name string, err error) {
 
 // HealthHandler returns a handler for the health check endpoint
 func HealthHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	return healthHandler(defaultHealthRegistry)
+}
+
+func healthHandler(r *HealthRegistry) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		ctx, cancel := context.WithTimeout(req.Context(), 5*time.Second)
 		defer cancel()
 
-		globalRegistry.mu.RLock()
-		checkers := make(map[string]HealthChecker, len(globalRegistry.checkers))
-		for k, v := range globalRegistry.checkers {
-			checkers[k] = v
+		var checkers map[string]HealthChecker
+		if r == defaultHealthRegistry {
+			checkers = defaultHealthRegistry.snapshot()
+		} else {
+			checkers = mergeCheckers(defaultHealthRegistry.snapshot(), r.snapshot())
 		}
-		globalRegistry.mu.RUnlock()
 
 		status := HealthStatus{
 			Status:    "healthy",
@@ -118,6 +183,9 @@ func HealthHandler() http.HandlerFunc {
 
 		// Add uptime information
 		uptime := GetUptime()
+		if r != nil {
+			uptime = r.Uptime()
+		}
 		status.Message = fmt.Sprintf("Server uptime: %s", uptime.Round(time.Second))
 
 		w.Header().Set("Content-Type", "application/json")
@@ -134,20 +202,20 @@ func HealthHandler() http.HandlerFunc {
 // ReadinessHandler returns a handler for the readiness check endpoint
 // Readiness checks if the service is ready to accept traffic
 func ReadinessHandler() http.HandlerFunc {
-	return readinessHandler(nil)
+	return readinessHandler(nil, defaultHealthRegistry)
 }
 
-func readinessHandler(database *db.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+func readinessHandler(database *db.DB, r *HealthRegistry) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		ctx, cancel := context.WithTimeout(req.Context(), 5*time.Second)
 		defer cancel()
 
-		globalRegistry.mu.RLock()
-		checkers := make(map[string]HealthChecker, len(globalRegistry.checkers))
-		for k, v := range globalRegistry.checkers {
-			checkers[k] = v
+		var checkers map[string]HealthChecker
+		if r == defaultHealthRegistry {
+			checkers = defaultHealthRegistry.snapshot()
+		} else {
+			checkers = mergeCheckers(defaultHealthRegistry.snapshot(), r.snapshot())
 		}
-		globalRegistry.mu.RUnlock()
 
 		status := HealthStatus{
 			Status:    "ready",
