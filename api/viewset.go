@@ -1196,31 +1196,44 @@ func (r *Router) Handle(method, path string, handler http.HandlerFunc) {
 func (r *Router) registerResourceRoutes(router *forgehttp.Router, resource string, vs ViewSet) {
 	path := r.prefix + "/" + resource
 	router.Route(path, func(sub *forgehttp.Router) {
-		sub.Get("/", withResource(resource, vs.List))
-		sub.Post("/", withResource(resource, vs.Create))
-		sub.Get("/{id}", withResource(resource, vs.Retrieve))
-		sub.Put("/{id}", withResource(resource, vs.Update))
-		sub.Patch("/{id}", withResource(resource, vs.PartialUpdate))
-		sub.Delete("/{id}", withResource(resource, vs.Destroy))
-		sub.Options("/", func(w http.ResponseWriter, r *http.Request) {
-			docs.OptionsHandler(w, r, vs, nil)
-		})
+		for _, desc := range r.resourceDescriptors(resource) {
+			subPath := "/"
+			if desc.Detail {
+				subPath = "/{id}"
+			}
+			var handler http.HandlerFunc
+			switch desc.Action {
+			case "list":
+				handler = withResource(resource, vs.List)
+			case "create":
+				handler = withResource(resource, vs.Create)
+			case "retrieve":
+				handler = withResource(resource, vs.Retrieve)
+			case "update":
+				handler = withResource(resource, vs.Update)
+			case "partial_update":
+				handler = withResource(resource, vs.PartialUpdate)
+			case "destroy":
+				handler = withResource(resource, vs.Destroy)
+			case "metadata":
+				handler = func(w http.ResponseWriter, r *http.Request) {
+					docs.OptionsHandler(w, r, vs, nil)
+				}
+			default:
+				continue
+			}
+			sub.Method(desc.Method, subPath, handler)
+		}
 	})
 }
 
 func (r *Router) registerActions(router *forgehttp.Router) {
-	cleanPrefix := strings.TrimSuffix(r.prefix, "/")
-	for _, act := range r.actions {
-		cleanResource := strings.Trim(act.resource, "/")
-		cleanActionPath := strings.Trim(act.cfg.URLPath, "/")
-		var fullPath string
-		if act.cfg.Detail {
-			fullPath = cleanPrefix + "/" + cleanResource + "/{id}/" + cleanActionPath
-		} else {
-			fullPath = cleanPrefix + "/" + cleanResource + "/" + cleanActionPath
-		}
-		for _, method := range act.cfg.Methods {
-			router.Method(method, fullPath, act.handler)
+	for _, desc := range r.actionDescriptors() {
+		for _, act := range r.actions {
+			if act.resource == desc.Resource && act.name == desc.Action {
+				router.Method(desc.Method, desc.Path, act.handler)
+				break
+			}
 		}
 	}
 }
@@ -1239,8 +1252,8 @@ func (r *Router) RegisterRoutes(router *forgehttp.Router) {
 			panic(err.Error())
 		}
 	}
-	for resource, vs := range r.routes {
-		r.registerResourceRoutes(router, resource, vs)
+	for _, resource := range resources {
+		r.registerResourceRoutes(router, resource, r.routes[resource])
 	}
 	r.registerActions(router)
 	for _, cr := range r.customRoutes {
