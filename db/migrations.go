@@ -829,7 +829,7 @@ func (mr *MigrationRunner) GetDetailedStatus(ctx context.Context) (*DetailedMigr
 			var fileVersions []uint
 			for _, list := range [][]execute.MigrationInfo{detailed.Applied, detailed.Pending} {
 				for _, mig := range list {
-					if v, parseErr := strconv.ParseUint(mig.Version, 10, 64); parseErr == nil {
+					if v, parseErr := strconv.ParseUint(mig.Version, 10, strconv.IntSize); parseErr == nil {
 						fileVersions = append(fileVersions, uint(v))
 					}
 				}
@@ -845,7 +845,7 @@ func (mr *MigrationRunner) GetDetailedStatus(ctx context.Context) (*DetailedMigr
 				partition := func(migs []execute.MigrationInfo) []execute.MigrationInfo {
 					var remaining []execute.MigrationInfo
 					for _, mig := range migs {
-						v, parseErr := strconv.ParseUint(mig.Version, 10, 64)
+						v, parseErr := strconv.ParseUint(mig.Version, 10, strconv.IntSize)
 						if parseErr == nil && oooSet[uint(v)] {
 							mig.Applied = false
 							detailed.OutOfOrder = append(detailed.OutOfOrder, mig)
