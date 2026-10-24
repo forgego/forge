@@ -400,11 +400,7 @@ func TestAppIsolation(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, statusB, "user created on A must fail authentication on B: %s", bodyB)
 	})
 
-	t.Run("4_HealthIndependent", func(t *testing.T) {
-		// Readiness DB check is not on this branch; readiness checks rely on
-		// server.globalRegistry (server/health.go:43) and NewServer registers no DB checker.
-		t.Skip("readiness DB check lands in #388")
-	})
+	// Health checks are not isolated yet: server/health.go keeps a process-wide registry (var globalRegistry). Tracked as a follow-up; add the subtest back when it is per-app.
 
 	t.Run("5_StoppingALeavesBServing", func(t *testing.T) {
 		serverA.shutdown(t)
