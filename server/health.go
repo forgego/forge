@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/forgego/forge/db"
 )
 
 // HealthChecker is the interface for health check implementations
@@ -132,6 +134,10 @@ func HealthHandler() http.HandlerFunc {
 // ReadinessHandler returns a handler for the readiness check endpoint
 // Readiness checks if the service is ready to accept traffic
 func ReadinessHandler() http.HandlerFunc {
+	return readinessHandler(nil)
+}
+
+func readinessHandler(database *db.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 		defer cancel()
@@ -149,14 +155,24 @@ func ReadinessHandler() http.HandlerFunc {
 			Checks:    make(map[string]string),
 		}
 
-		// Run all readiness checks
 		allReady := true
+		if database != nil {
+			if err := database.Ping(ctx); err != nil {
+				logCheckFailure("readiness", "database", err)
+				status.Checks["database"] = "not ready"
+				allReady = false
+			} else {
+				status.Checks["database"] = "ready"
+			}
+		}
+
+		// Run all readiness checks
 		for name, checker := range checkers {
 			if err := checker.CheckHealth(ctx); err != nil {
 				logCheckFailure("readiness", name, err)
 				status.Checks[name] = "not ready"
 				allReady = false
-			} else {
+			} else if _, ok := status.Checks[name]; !ok {
 				status.Checks[name] = "ready"
 			}
 		}
