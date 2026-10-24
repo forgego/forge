@@ -146,7 +146,7 @@ go test -count=1 -p 1 -json ./... | /tmp/testreport --require-no-skip '^github.c
 
 # From the tests module:
 cd tests
-go test -count=1 -p 1 -json ./... | /tmp/testreport --require-no-skip '^github.com/forgego/forge/tests/(integration|pkg_migrations|e2e)' --allow-skip 'tests/pkg_migrations$ ^TestMigrationApplySQLite$'
+go test -count=1 -p 1 -json ./... | /tmp/testreport --require-no-skip '^github.com/forgego/forge/tests/(integration|pkg_migrations|e2e)'
 ```
 
 The `--require-no-skip` flag takes a regular expression matching package paths whose tests must not be skipped. If any matching test is skipped, the reporter prints an error summary and exits with code 1. The repeatable `--allow-skip '<package-regexp> <test-regexp>'` flag exempts documented skips.

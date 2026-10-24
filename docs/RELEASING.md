@@ -81,8 +81,7 @@ of the root module and of the `tests` module serially:
 go test -count=1 -p 1 -json ./... | testreport --out forge-report.txt \
   --require-no-skip '^github.com/.*/(identity|internal/testutils)'
 (cd tests && go test -count=1 -p 1 -json ./... | testreport --out tests-report.txt \
-  --require-no-skip '^github.com/forgego/forge/tests/(integration|pkg_migrations|e2e)' \
-  --allow-skip 'tests/pkg_migrations$ ^TestMigrationApplySQLite$')
+  --require-no-skip '^github.com/forgego/forge/tests/(integration|pkg_migrations|e2e)')
 ```
 
 `internal/tools/testreport` prints pass, fail, skip and package-failure counts
