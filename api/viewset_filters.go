@@ -7,6 +7,12 @@ import (
 	"github.com/forgego/forge/schema"
 )
 
+// MaxFilterConditions is the maximum number of filter conditions permitted in a single request.
+const MaxFilterConditions = 20
+
+// CodeFilterTooComplex is the error code returned when filter conditions exceed MaxFilterConditions.
+const CodeFilterTooComplex = "filter_too_complex"
+
 // FilterableFields returns the schema names of fields safe for generated list
 // filters. Non-serializable fields are excluded.
 func FilterableFields(model interface{}) []string {

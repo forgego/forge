@@ -8,7 +8,8 @@ import (
 	forgehttp "github.com/forgego/forge/server"
 )
 
-// Pagination provides pagination functionality for API responses
+// Pagination provides pagination functionality for API responses.
+// A page_size above the configured maximum is clamped to the maximum.
 type Pagination struct {
 	Page       int  `json:"page"`
 	PageSize   int  `json:"page_size"`
@@ -30,8 +31,8 @@ type PaginatedResponse struct {
 
 // ParsePaginationParams extracts pagination parameters from an HTTP request.
 // It returns page number, page size, and calculated offset.
-// Invalid values are replaced with defaults. The page size is capped at the
-// configured MaxPageSize setting.
+// Invalid values are replaced with defaults. A page_size above the configured
+// maximum is clamped to the maximum (MaxPageSize).
 func ParsePaginationParams(r *http.Request, defaultPageSize int) (page, pageSize, offset int) {
 	page = forgehttp.GetQueryInt(r, "page", 1)
 	pageSize = forgehttp.GetQueryInt(r, "page_size", defaultPageSize)
@@ -58,6 +59,7 @@ func ParsePaginationParams(r *http.Request, defaultPageSize int) (page, pageSize
 }
 
 // GetPaginationParams extracts pagination parameters from request.
+// A page_size above the configured maximum is clamped to the maximum.
 //
 // Deprecated: Use ParsePaginationParams() for clarity (parsing vs getting).
 // GetPaginationParams will be removed in v3.0.
