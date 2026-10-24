@@ -269,53 +269,171 @@ advisory lock while it applies migrations, so an accidental second run waits
 instead of applying twice, but do not run migrations from every instance at
 start-up.
 
-## Deploy, back up, roll back
+## Production deployment path
 
-Run these from the project directory with the production `FORGE_DATABASE_*`
-variables set and the `forge` CLI at the library's version.
+This numbered production deployment path brings a release into service,
+verifies its health, and provides the exact rollback procedures.
 
-**1. Back up and inspect.**
+### 1. Configuration
+
+Configure the release using non-secret values in `config/config.yaml` or
+environment variables prefixed with `FORGE_`. Environment variables override
+configuration file keys:
+
+- `app.env` (`FORGE_APP_ENV`): set to `production` (case-insensitive).
+- `app.debug` (`FORGE_APP_DEBUG`): set to `false`. Production refuses startup if `app.debug` is true.
+- `server.host` (`FORGE_SERVER_HOST`): bind address (`0.0.0.0` or container address; default `localhost`).
+- `server.port` (`FORGE_SERVER_PORT`): listening port (default `8000`).
+- `server.health_check_path` (`FORGE_SERVER_HEALTH_CHECK_PATH`): base path for health endpoints (default `/health`).
+- `server.trusted_proxies` (`FORGE_SERVER_TRUSTED_PROXIES`): proxy IPs/CIDRs for client IP resolution.
+- `server.graceful_timeout` (`FORGE_SERVER_GRACEFUL_TIMEOUT`): seconds to drain requests on SIGTERM (default `30`).
+- `database.driver` (`FORGE_DATABASE_DRIVER`): database engine (`postgres` or `sqlite3`).
+- `database.host`, `database.port`, `database.name`, `database.user`, `database.password`: database connection settings.
+- `database.sslmode` (`FORGE_DATABASE_SSLMODE`): set to `require` or `verify-full` for networked databases.
+- `database.max_open_conns`, `database.max_idle_conns`, `database.conn_max_lifetime`, `database.conn_max_idle_time`: connection pool limits.
+- `logging.level` (`FORGE_LOGGING_LEVEL`), `logging.format` (`FORGE_LOGGING_FORMAT`): logging level (`info`) and format (`json`).
+
+Compile the application server binary with the pinned Forge library version:
 
 ```bash
-pg_dump -Fc -h "$FORGE_DATABASE_HOST" -U "$FORGE_DATABASE_USER" -f pre-deploy.dump "$FORGE_DATABASE_NAME"
-forge migrate status            # must not say DIRTY
-forge migrate recover --verify  # applied files still match their recorded checksums
-forge migrate up --dry-run      # review the SQL that will run
+CGO_ENABLED=0 go build -trimpath -o server ./cmd/server
 ```
 
-**2. Migrate and switch.**
+### 2. Secrets
+
+Supply secrets **exclusively through environment variables** (or your platform's
+secrets manager mapped to environment variables). Never commit secrets into
+`config.yaml` or include development `.env` files in production images.
+
+Required production secrets:
+
+- `FORGE_SECURITY_SECRET_KEY`: signing key for JWTs and tokens.
+- `FORGE_SECURITY_CSRF_SECRET_KEY`: signing key for CSRF protection cookies.
+- `FORGE_SECURITY_SESSION_SECRET`: signing key for session cookies.
+
+**Production validation (`validateProductionSecrets` in `server/server.go`):**
+When `app.env` is set to `production`, `Server.Start` and `Server.NewServer`
+refuse default and insecure secrets before the server begins listening:
+
+- **No empty secrets**: all three keys must be explicitly set.
+- **No placeholder values**: values starting with `change-me` (case-insensitive) or equal to `secret` or `default` are rejected.
+- **No generated ephemeral secrets**: keys generated dynamically in process memory are rejected.
+- **Minimum length**: each secret must be at least 32 bytes (`len >= 32`).
+- **Distinct values**: all three secrets must be distinct from one another (for example, generated with `openssl rand -hex 32`).
+- **Debug disabled**: `app.debug` must be `false`; if `app.debug` is `true`, startup is aborted.
+
+If any secret check fails, the process exits with status 1.
+
+### 3. Schema changes
+
+Run migration commands from the project directory using the matching `forge` CLI version.
+Framework store tables need `forge migrate up` before the application server starts:
+`server.NewServer` checks for framework tables (`forge_sessions`, `forge_rate_limits`,
+`forge_admin_tokens`, `forge_admin_saved_views`, `forge_admin_log`) and fails with exit
+status 1 if they have not been created.
+
+1. **Take a database backup**:
+   ```bash
+   pg_dump -Fc -h "$FORGE_DATABASE_HOST" -U "$FORGE_DATABASE_USER" -f pre-deploy.dump "$FORGE_DATABASE_NAME"
+   ```
+2. **Verify migration integrity**:
+   ```bash
+   forge migrate recover --verify
+   ```
+   Compares applied migration files against recorded SHA-256 baselines in
+   `forge_migration_checksums` and checks for dirty state (`cli/commands/migrations/recover.go`).
+3. **Inspect current migration status**:
+   ```bash
+   forge migrate status
+   ```
+   Ensures the database is not in a `DIRTY` state and lists pending migrations
+   (`cli/commands/migrations/status.go`).
+4. **Preview pending migrations (plan)**:
+   ```bash
+   forge migrate up --dry-run
+   ```
+   Previews the SQL statements that will execute without altering the database
+   (`cli/commands/migrations/up.go`).
+5. **Apply migrations**:
+   ```bash
+   forge migrate up
+   ```
+   Applies framework store tables first, then pending application migrations in order
+   (`cli/commands/migrations/up.go`).
+   If any pending migration contains destructive SQL (`DROP TABLE`, `DROP COLUMN`,
+   `TRUNCATE`, `DELETE FROM`, `DROP SCHEMA`, `DROP DATABASE`), `forge migrate up`
+   refuses to run and lists the destructive operations. To proceed after reviewing the
+   SQL and backup, run:
+   ```bash
+   forge migrate up --allow-destructive
+   ```
+
+### 4. Health checks and server startup
+
+Start the application binary:
 
 ```bash
-forge migrate up
-# stop the old binary (SIGTERM), start the new one
+./server
+```
+
+Verify service readiness and health using the endpoints registered by `server/server.go`
+and implemented in `server/health.go` (prefixed by `server.health_check_path`, default `/health`):
+
+1. **Readiness probe (`GET /health/ready`)**:
+   Checks database connectivity (`database.Ping(ctx)`) and any registered health
+   functions via `readinessHandler`. Returns HTTP 200 `{"status":"ready", ...}` when
+   ready, or HTTP 503 `{"status":"not ready", ...}` if any check fails. Point load
+   balancer and container readiness probes here before directing traffic to the instance.
+2. **Health check (`GET /health`)**:
+   Runs all health checks registered in `server.HealthRegistry` via `healthHandler`.
+   Returns HTTP 200 `{"status":"healthy", ...}` when all pass, or HTTP 503
+   `{"status":"unhealthy", ...}` if any fail.
+3. **Liveness probe (`GET /health/live`)**:
+   Simple liveness check via `LivenessHandler`. Always returns HTTP 200
+   `{"status":"alive", ...}` while the HTTP process is serving requests.
+
+You can also run the automated `./smoke-check.sh` script to verify endpoints:
+
+```bash
 ./smoke-check.sh https://app.example.com /admin
 ```
 
-If a pending migration deletes data, `migrate up` lists its file and operation
-and exits before applying any pending migration. After reviewing the SQL and
-backup, run `forge migrate up --allow-destructive` to proceed.
+### 5. Rollback
 
-Keep migrations backward compatible with the running binary where you can
-(add columns and tables first, remove them in a later release), so the old
-binary keeps working if you have to switch back.
+When a deployment fails, choose the appropriate rollback procedure:
 
-**3. Roll back, choosing the least destructive option.**
-
-- *The new binary is bad, the schema is fine*: start the previous binary.
-- *A migration must be undone*: `forge migrate rollback` runs the newest
-  migration's `.down.sql`. Run it once per migration to undo, then start the
-  previous binary.
-- *A migration failed half-way*: `forge migrate status` reports `DIRTY`. Fix
-  the database by hand, then mark it clean with `forge migrate recover --clean`
-  or set the version with `forge migrate force <version>`. See the
-  [migrations guide](/docs/migrations/).
-- *Data is damaged*: restore the backup. Everything written after the backup
-  is lost.
-
-  ```bash
-  pg_restore --clean --if-exists -h "$FORGE_DATABASE_HOST" -U "$FORGE_DATABASE_USER" -d "$FORGE_DATABASE_NAME" pre-deploy.dump
-  forge migrate status
-  ```
+1. **Schema rollback**:
+   **Forge does not have a `forge migrate down` command.** The real command to roll back
+   schema migrations is `forge migrate rollback`:
+   ```bash
+   forge migrate rollback
+   ```
+   This executes the `.down.sql` file of the last applied migration
+   (`cli/commands/migrations/rollback.go`). To step back multiple migrations, execute
+   `forge migrate rollback` once for each version.
+2. **Recovering from dirty migration state**:
+   If a migration fails midway, `forge migrate status` reports `DIRTY`.
+   - If the migration aborted without committing partial changes (PostgreSQL rolls back
+     failed DDL transactions), fix the migration SQL and reset the version pointer:
+     ```bash
+     forge migrate force <version>
+     ```
+     (`cli/commands/migrations/force.go`), then re-run `forge migrate up`.
+   - If the schema changes were completed manually, mark the version clean:
+     ```bash
+     forge migrate recover --clean --version <version>
+     ```
+     (`cli/commands/migrations/recover.go`).
+3. **Binary rollback**:
+   Send `SIGTERM` to the failing binary to initiate graceful shutdown
+   (`server.graceful_timeout`), then start the previous release binary.
+4. **Data restore**:
+   If data was corrupted or destructive changes cannot be undone with down migrations,
+   restore from the pre-deploy backup:
+   ```bash
+   pg_restore --clean --if-exists -h "$FORGE_DATABASE_HOST" -U "$FORGE_DATABASE_USER" -d "$FORGE_DATABASE_NAME" pre-deploy.dump
+   forge migrate status
+   ```
 
 ## Smoke check
 
