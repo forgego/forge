@@ -41,15 +41,14 @@ func main() {
 	adminSite.SetDB(database)
 
 	// Create server
-	// With server.stores: database, sessions and API throttling counters
-	// are kept in the database passed here.
+	// Sessions and API throttling counters are kept in the database passed here.
 	srv, err := server.NewServer(cfg, settings, logger, server.WithDatabase(database))
 	if err != nil {
 		stdlog.Fatal(err)
 	}
-	// server.stores: database keeps the admin's tokens, login lockout,
-	// saved views and change history in the database (run forge migrate up).
-	if err := adminSite.UseStores(context.Background(), settings.Server.Stores); err != nil {
+	// Keep the admin's tokens, login lockout, saved views and change history
+	// in the database (run forge migrate up).
+	if err := adminSite.UseDatabaseStores(context.Background()); err != nil {
 		stdlog.Fatal(err)
 	}
 

@@ -212,7 +212,7 @@ func main() {
 			adminPath := strings.TrimRight(settings.Admin.Path, "/")
 			site := admin.DefaultSite.WithUIConfig(admin.UIConfig{Prefix: adminPath})
 			site.SetDB(database)
-			if err := site.UseStores(context.Background(), settings.Server.Stores); err != nil {
+			if err := site.UseDatabaseStores(context.Background()); err != nil {
 				stdlog.Fatal(err)
 			}
 			router.Mount(adminPath, site.Handler())

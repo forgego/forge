@@ -27,7 +27,10 @@ func TestAdminLoginIssues24HourBearerToken(t *testing.T) {
 	t.Setenv("FORGE_ADMIN_USERNAME", "owner")
 	t.Setenv("FORGE_ADMIN_PASSWORD", "synthetic-password")
 	tokens := &lifetimeTokens{}
-	r := NewRouter(core.NewRegistry()).SetStores(Stores{Tokens: tokens})
+	r := NewRouter(core.NewRegistry()).SetStores(Stores{
+		Tokens:        tokens,
+		LoginAttempts: newLoginLimiter(),
+	})
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString(`{"username":"owner","password":"synthetic-password"}`))
 	r.handleLogin(w, req)

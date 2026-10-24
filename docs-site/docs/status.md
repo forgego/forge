@@ -78,16 +78,16 @@ The `release-gate` job runs every package serially against PostgreSQL with
 | --- | --- | --- | --- |
 | Migrations on PostgreSQL: generate from model diffs, apply, status, rollback, dirty-state recovery, checksum verification | Supported | See the [migrations guide](/docs/migrations/). `forge migrate squash` is not implemented. | `TestMigrationApplyPostgres`, `TestPostgresSchemaLifecycle` (evolution with seeded data, stable regeneration, failed-apply recovery, tamper detection), `tests/integration/migrate`, `TestCLIApplyMigration`; jobs `integration-tests`, `cli-e2e`, `release-gate` |
 | Migration apply on SQLite | Experimental | See Platforms. | `TestMigrationApplySQLite` (generate and apply two tables to a file database); job `release-gate` |
-| Generated REST API (`forge generate --api`) | Partially tested | Dispatch, content negotiation, pagination and error mapping are tested with in-memory stores. A freshly scaffolded `forge new` application with related models is generated with `--api --strict`, migrated and exercised over HTTP against PostgreSQL in CI (CRUD, filters, validation, protected fields, authentication and ownership denials, transaction rollback, regeneration after a schema change); the tier moves to Supported after independent review per `docs/REVIEWING.md`. Integer `id` primary keys only. The field contract is in the [API docs](/docs/api/field-contract/). | `TestCLIPostgresAppJourney` in jobs `cli-e2e` and `release-gate`, `tests/integration/api`, `api` tests |
-| Admin UI and admin REST API | Partially tested | Go handlers and the React app have unit tests. Browser journeys run in CI against PostgreSQL under a custom mount prefix: login/logout, list search/filter/sort/pagination, related-object selection, create/update/delete with field validation messages, read-only and auto-managed fields, object permission denials with stored-data checks, mixed-success bulk actions, and the 375px layout. Not covered: file uploads, inline related rows, saved views, export, history, plugins. Change history, saved views, tokens and the login lockout are kept in the database with `server.stores: database`, in process memory otherwise (see [Deployment](/docs/deployment/#shared-state)). | `admin` tests, `frontend` job, `Admin browser E2E result` job |
+| Generated REST API (`forge generate --api`) | Partially tested | Dispatch, content negotiation, pagination and error mapping are tested with an in-memory database. A freshly scaffolded `forge new` application with related models is generated with `--api --strict`, migrated and exercised over HTTP against PostgreSQL in CI (CRUD, filters, validation, protected fields, authentication and ownership denials, transaction rollback, regeneration after a schema change); the tier moves to Supported after independent review per `docs/REVIEWING.md`. Integer `id` primary keys only. The field contract is in the [API docs](/docs/api/field-contract/). | `TestCLIPostgresAppJourney` in jobs `cli-e2e` and `release-gate`, `tests/integration/api`, `api` tests |
+| Admin UI and admin REST API | Partially tested | Go handlers and the React app have unit tests. Browser journeys run in CI against PostgreSQL under a custom mount prefix: login/logout, list search/filter/sort/pagination, related-object selection, create/update/delete with field validation messages, read-only and auto-managed fields, object permission denials with stored-data checks, mixed-success bulk actions, and the 375px layout. Not covered: file uploads, inline related rows, saved views, export, history, plugins. Change history, saved views, tokens and the login lockout are kept in the database (see [Deployment](/docs/deployment/#shared-state)). | `admin` tests, `frontend` job, `Admin browser E2E result` job |
 | Admin file uploads | Not implemented | Unsupported: admin API returns 415 `unsupported_capability`; file fields render read-only. | `admin/api/rest/upload_unsupported_test.go`, `frontend` job |
 | Identity: users, password hashing, sessions, tokens, permissions | Supported | PostgreSQL. No OAuth/OIDC, social login or field-level permissions. | `identity/...` in `release-gate` with no skips allowed |
-| API throttling | Partially tested | With `server.stores: database` the default store is a shared PostgreSQL or SQLite counter; otherwise it is in process memory. | `api/throttling`, `stores` tests |
-| Shared stores (`server.stores: database`) | Partially tested | Sessions, throttling counters and the admin's tokens, login lockout, saved views and history in PostgreSQL or SQLite; two instances on one PostgreSQL database are tested end to end. | `stores` tests, `tests/integration/stores` |
+| API throttling | Partially tested | The default store is a shared PostgreSQL or SQLite counter in the database. | `api/throttling`, `stores` tests |
+| Shared stores (database) | Partially tested | Sessions, throttling counters and the admin's tokens, login lockout, saved views and history always live in PostgreSQL or SQLite; two instances on one PostgreSQL database are tested end to end. | `stores` tests, `tests/integration/stores` |
 | Caching (`api/caching`) | Partially tested | In-memory only. | `TestMemoryCache_*` |
 | Health, readiness and liveness endpoints | Supported | No database check is registered by default; see [Deployment](/docs/deployment/). | `TestHealthHandlers` |
 | Graceful shutdown | Supported | `Server.StartWithGracefulShutdown` on SIGINT/SIGTERM; generated projects use it. | `TestServeUntilDrainsInFlightRequests` |
-| Idempotency keys (`api/errors`) | Experimental | In-memory store only and no tests; `NewDatabaseStore` returns `NotImplemented`. | None |
+| Idempotency keys (`api/errors`) | Partially tested | `DatabaseStore` keeps keys in the `idempotency_keys` framework table (PostgreSQL or SQLite); `InMemoryStore` is for tests. | `TestDatabaseStoreFrameworkMigrationsSQLite` |
 | Log outputs `console` and `file` | Supported | The `remote` output returns `NotImplemented`. | `log` tests, `remote_output_not_implemented_test.go` |
 
 ## Extension points
@@ -102,7 +102,7 @@ The `release-gate` job runs every package serially against PostgreSQL with
 | Identity authentication backends (`identity/backends` registry) | Supported | `identity/backends/registry_test.go` |
 | Admin login authenticator (`SetLoginAuthenticator`) | Supported | `TestHandleLogin_Authenticator*` |
 | Admin actions and per-object permission hooks | Partially tested | `admin` tests |
-| Admin change-history store (`core.HistoryManager`) | Partially tested | Forge ships in-memory implementations and `stores/adminstore.History` (database). |
+| Admin change-history store (`core.HistoryManager`) | Partially tested | Forge ships `stores/adminstore.History` (database); tests can supply their own `core.HistoryManager`. |
 | Admin UI component overrides (`UIOverrides`) | Experimental | None |
 | Custom field types, `orm.RegisterAnnotation`, `orm.RegisterQueryExpr` | Experimental | None end to end |
 | Admin and API plugins (`registry.RegisterPlugin`) | Not implemented | `registry/plugin_unsupported_test.go` |
@@ -120,7 +120,6 @@ API exists, it fails with `NotImplemented`.
 - An advanced analytic query DSL: grouped aggregates, window functions, set operations, recursive CTEs.
 - More than one database per application, read replicas and distributed transactions.
 - Kubernetes manifests, Helm charts, service mesh integration.
-- Running more than one application instance with `server.stores: memory`. See [Deployment](/docs/deployment/#multiple-instances).
 
 ## Framework readiness and the example application
 

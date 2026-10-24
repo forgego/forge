@@ -22,7 +22,7 @@ func TestHandleLogin_PasswordWhitespacePreserved(t *testing.T) {
 	t.Setenv("FORGE_ADMIN_USERNAME", "admin")
 	t.Setenv("FORGE_ADMIN_PASSWORD", "p w ")
 
-	router := NewRouter(core.NewRegistry())
+	router := newTestRouter(core.NewRegistry())
 
 	// Exact password with trailing space succeeds
 	req1 := httptest.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString(`{"username":"admin","password":"p w "}`))
@@ -43,7 +43,7 @@ func TestHandleLogin_PasswordTrailingNewlineTrimmedFromEnv(t *testing.T) {
 	t.Setenv("FORGE_ADMIN_USERNAME", "admin")
 	t.Setenv("FORGE_ADMIN_PASSWORD", "p w \r\n")
 
-	router := NewRouter(core.NewRegistry())
+	router := newTestRouter(core.NewRegistry())
 
 	// Password with trailing space (before \r\n) matches
 	req1 := httptest.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString(`{"username":"admin","password":"p w "}`))
@@ -104,10 +104,13 @@ func TestHandleLogin_RateLimiting(t *testing.T) {
 	t.Setenv("FORGE_ADMIN_USERNAME", "admin")
 	t.Setenv("FORGE_ADMIN_PASSWORD", "secret")
 
-	router := NewRouter(core.NewRegistry())
-
+	limiter := newLoginLimiter()
 	mockNow := time.Date(2026, 9, 13, 12, 0, 0, 0, time.UTC)
-	router.loginLimiter.now = func() time.Time { return mockNow }
+	limiter.now = func() time.Time { return mockNow }
+	router := NewRouter(core.NewRegistry()).SetStores(Stores{
+		Tokens:        newAdminSessionStore(),
+		LoginAttempts: limiter,
+	})
 
 	// 5 failed attempts from IP 10.0.0.1 with user "admin"
 	for i := 1; i <= 5; i++ {
@@ -252,10 +255,13 @@ func TestHandleLogin_RemoteAddrFallback(t *testing.T) {
 	t.Setenv("FORGE_ADMIN_USERNAME", "admin")
 	t.Setenv("FORGE_ADMIN_PASSWORD", "secret")
 
-	router := NewRouter(core.NewRegistry())
-
+	limiter := newLoginLimiter()
 	mockNow := time.Date(2026, 9, 13, 12, 0, 0, 0, time.UTC)
-	router.loginLimiter.now = func() time.Time { return mockNow }
+	limiter.now = func() time.Time { return mockNow }
+	router := NewRouter(core.NewRegistry()).SetStores(Stores{
+		Tokens:        newAdminSessionStore(),
+		LoginAttempts: limiter,
+	})
 
 	// RemoteAddr without port
 	for i := 1; i <= 5; i++ {
@@ -307,7 +313,7 @@ func TestHandleLogin_LockoutUsesTrustedProxyClientIP(t *testing.T) {
 	}
 
 	t.Run("trusted proxy: other clients are not locked out", func(t *testing.T) {
-		router := NewRouter(core.NewRegistry())
+		router := newTestRouter(core.NewRegistry())
 		// One attacker behind the proxy exhausts its IP budget with
 		// different usernames so only the IP key accumulates.
 		for i := 0; i < 5; i++ {
@@ -323,7 +329,7 @@ func TestHandleLogin_LockoutUsesTrustedProxyClientIP(t *testing.T) {
 	})
 
 	t.Run("untrusted peer: spoofed header is ignored", func(t *testing.T) {
-		router := NewRouter(core.NewRegistry())
+		router := newTestRouter(core.NewRegistry())
 		for i := 0; i < 5; i++ {
 			code := login(router, "203.0.113.50:4000", fmt.Sprintf("192.0.2.%d", i+1), fmt.Sprintf("guess%d", i), "wrong")
 			require.Equal(t, http.StatusUnauthorized, code)
@@ -334,7 +340,7 @@ func TestHandleLogin_LockoutUsesTrustedProxyClientIP(t *testing.T) {
 	})
 
 	t.Run("per-user key still applies across clients", func(t *testing.T) {
-		router := NewRouter(core.NewRegistry())
+		router := newTestRouter(core.NewRegistry())
 		for i := 0; i < 5; i++ {
 			code := login(router, "10.0.0.5:4000", fmt.Sprintf("198.51.100.%d", i+1), "admin", "wrong")
 			require.Equal(t, http.StatusUnauthorized, code)

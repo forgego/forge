@@ -25,14 +25,11 @@ type Router struct {
 	// adminPrefix is the public mount path of the admin UI, used for
 	// absolute URLs in search results. Defaults to "/admin".
 	adminPrefix   string
-	views         *savedViewStore
-	sessions      *adminSessionStore
-	loginLimiter  *loginLimiter
 	authenticator LoginAuthenticator
 	users         AdminUserStore
 
-	// The stores the handlers use. They default to the in-memory stores
-	// above; SetStores replaces them.
+	// The stores the handlers use. SetStores configures them.
+	// If a store is nil, routes requiring it return HTTP 503.
 	tokens        TokenStore
 	savedViews    SavedViewStore
 	loginAttempts LoginAttemptStore
@@ -44,29 +41,24 @@ type AdminUserStore interface {
 }
 
 // Stores are the stores the admin API keeps its state in. A nil field
-// keeps the in-memory default.
+// leaves that store unconfigured; routes requiring it return HTTP 503.
 type Stores struct {
 	Tokens        TokenStore
 	SavedViews    SavedViewStore
 	LoginAttempts LoginAttemptStore
 }
 
-// NewRouter creates a new admin API router
+// NewRouter creates a new admin API router.
+// Stores must be configured via SetStores; routes requiring a store
+// return HTTP 503 (Service Unavailable) if the corresponding store is nil.
 func NewRouter(registry *core.Registry) *Router {
-	r := &Router{
+	return &Router{
 		registry: registry,
 		prefix:   "/api",
 		// adminPrefix is the public path the admin UI is served from. It is
 		// used to build absolute URLs (e.g. in global search results).
-		adminPrefix:  "/admin",
-		views:        newSavedViewStore(),
-		sessions:     newAdminSessionStore(),
-		loginLimiter: newLoginLimiter(),
+		adminPrefix: "/admin",
 	}
-	r.tokens = r.sessions
-	r.savedViews = r.views
-	r.loginAttempts = r.loginLimiter
-	return r
 }
 
 // SetStores replaces the stores for tokens, saved views and login
@@ -167,6 +159,11 @@ func (r *Router) authMiddleware(next http.Handler) http.Handler {
 		token, err := bearerToken(req.Header.Get("Authorization"))
 		if err != nil {
 			respondError(w, http.StatusUnauthorized, "authentication_required", "Authentication required", nil)
+			return
+		}
+
+		if r.tokens == nil {
+			respondError(w, http.StatusServiceUnavailable, "token_store_unavailable", "Token store is not configured", nil)
 			return
 		}
 

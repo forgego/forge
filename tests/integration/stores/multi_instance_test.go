@@ -59,7 +59,7 @@ func startInstance(t *testing.T, dsn string) *instance {
 
 	settings := &config.Settings{
 		App:      config.AppSettings{Name: "replica", Env: "test"},
-		Server:   config.ServerSettings{Host: "127.0.0.1", Port: "0", Stores: "database"},
+		Server:   config.ServerSettings{Host: "127.0.0.1", Port: "0"},
 		Security: config.SecuritySettings{SessionSecret: "multi-instance-session-secret-0123456789"},
 		Admin:    config.AdminSettings{Enabled: true, Path: "/admin"},
 	}
@@ -71,7 +71,7 @@ func startInstance(t *testing.T, dsn string) *instance {
 	uiConfig.Prefix = settings.Admin.Path
 	site.WithUIConfig(uiConfig)
 	site.SetDB(database)
-	require.NoError(t, site.UseStores(ctx, settings.Server.Stores))
+	require.NoError(t, site.UseDatabaseStores(ctx))
 
 	srv, err := server.NewServer(config.NewConfig(), settings, log.NewNopLogger(), server.WithDatabase(database))
 	require.NoError(t, err)

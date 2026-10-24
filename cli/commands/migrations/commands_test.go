@@ -14,7 +14,6 @@ func migrationConfig(dbPath string) *config.Config {
 	cfg := &config.Config{Viper: viper.New()}
 	cfg.Set("database.driver", "sqlite")
 	cfg.Set("database.name", dbPath)
-	cfg.Set("server.stores", "memory")
 	return cfg
 }
 func writeMigrationPair(t *testing.T, dir, version, table string) {

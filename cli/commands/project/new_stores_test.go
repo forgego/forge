@@ -22,7 +22,7 @@ func TestNewProjectUsesDatabaseStores(t *testing.T) {
 			v := viper.New()
 			v.SetConfigFile(filepath.Join(projectPath, "config", "config.yaml"))
 			require.NoError(t, v.ReadInConfig())
-			require.Equal(t, "database", v.GetString("server.stores"))
+			require.Empty(t, v.GetString("server.stores"))
 		})
 	}
 
@@ -33,7 +33,7 @@ func TestNewProjectUsesDatabaseStores(t *testing.T) {
 			mainGo, err := os.ReadFile(filepath.Join(projectPath, "cmd", "server", "main.go"))
 			require.NoError(t, err)
 			require.Contains(t, string(mainGo), "server.NewServer(cfg, settings, logger, server.WithDatabase(database))")
-			require.Contains(t, string(mainGo), "adminSite.UseStores(context.Background(), settings.Server.Stores)")
+			require.Contains(t, string(mainGo), "adminSite.UseDatabaseStores(context.Background())")
 		})
 	}
 }

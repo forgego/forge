@@ -28,13 +28,17 @@ func decodeLoggingOutputs(cfg *Config) ([]LoggingOutputConfig, error) {
 }
 
 // SettingsWarnings returns one warning per setting that LoadSettings could
-// not read and replaced with its default. Like SecretWarnings, loading the
-// config does not print them; the server logs them when it starts.
+// not read and replaced with its default, or deprecated settings that are
+// ignored. Like SecretWarnings, loading the config does not print them;
+// the server logs them when it starts.
 func (c *Config) SettingsWarnings() []string {
 	var warnings []string
 	if _, err := decodeLoggingOutputs(c); err != nil {
 		warnings = append(warnings, "logging.outputs is malformed and was ignored, so logs go to the console: "+err.Error()+
 			" (expected a list of outputs such as {type: file, enabled: true, path: logs/app.log})")
+	}
+	if c != nil && c.Viper != nil && (c.Viper.IsSet("server.stores") || c.Viper.GetString("server.stores") != "") {
+		warnings = append(warnings, "server.stores is deprecated and ignored; framework stores always use the database")
 	}
 	return warnings
 }

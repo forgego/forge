@@ -34,7 +34,11 @@ func TestHandleLogin_AuthenticatorSuccess(t *testing.T) {
 	t.Setenv("FORGE_ADMIN_USERNAME", "")
 	t.Setenv("FORGE_ADMIN_PASSWORD", "")
 
-	router := NewRouter(core.NewRegistry())
+	tokens := newAdminSessionStore()
+	router := NewRouter(core.NewRegistry()).SetStores(Stores{
+		Tokens:        tokens,
+		LoginAttempts: newLoginLimiter(),
+	})
 	router.SetLoginAuthenticator(&fakeAuthenticator{
 		authenticateFunc: func(ctx context.Context, username, password string) (string, error) {
 			if username == "staffuser" && password == "correctpassword" {
@@ -64,7 +68,7 @@ func TestHandleLogin_AuthenticatorSuccess(t *testing.T) {
 	assert.Equal(t, "staffuser", userObj["name"])
 	assert.Equal(t, "superuser", userObj["role"])
 
-	session, ok := router.sessions.Validate(token)
+	session, ok := tokens.Validate(token)
 	require.True(t, ok)
 	assert.Equal(t, "staffuser", session.Username)
 }
@@ -73,7 +77,7 @@ func TestHandleLogin_AuthenticatorInvalid_FallsBackToEnvWhenSet(t *testing.T) {
 	t.Setenv("FORGE_ADMIN_USERNAME", "envadmin")
 	t.Setenv("FORGE_ADMIN_PASSWORD", "envsecret")
 
-	router := NewRouter(core.NewRegistry())
+	router := newTestRouter(core.NewRegistry())
 	router.SetLoginAuthenticator(&fakeAuthenticator{
 		authenticateFunc: func(ctx context.Context, username, password string) (string, error) {
 			return "", ErrInvalidLogin
@@ -99,7 +103,7 @@ func TestHandleLogin_AuthenticatorInvalid_FallsBackToEnvWithWrongPassword(t *tes
 	t.Setenv("FORGE_ADMIN_USERNAME", "envadmin")
 	t.Setenv("FORGE_ADMIN_PASSWORD", "envsecret")
 
-	router := NewRouter(core.NewRegistry())
+	router := newTestRouter(core.NewRegistry())
 	router.SetLoginAuthenticator(&fakeAuthenticator{
 		authenticateFunc: func(ctx context.Context, username, password string) (string, error) {
 			return "", ErrInvalidLogin
@@ -126,7 +130,7 @@ func TestHandleLogin_AuthenticatorInvalid_NoEnvConfigured(t *testing.T) {
 	t.Setenv("FORGE_ADMIN_USERNAME", "")
 	t.Setenv("FORGE_ADMIN_PASSWORD", "")
 
-	router := NewRouter(core.NewRegistry())
+	router := newTestRouter(core.NewRegistry())
 	router.SetLoginAuthenticator(&fakeAuthenticator{
 		authenticateFunc: func(ctx context.Context, username, password string) (string, error) {
 			return "", &customDeniedError{}
@@ -153,7 +157,11 @@ func TestHandleLogin_AuthenticatorInfraError(t *testing.T) {
 	t.Setenv("FORGE_ADMIN_USERNAME", "")
 	t.Setenv("FORGE_ADMIN_PASSWORD", "")
 
-	router := NewRouter(core.NewRegistry())
+	limiter := newLoginLimiter()
+	router := NewRouter(core.NewRegistry()).SetStores(Stores{
+		Tokens:        newAdminSessionStore(),
+		LoginAttempts: limiter,
+	})
 	router.SetLoginAuthenticator(&fakeAuthenticator{
 		authenticateFunc: func(ctx context.Context, username, password string) (string, error) {
 			return "", errors.New("db connection failure")
@@ -170,21 +178,19 @@ func TestHandleLogin_AuthenticatorInfraError(t *testing.T) {
 	require.Equal(t, http.StatusInternalServerError, rec.Code)
 
 	// Verify limiter was NOT failed on infra error
-	if router.loginLimiter != nil {
-		blocked, _ := router.loginLimiter.blocked("ip:10.0.0.99")
-		assert.False(t, blocked)
-		router.loginLimiter.mu.Lock()
-		_, exists := router.loginLimiter.failures["ip:10.0.0.99"]
-		router.loginLimiter.mu.Unlock()
-		assert.False(t, exists, "infra error should not record limiter failure")
-	}
+	blocked, _ := limiter.blocked("ip:10.0.0.99")
+	assert.False(t, blocked)
+	limiter.mu.Lock()
+	_, exists := limiter.failures["ip:10.0.0.99"]
+	limiter.mu.Unlock()
+	assert.False(t, exists, "infra error should not record limiter failure")
 }
 
 func TestHandleLogin_NoAuthenticatorAndNoEnv(t *testing.T) {
 	t.Setenv("FORGE_ADMIN_USERNAME", "")
 	t.Setenv("FORGE_ADMIN_PASSWORD", "")
 
-	router := NewRouter(core.NewRegistry())
+	router := newTestRouter(core.NewRegistry())
 
 	body := `{"username":"admin","password":"password"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString(body))

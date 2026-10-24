@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/forgego/forge/admin/api/rest"
@@ -78,7 +80,7 @@ func storeSite(t *testing.T, database *db.DB) *httptest.Server {
 	_, err := RegisterWithSite(site, &core.Config[storeNote]{})
 	require.NoError(t, err)
 	site.SetDB(database)
-	require.NoError(t, site.UseStores(context.Background(), "database"))
+	require.NoError(t, site.UseDatabaseStores(context.Background()))
 	ts := httptest.NewServer(site.Handler())
 	t.Cleanup(ts.Close)
 	return ts
@@ -151,11 +153,9 @@ func TestSite_UseDatabaseStoresRequiresMigratedDatabase(t *testing.T) {
 	ctx := context.Background()
 	site := NewSite("stores")
 	require.ErrorContains(t, site.UseDatabaseStores(ctx), "call SetDB first")
-	require.NoError(t, site.UseStores(ctx, "memory"), "memory needs no database")
-	require.ErrorContains(t, site.UseStores(ctx, "redis"), "invalid server.stores")
 
 	site.SetDB(storestest.Open(t, "sqlite3", storestest.SQLitePath(t)))
-	require.ErrorIs(t, site.UseStores(ctx, "database"), stores.ErrNotMigrated)
+	require.ErrorIs(t, site.UseDatabaseStores(ctx), stores.ErrNotMigrated)
 }
 
 func TestSite_ConfiguredCredentialPrincipalUsesLoginIdentitySource(t *testing.T) {
@@ -172,6 +172,7 @@ func TestSite_ConfiguredCredentialPrincipalUsesLoginIdentitySource(t *testing.T)
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			site := NewSite("configured")
+			site.SetDB(storestest.OpenMemory(t))
 			site.SetUserStore(tc.users)
 			server := httptest.NewServer(site.Handler())
 			defer server.Close()
@@ -225,35 +226,92 @@ func TestSite_SharedHistoryKeepsExplicitHistoryManagers(t *testing.T) {
 	require.Len(t, own.entries, 1, "a config's own HistoryManager is kept")
 }
 
-func TestSite_UseStoresMemoryUndoesDatabaseStores(t *testing.T) {
+func TestSite_SetDBAppliesDatabaseStoresAutomatically(t *testing.T) {
 	t.Setenv("FORGE_ADMIN_USERNAME", "admin")
 	t.Setenv("FORGE_ADMIN_PASSWORD", "secret")
-	ctx := context.Background()
-	database, _ := storestest.Backends()[0].OpenMigrated(t)
-	createNotesTable(t, database)
-	site := NewSite("stores")
+
+	db := storestest.OpenMemory(t)
+	createNotesTable(t, db)
+
+	site := NewSite("autostores")
 	site.SetUserStore(siteTestUsers{})
 	_, err := RegisterWithSite(site, &core.Config[storeNote]{})
 	require.NoError(t, err)
-	site.SetDB(database)
-	require.NoError(t, site.UseStores(ctx, "database"))
-	require.NoError(t, site.UseStores(ctx, "memory"))
 
-	ts := httptest.NewServer(site.Handler())
-	t.Cleanup(ts.Close)
-	status, body := adminCall(t, ts.URL, http.MethodPost, "/api/login", "", map[string]string{"username": "admin", "password": "secret"})
+	// Apps only call SetDB; UseDatabaseStores is applied automatically.
+	site.SetDB(db)
+
+	server := httptest.NewServer(site.Handler())
+	defer server.Close()
+
+	status, body := adminCall(t, server.URL, http.MethodPost, "/api/login", "", map[string]string{
+		"username": "admin", "password": "secret",
+	})
 	require.Equal(t, http.StatusOK, status, "%v", body)
 	token := body["token"].(string)
-	status, body = adminCall(t, ts.URL, http.MethodPost, "/api/store_notes/", token, map[string]string{"title": "Local"})
-	require.Equal(t, http.StatusCreated, status, "%v", body)
 
-	for _, table := range []string{"forge_admin_tokens", "forge_admin_log"} {
-		var rows int
-		require.NoError(t, database.QueryRowContext(ctx, "SELECT count(*) FROM "+table).Scan(&rows))
-		assert.Zero(t, rows, "%s: memory stores must not write to the database", table)
-	}
-	id := fmt.Sprint(body["id"])
-	status, body = adminCall(t, ts.URL, http.MethodGet, "/api/store_notes/"+id+"/history", token, nil)
-	require.Equal(t, http.StatusOK, status, "%v", body)
-	assert.Contains(t, fmt.Sprint(body), "add", "history is kept in memory")
+	status, _ = adminCall(t, server.URL, http.MethodGet, "/api/config", token, nil)
+	assert.Equal(t, http.StatusOK, status)
+}
+
+func TestSite_SetDBUnmigratedDatabaseReturns503(t *testing.T) {
+	database, err := db.NewDBWithDriver("sqlite3", ":memory:", db.WithMaxOpenConns(1), db.WithMaxIdleConns(1))
+	require.NoError(t, err)
+	defer database.Close()
+
+	site := NewSite("unmigrated")
+	site.SetDB(database)
+	require.Error(t, site.storesErr)
+
+	server := httptest.NewServer(site.Handler())
+	defer server.Close()
+
+	// Every request gets 503
+	status, body := adminCall(t, server.URL, http.MethodGet, "/api/config", "", nil)
+	assert.Equal(t, http.StatusServiceUnavailable, status)
+	assert.Equal(t, "admin stores unavailable: run forge migrate up", body["error"])
+
+	status, body = adminCall(t, server.URL, http.MethodPost, "/api/login", "", map[string]string{"username": "admin", "password": "x"})
+	assert.Equal(t, http.StatusServiceUnavailable, status)
+	assert.Equal(t, "admin stores unavailable: run forge migrate up", body["error"])
+
+	// Clear storesErr when a later UseDatabaseStores succeeds
+	storestest.Migrate(t, database)
+	require.NoError(t, site.UseDatabaseStores(context.Background()))
+	assert.NoError(t, site.storesErr)
+
+	// Handler now succeeds and doesn't return 503
+	recoveredServer := httptest.NewServer(site.Handler())
+	defer recoveredServer.Close()
+	status, body = adminCall(t, recoveredServer.URL, http.MethodGet, "/api/config", "", nil)
+	assert.Equal(t, http.StatusUnauthorized, status)
+	assert.NotEqual(t, "admin stores unavailable: run forge migrate up", body["error"])
+}
+
+func TestSite_HandlerLogsStoresErrorOnce(t *testing.T) {
+	var buf bytes.Buffer
+	prevWriter := log.Writer()
+	log.SetOutput(&buf)
+	defer log.SetOutput(prevWriter)
+
+	database, err := db.NewDBWithDriver("sqlite3", ":memory:", db.WithMaxOpenConns(1), db.WithMaxIdleConns(1))
+	require.NoError(t, err)
+	defer database.Close()
+
+	site := NewSite("unmigrated_log")
+	site.SetDB(database)
+
+	handler := site.Handler()
+	req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+	rec1 := httptest.NewRecorder()
+	handler.ServeHTTP(rec1, req)
+	assert.Equal(t, http.StatusServiceUnavailable, rec1.Code)
+
+	rec2 := httptest.NewRecorder()
+	handler.ServeHTTP(rec2, req)
+	assert.Equal(t, http.StatusServiceUnavailable, rec2.Code)
+
+	logged := buf.String()
+	assert.Contains(t, logged, "forge/admin: stores unavailable:")
+	assert.Equal(t, 1, strings.Count(logged, "forge/admin: stores unavailable:"))
 }

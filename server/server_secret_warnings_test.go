@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/forgego/forge/config"
+	"github.com/forgego/forge/stores/storestest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -37,7 +38,7 @@ func TestEphemeralSecretWarningsOnlyOnServerStart(t *testing.T) {
 	srv, err := NewServer(cfg, &config.Settings{
 		App:    config.AppSettings{Env: "development"},
 		Server: config.ServerSettings{Host: "127.0.0.1", Port: "0"},
-	}, nil)
+	}, nil, WithDatabase(storestest.OpenMemory(t)))
 	require.NoError(t, err)
 	assert.NotContains(t, logged.String(), "ephemeral", "building the server must not warn")
 

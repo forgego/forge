@@ -1,17 +1,39 @@
 package config
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
-// server.stores keeps its pre-#293 behavior (memory) unless an app opts in.
-func TestLoadSettings_StoresDefaultsToMemory(t *testing.T) {
-	if got := LoadSettings(NewConfig()).Server.Stores; got != "memory" {
-		t.Fatalf("Stores default = %q, want memory", got)
+// server.stores is deprecated and ignored: framework stores always use the database.
+func TestSettingsWarnings_DeprecatedServerStores(t *testing.T) {
+	cfg := NewConfig()
+	cfg.Set("server.stores", "memory")
+	warnings := cfg.SettingsWarnings()
+	found := false
+	for _, w := range warnings {
+		if strings.Contains(w, "server.stores is deprecated and ignored") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("SettingsWarnings() = %q, want deprecation warning for server.stores", warnings)
 	}
 }
 
-func TestLoadSettings_StoresFromEnv(t *testing.T) {
+func TestSettingsWarnings_DeprecatedServerStoresFromEnv(t *testing.T) {
 	t.Setenv("FORGE_SERVER_STORES", "database")
-	if got := LoadSettings(NewConfig()).Server.Stores; got != "database" {
-		t.Fatalf("Stores = %q, want database", got)
+	cfg := NewConfig()
+	warnings := cfg.SettingsWarnings()
+	found := false
+	for _, w := range warnings {
+		if strings.Contains(w, "server.stores is deprecated and ignored") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("SettingsWarnings() = %q, want deprecation warning for server.stores", warnings)
 	}
 }

@@ -9,9 +9,9 @@ image: /social-card.png
 
 This guide covers the deployment Forge supports today: **one or more
 application instances** built from a `forge new` project, talking to **one
-PostgreSQL 15 database**, behind a reverse proxy that terminates TLS. More
-than one instance needs `server.stores: database` (the `forge new` default);
-see [multiple instances](#multiple-instances). The
+PostgreSQL 15 database**, behind a reverse proxy that terminates TLS.
+Framework state always lives in the database; see
+[multiple instances](#multiple-instances). The
 [support contract](/docs/status/) defines the tiers used below.
 
 Every statement here was checked against the code at the time of writing, and
@@ -34,9 +34,9 @@ A deployable release of your application is:
 2. **`config/config.yaml`** with non-secret settings. Forge looks for
    `config.yaml` in `.`, `./config` and `../config` relative to the working
    directory, so start the binary from the directory that contains `config/`.
-3. **The `migrations/` directory**, applied with the `forge` CLI. With
-   `server.stores: database`, `forge migrate up` also creates Forge's own
-   store tables (see [shared state](#shared-state)).
+3. **The `migrations/` directory**, applied with the `forge` CLI. `forge
+   migrate up` also creates Forge's own store tables (see
+   [shared state](#shared-state)).
 4. **The `forge` CLI at the same version as the library**, so migrations are
    applied by the code that generated them:
 
@@ -85,7 +85,6 @@ manager; never ship the `.env` file that `forge new` generates for local use.
 | `FORGE_SERVER_HOST` | `0.0.0.0` or the proxy-facing address | The default `localhost` is unreachable from outside a container. |
 | `FORGE_SERVER_PORT` | your port | Default `8000`. |
 | `FORGE_SERVER_TRUSTED_PROXIES` | your proxy's address or CIDR | Forwarding headers are honored only from these peers, for rate limiting and the admin login lockout. Empty by default: the TCP peer address is used. |
-| `FORGE_SERVER_STORES` | `database` | Keeps sessions, API throttling counters and the admin's tokens, login lockout, saved views and change history in PostgreSQL. `forge new` writes `stores: database` to `config.yaml`; the library default is `memory`. |
 | `FORGE_DATABASE_HOST`, `_PORT`, `_NAME`, `_USER`, `_PASSWORD`, `_SSLMODE` | your database | |
 | `FORGE_SECURITY_SECRET_KEY`, `FORGE_SECURITY_SESSION_SECRET`, `FORGE_SECURITY_CSRF_SECRET_KEY` | three independent random values, for example `openssl rand -hex 32` | Required in production. Rotating the session or CSRF secret invalidates existing session and CSRF cookies. |
 | `FORGE_ADMIN_USERNAME`, `FORGE_ADMIN_PASSWORD` | only if you use environment-based admin login | Without them, and without a login authenticator, admin login answers `503 admin_login_disabled`. |
@@ -101,9 +100,8 @@ manager; never ship the `.env` file that `forge new` generates for local use.
   exits with status 1.
 - Debug mode: with `app.env` set to production, `Server.Start` also refuses to
   listen while `app.debug` is true.
-- The store tables: with `server.stores: database`, `server.NewServer` and
-  `admin.Site.UseStores` fail, and the process exits with status 1, until
-  `forge migrate up` has created the framework store tables.
+- The store tables: `server.NewServer` fails, and the process exits with
+  status 1, until `forge migrate up` has created the framework store tables.
 
 **What is not checked**: `server.host`, `database.sslmode`, admin
 credentials, and whether TLS is in front of the server. The server speaks
@@ -190,35 +188,34 @@ client address, user agent and request ID.
 
 ## Shared state
 
-`server.stores` decides where the state below lives. With `database` (what
-`forge new` writes to `config.yaml`) it is kept in PostgreSQL, survives a
-restart and is shared by every instance. With `memory` (the library default
-when the key is absent) each process has its own copy and a restart loses it.
+Framework state always lives in the application database (PostgreSQL or
+SQLite). It survives restarts and is shared by every instance. There is no
+memory option.
 
-| State | `server.stores: database` | `server.stores: memory` |
-| --- | --- | --- |
-| Server sessions (`forge_session` cookie) | `forge_sessions` | In-memory `scs` store; a restart ends all sessions. |
-| API throttling counters (throttles without their own `WithStore`) | `forge_rate_limits` | Per process; reset on restart. |
-| Admin bearer tokens (24 h lifetime) | `forge_admin_tokens` (SHA-256 hashes only) | Every admin user is signed out on restart. |
-| Admin login attempt limiter, keyed by client IP and by username | `forge_rate_limits` | Counters reset on restart. |
-| Admin saved views | `forge_admin_saved_views` | Lost on restart. |
-| Admin change history | `forge_admin_log` | Last 1000 entries per registered model, lost on restart. |
+| State | Table |
+| --- | --- |
+| Server sessions (`forge_session` cookie) | `forge_sessions` |
+| API throttling counters (throttles without their own `WithStore`) | `forge_rate_limits` |
+| Admin bearer tokens (24 h lifetime) | `forge_admin_tokens` (SHA-256 hashes only) |
+| Admin login attempt limiter, keyed by client IP and by username | `forge_rate_limits` |
+| Admin saved views | `forge_admin_saved_views` |
+| Admin change history | `forge_admin_log` |
 
 The tables are created by framework migrations embedded in Forge.
-`forge migrate up` applies them before your own migrations when
-`server.stores` is `database`, and records them in
-`forge_framework_migrations`, separately from your `schema_migrations`, so
-they never appear in `migrations/` or in `forge makemigrations` output.
-`forge migrate status` shows their version. `forge migrate rollback` does not
-touch them; to remove them, drop the five `forge_*` tables and
-`forge_framework_migrations`. To apply them from Go instead, call
-`stores.Migrate(ctx, database)`.
+`forge migrate up` always applies them before your own migrations, and records
+them in `forge_framework_migrations`, separately from your
+`schema_migrations`, so they never appear in `migrations/` or in `forge
+makemigrations` output. Saved filters (`forge_saved_filters`) and idempotency
+keys (`idempotency_keys`) also use framework tables. `forge migrate status`
+shows their version. `forge migrate rollback` does not touch them; to remove
+them, drop the framework tables and `forge_framework_migrations`. To apply
+them from Go instead, call `stores.Migrate(ctx, database)`.
 
-The generated `main.go` wires the setting in with
-`server.NewServer(cfg, settings, logger, server.WithDatabase(database))` and
-`adminSite.UseStores(ctx, settings.Server.Stores)`. Older projects that call
-`server.NewServer(cfg, settings, logger)` keep in-memory stores; to switch,
-add both calls, set `server.stores: database` and run `forge migrate up`.
+`server.NewServer` requires `server.WithDatabase(database)`. It fails to start
+if framework tables are missing, reporting that you must run `forge migrate
+up`. In the admin, `adminSite.SetDB(database)` applies the database stores
+automatically. If the tables are missing, the admin answers 503 "admin stores
+unavailable: run forge migrate up".
 
 Expired sessions, tokens and counter rows are deleted by the instances
 themselves, at most once a minute per table, on the write path; no cron job is
@@ -230,13 +227,13 @@ Each throttle and lockout query waits at most two seconds for the database.
 If it is unreachable or that runs out, throttled requests are allowed (and
 logged), while admin logins answer 503 because the lockout cannot be checked.
 
-This state stays in process memory whatever `server.stores` says:
+This state stays in process memory:
 
 | State | Effect of a restart or a second instance |
 | --- | --- |
 | `server.RateLimitByIP` / `RateLimitByUser` middleware | Per process; reset on restart. |
 | A throttle given its own store with `WithStore` | Whatever that store does. |
-| `api/caching` in-memory response cache, idempotency keys | Per process; lost on restart. Shared or query caching is planned, not available. |
+| Response cache (`api/caching` MemoryCache) | Per process; lost on restart. Shared or query caching is planned, not available. |
 | Secrets generated at startup (non-production only) | New values each start, so existing cookies stop working. |
 
 These survive a restart in any configuration because they live in
@@ -246,29 +243,26 @@ signed cookies and survive as long as the CSRF secret does.
 
 ## Audit history
 
-With `server.stores: database` the admin's change history is durable: every
-add, change and delete is a row in `forge_admin_log`, kept until you delete
-it (the history view shows the newest 1000 entries). It is not a compliance
-audit log: anyone with write access to the database can change it. Models
-whose `admin.Config` sets its own `HistoryManager` keep it; the compatibility
-`admin.HistoryManager` writes to the shared table. With `memory` it is capped
-at 1000 entries per registered model and lost on restart.
+The admin's change history is durable: every add, change and delete is a row in
+`forge_admin_log`, kept until you delete it (the history view shows the newest
+1000 entries). It is not a compliance audit log: anyone with write access to
+the database can change it. Models whose `admin.Config` sets its own
+`HistoryManager` keep it; the compatibility `admin.HistoryManager` writes to
+the shared table. Accessing admin history without a database returns
+`admin.ErrNoHistoryBackend`.
 
 ## Multiple instances
 
-Running several instances behind a load balancer is supported with
-`server.stores: database`: a session or admin token issued by one instance is
-valid on every other, change history and saved views are shared, and API
-throttling limits and login lockouts count requests across all instances. A
-test starts two instances on one PostgreSQL database and checks each of these
-(`tests/integration/stores`).
+Running several instances behind a load balancer is supported: a session or
+admin token issued by one instance is valid on every other, change history and
+saved views are shared, and API throttling limits and login lockouts count
+requests across all instances. A test starts two instances on one PostgreSQL
+database and checks each of these (`tests/integration/stores`).
 
 Every instance must use the same database and the same
 `FORGE_SECURITY_*` secrets. The per-process state listed under
-[shared state](#shared-state) (the `RateLimitByIP` middleware, in-memory response
-caches, idempotency keys) stays per instance. With `server.stores: memory`, more
-than one instance is not supported: admin users are signed out when a request lands
-on the other instance, limits are per instance and history is split.
+[shared state](#shared-state) (such as the `RateLimitByIP` middleware and
+in-memory response cache) stays per instance.
 
 Run migrations from one place only. `forge migrate up` holds a PostgreSQL
 advisory lock while it applies migrations, so an accidental second run waits

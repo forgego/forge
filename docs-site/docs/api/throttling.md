@@ -72,14 +72,10 @@ test.
 
 ## Where counts are kept
 
-A throttle without a store of its own counts in the default store:
-
-- With `server.stores: memory` (the library default), each process keeps its
-  own counters, which reset on restart. With N instances, a client gets N
-  times the budget.
-- With `server.stores: database`, `server.NewServer` switches the default to
-  the `forge_rate_limits` table, so every instance on the database shares one
-  count. See [the deployment guide](/docs/deployment/) for setting it up.
+A throttle without a store of its own counts in the default store, which lives
+in the `forge_rate_limits` table in the application database. Every instance
+connected to the database shares one count. See [the deployment guide](/docs/deployment/)
+for setting it up.
 
 If the database cannot be reached, or does not answer within two seconds
 (`stores.DefaultQueryTimeout`), the request is allowed and the error is
@@ -87,12 +83,12 @@ logged: a database outage does not turn into refused requests. When the
 client disconnects during the check, the query stops and the request is
 refused without a log line.
 
-The default store is process-wide, and the most recently created server's
-`server.stores` setting decides it.
+The default store is process-wide, configured by `server.NewServer` using the
+database passed to `server.WithDatabase`.
 
 ### A store of your own
 
-`WithStore` gives one throttle its own store, which ignores `server.stores`:
+`WithStore` gives one throttle its own store:
 
 ```go
 throttle := throttling.NewUserRateThrottle("100/min").WithStore(myStore)

@@ -13,6 +13,9 @@ import (
 	"time"
 
 	"github.com/forgego/forge/config"
+	"github.com/forgego/forge/db"
+	"github.com/forgego/forge/stores"
+	"github.com/forgego/forge/stores/storestest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -102,7 +105,15 @@ func runSignalChild() {
 		App:    config.AppSettings{Env: "test"},
 		Server: config.ServerSettings{Host: "127.0.0.1", Port: os.Getenv("FORGE_TEST_SIGNAL_PORT"), ReadTimeout: 60, WriteTimeout: 60, GracefulTimeout: 60},
 	}
-	srv, err := NewServer(config.NewConfig(), settings, nil)
+	database, err := db.NewDBWithDriver("sqlite3", ":memory:", db.WithMaxOpenConns(1), db.WithMaxIdleConns(1))
+	if err != nil {
+		os.Exit(4)
+	}
+	defer database.Close()
+	if err := stores.Migrate(context.Background(), database); err != nil {
+		os.Exit(5)
+	}
+	srv, err := NewServer(config.NewConfig(), settings, nil, WithDatabase(database))
 	if err != nil {
 		os.Exit(3)
 	}
@@ -124,7 +135,7 @@ func TestServeUntilDrainsInFlightRequests(t *testing.T) {
 		App:    config.AppSettings{Env: "test"},
 		Server: config.ServerSettings{Host: "127.0.0.1", Port: port, ReadTimeout: 5, WriteTimeout: 5, GracefulTimeout: 5},
 	}
-	srv, err := NewServer(config.NewConfig(), settings, nil)
+	srv, err := NewServer(config.NewConfig(), settings, nil, WithDatabase(storestest.OpenMemory(t)))
 	require.NoError(t, err)
 
 	started := make(chan struct{})

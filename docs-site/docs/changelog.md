@@ -11,6 +11,10 @@ the change.
 
 ## Unreleased
 
+### Breaking
+
+- The `server.stores` setting is removed. Framework state always lives in the database. Applications must pass `server.WithDatabase(database)` to `server.NewServer`. Upgrade step: run `forge migrate up` before starting the new version.
+
 ### Fixed
 
 - Static `IndexOn`/`UniqueIndexOn` metadata is preserved during generation,

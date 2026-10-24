@@ -68,7 +68,7 @@ type SessionManager struct {
 }
 
 // NewSessionManager creates a new session manager
-func NewSessionManager(secretKey []byte) *SessionManager {
+func NewSessionManager(secretKey []byte, store ...scs.Store) *SessionManager {
 	sessionManager := scs.New()
 	sessionManager.Lifetime = 24 * time.Hour
 	sessionManager.Cookie.Name = "forge_session"
@@ -76,6 +76,9 @@ func NewSessionManager(secretKey []byte) *SessionManager {
 	sessionManager.Cookie.Secure = false // Set to true in production
 	sessionManager.Cookie.SameSite = http.SameSiteStrictMode
 	sessionManager.Cookie.Path = "/"
+	if len(store) > 0 && store[0] != nil {
+		sessionManager.Store = store[0]
+	}
 
 	return &SessionManager{
 		SessionManager: sessionManager,

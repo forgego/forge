@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/forgego/forge/config"
+	"github.com/forgego/forge/stores/storestest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -66,7 +67,7 @@ func TestProductionWithExplicitSecureSettingsStarts(t *testing.T) {
 	withCleanSecretEnv(t)
 	cfg := config.NewConfig()
 	require.NotEmpty(t, cfg.GeneratedSecrets(), "test requires a config with generated secrets")
-	srv, err := NewServer(cfg, productionSettingsWith(secureTestSecurity()), nil)
+	srv, err := NewServer(cfg, productionSettingsWith(secureTestSecurity()), nil, WithDatabase(storestest.OpenMemory(t)))
 	require.NoError(t, err)
 	require.NoError(t, srv.validateProductionSecrets())
 }
@@ -110,7 +111,7 @@ func TestNonProductionIgnoresInsecureSettingsSecurity(t *testing.T) {
 		srv, err := NewServer(cfg, &config.Settings{
 			App:      config.AppSettings{Env: env},
 			Security: config.SecuritySettings{},
-		}, nil)
+		}, nil, WithDatabase(storestest.OpenMemory(t)))
 		require.NoError(t, err)
 		require.NoError(t, srv.validateProductionSecrets(), "env %q should not be validated", env)
 	}
@@ -127,7 +128,7 @@ func TestProductionEnvSecureCookiesIgnoreCase(t *testing.T) {
 				Server:   config.ServerSettings{Host: "127.0.0.1", Port: "0", HealthCheckPath: "/health"},
 				Security: secureTestSecurity(),
 			}
-			srv, err := NewServer(config.NewConfig(), settings, nil)
+			srv, err := NewServer(config.NewConfig(), settings, nil, WithDatabase(storestest.OpenMemory(t)))
 			require.NoError(t, err)
 
 			rec := httptest.NewRecorder()
@@ -154,12 +155,12 @@ func TestProductionRejectsDebug(t *testing.T) {
 	require.Contains(t, err.Error(), "app.debug")
 
 	settings.App.Debug = false
-	srv, err := NewServer(cfg, settings, nil)
+	srv, err := NewServer(cfg, settings, nil, WithDatabase(storestest.OpenMemory(t)))
 	require.NoError(t, err)
 	require.NoError(t, srv.validateProductionSecrets())
 
 	dev := &config.Settings{App: config.AppSettings{Env: "development", Debug: true}}
-	srv, err = NewServer(cfg, dev, nil)
+	srv, err = NewServer(cfg, dev, nil, WithDatabase(storestest.OpenMemory(t)))
 	require.NoError(t, err)
 	require.NoError(t, srv.validateProductionSecrets())
 }

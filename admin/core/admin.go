@@ -227,9 +227,4 @@ func applyConfigDefaults[T any](config *Config[T], s schema.Schema) {
 	if config.ListMaxShowAll == 0 {
 		config.ListMaxShowAll = 100
 	}
-
-	// Set default history manager if not provided
-	if config.HistoryManager == nil {
-		config.HistoryManager = NewMemoryHistoryManager()
-	}
 }

@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"github.com/forgego/forge/config"
+	"github.com/forgego/forge/stores/storestest"
 )
 
 func TestDefaultMiddlewareReference_A239(t *testing.T) {
-	srv, err := NewServer(config.NewConfig(), &config.Settings{}, nil)
+	srv, err := NewServer(config.NewConfig(), &config.Settings{}, nil, WithDatabase(storestest.OpenMemory(t)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +34,7 @@ func TestCSRFSecretControlsMiddleware_A255(t *testing.T) {
 		{"secret", "a-csrf-secret-of-at-least-32-bytes", http.StatusForbidden},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			srv, err := NewServer(config.NewConfig(), &config.Settings{Security: config.SecuritySettings{CSRFSecretKey: tc.secret}}, nil)
+			srv, err := NewServer(config.NewConfig(), &config.Settings{Security: config.SecuritySettings{CSRFSecretKey: tc.secret}}, nil, WithDatabase(storestest.OpenMemory(t)))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -82,7 +83,7 @@ func TestOptionalResponseMiddlewareReference(t *testing.T) {
 	cfg := config.NewConfig()
 	cfg.Set("server.cors.enabled", true)
 	cfg.Set("server.cors.allowed_origins", []string{"https://store.example.com"})
-	srv, err := NewServer(cfg, &config.Settings{}, nil)
+	srv, err := NewServer(cfg, &config.Settings{}, nil, WithDatabase(storestest.OpenMemory(t)))
 	if err != nil {
 		t.Fatal(err)
 	}
