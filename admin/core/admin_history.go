@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	apierrors "github.com/forgego/forge/api/errors"
 	"github.com/forgego/forge/audit"
 	"github.com/forgego/forge/db"
 	"github.com/forgego/forge/schema"
@@ -67,7 +68,10 @@ func (a *Admin[T]) writeHistoryWithTx(ctx context.Context, tx *db.Tx, user inter
 	} else {
 		err = a.config.HistoryManager.LogAction(ctx, entry)
 	}
-	correlationID := "admin-" + uuid.NewString()
+	correlationID := apierrors.GetRequestIDFromContext(ctx)
+	if correlationID == "" {
+		correlationID = "admin-" + uuid.NewString()
+	}
 	return audit.HandleError(ctx, err, correlationID, a.config.AuditPolicy, audit.Options{Logger: a.config.AuditLogger, Counter: a.config.AuditFailures})
 }
 
