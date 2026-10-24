@@ -45,7 +45,7 @@ func TestMigrateUp_AppliesFrameworkStoreTables(t *testing.T) {
 
 	out, err := runMigrateCommand(t, NewUpCommand().Definition(), "--path", migrations)
 	require.NoError(t, err, out)
-	assert.Contains(t, out, "Framework store tables migrated to version 1")
+	assert.Contains(t, out, "Framework store tables migrated to version 2")
 	for _, table := range []string{"widgets", "forge_sessions", "forge_rate_limits", "forge_admin_tokens", "forge_admin_saved_views", "forge_admin_log", "forge_framework_migrations"} {
 		assert.True(t, sqliteTableExists(t, dbPath, table), table)
 	}
@@ -56,7 +56,7 @@ func TestMigrateUp_AppliesFrameworkStoreTables(t *testing.T) {
 
 	out, err = runMigrateCommand(t, NewStatusCommand().Definition(), "--path", migrations)
 	require.NoError(t, err, out)
-	assert.Contains(t, out, "Framework store tables: version 1 of 1, up to date")
+	assert.Contains(t, out, "Framework store tables: version 2 of 2, up to date")
 	assert.Contains(t, out, "Current Version: 1", "the application's version is tracked separately")
 }
 
@@ -73,6 +73,6 @@ func TestMigrateUp_FrameworkTablesWithoutApplicationMigrations(t *testing.T) {
 
 	out, err = runMigrateCommand(t, NewStatusCommand().Definition(), "--path", dir)
 	require.NoError(t, err, out)
-	assert.Contains(t, out, "Framework store tables: version 1 of 1, up to date",
+	assert.Contains(t, out, "Framework store tables: version 2 of 2, up to date",
 		"the framework version shows even without application migrations")
 }

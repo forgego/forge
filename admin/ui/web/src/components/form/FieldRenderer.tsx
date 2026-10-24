@@ -65,6 +65,24 @@ export function FieldRenderer({
     );
   }
 
+  if (field.upload_supported === false) {
+    const isEmpty =
+      value === null ||
+      value === undefined ||
+      value === "" ||
+      (typeof value === "string" && value.trim() === "");
+    const displayValue = isEmpty ? "—" : String(value);
+
+    return (
+      <div className="space-y-1">
+        <p className="text-sm">{displayValue}</p>
+        <p className="text-xs text-muted-foreground">
+          File uploads are not supported by the admin. Set this value in code or through your own upload endpoint.
+        </p>
+      </div>
+    );
+  }
+
   const kind = resolveFieldKind(field, relation);
 
   switch (kind) {

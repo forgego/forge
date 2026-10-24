@@ -20,6 +20,7 @@ export interface FieldMetadata {
   max_size?: number;
   multiple?: boolean;
   allow_create?: boolean;
+  upload_supported?: boolean;
 }
 
 export interface Choice {

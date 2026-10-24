@@ -12,7 +12,7 @@ import (
 	"github.com/forgego/forge/db/dialect"
 )
 
-// InMemoryStore is an in-memory idempotency store (for dev/testing)
+// InMemoryStore is an in-memory idempotency store for tests only; production uses the database store.
 type InMemoryStore struct {
 	mu    sync.RWMutex
 	store map[string]*cachedEntry
@@ -23,12 +23,17 @@ type cachedEntry struct {
 	expires  time.Time
 }
 
-// NewInMemoryStore creates a new in-memory store
+// NewInMemoryStore creates a new in-memory store for tests only; production uses the database store.
 func NewInMemoryStore() *InMemoryStore {
 	return &InMemoryStore{
 		store: make(map[string]*cachedEntry),
 	}
 }
+
+var (
+	_ IdempotencyStore = (*InMemoryStore)(nil)
+	_ IdempotencyStore = (*DatabaseStore)(nil)
+)
 
 // Get retrieves a cached response
 func (s *InMemoryStore) Get(key string) (*CachedResponse, error) {

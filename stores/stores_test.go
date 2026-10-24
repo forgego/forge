@@ -58,7 +58,7 @@ func TestMigrate_CreatesTablesOnceAndKeepsTheConnectionOpen(t *testing.T) {
 		assert.Equal(t, latest, version)
 		assert.False(t, dirty)
 
-		for _, table := range []string{"forge_sessions", "forge_rate_limits", "forge_admin_tokens", "forge_admin_saved_views", "forge_admin_log"} {
+		for _, table := range []string{"forge_sessions", "forge_rate_limits", "forge_admin_tokens", "forge_admin_saved_views", "forge_admin_log", "forge_saved_filters", "idempotency_keys"} {
 			var count int
 			require.NoError(t, database.QueryRowContext(ctx, "SELECT count(*) FROM "+table).Scan(&count), table)
 		}
