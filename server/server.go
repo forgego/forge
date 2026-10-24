@@ -71,6 +71,9 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 	// Add request ID middleware (should be first)
 	router.Use(RequestIDMiddleware())
 
+	// RealIP rewrites RemoteAddr and scheme when request comes from a trusted proxy
+	router.Use(RealIP)
+
 	// Add error handler middleware (should be early in the stack)
 	if logger != nil {
 		errorHandlerOpts := DefaultErrorHandlerOptions()

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"strings"
 	"time"
@@ -46,8 +47,29 @@ func RealIP(next http.Handler) http.Handler {
 			// untrusted or sent no usable header; compare against that form
 			// so RemoteAddr (and its port) is only replaced by a forwarded IP.
 			peer := netutil.ClientIP(&http.Request{RemoteAddr: r.RemoteAddr, Header: http.Header{}}, nil)
-			if ip := netutil.ClientIP(r, trusted); ip != "" && ip != peer {
-				r.RemoteAddr = ip
+			if addr, err := netip.ParseAddr(peer); err == nil {
+				addr = addr.Unmap()
+				peerTrusted := false
+				for _, p := range trusted {
+					if p.Contains(addr) {
+						peerTrusted = true
+						break
+					}
+				}
+				if peerTrusted {
+					if ip := netutil.ClientIP(r, trusted); ip != "" && ip != peer {
+						r.RemoteAddr = ip
+					}
+					if proto := r.Header.Get("X-Forwarded-Proto"); proto != "" {
+						if comma := strings.Index(proto, ","); comma != -1 {
+							proto = proto[:comma]
+						}
+						proto = strings.TrimSpace(proto)
+						if proto != "" && r.URL != nil {
+							r.URL.Scheme = strings.ToLower(proto)
+						}
+					}
+				}
 			}
 		}
 		next.ServeHTTP(w, r)
@@ -109,7 +131,7 @@ type CORSOptions struct {
 // DefaultCORSOptions returns default CORS options
 func DefaultCORSOptions() *CORSOptions {
 	return &CORSOptions{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   []string{},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
@@ -131,6 +153,11 @@ func CORS(opts *CORSOptions) Middleware {
 		ExposedHeaders:   opts.ExposedHeaders,
 		AllowCredentials: opts.AllowCredentials,
 		MaxAge:           opts.MaxAge,
+	}
+	if len(opts.AllowedOrigins) == 0 {
+		c.AllowOriginFunc = func(r *http.Request, origin string) bool {
+			return false
+		}
 	}
 
 	return cors.Handler(c)
