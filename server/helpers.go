@@ -118,6 +118,10 @@ func SendError(w http.ResponseWriter, statusCode int, message string) error {
 		http.StatusText(statusCode),
 		message,
 	)
+	if reqID := w.Header().Get(errors.RequestIDHeader); reqID != "" {
+		problem.RequestID = reqID
+		problem.WithMeta("request_id", reqID)
+	}
 
 	return problem.WriteJSON(w)
 }

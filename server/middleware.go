@@ -31,7 +31,7 @@ func DefaultMiddlewares() []Middleware {
 
 // RequestID adds a request ID to each request
 func RequestID(next http.Handler) http.Handler {
-	return chimw.RequestID(next)
+	return RequestIDMiddleware()(next)
 }
 
 // RealIP rewrites r.RemoteAddr to the client IP taken from X-Forwarded-For or

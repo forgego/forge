@@ -119,8 +119,12 @@ func (h *Handler) HandleError(w http.ResponseWriter, r *http.Request, err error)
 		problem = h.mapper.MapError(err, instance)
 	}
 
-	// Add request ID if available in context
+	// Add request ID if available in context or request
 	if requestID := GetRequestIDFromContext(r.Context()); requestID != "" {
+		problem.RequestID = requestID
+		problem.WithMeta("request_id", requestID)
+	} else if requestID := GetRequestIDFromRequest(r); requestID != "" {
+		problem.RequestID = requestID
 		problem.WithMeta("request_id", requestID)
 	}
 
@@ -144,6 +148,10 @@ func (h *Handler) HandlePanic(w http.ResponseWriter, r *http.Request, rec interf
 
 	// Add request ID if available
 	if requestID := GetRequestIDFromContext(r.Context()); requestID != "" {
+		problem.RequestID = requestID
+		problem.WithMeta("request_id", requestID)
+	} else if requestID := GetRequestIDFromRequest(r); requestID != "" {
+		problem.RequestID = requestID
 		problem.WithMeta("request_id", requestID)
 	}
 
@@ -156,6 +164,11 @@ func (h *Handler) HandlePanic(w http.ResponseWriter, r *http.Request, rec interf
 
 // writeProblem writes the problem to the HTTP response
 func (h *Handler) writeProblem(w http.ResponseWriter, r *http.Request, problem *Problem) {
+	// Ensure request ID is in response header
+	if problem.RequestID != "" && w.Header().Get(RequestIDHeader) == "" {
+		w.Header().Set(RequestIDHeader, problem.RequestID)
+	}
+
 	// Set headers
 	if h.config.IncludeLinkHeader && h.config.LinkHeaderURL != "" {
 		w.Header().Set("Link", fmt.Sprintf("<%s>; rel=\"help\"", h.config.LinkHeaderURL))
