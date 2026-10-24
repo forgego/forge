@@ -30,8 +30,8 @@ func (opOnlyMetaModel) Fields() []schema.Field {
 
 type opOnlyFieldTraitModel struct {
 	schema.BaseSchema
-	ID     int64  `db:"id" json:"id"`
-	State  string `db:"state_col" json:"state_field"`
+	ID    int64  `db:"id" json:"id"`
+	State string `db:"state_col" json:"state_field"`
 }
 
 func (opOnlyFieldTraitModel) Fields() []schema.Field {

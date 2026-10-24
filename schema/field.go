@@ -112,11 +112,11 @@ type Field struct {
 	UniqueForYear  string            // Unique constraint scoped to year
 
 	// Presentation configuration (organized in FieldOptions.PresentationConfig)
-	VerboseName string // Human-readable name
-	HelpText    string // Help text for forms/admin
-	Editable    bool   // Control field editability in forms/admin
-	Serialize   bool   // Control field serialization in forms/API
-	OperationOnly bool // Control whether field can only be changed by authorized operations
+	VerboseName   string // Human-readable name
+	HelpText      string // Help text for forms/admin
+	Editable      bool   // Control field editability in forms/admin
+	Serialize     bool   // Control field serialization in forms/API
+	OperationOnly bool   // Control whether field can only be changed by authorized operations
 
 	// Type-specific behaviors
 	AutoIncrement bool // Auto-increment (for integer fields)
