@@ -31,6 +31,7 @@ type Server struct {
 	settings *config.Settings
 	sessions *SessionManager
 	database *db.DB
+	health   *HealthRegistry
 }
 
 // NewServer creates a new framework server. Pass WithDatabase with the
@@ -130,10 +131,12 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 		router.Use(Profiler("/debug", true))
 	}
 
+	health := NewHealthRegistry()
+
 	// Register health check endpoints
 	if settings.Server.HealthCheckPath != "" {
-		router.Get(settings.Server.HealthCheckPath, HealthHandler())
-		router.Get(settings.Server.HealthCheckPath+"/ready", readinessHandler(options.database))
+		router.Get(settings.Server.HealthCheckPath, healthHandler(health))
+		router.Get(settings.Server.HealthCheckPath+"/ready", readinessHandler(options.database, health))
 		router.Get(settings.Server.HealthCheckPath+"/live", LivenessHandler())
 	}
 
@@ -168,6 +171,7 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 		settings: settings,
 		sessions: sessionManager,
 		database: options.database,
+		health:   health,
 	}
 
 	return server, nil
@@ -178,6 +182,14 @@ func NewServer(cfg *config.Config, settings *config.Settings, logger *log.Logger
 // write session values through it.
 func (s *Server) SessionManager() *SessionManager {
 	return s.sessions
+}
+
+// Health returns the server's per-app health registry.
+func (s *Server) Health() *HealthRegistry {
+	if s == nil {
+		return nil
+	}
+	return s.health
 }
 
 // RegisterRoutes registers routes on the server's router
