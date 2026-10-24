@@ -115,6 +115,8 @@ func newLoggerFromConfig(config *LoggingConfig, hooks ...Hook) (*Logger, error) 
 		combinedCore = NewHookCore(combinedCore, registry)
 	}
 
+	combinedCore = NewRedactionCore(combinedCore)
+
 	// Create logger
 	zapLogger := zap.New(
 		combinedCore,
@@ -173,6 +175,19 @@ func isDevelopmentMode(config *LoggingConfig) bool {
 func NewNopLogger() *Logger {
 	return &Logger{
 		Logger:    zap.NewNop(),
+		config:    DefaultLoggingConfig(false),
+		resources: &loggerResources{},
+	}
+}
+
+// NewLoggerWithCore creates a Logger wrapping a zapcore.Core with redaction.
+func NewLoggerWithCore(core zapcore.Core) *Logger {
+	combinedCore := NewRedactionCore(core)
+	return &Logger{
+		Logger: zap.New(
+			combinedCore,
+			zap.AddCaller(),
+		),
 		config:    DefaultLoggingConfig(false),
 		resources: &loggerResources{},
 	}

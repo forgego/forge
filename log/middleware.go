@@ -21,19 +21,36 @@ var sensitiveQueryParams = map[string]struct{}{
 	"access_token":  {},
 	"refresh_token": {},
 	"password":      {},
+	"passwd":        {},
 	"secret":        {},
 	"signature":     {},
 	"session":       {},
 	"session_key":   {},
+	"authorization": {},
 }
 
 func redactQuery(raw string) string {
 	if raw == "" {
 		return ""
 	}
+	prefix := ""
+	if strings.HasPrefix(raw, "?") {
+		prefix = "?"
+		raw = raw[1:]
+	}
 	vals, err := url.ParseQuery(raw)
 	if err != nil {
 		return "[unparseable]"
+	}
+	hasSensitive := false
+	for k := range vals {
+		if _, ok := sensitiveQueryParams[strings.ToLower(k)]; ok {
+			hasSensitive = true
+			break
+		}
+	}
+	if !hasSensitive {
+		return prefix + raw
 	}
 	for k, vs := range vals {
 		if _, ok := sensitiveQueryParams[strings.ToLower(k)]; ok {
@@ -43,7 +60,7 @@ func redactQuery(raw string) string {
 			vals[k] = vs
 		}
 	}
-	return vals.Encode()
+	return prefix + vals.Encode()
 }
 
 func sanitizeLogString(s string) string {
