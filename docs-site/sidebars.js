@@ -73,6 +73,7 @@ const sidebars = {
         'community',
         'contributing/development',
         'contributing/versioning-and-support',
+        'contributing/extension-contracts',
         'security',
       ],
     },

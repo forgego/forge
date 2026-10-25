@@ -170,7 +170,7 @@ export default defineConfig({
 });
 ```
 
-See the complete example in [build-helper example](../../../examples/admin-extension/).
+See the complete example in [build-helper example](https://github.com/forgego/forge/tree/master/examples/admin-extension/).
 
 ---
 
@@ -208,4 +208,4 @@ The extension architecture operates under the following security model:
 - **[Admin UI & Custom Plugins](./ui.md)**: Dashboard layout, components, and server-driven plugin pages.
 - **[Admin Actions](./actions.md)**: Batch actions, row actions, and confirmation dialogs.
 - **[Model Configuration](./config.md)**: Admin list, filter, and field configurations.
-- **[Admin Extension Example](../../../examples/admin-extension/)**: Full runnable example with Go embedding and Vite build helper.
+- **[Admin Extension Example](https://github.com/forgego/forge/tree/master/examples/admin-extension/)**: Full runnable example with Go embedding and Vite build helper.
