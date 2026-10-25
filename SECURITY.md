@@ -4,10 +4,13 @@
 
 We release patches for security vulnerabilities. Currently supported versions:
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.x.x   | :white_check_mark: |
-| < 1.0   | :x:                |
+| Version | Supported |
+| ------- | --------- |
+| `0.1.x (latest)` | :white_check_mark: |
+| `< 0.1` | :x: |
+| `1.0.0, 1.0.1 (retracted)` | :x: |
+
+Once a stable 1.x is released, the latest minor of the current major is supported (see docs-site/docs/contributing/versioning-and-support.md).
 
 ## Reporting a Vulnerability
 

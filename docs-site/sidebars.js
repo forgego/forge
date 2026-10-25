@@ -68,7 +68,13 @@ const sidebars = {
     {
       type: 'category',
       label: 'Project',
-      items: ['changelog', 'community', 'security'],
+      items: [
+        'changelog',
+        'community',
+        'contributing/development',
+        'contributing/versioning-and-support',
+        'security',
+      ],
     },
   ],
 };

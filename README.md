@@ -167,8 +167,11 @@ steps, and `forge --help` lists every command.
 ## Contributing
 
 Bug reports, questions and pull requests are welcome. Read
-[CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. To report a
-vulnerability, follow [SECURITY.md](SECURITY.md) instead of opening an issue.
+[CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. For release
+lifecycle and compatibility guarantees, see
+[versioning and support](docs-site/docs/contributing/versioning-and-support.md).
+To report a vulnerability, follow [SECURITY.md](SECURITY.md) instead of opening
+an issue.
 
 ## License
 
