@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import type {
+  ExtensionMetadata,
   Metadata,
   MetadataResponse,
   PaginatedResponse,
@@ -152,7 +153,17 @@ const SEARCH_DATA: SearchResponse = {
   results: [],
 };
 
-export async function mockAdminApi(page: Page, authenticated = true): Promise<void> {
+export interface MockAdminApiOptions {
+  extensions?: ExtensionMetadata[];
+}
+
+export async function mockAdminApi(
+  page: Page,
+  authenticated = true,
+  options: MockAdminApiOptions = {},
+): Promise<void> {
+  const extensions = options.extensions;
+
   if (authenticated) {
     await page.addInitScript(() => {
       localStorage.setItem('admin_token', 'e2e-token');
@@ -265,11 +276,16 @@ export async function mockAdminApi(page: Page, authenticated = true): Promise<vo
     });
   });
 
+  const metaData: MetadataResponse = {
+    ...META_DATA,
+    ...(extensions ? { extensions } : {}),
+  };
+
   await page.route('**/admin/api/meta', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(META_DATA),
+      body: JSON.stringify(metaData),
     });
   });
 
