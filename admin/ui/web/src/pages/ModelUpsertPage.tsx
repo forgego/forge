@@ -471,7 +471,7 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
                         <div className="flex items-center justify-between px-1">
                           <label
                             htmlFor={field.name}
-                            className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80"
+                            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
                           >
                             {field.label}{" "}
                             {formField(field, mode).required && (
@@ -483,7 +483,11 @@ export default function ModelFormPage({ mode }: ModelFormPageProps) {
                         </div>
                         {renderField(field)}
                         {fieldErrors[field.name] && (
-                          <p className="text-xs text-destructive font-medium animate-in slide-in-from-top-1">
+                          <p
+                            role="alert"
+                            id={`${field.name}-error`}
+                            className="text-xs text-destructive font-medium animate-in slide-in-from-top-1"
+                          >
                             {fieldErrors[field.name].join(", ")}
                           </p>
                         )}

@@ -139,7 +139,7 @@ export function InlineRelations({
                           <div className="flex items-center justify-between px-1">
                             <label
                               htmlFor={`${detail.relation.name}-${rowIndex}-${field.name}`}
-                              className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80"
+                              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
                             >
                               {field.label}{" "}
                               {field.required && (

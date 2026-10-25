@@ -123,7 +123,7 @@ export default function DashboardPage() {
                 variant="default"
                 size="sm"
                 asChild
-                className="text-meta gap-1.5 h-9"
+                className="text-meta gap-1.5 h-9 text-primary-foreground"
               >
                 <Link to="/style-guide">
                   <Sparkles className="h-3.5 w-3.5" />

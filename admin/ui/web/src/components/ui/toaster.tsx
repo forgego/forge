@@ -9,11 +9,12 @@ export function Toaster() {
         classNames: {
           toast:
             "rounded border border-border bg-surface-3 text-foreground shadow-overlay text-ui",
-          description: "text-meta text-muted-foreground",
+          title: "text-foreground font-semibold",
+          description: "text-foreground font-normal text-meta",
           actionButton: "rounded-sm bg-primary text-primary-foreground text-meta",
           cancelButton: "rounded-sm bg-surface-sunken text-foreground text-meta",
-          error: "border-danger/30",
-          success: "border-success/30",
+          error: "border-danger/30 text-foreground",
+          success: "border-success/30 text-foreground",
         },
       }}
     />
