@@ -329,7 +329,7 @@ Unregistering is not supported. Cleanup lifecycle is unspecified; do not rely on
 
 #### Tested by
 
-Unspecified; no existing `_test.go` file in the repository exercises this registry extension contract.
+`registry/extensions_test.go`
 
 ---
 
