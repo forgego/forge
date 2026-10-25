@@ -53,6 +53,8 @@ type ViewSet interface {
 
 // QuerySetInterface defines the common methods needed from QuerySet for viewset operations.
 // This interface allows type-safe operations without reflection when the QuerySet implements it.
+//
+// Deprecated: registration validates viewset querysets by reflection (see checkViewSet in viewset_check.go); this interface is not used and will be removed in v2.
 type QuerySetInterface interface {
 	Count(ctx context.Context) (int64, error)
 	All(ctx context.Context) (interface{}, error)
@@ -63,6 +65,8 @@ type QuerySetInterface interface {
 }
 
 // ManagerInterface defines the common methods needed from Manager for viewset operations.
+//
+// Deprecated: registration validates viewset querysets by reflection (see checkViewSet in viewset_check.go); this interface is not used and will be removed in v2.
 type ManagerInterface interface {
 	Get(ctx context.Context, id int64) (interface{}, error)
 	Create(ctx context.Context, model interface{}) error
