@@ -69,7 +69,7 @@ export function ListBulkToolbar({
               variant="destructive"
               size="sm"
               className={cn(
-                "h-8 px-3 text-meta font-medium gap-1.5",
+                "h-8 px-3 text-meta font-medium gap-1.5 text-danger-fg",
                 !hasSelection && "opacity-50"
               )}
               onClick={() => setBulkDeleteConfirmOpen(true)}
@@ -89,7 +89,7 @@ export function ListBulkToolbar({
         data-testid="bulk-cancel"
         variant="ghost"
         size="sm"
-        className="h-8 px-3 text-meta font-medium text-muted-foreground hover:text-foreground self-start sm:self-auto"
+        className="h-8 px-3 text-meta font-medium text-foreground/80 hover:text-foreground self-start sm:self-auto"
         onClick={() => setSelectedIds([])}
         disabled={!hasSelection}
       >

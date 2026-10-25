@@ -276,7 +276,7 @@ export function Sidebar({
                               {model.verbose_name_plural}
                             </span>
                             {typeof model.count === "number" && (
-                              <span className="shrink-0 text-micro tabular-nums text-muted-foreground/80">
+                              <span className="shrink-0 text-micro tabular-nums text-muted-foreground">
                                 {model.count > 999
                                   ? `${(model.count / 1000).toFixed(1)}k`
                                   : model.count}

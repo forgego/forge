@@ -42,7 +42,7 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-background px-4 py-10">
       <Card className="w-full max-w-3xl overflow-hidden shadow-lg md:grid md:grid-cols-2 p-0">
         {/* Brand panel */}
-        <div className="relative hidden md:flex flex-col justify-between overflow-hidden bg-surface-sunken p-8 text-white dark:bg-primary/[0.12] dark:text-foreground dark:border-r dark:border-border">
+        <div className="relative hidden md:flex flex-col justify-between overflow-hidden bg-surface-sunken p-8 text-foreground dark:bg-primary/[0.12] dark:text-foreground dark:border-r dark:border-border">
           <div
             aria-hidden
             className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary/30 blur-3xl"
