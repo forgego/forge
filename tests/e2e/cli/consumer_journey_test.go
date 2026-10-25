@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -42,6 +43,15 @@ func TestConsumerJourney(t *testing.T) {
 	overlaySource, err := os.ReadFile(filepath.Join("..", "..", "testdata", "reference_app", "operations", "approve_order.go"))
 	require.NoError(t, err)
 	testhelpers.WriteFileString(t, filepath.Join(projectDir, "app", "work", "operations", "approve_order.go"), string(overlaySource))
+
+	extSource, err := os.ReadFile(filepath.Join("..", "..", "testdata", "reference_app", "admin", "extension.go"))
+	require.NoError(t, err)
+	testhelpers.WriteFileString(t, filepath.Join(projectDir, "app", "work", "refadmin", "extension.go"), string(extSource))
+
+	assetsSource, err := os.ReadFile(filepath.Join("..", "..", "testdata", "reference_app", "admin", "assets", "index.js"))
+	require.NoError(t, err)
+	testhelpers.WriteFileString(t, filepath.Join(projectDir, "app", "work", "refadmin", "assets", "index.js"), string(assetsSource))
+
 	testhelpers.WriteFileString(t, filepath.Join(projectDir, "app", "work", "routes.go"), consumerJourneyRoutes)
 	registerAppInMainForModule(t, filepath.Join(projectDir, "cmd", "server", "main.go"), "consumer")
 
@@ -64,6 +74,8 @@ func TestConsumerJourney(t *testing.T) {
 const consumerJourneyRoutes = `package work
 
 import (
+	"consumer/app/work/refadmin"
+
 	"github.com/forgego/forge/admin"
 	"github.com/forgego/forge/api"
 	"github.com/forgego/forge/db"
@@ -73,8 +85,11 @@ import (
 func Register(router *server.Router, database *db.DB) {
 	OrderObjects.SetDB(database)
 	CustomerObjects.SetDB(database)
+	if err := refadmin.Register(); err != nil { panic(err) }
 	if _, err := admin.Register[Order](&admin.Config[Order]{}); err != nil { panic(err) }
 	if _, err := admin.Register[Customer](&admin.Config[Customer]{}); err != nil { panic(err) }
+	router.Get("/admin/ext/*", admin.DefaultSite.Handler().ServeHTTP)
+	router.Head("/admin/ext/*", admin.DefaultSite.Handler().ServeHTTP)
 	apiRouter := api.NewRouter("/api/v1")
 	apiRouter.Register("orders", NewOrderViewSet())
 	apiRouter.Register("customers", NewCustomerViewSet())
@@ -132,4 +147,24 @@ func checkConsumerJourneyEndpoints(t *testing.T, port string) {
 	require.NoError(t, err, "GET published orders list")
 	apiResp.Body.Close()
 	require.Equal(t, http.StatusOK, apiResp.StatusCode, "default REST list access")
+
+	extResp, err := client.Get(base + "/admin/ext/reference/index.js")
+	require.NoError(t, err, "GET extension index.js")
+	require.Equal(t, http.StatusOK, extResp.StatusCode, "GET extension index.js")
+	require.Contains(t, extResp.Header.Get("Content-Type"), "javascript", "extension index.js content type")
+	require.Equal(t, "nosniff", extResp.Header.Get("X-Content-Type-Options"), "extension index.js nosniff header")
+	extBody, err := io.ReadAll(extResp.Body)
+	extResp.Body.Close()
+	require.NoError(t, err, "read extension index.js body")
+	require.Contains(t, string(extBody), "registerPage", "extension index.js body")
+
+	for _, invalidPath := range []string{
+		"/admin/ext/reference/../../etc/passwd",
+		"/admin/ext/reference/",
+	} {
+		resp, err := client.Get(base + invalidPath)
+		require.NoError(t, err, "GET %s", invalidPath)
+		resp.Body.Close()
+		require.NotEqual(t, http.StatusOK, resp.StatusCode, "GET %s should not return 200", invalidPath)
+	}
 }
