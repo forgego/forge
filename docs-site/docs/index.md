@@ -8,7 +8,7 @@ image: /social-card.png
 
 # Forge Documentation
 
-Welcome to Forge, a Go framework that brings Django-style rapid development to the Go ecosystem. Build database-backed web applications with type-safe queries, auto-generated admin interfaces, and REST APIs.
+Welcome to Forge, a Go framework that brings Django-style rapid development to the Go ecosystem. Build database-backed web applications with type-safe queries, auto-generated admin interfaces, and REST APIs. The [status](./status.md) page is the source of truth for capability tiers and verification status.
 
 ## Getting Started
 
@@ -63,7 +63,7 @@ Go deeper:
 
 ## Resources
 
-- **[Support contract](/docs/status)** - What is supported, tested and excluded
+- **[Support contract](./status.md)** - What is supported, tested and excluded
 - **[Deployment](/docs/deployment)** - Run one production instance
 - **[Features](/docs/features)** - Feature list
 - **[Changelog](/docs/changelog)** - Version history
@@ -75,10 +75,10 @@ Go deeper:
 Forge provides everything you need to build web applications:
 
 - **Type-Safe ORM** - Query with full compile-time safety
-- **Admin** - Register a model to manage it in the bundled admin
-- **REST APIs** - Serializers, auth, and pagination built-in
+- **Admin** ([partially tested](./status.md)) - Register a model to manage it in the bundled admin
+- **REST APIs** ([partially tested](./status.md)) - Serializers, auth, and pagination built-in
 - **Migrations** - Track and apply database changes
-- **Code Generation** - Generate type-safe queries and managers
+- **Code Generation** ([partially tested](./status.md)) - Generate type-safe queries and managers
 - **Security** - Sessions, CSRF and production secret checks by default; CORS and rate-limiting middleware to add
 - **Authentication** - Multiple auth backends included
 - **CLI Tools** - Powerful command-line interface

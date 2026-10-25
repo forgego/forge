@@ -6,7 +6,7 @@ image: /social-card.png
 
 # Features
 
-Forge provides a toolkit for building web applications in Go. This page outlines the major features by category. It describes what exists, not how well it is tested: the [support contract](/docs/status/) gives each capability a tier (supported, partially tested, experimental or not implemented) with its test evidence, and wins where the two differ.
+Forge provides a toolkit for building web applications in Go. This page outlines the major features by category. It describes what exists, not how well it is tested: the [status](./status.md) page is the source of truth for capability tiers (supported, partially tested, experimental or not implemented) with test evidence, and wins where the two differ.
 
 ## Core Framework
 
@@ -23,7 +23,7 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 ### Code Generation
 - Auto-generate type-safe managers for each model
 - Generate field expressions for compile-time query validation (`orm.Q`)
-- Build REST serializers, viewsets and routes (`forge generate --api`)
+- Build REST serializers, viewsets and routes (`forge generate --api`) ([partially tested](./status.md))
 - CLI commands: `forge generate`, `forge new`, `forge add`, `forge check`
 
 ### Type-Safe ORM
@@ -37,7 +37,7 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 - Eager loading via `SelectRelated` (SQL JOINs) and `PrefetchRelated` (batched queries)
 
 ### Database Layer & Migrations
-- PostgreSQL (tested) and SQLite (experimental); both use Go's `database/sql` pool settings. Pool option behavior is covered in-process on SQLite.
+- PostgreSQL (supported) and SQLite ([partially tested](./status.md), migration apply is [experimental](./status.md)); both use Go's `database/sql` pool settings. Pool option behavior is covered in-process on SQLite.
 - **AST-Driven Migrations**: Introspects Go AST code to detect model diffs automatically
 - Cryptographic SHA-256 checksums on all migration files to detect drift
 - Recovery with `forge migrate recover --verify`, `forge migrate recover --clean` and `forge migrate force <version>`
@@ -51,16 +51,16 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 - `Filter()` - Add WHERE conditions
 - `Exclude()` - Add NOT conditions
 - `OrderBy()` - Sort results
-- `Distinct()` - Remove duplicates
+- `Distinct()` ([partially tested](./status.md)) - Remove duplicates
 - `Limit()` / `Offset()` - Pagination
 - `Count()` - Count without fetching
 
 ### Field Operations
-- `Select()` - Choose specific fields
-- `Only()` - Defer expensive fields
-- `Defer()` - Exclude specific fields
-- `Values()` - Get map of values
-- `ValuesList()` - Get slice of values
+- `Select()` ([partially tested](./status.md)) - Choose specific fields
+- `Only()` ([partially tested](./status.md)) - Defer expensive fields
+- `Defer()` ([partially tested](./status.md)) - Exclude specific fields
+- `Values()` ([partially tested](./status.md)) - Get map of values
+- `ValuesList()` ([partially tested](./status.md)) - Get slice of values
 
 ### Relations
 - `SelectRelated()` - Eager load foreign keys (JOIN)
@@ -71,13 +71,13 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 
 ### Aggregations
 - Scalar `AggregateValues()` supports Count, Sum, Avg, Min and Max over a QuerySet (ungrouped).
-- `Annotate()` - Add computed fields
+- `Annotate()` ([partially tested](./status.md)) - Add computed fields
 - Scalar aggregates (`Count`, `Sum`, `Avg`, `Min`, `Max`) are supported. Grouped/custom aggregates and QuerySet `Union`, `Intersection`, `Difference` are unsupported.
 
 ### Bulk Operations
 - `BulkCreate()` - Insert multiple records
-- `BulkUpdate()` - Apply several updates (one `UPDATE` statement per entry)
-- `UpdateBuilder()` - Build complex updates
+- `BulkUpdate()` ([partially tested](./status.md)) - Apply several updates (one `UPDATE` statement per entry)
+- `UpdateBuilder()` ([partially tested](./status.md)) - Build complex updates
 
 ## Advanced Filtering
 
@@ -114,10 +114,10 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 - Auto-generated forms from models
 - Field widgets (text, select, date picker, etc.)
 - Form validation
-- Related object selection and inline relations
+- Related object selection (inline relations are planned)
 
 ### Admin Features
-- Full-text search across fields
+- Full-text search across fields (planned)
 - Advanced filtering sidebar
 - Action menu for bulk operations
 - Export to CSV/JSON
@@ -256,7 +256,7 @@ Request IDs, error handling, logging, sessions and CSRF are installed by `server
 - Standardized error codes
 - Problem details format (RFC 7807)
 - Error sanitization for security
-- Idempotency keys
+- Idempotency keys ([partially tested](./status.md))
 - User-friendly error messages
 - Developer debug info
 
@@ -337,7 +337,7 @@ Request IDs, error handling, logging, sessions and CSRF are installed by `server
 - One framework, one workflow
 
 ### Path to Production
-- Forge is pre-1.0; check the [support contract](/docs/status/) for what is tested
+- Forge is pre-1.0; check the [support contract](./status.md) for what is tested
 - Production secrets are validated before the server listens
 - Health, readiness and liveness endpoints
 - Graceful shutdown and structured request logging
@@ -349,7 +349,7 @@ Request IDs, error handling, logging, sessions and CSRF are installed by `server
 Not implemented: `registry.RegisterPlugin` rejects admin and API plugins with `NotImplemented`.
 
 ### Extension Points
-- Custom field types (experimental: generation and migrations do not understand them)
+- Custom field types ([experimental](./status.md): generation and migrations do not understand them)
 - Custom validators
 - Custom middleware
 - Custom serializers
