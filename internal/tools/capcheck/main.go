@@ -13,6 +13,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/forgego/forge/internal/safepath"
 )
 
 type problem struct {
@@ -83,7 +85,11 @@ func collectTests(root string) (*testIndex, error) {
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return err
+		}
+		data, err := safepath.ReadFile(absRoot, absPath)
 		if err != nil {
 			return err
 		}
@@ -166,12 +172,8 @@ func parseTableRow(line string) []string {
 	if !strings.Contains(trimmed, "|") {
 		return nil
 	}
-	if strings.HasPrefix(trimmed, "|") {
-		trimmed = trimmed[1:]
-	}
-	if strings.HasSuffix(trimmed, "|") {
-		trimmed = trimmed[:len(trimmed)-1]
-	}
+	trimmed = strings.TrimPrefix(trimmed, "|")
+	trimmed = strings.TrimSuffix(trimmed, "|")
 	rawCells := splitPipes(trimmed)
 	cells := make([]string, len(rawCells))
 	for i, c := range rawCells {
@@ -204,12 +206,21 @@ func isDelimiterRow(cells []string) bool {
 // check parses the markdown tables in statusPath and validates capability evidence
 // against tests under rootPath.
 func check(statusPath, rootPath string) (int, []problem, error) {
-	tests, err := collectTests(rootPath)
+	absRoot, err := filepath.Abs(rootPath)
+	if err != nil {
+		return 0, nil, err
+	}
+	absStatus, err := filepath.Abs(statusPath)
 	if err != nil {
 		return 0, nil, err
 	}
 
-	data, err := os.ReadFile(statusPath)
+	tests, err := collectTests(absRoot)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	data, err := safepath.ReadFile(absRoot, absStatus)
 	if err != nil {
 		return 0, nil, err
 	}
