@@ -22,6 +22,7 @@ import type {
   SavedViewRequest,
 } from "./types";
 import { withAdminPrefix, stripAdminPrefix } from "../lib/admin-prefix";
+import { loadExtensions } from "../lib/extensions/loader";
 
 export const ADMIN_CONTRACT_VERSION = 1;
 
@@ -80,6 +81,9 @@ export class AdminAPIClient {
 
   async getMetadata(): Promise<MetadataResponse> {
     const response = await this.client.get("/meta");
+    if (response.data?.extensions) {
+      await loadExtensions(response.data);
+    }
     return response.data;
   }
 

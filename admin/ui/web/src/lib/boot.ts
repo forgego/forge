@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
 import { widgetRegistry, WIDGET_TYPES } from './widgets';
 import type { WidgetProps } from './widgets';
+import './extensions/api';
 import StatsWidget from '../features/dashboard/widgets/StatsWidget';
 import ActivityWidget from '../features/dashboard/widgets/ActivityWidget';
 import { Skeleton } from '../components/ui/skeleton';

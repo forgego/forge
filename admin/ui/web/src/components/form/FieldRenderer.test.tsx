@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { FieldRenderer } from "./FieldRenderer";
 import type { FieldMetadata } from "../../api/types";
+import { ForgeAdmin, clearRegisteredFieldEditors } from "../../lib/extensions/api";
 
 describe("FieldRenderer", () => {
   const uploadUnsupportedField: FieldMetadata = {
@@ -86,5 +87,34 @@ describe("FieldRenderer", () => {
         "File uploads are not supported by the admin. Set this value in code or through your own upload endpoint."
       )
     ).not.toBeInTheDocument();
+  });
+
+  it("renders a registered custom extension field editor when available", () => {
+    ForgeAdmin.registerFieldEditor(
+      { model: "products", field: "tags" },
+      ({ value }) => <div data-testid="custom-tags-editor">Tags: {String(value)}</div>
+    );
+
+    const tagField: FieldMetadata = {
+      name: "tags",
+      type: "string",
+      label: "Tags",
+      required: false,
+      read_only: false,
+    };
+
+    render(
+      <FieldRenderer
+        field={tagField}
+        value="electronics, computers"
+        onChange={vi.fn()}
+        mode="edit"
+        metadata={{ name: "products" } as any}
+      />
+    );
+
+    expect(screen.getByTestId("custom-tags-editor")).toBeInTheDocument();
+    expect(screen.getByText("Tags: electronics, computers")).toBeInTheDocument();
+    clearRegisteredFieldEditors();
   });
 });
