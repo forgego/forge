@@ -19,7 +19,7 @@ a REST API and an admin panel for it.
 [Documentation](https://forgego.github.io/forge/) ·
 [Quickstart](https://forgego.github.io/forge/docs/quickstart/) ·
 [Example app](examples/ecommerce/) ·
-[Support contract](https://forgego.github.io/forge/docs/status/)
+[Support contract](docs-site/docs/status.md)
 
 </div>
 
@@ -34,7 +34,8 @@ Go gives you excellent building blocks, and then you wire the same pieces
 together for every project: models, queries, migrations, an admin, an API.
 Forge takes the approach Django made popular and brings it to Go. You write
 the schema, and the rest is generated or configured from it, as ordinary Go
-code you can read and change.
+code you can read and change. The support matrix in [status](docs-site/docs/status.md)
+is the canonical source of truth for capability tiers and verification evidence.
 
 - **Schema-first models.** Fields, indexes, relations and hooks live in one Go
   definition per model.
@@ -42,11 +43,11 @@ code you can read and change.
   for each model, so a misspelled column is a compile error.
 - **Migrations from your models.** `forge makemigrations --auto` compares your
   models with the migration history and writes the SQL.
-- **Built-in admin.** A React admin with search, filters, saved views, bulk
+- **Built-in admin.** ([partially tested](docs-site/docs/status.md)) A React admin with search, filters, saved views, bulk
   actions, change history and per-object permission hooks. Saved views, change
   history, admin tokens and sessions always live in the database, so several
   instances can share them.
-- **REST API layer.** ViewSets, serializers, pagination, throttling and an
+- **REST API layer.** ([partially tested](docs-site/docs/status.md)) ViewSets, serializers, pagination, throttling and an
   OpenAPI document, modelled on Django REST Framework.
 - **Secure defaults.** Password hashing, sessions, CSRF protection, secure
   cookies in production and a rate-limited admin login. CORS and request
@@ -54,8 +55,9 @@ code you can read and change.
 
 > [!NOTE]
 > Forge is pre-1.0 (v0.1.x) and its API may still change between minor
-> releases. PostgreSQL 15 is the tested database; SQLite is experimental. The
-> [support contract](https://forgego.github.io/forge/docs/status/) lists what
+> releases. PostgreSQL 15 is supported; SQLite is [partially tested](docs-site/docs/status.md)
+> (migration apply is [experimental](docs-site/docs/status.md)). The
+> [support contract](docs-site/docs/status.md) lists what
 > is verified in CI, what is partial, what is excluded, and the stability
 > policy.
 
@@ -139,7 +141,7 @@ Forge needs Go 1.26 or later.
 
 ## Start a project
 
-Applying migrations to SQLite is experimental. Use `--database postgres` for
+Applying migrations to SQLite is [experimental](docs-site/docs/status.md). Use `--database postgres` for
 anything you deploy; see the [deployment guide](https://forgego.github.io/forge/docs/deployment/)
 before going to production.
 

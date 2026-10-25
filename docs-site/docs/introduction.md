@@ -6,17 +6,17 @@ image: /social-card.png
 
 # Introduction
 
-Forge is a Go framework that brings Django-style rapid development to the Go ecosystem. Build database-backed applications with type-safe queries, auto-generated admin interfaces, and REST APIs—all without sacrificing Go's performance or type safety.
+Forge is a Go framework that brings Django-style rapid development to the Go ecosystem. Build database-backed applications with type-safe queries, auto-generated admin interfaces, and REST APIs—all without sacrificing Go's performance or type safety. The [status](./status.md) page is the source of truth for capability tiers and verification status.
 
 ## What is Forge?
 
 Forge provides the building blocks for web applications:
 
 - **Type-Safe ORM** - Query your database with full compile-time safety. No string-based queries or runtime surprises.
-- **Built-in Admin** - Register a model to manage it in the bundled React admin.
-- **REST API Framework** - Build APIs with serializers, authentication, and pagination built-in.
+- **Built-in Admin** ([partially tested](./status.md)) - Register a model to manage it in the bundled React admin.
+- **REST API Framework** ([partially tested](./status.md)) - Build APIs with serializers, authentication, and pagination built-in.
 - **Schema Migrations** - Track and apply database changes automatically, like Django or Rails.
-- **Code Generation** - Define schemas once, generate type-safe queries and managers automatically.
+- **Code Generation** ([partially tested](./status.md)) - Define schemas once, generate type-safe queries and managers automatically.
 
 ## Why Forge?
 
@@ -103,7 +103,7 @@ func (User) Fields() []schema.Field {
 Run `forge generate` and get:
 - Manager with CRUD methods
 - Type-safe field expressions for queries
-- With `--api`, REST serializers, viewsets and routes
+- With `--api`, REST serializers, viewsets and routes ([partially tested](./status.md))
 
 ### Migrations Handle Schema Changes
 
