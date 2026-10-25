@@ -322,6 +322,9 @@ jobs:
           go-version: '1.27.3'
           cache-dependency-path: '**/go.sum'
 
+      - name: Check capability evidence
+        run: go run ./internal/tools/capcheck
+
       - name: Build test reporter
         id: reporter
         run: go build -o "$RUNNER_TEMP/testreport" ./internal/tools/testreport
