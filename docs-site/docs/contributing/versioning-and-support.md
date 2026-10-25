@@ -6,7 +6,7 @@ description: Release policy, semantic versioning guarantees, supported versions,
 
 # Versioning and Support
 
-This document defines the versioning policy, compatibility guarantees, support tiers, and deprecation lifecycle for Forge. For development environment setup and contributor workflows, see [Development](development.md) and [CONTRIBUTING.md](../../../CONTRIBUTING.md).
+This document defines the versioning policy, compatibility guarantees, support tiers, and deprecation lifecycle for Forge. For development environment setup and contributor workflows, see [Development](development.md) and [CONTRIBUTING.md](https://github.com/forgego/forge/blob/master/CONTRIBUTING.md).
 
 ## Semantic Versioning
 
@@ -44,7 +44,7 @@ For component support tiers and verification evidence, see the [Support contract
 
 ## Supported Versions
 
-In accordance with [SECURITY.md](../../../SECURITY.md), version support is maintained as follows:
+In accordance with [SECURITY.md](https://github.com/forgego/forge/blob/master/SECURITY.md), version support is maintained as follows:
 
 | Version | Supported | Maintenance Policy |
 | :--- | :--- | :--- |
@@ -75,7 +75,7 @@ When an exported API, CLI flag, configuration key, or feature is marked for depr
 When a release introduces breaking changes or migration steps:
 
 - Upgrade guides are published directly within the corresponding [Changelog](../changelog.md) release entry.
-- The internal release process and upgrade template are documented in [docs/RELEASING.md](../../../docs/RELEASING.md).
+- The internal release process and upgrade template are documented in [docs/RELEASING.md](https://github.com/forgego/forge/blob/master/docs/RELEASING.md).
 - Each upgrade guide must include:
   - An overview of breaking changes and affected consumers.
   - Code regeneration steps using `forge generate`.
@@ -90,4 +90,4 @@ For detailed schema migration and recovery procedures, refer to [Migrations & Di
 
 Do not report security vulnerabilities through public GitHub issues.
 
-To report a vulnerability, review and follow the instructions in [SECURITY.md](../../../SECURITY.md).
+To report a vulnerability, review and follow the instructions in [SECURITY.md](https://github.com/forgego/forge/blob/master/SECURITY.md).
