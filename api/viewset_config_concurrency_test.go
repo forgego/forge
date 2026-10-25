@@ -44,10 +44,7 @@ func (s *configConcurrencySerializer) New() Serializer {
 	return newConfigConcurrencySerializer()
 }
 
-type configConcurrencyQueryset struct {
-	unusedUpdateOperation
-	unusedDeleteOperation
-}
+type configConcurrencyQueryset struct{}
 
 func (q *configConcurrencyQueryset) All(context.Context) ([]*configConcurrencyModel, error) {
 	return []*configConcurrencyModel{
