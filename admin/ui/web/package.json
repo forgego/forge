@@ -75,6 +75,6 @@
   },
   "overrides": {
     "rolldown": "1.2.14",
-    "follow-redirects": "^1.16.1"
+    "follow-redirects": "^1.16.2"
   }
 }
