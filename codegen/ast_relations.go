@@ -117,8 +117,10 @@ func (p *ASTParser) extractRelationFromExpr(expr ast.Expr) *RelationDefinition {
 							relation.To = val
 						}
 					case "Type":
-						if val := p.extractIntFromExpr(kv.Value); val != nil {
-							relation.Type = fmt.Sprintf("%d", *val)
+						if relType := p.extractRelationTypeFromExpr(kv.Value); relType != "" {
+							relation.Type = relType
+						} else if val := p.extractIntFromExpr(kv.Value); val != nil {
+							relation.Type = relationTypeFromInt(*val)
 							relation.Options["type"] = *val
 						}
 					case "RelatedName":
@@ -126,11 +128,11 @@ func (p *ASTParser) extractRelationFromExpr(expr ast.Expr) *RelationDefinition {
 							relation.Options["related_name"] = val
 						}
 					case "OnDelete":
-						if val := p.extractStringFromExpr(kv.Value); val != "" {
+						if val := p.extractCascadeFromExpr(kv.Value); val != "" {
 							relation.Options["on_delete"] = val
 						}
 					case "OnUpdate":
-						if val := p.extractStringFromExpr(kv.Value); val != "" {
+						if val := p.extractCascadeFromExpr(kv.Value); val != "" {
 							relation.Options["on_update"] = val
 						}
 					case "Through":
@@ -268,4 +270,54 @@ func (p *ASTParser) extractRelationOptionFromMethod(methodName string, call *ast
 	case "CascadeOnDelete":
 		options["on_delete"] = "CASCADE"
 	}
+}
+
+func (p *ASTParser) extractRelationTypeFromExpr(expr ast.Expr) string {
+	switch e := expr.(type) {
+	case *ast.SelectorExpr:
+		if pkgIdent, ok := e.X.(*ast.Ident); ok && p.isSchemaQualifier(pkgIdent.Name) {
+			return normalizeRelationTypeName(e.Sel.Name)
+		}
+	case *ast.Ident:
+		return normalizeRelationTypeName(e.Name)
+	}
+	return ""
+}
+
+func normalizeRelationTypeName(name string) string {
+	switch name {
+	case "RelationForeignKey", "ForeignKey", "ForeignKeyField":
+		return "ForeignKey"
+	case "RelationOneToOne", "OneToOne", "OneToOneField":
+		return "OneToOne"
+	case "RelationManyToMany", "ManyToMany", "ManyToManyField":
+		return "ManyToMany"
+	default:
+		return ""
+	}
+}
+
+func relationTypeFromInt(val int) string {
+	switch val {
+	case 0:
+		return "ForeignKey"
+	case 1:
+		return "OneToOne"
+	case 2:
+		return "ManyToMany"
+	default:
+		return fmt.Sprintf("%d", val)
+	}
+}
+
+func (p *ASTParser) extractCascadeFromExpr(expr ast.Expr) string {
+	if sel, ok := expr.(*ast.SelectorExpr); ok {
+		if pkgIdent, ok := sel.X.(*ast.Ident); ok && p.isSchemaQualifier(pkgIdent.Name) {
+			return strings.TrimPrefix(sel.Sel.Name, "Cascade")
+		}
+	}
+	if val := p.extractStringFromExpr(expr); val != "" {
+		return strings.TrimPrefix(val, "Cascade")
+	}
+	return ""
 }

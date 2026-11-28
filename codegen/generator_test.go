@@ -511,3 +511,67 @@ func (Customer) Meta() schema.Meta {
 	assert.Contains(t, string(contents), `Id: orm.NewField[int64]("id", "customers")`)
 	assert.Contains(t, string(contents), `Email: orm.NewField[string]("email", "customers")`)
 }
+
+func TestGeneratorForeignKeyAndStructLiteralRelationsCompile(t *testing.T) {
+	tmpDir := t.TempDir()
+	modelSrc := `package products
+
+import "github.com/forgego/forge/schema"
+
+type Product struct{ ProductGenerated }
+
+func (Product) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.TextField("name", schema.Required()),
+	}
+}
+
+type WebshopProduct struct{ WebshopProductGenerated }
+
+func (WebshopProduct) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.Int64Field("product_id", schema.Required(), schema.DBIndex(), schema.DBColumn("product_id")),
+		schema.StringField("sku", schema.Required(), schema.MaxLength(64), schema.Unique()),
+		schema.DecimalField("price", schema.Optional(), schema.MaxDigits(10), schema.DecimalPlaces(2), schema.Default(0.0)),
+	}
+}
+
+func (WebshopProduct) Relations() []schema.Relation {
+	return []schema.Relation{
+		schema.ForeignKeyField("product_id", "Product", schema.OnDelete(schema.CascadeCASCADE)),
+		{
+			Name:        "primary_product",
+			To:          "Product",
+			Type:        schema.RelationOneToOne,
+			RelatedName: "webshop_entry",
+			OnDelete:    schema.CascadeSET_NULL,
+			OnUpdate:    schema.CascadeCASCADE,
+		},
+		{
+			Name:    "related_products",
+			To:      "Product",
+			Type:    2,
+			Through: "webshop_related",
+		},
+	}
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "models.go"), []byte(modelSrc), 0644))
+	require.NoError(t, NewGenerator(tmpDir, tmpDir).Generate())
+
+	genBytes, err := os.ReadFile(filepath.Join(tmpDir, "gen.go"))
+	require.NoError(t, err)
+	genStr := string(genBytes)
+
+	assert.NotContains(t, genStr, "<no value>")
+	assert.NotContains(t, genStr, "RelationExpr")
+	assert.Contains(t, genStr, `schema.Int64Field("id", schema.Primary(), schema.AutoIncrement(), schema.Required())`)
+	assert.Contains(t, genStr, `schema.DBIndex()`)
+	assert.Contains(t, genStr, `schema.DBColumn("product_id")`)
+	assert.Contains(t, genStr, `schema.MaxDigits(10), schema.DecimalPlaces(2)`)
+	assert.Contains(t, genStr, `schema.ForeignKeyField("product_id", "Product", schema.OnDelete(schema.CascadeType("CASCADE")))`)
+	assert.Contains(t, genStr, `schema.OneToOneField("primary_product", "Product", schema.OnDelete(schema.CascadeType("SET_NULL")), schema.OnUpdate(schema.CascadeType("CASCADE")), schema.RelatedName("webshop_entry"))`)
+	assert.Contains(t, genStr, `schema.ManyToManyField("related_products", "Product", schema.Through("webshop_related"))`)
+}
