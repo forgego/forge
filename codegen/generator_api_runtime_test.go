@@ -92,3 +92,95 @@ func TestGeneratedAPI(t *testing.T) {
 	output, err := cmd.CombinedOutput()
 	require.NoError(t, err, "generated API module failed:\n%s", output)
 }
+
+func TestGeneratedReadOnlyViewSet(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds a generated module")
+	}
+	forgePath, err := filepath.Abs("..")
+	require.NoError(t, err)
+	moduleDir := t.TempDir()
+	pkgDir := filepath.Join(moduleDir, "webshops")
+	require.NoError(t, os.MkdirAll(pkgDir, 0o755))
+
+	require.NoError(t, os.WriteFile(filepath.Join(moduleDir, "go.mod"), []byte(
+		"module example.com/readonlyapi\n\ngo 1.23\n\nrequire github.com/forgego/forge v0.0.0\n\nreplace github.com/forgego/forge => "+forgePath+"\n"), 0o644))
+
+	require.NoError(t, os.WriteFile(filepath.Join(pkgDir, "models.go"), []byte(`package webshops
+
+import "github.com/forgego/forge/schema"
+
+type Webshop struct {
+	schema.BaseSchema
+	ID   int64  `+"`json:\"id\" db:\"id\"`"+`
+	Name string `+"`json:\"name\" db:\"name\"`"+`
+}
+
+func (Webshop) Fields() []schema.Field {
+	return []schema.Field{
+		schema.Int64Field("id", schema.Primary(), schema.AutoIncrement()),
+		schema.StringField("name", schema.Required()),
+	}
+}
+`), 0o644))
+
+	gen := NewGenerator(pkgDir, pkgDir)
+	gen.SetGenerateAPI(true)
+	require.NoError(t, gen.Generate())
+
+	require.NoError(t, os.WriteFile(filepath.Join(pkgDir, "readonly_runtime_test.go"), []byte(`package webshops
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/forgego/forge/api"
+	"github.com/forgego/forge/api/authentication"
+	"github.com/forgego/forge/api/permissions"
+	forgehttp "github.com/forgego/forge/server"
+)
+
+func TestGeneratedViewSetReadOnlyFieldAndResponses(t *testing.T) {
+	router := forgehttp.NewRouter()
+	viewset := NewWebshopViewSet()
+	viewset.ReadOnly = true
+	viewset.Authentication = []authentication.Authentication{}
+	viewset.Permissions = []permissions.Permission{}
+
+	apiRouter := api.NewRouter("/api/v1")
+	apiRouter.Register("webshops", viewset)
+	apiRouter.RegisterRoutes(router)
+
+	for _, tc := range []struct {
+		method string
+		path   string
+		body   string
+	}{
+		{http.MethodPost, "/api/v1/webshops/", `+"`"+`{"name":"shop"}`+"`"+`},
+		{http.MethodPut, "/api/v1/webshops/1", `+"`"+`{"name":"shop"}`+"`"+`},
+		{http.MethodPatch, "/api/v1/webshops/1", `+"`"+`{"name":"shop"}`+"`"+`},
+		{http.MethodDelete, "/api/v1/webshops/1", ""},
+	} {
+		req := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))
+		if tc.body != "" {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("%s %s: got %d, want 405 (%s)", tc.method, tc.path, rec.Code, rec.Body.String())
+		}
+		if allow := rec.Header().Get("Allow"); allow != http.MethodGet {
+			t.Fatalf("%s %s: Allow header = %q, want %q", tc.method, tc.path, allow, http.MethodGet)
+		}
+	}
+}
+`), 0o644))
+
+	cmd := exec.Command("go", "test", "-mod=mod", "./...")
+	cmd.Dir = moduleDir
+	output, err := cmd.CombinedOutput()
+	require.NoError(t, err, "readonly generated API module failed:\n%s", output)
+}
