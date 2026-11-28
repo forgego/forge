@@ -88,29 +88,126 @@ func (w *Writer) renderCombined(definitions []*ModelDefinition) ([]byte, error) 
 
 func schemaFieldExpression(field FieldDefinition) string {
 	builder := strings.TrimSuffix(field.Type, "Field") + "Field"
-	options := make([]string, 0, 4)
+	options := make([]string, 0, 8)
+	if field.PrimaryKey || optionBool(field.Options, "primary") || optionBool(field.Options, "primary_key") {
+		options = append(options, "schema.Primary()")
+	}
+	if field.AutoIncrement || optionBool(field.Options, "auto_increment") {
+		options = append(options, "schema.AutoIncrement()")
+	}
 	if field.Required {
 		options = append(options, "schema.Required()")
 	} else {
 		options = append(options, "schema.Optional()")
 	}
+	if optionBool(field.Options, "unique") {
+		options = append(options, "schema.Unique()")
+	}
+	if optionBool(field.Options, "blank") {
+		options = append(options, "schema.Blank()")
+	}
+	if optionBool(field.Options, "db_index") {
+		options = append(options, "schema.DBIndex()")
+	}
+	if dbCol, ok := field.Options["db_column"].(string); ok && dbCol != "" {
+		options = append(options, "schema.DBColumn("+strconv.Quote(dbCol)+")")
+	}
+	if dbType, ok := field.Options["db_type"].(string); ok && dbType != "" {
+		options = append(options, "schema.DBType("+strconv.Quote(dbType)+")")
+	}
+	if dbDefault, ok := field.Options["db_default"].(string); ok && dbDefault != "" {
+		options = append(options, "schema.DBDefault("+strconv.Quote(dbDefault)+")")
+	}
+	if dbComment, ok := field.Options["db_comment"].(string); ok && dbComment != "" {
+		options = append(options, "schema.DBComment("+strconv.Quote(dbComment)+")")
+	}
+	if dbCollation, ok := field.Options["db_collation"].(string); ok && dbCollation != "" {
+		options = append(options, "schema.DBCollation("+strconv.Quote(dbCollation)+")")
+	}
+	if dbTablespace, ok := field.Options["db_tablespace"].(string); ok && dbTablespace != "" {
+		options = append(options, "schema.DBTablespace("+strconv.Quote(dbTablespace)+")")
+	}
 	if maxLength, ok := field.Options["max_length"].(int); ok && maxLength > 0 {
 		options = append(options, fmt.Sprintf("schema.MaxLength(%d)", maxLength))
 	}
-	if unique, ok := field.Options["unique"].(bool); ok && unique {
-		options = append(options, "schema.Unique()")
+	if minLength, ok := field.Options["min_length"].(int); ok && minLength > 0 {
+		options = append(options, fmt.Sprintf("schema.MinLength(%d)", minLength))
+	}
+	if minVal, ok := optionFloat(field.Options, "min_value"); ok {
+		options = append(options, "schema.MinValue("+strconv.FormatFloat(minVal, 'g', -1, 64)+")")
+	}
+	if maxVal, ok := optionFloat(field.Options, "max_value"); ok {
+		options = append(options, "schema.MaxValue("+strconv.FormatFloat(maxVal, 'g', -1, 64)+")")
+	}
+	if maxDigits, ok := field.Options["max_digits"].(int); ok && maxDigits > 0 {
+		options = append(options, fmt.Sprintf("schema.MaxDigits(%d)", maxDigits))
+	}
+	if decPlaces, ok := field.Options["decimal_places"].(int); ok && decPlaces >= 0 {
+		options = append(options, fmt.Sprintf("schema.DecimalPlaces(%d)", decPlaces))
 	}
 	if defaultValue, ok := goLiteral(field.Default); ok {
 		options = append(options, "schema.Default("+defaultValue+")")
 	}
+	if optionBool(field.Options, "auto_now") {
+		options = append(options, "schema.AutoNow()")
+	}
+	if optionBool(field.Options, "auto_now_add") {
+		options = append(options, "schema.AutoNowAdd()")
+	}
+	if optionBool(field.Options, "write_only") {
+		options = append(options, "schema.WriteOnly()")
+	}
+	if editable, ok := field.Options["editable"].(bool); ok && !editable {
+		options = append(options, "schema.Editable(false)")
+	}
+	if optionBool(field.Options, "generated") {
+		if expr, ok := field.Options["generated_expr"].(string); ok && expr != "" {
+			stored := optionBool(field.Options, "generated_stored")
+			options = append(options, fmt.Sprintf("schema.GeneratedColumn(%s, %t)", strconv.Quote(expr), stored))
+		}
+	}
+	if verboseName, ok := field.Options["verbose_name"].(string); ok && verboseName != "" {
+		options = append(options, "schema.VerboseName("+strconv.Quote(verboseName)+")")
+	}
+	if helpText, ok := field.Options["help_text"].(string); ok && helpText != "" {
+		options = append(options, "schema.HelpText("+strconv.Quote(helpText)+")")
+	}
 	return fmt.Sprintf("schema.%s(%s, %s)", builder, strconv.Quote(field.Name), strings.Join(options, ", "))
 }
 
+func optionBool(options map[string]interface{}, key string) bool {
+	if options == nil {
+		return false
+	}
+	v, _ := options[key].(bool)
+	return v
+}
+
+func optionFloat(options map[string]interface{}, key string) (float64, bool) {
+	if options == nil {
+		return 0, false
+	}
+	switch v := options[key].(type) {
+	case float64:
+		return v, true
+	case int:
+		return float64(v), true
+	default:
+		return 0, false
+	}
+}
+
 func schemaRelationExpression(relation RelationDefinition) string {
-	builder := strings.TrimSuffix(relation.Type, "Field") + "Field"
-	options := make([]string, 0, 2)
+	builder := relationBuilderName(relation.Type)
+	options := make([]string, 0, 4)
 	if onDelete, ok := relation.Options["on_delete"].(string); ok && onDelete != "" {
 		options = append(options, "schema.OnDelete(schema.CascadeType("+strconv.Quote(onDelete)+"))")
+	}
+	if onUpdate, ok := relation.Options["on_update"].(string); ok && onUpdate != "" {
+		options = append(options, "schema.OnUpdate(schema.CascadeType("+strconv.Quote(onUpdate)+"))")
+	}
+	if relatedName, ok := relation.Options["related_name"].(string); ok && relatedName != "" {
+		options = append(options, "schema.RelatedName("+strconv.Quote(relatedName)+")")
 	}
 	if through, ok := relation.Options["through"].(string); ok && through != "" {
 		options = append(options, "schema.Through("+strconv.Quote(through)+")")
@@ -118,6 +215,17 @@ func schemaRelationExpression(relation RelationDefinition) string {
 	args := []string{strconv.Quote(relation.Name), strconv.Quote(relation.To)}
 	args = append(args, options...)
 	return fmt.Sprintf("schema.%s(%s)", builder, strings.Join(args, ", "))
+}
+
+func relationBuilderName(relationType string) string {
+	switch strings.TrimSuffix(relationType, "Field") {
+	case "OneToOne", "RelationOneToOne", "1":
+		return "OneToOneField"
+	case "ManyToMany", "RelationManyToMany", "2":
+		return "ManyToManyField"
+	default:
+		return "ForeignKeyField"
+	}
 }
 
 func goLiteral(value interface{}) (string, bool) {

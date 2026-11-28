@@ -68,17 +68,10 @@ var PostFieldsInstance = PostFields{
 
 ### Relations
 
-For each model with relations, generation adds `<Model>RelationExpr` (typed accessors
-returning `*orm.RelationField[...]`) and `<Model>RelationHelper`.
-
-:::caution
-The generated ForeignKey loader calls `instance.Get<RelationName>ID()`, built from the raw
-relation name (a relation named `author_id` produces `Getauthor_idID()`), and nothing
-generates that accessor — so a package with ForeignKey relations does not compile unless you
-declare the method yourself. Relations declared with functional constructors such as
-`ForeignKeyField` get no loader at all. Load related rows through the ORM instead until this
-is fixed.
-:::
+When a model defines `Relations()`, generation emits `Relations() []schema.Relation`
+on `<Model>Generated` so schema inspection and migrations see the declared foreign keys,
+one-to-one links, and many-to-many relations. Load related rows through the ORM
+(`SelectRelated`, `PrefetchRelated`, or explicit `Filter` queries on the target manager).
 
 ## Running Code Generation
 
