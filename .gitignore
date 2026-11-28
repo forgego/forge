@@ -77,6 +77,9 @@ build/
 out/
 *.min.js
 *.min.css
+/docs-site/static/llms.txt
+/docs-site/static/llms-full.txt
+/docs-site/static/search-index.json
 
 # Frontend specific
 node_modules/

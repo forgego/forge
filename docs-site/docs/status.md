@@ -109,7 +109,7 @@ The `release-gate` job runs every package serially against PostgreSQL with
 
 ## Not in this release
 
-These are out of scope for the v0.1 line and for the first v1 release. Where an
+These are out of scope for the v0.x line and for the first v1 release. Where an
 API exists, it fails with `NotImplemented`.
 
 - GraphQL.
@@ -145,7 +145,7 @@ variables, the code `forge generate` writes, the migration file format and the
   code, CLI flags, configuration keys or migration bookkeeping. Each break is
   listed under **Breaking** in the [changelog](/docs/changelog/) with the steps
   to upgrade.
-- A patch release (v0.1.2, ...) contains fixes. It does not break the public
+- A patch release (v0.2.1, ...) contains fixes. It does not break the public
   API on purpose; if a security fix has to, the changelog says so.
 - Regenerate code (`forge generate`) after every upgrade. Hand edits to
   generated files are not preserved.

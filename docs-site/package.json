@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
-    "start": "docusaurus start --port 3000",
-    "build": "docusaurus build --no-minify",
-    "build:fast": "docusaurus build --no-minify",
+    "generate-artifacts": "node ./scripts/generate-site-artifacts.mjs",
+    "start": "node ./scripts/generate-site-artifacts.mjs && docusaurus start --port 3000",
+    "build": "node ./scripts/generate-site-artifacts.mjs && docusaurus build --no-minify",
+    "build:fast": "node ./scripts/generate-site-artifacts.mjs && docusaurus build --no-minify",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
     "clear": "docusaurus clear",

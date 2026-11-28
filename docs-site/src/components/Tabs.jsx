@@ -6,13 +6,13 @@ export default function Tabs({ children, defaultValue, values, groupId }) {
 
   return (
     <div className="tabs-container">
-      <div className="tabs-list" role="tablist">
+      <div className="tabs" role="tablist">
         {values.map(({ value, label }) => (
           <button
             key={value}
             role="tab"
-            className={clsx('tabs-tab', {
-              'tabs-tab--active': selectedValue === value,
+            className={clsx('tabs__item', {
+              'tabs__item--active': selectedValue === value,
             })}
             onClick={() => setSelectedValue(value)}
             aria-selected={selectedValue === value}

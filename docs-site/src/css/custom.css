@@ -58,7 +58,7 @@
   --ifm-global-shadow-tl: 0 12px 32px rgba(15, 23, 42, 0.2);
 
   /* Syntax Highlighting */
-  --docusaurus-highlighted-code-line-bg: rgba(59, 130, 246, 0.1);
+  --docusaurus-highlighted-code-line-bg: rgba(194, 65, 12, 0.1);
 
   /* Navbar */
   --ifm-navbar-height: 70px;
@@ -67,9 +67,9 @@
 
   /* Forge Custom Tokens */
   --forge-accent-gradient: linear-gradient(135deg, #C2410C 0%, #F26B1D 100%);
-  --forge-card-glow: 0 10px 30px -10px rgba(59, 130, 246, 0.15);
-  --forge-badge-bg: rgba(59, 130, 246, 0.1);
-  --forge-badge-border: rgba(59, 130, 246, 0.25);
+  --forge-card-glow: 0 10px 30px -10px rgba(194, 65, 12, 0.15);
+  --forge-badge-bg: rgba(194, 65, 12, 0.08);
+  --forge-badge-border: rgba(194, 65, 12, 0.25);
   --forge-code-tab-active: #9A3412;
 }
 
@@ -85,7 +85,7 @@
 
   --ifm-color-accent: #FB923C;
   --ifm-color-accent-dark: #F26B1D;
-  --ifm-color-accent-light: #93c5fd;
+  --ifm-color-accent-light: #FDBA74;
 
   --ifm-background-color: #080c14;
   --ifm-background-surface-color: #0f172a;
@@ -95,22 +95,22 @@
   --ifm-font-color-secondary: #94a3b8;
   --ifm-heading-color: #ffffff;
   --ifm-link-color: #FB923C;
-  --ifm-link-hover-color: #7dd3fc;
+  --ifm-link-hover-color: #FDBA74;
 
   --ifm-code-background: #0d1527;
   --ifm-code-color: #e2e8f0;
 
   --ifm-border-color: #1e293b;
 
-  --docusaurus-highlighted-code-line-bg: rgba(56, 189, 248, 0.15);
+  --docusaurus-highlighted-code-line-bg: rgba(251, 146, 60, 0.14);
 
   --ifm-navbar-background-color: rgba(8, 12, 20, 0.9);
   --ifm-navbar-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 
   --forge-accent-gradient: linear-gradient(135deg, #FDBA74 0%, #F26B1D 100%);
-  --forge-card-glow: 0 12px 36px -8px rgba(56, 189, 248, 0.2);
-  --forge-badge-bg: rgba(56, 189, 248, 0.12);
-  --forge-badge-border: rgba(56, 189, 248, 0.3);
+  --forge-card-glow: 0 12px 36px -8px rgba(251, 146, 60, 0.18);
+  --forge-badge-bg: rgba(251, 146, 60, 0.12);
+  --forge-badge-border: rgba(251, 146, 60, 0.3);
   --forge-code-tab-active: #FB923C;
 }
 
@@ -234,7 +234,7 @@ pre code {
 }
 
 .menu__link--active {
-  background: rgba(59, 130, 246, 0.1);
+  background: rgba(194, 65, 12, 0.1);
   color: var(--ifm-color-accent);
   font-weight: 600;
 }
@@ -267,7 +267,7 @@ pre code {
 .table-of-contents__link--active {
   color: var(--ifm-color-accent);
   font-weight: 600;
-  background: rgba(59, 130, 246, 0.08);
+  background: rgba(194, 65, 12, 0.08);
 }
 
 /* Docs Content */
@@ -320,7 +320,7 @@ pre code {
 }
 
 .button--secondary:hover {
-  background: rgba(59, 130, 246, 0.1);
+  background: rgba(194, 65, 12, 0.1);
   transform: translateY(-1px);
 }
 
@@ -400,7 +400,7 @@ pre code {
 
 .navbar__search-input:focus {
   border-color: var(--ifm-color-accent);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(194, 65, 12, 0.12);
 }
 
 /* Announcement Bar */
@@ -493,7 +493,7 @@ pre code {
 
 /* Selection */
 ::selection {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(194, 65, 12, 0.2);
   color: var(--ifm-font-color-base);
 }
 

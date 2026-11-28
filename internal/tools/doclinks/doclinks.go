@@ -33,6 +33,24 @@ var (
 var backtickSuffixes = []string{".md", ".go", ".yml", ".yaml", ".json"}
 
 var backtickPathRoots = map[string]bool{
+	"admin":     true,
+	"api":       true,
+	"cli":       true,
+	"codegen":   true,
+	"db":        true,
+	"errors":    true,
+	"filter":    true,
+	"identity":  true,
+	"internal":  true,
+	"log":       true,
+	"netutil":   true,
+	"orm":       true,
+	"registry":  true,
+	"schema":    true,
+	"server":    true,
+	"stores":    true,
+	"utils":     true,
+	"validate":  true,
 	"forge":     true,
 	"docs":      true,
 	"docs-site": true,
@@ -40,6 +58,7 @@ var backtickPathRoots = map[string]bool{
 	"tests":     true,
 	"examples":  true,
 	"scripts":   true,
+	".agents":   true,
 	".github":   true,
 }
 
@@ -74,7 +93,7 @@ func collectFiles(root string) ([]string, error) {
 	} {
 		add(rel)
 	}
-	for _, tree := range []string{"docs", "docs-site/docs", "skills", "tests"} {
+	for _, tree := range []string{"docs", "docs-site/docs", "skills", ".agents/skills", "tests"} {
 		treePath := filepath.Join(absRoot, filepath.FromSlash(tree))
 		if _, err := os.Stat(treePath); os.IsNotExist(err) {
 			continue
@@ -89,8 +108,8 @@ func collectFiles(root string) ([]string, error) {
 			}
 			rel = filepath.ToSlash(rel)
 			if d.IsDir() {
-				// DOCUMENTATION-POLICY.md keeps these historical drafts local.
-				if rel == "docs/design/tasks" {
+				// DOCUMENTATION-POLICY.md keeps these historical drafts and local speckit skills untracked.
+				if rel == "docs/design/tasks" || strings.HasPrefix(d.Name(), "speckit-") {
 					return filepath.SkipDir
 				}
 				if path != treePath && (strings.HasPrefix(d.Name(), ".") || d.Name() == "node_modules" || d.Name() == "dist" || d.Name() == "build") {

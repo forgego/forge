@@ -12,7 +12,7 @@ This guide covers everything you need to install and set up Forge for developmen
 
 ### Go Version
 
-Forge requires Go 1.26 or higher. Check your version:
+Forge requires Go 1.26.10 or higher (Go 1.26.10+ or 1.27.3+ are tested in CI). Check your version:
 
 ```bash
 go version
@@ -22,8 +22,7 @@ If you need to install or upgrade Go, download it from [go.dev/dl](https://go.de
 
 ### Database
 
-Forge is tested with PostgreSQL 15; other versions are untested and SQLite is
-experimental. The [support contract](/docs/status/) has the details. Install
+PostgreSQL 15 is the primary CI-tested database; PostgreSQL 16+ and SQLite are partially tested, and applying generated migrations to SQLite is experimental. The [support contract](/docs/status/) has the details. Install
 PostgreSQL:
 
 - **macOS**: `brew install postgresql`
@@ -200,11 +199,12 @@ forge new myproject
 cd myproject
 ```
 
-Configure your database in `config/config.yaml`, then:
+Configure your database in `config/config.yaml`, add an app, then generate and migrate:
 
 ```bash
-forge generate
-forge makemigrations init --auto
+forge add app blog --example
+forge generate --models ./app/blog --output ./app/blog
+forge makemigrations initial --auto --models ./app/blog
 forge migrate up
 forge runserver
 ```

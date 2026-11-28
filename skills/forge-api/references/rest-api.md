@@ -1,509 +1,59 @@
----
-sidebar_position: 4
-description: Build REST APIs with forge's ViewSet framework. Complete guide to serializers, viewsets, authentication, permissions, and API best practices.
-keywords:
-  - forge rest api
-  - forge api
-  - go rest api
-  - forge viewset
-  - forge serializer
-  - api framework
-image: /forge-social-card.svg
----
+# REST API Reference
 
-# REST API
+## Serializers (`api/serializer.go`, `api/serializer_fields.go`)
 
-forge's REST API framework is inspired by Django REST Framework. Instead of
-writing HTTP handlers for every endpoint, you use ViewSets and get CRUD
-operations, pagination, and filtering with consistent defaults.
-
-## Why use it?
-
-Because writing API endpoints is repetitive:
-
-- **Automatic CRUD** - Get all the endpoints without writing them
-- **Pagination** - Built in, works out of the box
-- **Filtering** - Filter by any field via query params
-- **Serialization** - Control what fields get exposed
-- **Authentication** - Token, JWT, session—pick what you need
-- **Permissions** - Flexible permission system
-
-## Overview
-
-The REST API is built on the ViewSet pattern, providing:
-
-- Full CRUD operations (Create, Read, Update, Delete)
-- Automatic pagination
-- Filtering and ordering
-- Serialization
-- Error handling
-
-## Basic Usage
-
-### 1. Define a Serializer
-
-Create a serializer for your model:
+Always provide a factory (`func() api.Serializer`) and override `New()` so each request gets an isolated serializer instance:
 
 ```go
-package models
-
-import (
-    "github.com/forgego/forge/api"
-)
-
-// UserSerializer serializes User model
 type UserSerializer struct {
-    *api.BaseSerializer
+	*api.BaseSerializer
 }
 
 func NewUserSerializer() api.Serializer {
-    return &UserSerializer{
-        BaseSerializer: api.NewBaseSerializer(),
-    }
+	return &UserSerializer{BaseSerializer: api.NewBaseSerializer(nil)}
 }
 
-func (s *UserSerializer) Fields() []string {
-    return []string{"id", "username", "email", "is_active"}
-}
-
-func (s *UserSerializer) ReadOnlyFields() []string {
-    return []string{"id", "date_joined"}
-}
+func (s *UserSerializer) New() api.Serializer          { return NewUserSerializer() }
+func (s *UserSerializer) Fields() []string           { return []string{"id", "username", "email", "is_active"} }
+func (s *UserSerializer) ReadOnlyFields() []string   { return []string{"id", "date_joined"} }
+func (s *UserSerializer) WriteOnlyFields() []string  { return []string{"password"} }
 ```
 
-### 2. Create a ViewSet
+## ViewSets & `ViewSetConfig` (`api/viewset.go`, `api/viewset_config.go`)
 
 ```go
-package api
-
-import (
-    "myapp/models"
-    "github.com/forgego/forge/api"
-)
-
-func RegisterUserViewSet(router *api.Router) {
-    viewset := api.NewBaseViewSet(
-        func() api.Serializer {
-            return models.NewUserSerializer()
-        },
-        models.UserObjects, // Queryset: the generated manager
-        &models.User{},     // Model instance
-    )
-
-    router.Register("users", viewset)
+vs := &api.ViewSetConfig{
+	Model:                      &catalog.Product{},
+	Queryset:                   catalog.ProductObjects,
+	Serializer:                 NewProductSerializer(),
+	PerPage:                    20,
+	RejectUnknownRequestFields: true,
+	Authentication:             []authentication.Authentication{authentication.NewJWTAuthentication(jwtCfg)},
+	Permissions:                []permissions.Permission{permissions.IsAuthenticated{}},
+	Throttles:                  []throttling.Throttle{throttling.NewUserRateThrottle(100, time.Minute)},
 }
+apiRouter.Register("products", vs)
 ```
 
-### 3. Register Routes
+For read-only endpoints (or managers without write methods), set `ReadOnly: true` so `Router.Register` only requires read methods.
 
-In your `main.go`:
+## Filtering, Ordering & Pagination
 
-```go
-import (
-    "github.com/forgego/forge/api"
-    "github.com/forgego/forge/server"
-)
+- **Pagination**: `?page=2&page_size=50`
+- **Ordering**: `?ordering=-price,name`
+- **Field filters** (`api/viewset.go` `buildFilterExpr`): `?is_active=true`, `?name__contains=desk`, `?price__gte=10`, `?price__lte=100`, `?name__startswith=a`, `?name__endswith=z`, `?id__in=1,2,3`, `?deleted_at__isnull=true` (`iexact` and `range` are not handled by `BaseViewSet.buildFilterExpr`).
 
-func main() {
-    // ... setup code ...
+## Error Format (`api/errors/`)
 
-    // Create API router
-    apiRouter := api.NewRouter("/api/v1")
-
-    // Register viewsets
-    api.RegisterUserViewSet(apiRouter)
-    api.RegisterPostViewSet(apiRouter)
-
-    // Register on HTTP router
-    server.RegisterRoutes(func(router *server.Router) {
-        apiRouter.RegisterRoutes(router)
-    })
-}
-```
-
-## API Endpoints
-
-Once registered, your ViewSet automatically provides these endpoints:
-
-### List (GET /api/v1/users/)
-
-Returns paginated list of users.
-
-**Query Parameters:**
-- `page` - Page number (default: 1)
-- `page_size` - Items per page (default: 20)
-- `search` - Search query
-- `ordering` - Order by field (use `-` for descending)
-- `is_active` - Filter by field
-- `username__contains` - Field lookup filters
-
-**Response:**
-```json
-{
-  "count": 100,
-  "next": "http://example.com/api/v1/users/?page=2",
-  "previous": null,
-  "results": [
-    {
-      "id": 1,
-      "username": "john",
-      "email": "john@example.com",
-      "is_active": true
-    }
-  ]
-}
-```
-
-### Detail (GET /api/v1/users/\{id\}/)
-
-Returns a single user.
-
-**Response:**
-```json
-{
-  "id": 1,
-  "username": "john",
-  "email": "john@example.com",
-  "is_active": true
-}
-```
-
-### Create (POST /api/v1/users/)
-
-Creates a new user.
-
-**Request:**
-```json
-{
-  "username": "jane",
-  "email": "jane@example.com",
-  "is_active": true
-}
-```
-
-**Response:**
-```json
-{
-  "id": 2,
-  "username": "jane",
-  "email": "jane@example.com",
-  "is_active": true
-}
-```
-
-### Update (PUT /api/v1/users/\{id\}/)
-
-Updates a user (full update).
-
-**Request:**
-```json
-{
-  "username": "jane_updated",
-  "email": "jane@example.com",
-  "is_active": true
-}
-```
-
-### Partial Update (PATCH /api/v1/users/\{id\}/)
-
-Partially updates a user.
-
-**Request:**
-```json
-{
-  "is_active": false
-}
-```
-
-### Delete (DELETE /api/v1/users/\{id\}/)
-
-Deletes a user.
-
-**Response:** 204 No Content
-
-## Pagination
-
-Pagination is automatic. Use query parameters:
-
-```
-GET /api/v1/users/?page=2&page_size=50
-```
-
-**Response Format:**
-```json
-{
-  "count": 100,
-  "next": "http://example.com/api/v1/users/?page=3&page_size=50",
-  "previous": "http://example.com/api/v1/users/?page=1&page_size=50",
-  "results": [...]
-}
-```
-
-## Filtering
-
-Filter by field values:
-
-```
-GET /api/v1/users/?is_active=true
-GET /api/v1/users/?username__contains=john
-GET /api/v1/users/?date_joined__gte=2024-01-01
-```
-
-### Filter Lookups
-
-- `exact` - Exact match (default)
-- `iexact` - Case-insensitive exact match
-- `contains` - Contains substring
-- `icontains` - Case-insensitive contains
-- `startswith` - Starts with
-- `endswith` - Ends with
-- `gt` - Greater than
-- `gte` - Greater than or equal
-- `lt` - Less than
-- `lte` - Less than or equal
-- `in` - Value in list
-- `isnull` - Is null
-- `range` - Range filter
-
-## Ordering
-
-Use the `ordering` parameter:
-
-```
-GET /api/v1/users/?ordering=-date_joined,username
-```
-
-Use `-` prefix for descending order.
-
-## Search
-
-Full-text search via `search` parameter:
-
-```
-GET /api/v1/users/?search=john
-```
-
-Searches across fields specified in the serializer's `SearchFields()`.
-
-## Custom Serializers
-
-### Custom Field Serialization
-
-```go
-type UserSerializer struct {
-    *api.BaseSerializer
-}
-
-func (s *UserSerializer) SerializeField(field string, value interface{}) interface{} {
-    switch field {
-    case "password":
-        return nil // Never serialize password
-    case "date_joined":
-        return value.(time.Time).Format(time.RFC3339)
-    default:
-        return value
-    }
-}
-```
-
-### Nested Serialization
-
-```go
-type PostSerializer struct {
-    *api.BaseSerializer
-}
-
-func (s *PostSerializer) Fields() []string {
-    return []string{"id", "title", "content", "author", "created_at"}
-}
-
-func (s *PostSerializer) NestedFields() map[string]api.Serializer {
-    return map[string]api.Serializer{
-        "author": NewUserSerializer(),
-    }
-}
-```
-
-## Custom Viewsets
-
-Create custom viewsets for complex logic:
-
-```go
-type PostViewSet struct {
-    *api.BaseViewSet
-}
-
-func NewPostViewSet() *PostViewSet {
-    return &PostViewSet{
-        BaseViewSet: api.NewBaseViewSet(
-            NewPostSerializer,
-            PostObjects,
-            &Post{},
-        ),
-    }
-}
-
-func (vs *PostViewSet) Create(w http.ResponseWriter, r *http.Request) {
-    // your custom logic here
-}
-
-func (vs *PostViewSet) List(w http.ResponseWriter, r *http.Request) {
-    // your custom filtering logic here
-}
-```
-
-## Permissions
-
-Add permission checks:
-
-```go
-viewset := api.NewBaseViewSet(...)
-viewset.SetPermissions(
-    api.RequireAuthenticated(),
-    api.RequirePermission("can_view_user"),
-)
-```
-
-## Authentication
-
-Add authentication to your API:
-
-```go
-apiRouter := api.NewRouter("/api/v1")
-apiRouter.Use(auth.RequireAuth())
-```
-
-## Error Handling
-
-API errors are returned in a consistent format:
+Validation and request-contract errors return `400 Bad Request` with problem-detail JSON:
 
 ```json
 {
-  "error": "Validation failed",
-  "details": {
-    "username": ["This field is required."],
-    "email": ["Enter a valid email address."]
+  "status": 400,
+  "code": "VALIDATION_ERROR",
+  "detail": "Validation failed",
+  "errors": {
+    "price": ["price must be positive"]
   }
 }
 ```
-
-## Best Practices
-
-1. **Use Serializers** - Always use serializers to control API output
-2. **Paginate Lists** - Always paginate list endpoints
-3. **Filter Appropriately** - Add filters for commonly queried fields
-4. **Validate Input** - Use model validation in serializers
-5. **Handle Errors** - Return consistent error responses
-6. **Use HTTP Status Codes** - Use appropriate status codes (200, 201, 400, 404, 500)
-
-## Examples
-
-### Complete API Setup
-
-```go
-package main
-
-import (
-    "github.com/forgego/forge/api"
-    "github.com/forgego/forge/server"
-    "myapp/api"
-)
-
-func main() {
-    // ... your setup code ...
-
-    apiRouter := api.NewRouter("/api/v1")
-    api.RegisterUserViewSet(apiRouter)
-    api.RegisterPostViewSet(apiRouter)
-    api.RegisterCategoryViewSet(apiRouter)
-
-    server.RegisterRoutes(func(router *server.Router) {
-        apiRouter.RegisterRoutes(router)
-    })
-}
-```
-
-## Next Steps
-
-- [Queries Guide](../../forge-models/references/models.md) - Models backing your API
-- [Security Guide](../../../SECURITY.md) - Secure your API
-
-## Appendix: Manual Handlers Without ViewSets
-
-ViewSets are sugar. The same endpoint as plain chi handlers, using the
-generated manager and field instances directly:
-
-```go
-func RegisterPostRoutes(router chi.Router) {
-    router.Route("/api/posts", func(r chi.Router) {
-        r.Get("/", listPosts)
-        r.Post("/", createPost)
-        r.Get("/{id}", getPost)
-        r.Put("/{id}", updatePost)
-        r.Delete("/{id}", deletePost)
-    })
-}
-
-func listPosts(w http.ResponseWriter, r *http.Request) {
-    ctx := r.Context()
-
-    posts, err := PostObjects.
-        Filter(PostFieldsInstance.Published.Eq(true)).
-        OrderBy("-created_at").
-        All(ctx)
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
-
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(posts)
-}
-
-func createPost(w http.ResponseWriter, r *http.Request) {
-    ctx := r.Context()
-
-    var post Post
-    if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
-        http.Error(w, err.Error(), http.StatusBadRequest)
-        return
-    }
-
-    if err := PostObjects.Create(ctx, &post); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
-
-    w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(http.StatusCreated)
-    json.NewEncoder(w).Encode(post)
-}
-```
-
-Test the loop with curl (server runs via `forge runserver`):
-
-```bash
-curl -X POST http://localhost:8000/api/posts \
-  -H "Content-Type: application/json" \
-  -d '{"title": "My First Post", "content": "...", "published": true}'
-
-curl http://localhost:8000/api/posts
-curl http://localhost:8000/api/posts/1
-
-curl -X PUT http://localhost:8000/api/posts/1 \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Updated Title", "content": "...", "published": true}'
-
-curl -X DELETE http://localhost:8000/api/posts/1
-```
-
-## Appendix: Codegen and Migration Ordering
-
-```bash
-forge generate        # emits <app>/gen.go (managers, field instances)
-forge makemigrations  # detect model changes
-forge migrate up      # apply to the database
-```
-
-Generate before migrating: migrations are derived from models, and the
-generated managers are what ViewSets query at runtime.

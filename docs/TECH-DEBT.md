@@ -16,7 +16,7 @@
 
 ## Admin
 
-- [ ] Admin template rendering, uploads, pickers missing.
+- [ ] Admin Go template rendering and file uploads missing (relation pickers are implemented via `SearchableSelect`).
 - [x] History/audit manager: implemented thread-safe `MemoryHistoryManager`,
       hooked into `Admin[T]` lifecycle (`CreateObject`, `UpdateObject`, `DeleteObject`),
       and tested `/history` REST endpoint.
@@ -28,12 +28,6 @@
 
 ## Tooling / repo hygiene
 
-- [ ] TODO scanner reports ~500 hits but only 1 is first-party
-      (`log/encoder.go:258`, trivial comment); the rest is
-      lockfiles, `docs-site/build`, `helper-projects`, `.kilocode` noise.
-      Scope the scanner to the root module packages, `examples/`, `tests/`.
-- [ ] TODO-history churn is self-referential (counts ops run logs as
-      new/resolved TODOs). Exclude `ops/` from the scan.
 - [ ] Runner env gotchas: default Go build cache may be access-denied
       (rerun with a temp `GOCACHE`); `git dubious ownership` needs the
       safe-directory policy. Document in CI/runner notes.

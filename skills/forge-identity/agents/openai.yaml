@@ -1,0 +1,4 @@
+interface:
+  display_name: "Forge Identity"
+  short_description: "Users, password hashing, sessions, tokens, and permissions."
+  default_prompt: "Help me set up Forge authentication, password hashing, sessions, tokens, or permissions."

@@ -52,7 +52,7 @@ a development starting point.
 
 ## PostgreSQL
 
-- Version: 15 is the tested version. Newer majors are untested.
+- Version: 15 is the CI-tested primary version; 16+ is partially tested (admin browser E2E runs against PostgreSQL 16). See the [support contract](/docs/status/).
 - Create a dedicated database and role for the application. The role needs to
   create tables for `forge migrate up`; if you run migrations with a separate
   owner role, the application role only needs data privileges.

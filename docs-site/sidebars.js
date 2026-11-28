@@ -9,13 +9,13 @@ const sidebars = {
   docs: [
     {
       type: 'category',
-      label: 'Start Here',
-      items: ['index', 'introduction', 'quickstart', 'installation', 'status', 'deployment'],
+      label: 'Getting Started',
+      items: ['index', 'introduction', 'quickstart', 'installation', 'status', 'upgrading'],
     },
     {
       type: 'category',
-      label: 'Core Build',
-      items: ['models', 'orm', 'migrations'],
+      label: 'Core Guides',
+      items: ['models', 'codegen', 'orm', 'migrations', 'filters', 'testing'],
     },
     {
       type: 'category',
@@ -24,7 +24,7 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'API',
+      label: 'REST API',
       items: [
         'api/overview',
         'api/serializers',
@@ -38,37 +38,40 @@ const sidebars = {
         'api/versioning',
         'api/renderers-parsers',
         'api/errors',
+        'validation-errors',
         'api/openapi',
       ],
     },
     {
       type: 'category',
-      label: 'Platform',
-      items: ['filters', 'identity', 'operations', 'server/overview', 'server/middleware', 'server/security', 'server/health'],
+      label: 'Server, Identity & Ops',
+      items: ['identity', 'operations', 'server/overview', 'server/middleware', 'server/security', 'server/health', 'deployment'],
     },
     {
       type: 'category',
-      label: 'Config',
+      label: 'Configuration',
       items: ['config/overview', 'config/app', 'config/server', 'config/database', 'config/security', 'config/logging', 'config/errors'],
     },
     {
       type: 'category',
       label: 'Reference',
       items: [
+        'cli',
         'features',
         'api-reference',
         'api-reference/schema',
+        'api-reference/fields',
+        'api-reference/relations',
         'api-reference/queryset',
         'api-reference/manager',
-        'api-reference/fields',
         'api-reference/hooks',
-        'api-reference/relations',
       ],
     },
     {
       type: 'category',
-      label: 'Project',
+      label: 'AI & Project',
       items: [
+        'ai-skills',
         'changelog',
         'community',
         'contributing/development',

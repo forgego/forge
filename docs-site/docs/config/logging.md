@@ -1,6 +1,6 @@
 ---
-sidebar_position: 6
-description: Logging configuration.
+title: Logging Settings
+description: Structured logging levels, formats, and console/file outputs.
 image: /social-card.png
 ---
 
@@ -8,20 +8,20 @@ image: /social-card.png
 
 ## Levels
 
-- trace, debug, info, warn, error, fatal
+- `trace`, `debug`, `info`, `warn`, `error`, `fatal`
 
 ## Formats
 
-- json, text, console
+- `json`, `text`, `console`
 
 ## Outputs
 
-- console, file
-- remote: not implemented; configuring it makes logger construction fail with `NotImplemented`
+- `console`, `file`
+- `remote`: not implemented; configuring it makes logger construction fail with `NotImplemented`
 
-## Production sampling
+## Programmatic Sampling
 
-Configure sampling to limit log volume in production.
+YAML configuration does not expose sampling keys (`config/logging_settings.go`). To sample high-volume logs in Go code, use `log.NewBuilder().Sampling(...)`.
 
 ## Configuration keys
 

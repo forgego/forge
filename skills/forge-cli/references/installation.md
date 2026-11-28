@@ -1,164 +1,51 @@
----
-sidebar_position: 1
-description: Install forge framework on your machine. Step-by-step guide for setting up forge CLI, PostgreSQL, and your development environment.
-keywords:
-  - install forge
-  - forge installation
-  - setup forge
-  - forge cli
-  - forge setup
-image: /forge-social-card.svg
----
-
-# Installation
-
-Get forge up and running on your machine in a few minutes.
+# Forge CLI Installation & Project Layout
 
 ## Prerequisites
 
-Before installing forge, make sure you have:
+- **Go 1.26.10 or later** (required by `go.mod`; Go < 1.26.10 and 1.27.0–1.27.2 are unsupported).
+- **PostgreSQL 15** (primary, CI-tested database).
+- **C compiler** (`gcc` on Linux, Xcode Command Line Tools on macOS) if using SQLite (`go-sqlite3` requires cgo).
 
-- **Go 1.26 or later** - [Download Go](https://go.dev/dl/)
-- **PostgreSQL 12 or later** - [Download PostgreSQL](https://www.postgresql.org/download/)
-- **Basic knowledge of Go** - Familiarity with Go syntax and concepts
-
-## Install forge CLI
-
-The forge CLI tool is your main interface for creating projects, generating code, running migrations, and starting your development server.
-
-### Option 1: Build from Source (Recommended for development)
-
-Clone the repository and build:
-
-```bash
-git clone https://github.com/forgego/forge.git
-cd forge
-go build -o forge ./cmd/forge
-```
-
-Add `forge` to your PATH:
-```bash
-# Add to your shell profile (~/.bashrc, ~/.zshrc, etc.)
-export PATH="$PATH:/path/to/forge"
-```
-
-### Option 2: Install via go install
+## Install the CLI
 
 ```bash
 go install github.com/forgego/forge/cmd/forge@latest
+forge version
 ```
 
-Make sure `$GOPATH/bin` or `$HOME/go/bin` is in your PATH.
-
-### Option 3: Release Binaries
-
-Pre-compiled release binaries are published with tagged releases on GitHub:
-`https://github.com/forgego/forge/releases`
-
-### Verify Installation
-
-Check that forge is installed correctly:
+If `forge` is not found, add Go's bin directory to `PATH`:
 
 ```bash
-forge --version
-forge help
+export PATH="$PATH:$(go env GOPATH)/bin"
 ```
 
-You should see the version number and available commands.
+## Project Layout Created by `forge new`
 
-## Set Up PostgreSQL
-
-forge uses PostgreSQL as its primary database. Make sure PostgreSQL is installed and running.
-
-### Create a Database
-
-Create a database for your project:
+Running:
 
 ```bash
-# Connect to PostgreSQL
-psql -U postgres
-
-# Create database
-CREATE DATABASE myapp_db;
-
-# Exit
-\q
+forge new myapp --database postgres --template simple --docker=false
 ```
 
-### Test Connection
+creates:
 
-Verify you can connect to PostgreSQL:
-
-```bash
-psql -U postgres -d myapp_db -c "SELECT version();"
-```
-
-## Project Structure
-
-When you create a new forge project, you'll get this structure:
-
-```
+```text
 myapp/
-├── main.go              # Application entry point
-├── go.mod               # Go module file
+├── .forge/
+│   └── config.yaml     # Project metadata
+├── app/                # Application packages (created via `forge add app <name>`)
+├── cmd/
+│   └── server/
+│       └── main.go     # Server entry point (required by `forge runserver`)
 ├── config/
-│   └── config.yaml      # Configuration file
-├── models/              # Your model definitions
-│   └── example.go       # Example model
-└── migrations/          # Database migrations
+│   └── config.yaml     # Non-secret configuration
+├── migrations/         # SQL migration files (*_*.up.sql / *_*.down.sql)
+├── static/
+├── templates/
+├── .env                # Generated FORGE_SECURITY_* secrets (do not commit)
+└── go.mod
 ```
 
-## Next Steps
+## Database & Environment Variables
 
-Now that you have forge installed:
-
-1. [Create your first project](/docs/getting-started/quickstart)
-2. [Learn about models](/docs/guides/models)
-3. [Explore the examples](/docs/examples/blog/)
-
-## Troubleshooting
-
-### Go Version Issues
-
-If you get errors about Go version, make sure you're using Go 1.26 or later:
-
-```bash
-go version
-```
-
-### PostgreSQL Connection Issues
-
-If you can't connect to PostgreSQL:
-
-1. Make sure PostgreSQL is running:
-   ```bash
-   # Linux/macOS
-   sudo systemctl status postgresql
-   
-   # macOS (Homebrew)
-   brew services list
-   ```
-
-2. Check your connection settings in `config/config.yaml`
-
-3. Verify PostgreSQL is listening on the correct port (default: 5432)
-
-### Permission Issues
-
-If you get permission errors:
-
-- Make sure your PostgreSQL user has the necessary permissions
-- Check that the database exists and is accessible
-- Verify file permissions for your project directory
-
-## Development Tools
-
-Recommended tools for forge development:
-
-- **IDE**: VS Code with Go extension, GoLand, or Vim/Neovim with gopls
-- **Database Client**: pgAdmin, DBeaver, or psql
-- **API Testing**: Postman, Insomnia, or curl
-
-## What's Next?
-
-Ready to create your first application? Head over to the [Quick Start Guide](/docs/getting-started/quickstart)!
+Secrets generated by `forge new` are written to `.env` (`FORGE_SECURITY_SECRET_KEY`, `FORGE_SECURITY_CSRF_SECRET_KEY`, `FORGE_SECURITY_SESSION_SECRET`). In production (`app.env: production`), all three secrets are required, must be at least 32 characters, and must be distinct.

@@ -1,0 +1,22 @@
+[
+  {
+    "query": "How do I define a custom Serializer with ReadOnlyFields and register a ViewSet on api.Router?",
+    "expected_trigger": true
+  },
+  {
+    "query": "Why did Router.Register panic with a queryset mismatch on my ViewSet?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I configure TokenAuthentication, IsAuthenticated, and throttling on a Forge ViewSet?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I configure ListDisplay and Fieldsets in the Forge admin UI?",
+    "expected_trigger": false
+  },
+  {
+    "query": "How do I write a BeforeCreate hook on a Forge schema model?",
+    "expected_trigger": false
+  }
+]

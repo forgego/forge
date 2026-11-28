@@ -95,8 +95,13 @@ const config = {
             position: 'left',
           },
           {
-            to: '/docs/changelog',
-            label: 'Changelog',
+            to: '/docs/cli',
+            label: 'CLI',
+            position: 'left',
+          },
+          {
+            to: '/docs/ai-skills',
+            label: 'AI Skills',
             position: 'left',
           },
           {
@@ -131,6 +136,8 @@ const config = {
           {
             title: 'Project & Community',
             items: [
+              {label: 'AI Skills & llms.txt', to: '/docs/ai-skills'},
+              {label: 'llms.txt', href: 'https://forgego.github.io/forge/llms.txt'},
               {label: 'Changelog', to: '/docs/changelog'},
               {label: 'Community', to: '/docs/community'},
               {label: 'Security', to: '/docs/security'},
@@ -143,7 +150,7 @@ const config = {
       prism: {
         theme: lightCodeTheme,
         darkTheme: darkCodeTheme,
-        additionalLanguages: ['go', 'bash', 'yaml', 'sql'],
+        additionalLanguages: ['go', 'bash', 'yaml', 'sql', 'json', 'toml'],
       },
       colorMode: {
         defaultMode: 'light',

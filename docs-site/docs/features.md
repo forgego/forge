@@ -16,7 +16,7 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 - **Field types**: integers (Int64, Int32), strings, text, booleans, dates, times, timestamps, floats (Float64, Float32), fixed-point decimals, email, URL, UUID, JSON/JSONB, and binary bytes
 - **Generated Columns**: Field metadata for SQL computed columns (`schema.GeneratedColumn("expr", stored)`); create the column in a manual migration because source generation does not yet emit its DDL.
 - **Database options**: custom column names (`DBColumn`), SQL default expressions (`DBDefault`), collation (`DBCollation`), column comments (`DBComment`), tablespace (`DBTablespace`), and index flags (`DBIndex`)
-- **Choices & Enums**: Permitted value-label sets with `schema.Choices` and `schema.NewChoice`
+- **Choices & Enums**: Permitted value-label sets with `schema.ChoicesOpts` / `schema.ChoicesFromPairsOpts` and `schema.NewChoice`
 - **Referential Integrity & Cascades**: `CascadeCASCADE`, `CascadePROTECT`, `CascadeSET_NULL`, `CascadeSET_DEFAULT`, `CascadeDO_NOTHING`
 - **Lifecycle hooks**: `BeforeCreate`, `AfterCreate`, `BeforeUpdate`, `AfterUpdate`, `BeforeSave`, `AfterSave`, `BeforeDelete`, `AfterDelete`, and `Clean` validation
 
@@ -144,8 +144,7 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 - Generic viewsets for CRUD operations
 - Automatic URL routing
 - Custom action methods
-- Bulk operations
-- Filtering and search
+- Filtering (query params) and ordering
 - Pagination support
 
 ### Authentication
@@ -166,17 +165,14 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 - Custom permission classes
 
 ### Throttling
-- Per-user rate limits
-- Anonymous user limits
-- Custom throttle rules
-- Scope-based throttling
-- Burst protection
+- Per-user rate limits (`NewUserRateThrottle`)
+- Anonymous user limits (`NewAnonRateThrottle`)
+- Fixed-window counters backed by the application database
 
 ### API Features
 - Page-number pagination (`page`, `page_size`)
 - Ordering by fields
-- Search across fields
-- Filtering with query params
+- Filtering with query params (field lookups; `?search=` requires wiring `api/filters.SearchFilter`)
 - Content negotiation
 - API versioning (header, query, path)
 
@@ -196,7 +192,6 @@ Forge provides a toolkit for building web applications in Go. This page outlines
 - Session management
 - Token generation and validation
 - Groups and permissions
-- Custom user models
 
 ### Auth Services
 - User service for CRUD
@@ -248,7 +243,7 @@ Request IDs, error handling, logging, sessions and CSRF are installed by `server
 - Structured logging with levels (debug, info, warn, error)
 - Multiple output formats (console, JSON)
 - Destinations: console and file (remote output is not implemented)
-- Sampling for high-volume logs
+- Programmatic sampling via `log.NewBuilder().Sampling(...)`
 - Stacktrace control
 - Request ID correlation
 
@@ -256,7 +251,7 @@ Request IDs, error handling, logging, sessions and CSRF are installed by `server
 - Standardized error codes
 - Problem details format (RFC 7807)
 - Error sanitization for security
-- Idempotency keys ([partially tested](./status.md))
+- Idempotency keys ([partially tested](./status.md); in-memory store only, `NewDatabaseStore` returns `NotImplemented`)
 - User-friendly error messages
 - Developer debug info
 
@@ -278,7 +273,7 @@ Request IDs, error handling, logging, sessions and CSRF are installed by `server
 
 ### User Management
 - `forge createsuperuser` - Create admin user
-- `forge auth` - Auth utilities
+- `forge auth` - Scaffold `app/auth` and wire authentication into `cmd/server/main.go`
 
 ### Code Scaffolding
 - `forge add app` - Create new app
@@ -288,7 +283,7 @@ Request IDs, error handling, logging, sessions and CSRF are installed by `server
 - `forge add service` - Create a service interface and implementation. `--inject` writes a manual dependency wiring placeholder comment only; it does not wire dependencies automatically.
 
 ### Development Tools
-- `forge shell` - Interactive Go shell
+- `forge shell` - Minimal interactive command shell (`help`, `history`, `clear`, `models`, `dbinfo`)
 - `forge test` - Run tests
 - `forge check` - Validate configuration
 
@@ -311,7 +306,6 @@ Request IDs, error handling, logging, sessions and CSRF are installed by `server
 ### Logging Config
 - Log level and output format
 - Console and file destinations, file rotation
-- Sampling rules
 
 ## What Makes Forge Different
 

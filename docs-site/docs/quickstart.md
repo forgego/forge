@@ -13,7 +13,7 @@ admin screen.
 
 ## Before you begin
 
-- Go 1.26 or later ([install Go](https://go.dev/dl/)).
+- Go 1.26.10 or later ([install Go](https://go.dev/dl/)).
 - PostgreSQL running locally, with a database and credentials you can use.
 - A C compiler if you choose SQLite instead. This walkthrough uses PostgreSQL.
 

@@ -1,17 +1,33 @@
 ---
-sidebar_position: 2
-description: Application settings.
+title: App Settings
+description: Application-level settings (name, env, version, debug).
 image: /social-card.png
 ---
 
 # App Settings
 
-- Name
-- Env
-- Version
-- Debug (`app.debug`, default `false`): allows the profiling routes when
-  `server.enable_profiling` is also on, and selects the development logger
-  for commands run through the `forge` CLI. It does not change a server's
-  logger: the `main.go` from `forge new` builds it from `logging.level` and
-  `logging.format` (see [logging](/docs/config/logging/)). Rejected at startup
-  when `app.env` is `production`.
+`AppSettings` (`config/settings.go`) controls application identity and environment mode.
+
+## Keys & Defaults
+
+| Key | Env Override | Default | Description |
+|---|---|---|---|
+| `app.name` | `FORGE_APP_NAME` | `"forge"` | Application display name |
+| `app.env` | `FORGE_APP_ENV` | `"development"` | Environment (`development`, `staging`, `production`) |
+| `app.version` | `FORGE_APP_VERSION` | `"0.1.0"` | Application version string |
+| `app.debug` | `FORGE_APP_DEBUG` | `false` | Enables debug behavior (e.g. profiling routes when `server.enable_profiling` is true) |
+
+## Production Rules
+
+When `app.env` is `production` (case-insensitive):
+- `Server.Start` / `StartWithGracefulShutdown` refuses to listen if `app.debug` is `true`.
+- Session and CSRF cookies set `Secure: true`.
+- All three `security.*` secrets must be explicitly set, at least 32 characters long, and distinct.
+
+```yaml
+app:
+  name: store
+  env: production
+  version: 1.0.0
+  debug: false
+```

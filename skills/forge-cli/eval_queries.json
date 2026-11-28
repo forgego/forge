@@ -1,0 +1,26 @@
+[
+  {
+    "query": "How do I scaffold a new Forge project and run codegen and migrations?",
+    "expected_trigger": true
+  },
+  {
+    "query": "What flags does forge generate take when generating REST API files?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I add a new app and model using the forge CLI?",
+    "expected_trigger": true
+  },
+  {
+    "query": "Why did forge makemigrations fail without a name argument?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I run the Forge framework unit and integration tests inside the forge repo?",
+    "expected_trigger": false
+  },
+  {
+    "query": "How do I configure Fieldsets and SearchFields on admin.Config[T]?",
+    "expected_trigger": false
+  }
+]

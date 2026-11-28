@@ -49,8 +49,8 @@ func (ProductSerializer) Fields() []string {
     }
 }
 
-// ReadonlyFields prevents clients from overriding generated or audit fields
-func (ProductSerializer) ReadonlyFields() []string {
+// ReadOnlyFields prevents clients from overriding generated or audit fields
+func (ProductSerializer) ReadOnlyFields() []string {
     return []string{"id", "price_with_tax", "created_at"}
 }
 
@@ -75,7 +75,7 @@ Forge calls the serializer's `Validate()` method. Methods named `ValidatePrice` 
 | :--- | :--- | :--- |
 | `Fields()` | `[]string` | Whitelist of field names to serialize. |
 | `Exclude()` | `[]string` | Blacklist of field names to omit. |
-| `ReadonlyFields()` | `[]string` | Fields serialized in responses but ignored in `POST`/`PUT`/`PATCH`. |
+| `ReadOnlyFields()` | `[]string` | Fields serialized in responses but ignored in `POST`/`PUT`/`PATCH`. |
 | `WriteOnlyFields()`| `[]string` | Fields accepted in requests but never included in responses (e.g. passwords). |
 
 ---

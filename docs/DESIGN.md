@@ -112,14 +112,14 @@ Invariants are the rules we preserve even during large refactors.
 - Use Go naming conventions (`ID` vs `Id` depends on generator conventions; generated code must be consistent).
 - Avoid suffixes that force ceremony (for example, `Build()` patterns in schema were removed in favor of direct chaining).
 
-### 5.2 Fluent builder style
+### 5.2 Functional builder style
 
-The schema DSL uses fluent chains:
+The schema DSL uses functional constructors and options:
 
-- Field: `schema.String("email").WithRequired().WithUnique().WithMaxLength(255)`
-- Relation: `schema.ForeignKey("customer_id", "Customer").WithOnDelete(schema.CascadeCASCADE)`
+- Field: `schema.StringField("email", schema.Required(), schema.Unique(), schema.MaxLength(255))`
+- Relation: `schema.ForeignKeyField("customer_id", "Customer", schema.OnDelete(schema.CascadeCASCADE))`
 
-Design reason: chainable methods map cleanly to AST extraction and maintain readability.
+Design reason: functional constructor calls map cleanly to AST extraction and maintain readability.
 
 ### 5.3 Immutability and chaining
 
@@ -167,7 +167,7 @@ Used to build composite systems with injected dependencies.
 Used for fluent construction of schema fields/relations and query expressions.
 
 - Schema field constructors and options: `schema/fields_functional.go`.
-- Relations chain methods: `schema/relation.go`.
+- Relation constructors and options: `schema/relations_functional.go`.
 - Query expression builders: `orm/expression.go`.
 
 ### 6.6 Registry pattern
@@ -196,7 +196,7 @@ Used in middleware chains.
 
 Used to wrap querysets and values querysets.
 
-- Values/ValuesList wrappers: `orm/queryset.go` defines `ValuesQuerySet` and `ValuesListQuerySet` wrappers.
+- Values/ValuesList wrappers: `orm/queryset_values.go` defines `ValuesQuerySet` and `ValuesListQuerySet` wrappers.
 
 ### 6.10 Observer/event pattern
 
@@ -234,7 +234,7 @@ Design reason: these traits allow the SQL builder to set driver-specific default
 
 ### 7.4 Generated columns
 
-Generated columns are modeled via `WithGeneratedColumn(expression, stored)`.
+Generated columns are modeled via `schema.GeneratedColumn(expression, stored)`.
 
 - AST parser must capture both the expression and stored/virtual setting.
 - SQL builders must implement driver rules:
@@ -243,12 +243,12 @@ Generated columns are modeled via `WithGeneratedColumn(expression, stored)`.
 
 ### 7.5 Relations
 
-`schema/relation.go` defines relations and chain methods.
+`schema/relations_functional.go` defines relation constructors and options.
 
 Important decisions:
 
-- `ForeignKey(name, to)` uses the local column name as the relation key.
-- `ManyToMany(name, to)` must support a through table to avoid magical naming.
+- `ForeignKeyField(name, to, opts...)` uses the local column name as the relation key.
+- `ManyToManyField(name, to, opts...)` supports a through table (`schema.Through(...)`) to avoid magical naming.
 - Cascade and constraint options must be preserved into migrations.
 
 ### 7.6 Meta
@@ -435,7 +435,7 @@ SQL generation is separated by driver to avoid "lowest common denominator" outpu
 Dirty-state recovery is built into the system.
 
 - `db/migrate/execute/recover.go` provides tools to inspect and recover.
-- `verify/*` provides lint/safety checks.
+- `db/migrate/verify/*` provides lint/safety checks.
 
 The design is to fail loudly on dirty state by default, but provide force/recovery mechanisms that are test-covered.
 
@@ -474,10 +474,7 @@ The design reduces duplication: models are the single source of truth.
 
 Archived docs promoted a headless admin.
 
-The current implementation includes REST routers (`admin/api/rest/router.go`) and UI helpers (`admin/ui/*`), allowing either:
-
-- a JS SPA consuming admin APIs
-- server-rendered admin pages
+The current implementation includes REST routers (`admin/api/rest/router.go`) and embedded SPA assets (`admin/ui/*`), serving a React SPA consuming the admin REST APIs (server-rendered admin HTML templates are not implemented).
 
 ### 12.5 Audit/history
 
@@ -604,8 +601,6 @@ Quality gates:
 
 ## 19. Documentation policy
 
-This repository contains a large archive.
-
 Rules:
 
 - `docs/DESIGN.md`, `docs/PRD.md`, `docs/ROADMAP.md`, `docs/TECH-DEBT.md`,
@@ -662,8 +657,8 @@ those sources were deleted. They document behavior the code implements.
   constrain aggregates over that relation. Aggregates across many-to-many
   relations are not supported yet.
 - Hook order on write paths is
-  `BeforeSave` → `BeforeCreate` → `AfterCreate` → `AfterSave`
-  (and the `BeforeUpdate`/`BeforeDelete` analogues).
+  `BeforeCreate` → `BeforeSave` → `Clean` → SQL → `AfterCreate` → `AfterSave`
+  (and the `BeforeUpdate`/`AfterUpdate` analogues, plus `BeforeDelete` → SQL → `AfterDelete`).
 
 ### 20.5 Example authorization pattern
 

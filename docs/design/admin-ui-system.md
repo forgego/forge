@@ -1,5 +1,7 @@
 # Forge Admin — Design System Spec v3 ("Instrument")
 
+> **Status note:** The Instrument redesign is implemented in `admin/ui/web/` (dark tokens, `stat-tile.tsx`, `cmdk` `GlobalSearch`, `index.css` token updates, `SidebarItem`, and component packages). Remaining cleanup: `ModelListPage` (~805 lines vs the 800-line target) and `searchable-select.tsx` border/height tokens. Keep the rules below as the durable visual standard for all Admin UI changes.
+
 Authoritative source of truth for the admin UI redesign. Implementers MUST read this
 file before changing any UI code, and MUST NOT invent values that are not in it.
 

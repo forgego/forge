@@ -54,7 +54,7 @@ is the canonical source of truth for capability tiers and verification evidence.
   rate-limiting middleware are available to add.
 
 > [!NOTE]
-> Forge is pre-1.0 (v0.1.x) and its API may still change between minor
+> Forge is pre-1.0 (v0.2.x) and its API may still change between minor
 > releases. PostgreSQL 15 is supported; SQLite is [partially tested](docs-site/docs/status.md)
 > (migration apply is [experimental](docs-site/docs/status.md)). The
 > [support contract](docs-site/docs/status.md) lists what
@@ -137,7 +137,7 @@ Add the framework to an existing module:
 go get github.com/forgego/forge@latest
 ```
 
-Forge needs Go 1.26 or later.
+Forge needs Go 1.26.10 or later.
 
 ## Start a project
 
@@ -162,6 +162,7 @@ steps, and `forge --help` lists every command.
 
 - [User documentation](https://forgego.github.io/forge/): models, ORM,
   migrations, admin, REST API, configuration.
+- [AI Agent Skills](skills/) and [llms.txt](https://forgego.github.io/forge/llms.txt) for coding agents (Claude Code, Codex, Cursor, OpenCode, Gemini CLI).
 - [Design](docs/DESIGN.md), [product requirements](docs/PRD.md) and
   [roadmap](docs/ROADMAP.md) for how Forge is built and where it is going.
 - [Contributor docs index](docs/README.md).

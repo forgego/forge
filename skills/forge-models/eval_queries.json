@@ -1,0 +1,22 @@
+[
+  {
+    "query": "How do I define a Forge model with StringField, DecimalField, and ForeignKeyField?",
+    "expected_trigger": true
+  },
+  {
+    "query": "What is the signature of BeforeSave and Clean in schema.ModelHooks?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I add a check constraint or composite index in Meta()?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I query posts with Filter, OrderBy, and SelectRelated?",
+    "expected_trigger": false
+  },
+  {
+    "query": "How do I recover from a dirty migration version in PostgreSQL?",
+    "expected_trigger": false
+  }
+]
