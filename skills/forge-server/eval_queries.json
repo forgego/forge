@@ -4,7 +4,7 @@
     "expected_trigger": true
   },
   {
-    "query": "How do I configure server.stores: database for multi-instance Forge deployments?",
+    "query": "How do I wire server.WithDatabase and trusted proxies for multi-instance Forge deployments?",
     "expected_trigger": true
   },
   {

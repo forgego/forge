@@ -30,7 +30,7 @@ The Forge repository includes 9 task-focused skills under `skills/` (compatible 
 | `forge-admin` | `admin.Register`, `admin.Config[T]`, actions, permissions, React SPA, `UseDatabaseStores` |
 | `forge-api` | `ViewSet`, `Serializer`, `api.Router`, auth, permissions, throttling, RFC 7807 errors |
 | `forge-identity` | `forge auth`, `identity.SetupIdentitySystem`, password hashing, sessions, tokens |
-| `forge-server` | `server.NewServer`, middleware, Viper config, `FORGE_*` env vars, `server.stores: database` |
+| `forge-server` | `server.NewServer`, middleware, Viper config, `FORGE_*` env vars, `server.WithDatabase` |
 | `forge-contributor` | Contributing to the Forge repository itself (Go tests, Playwright, docs, CI) |
 
 Each skill includes a concise `SKILL.md` (with explicit negative triggers so agents pick the right skill), pure-Markdown `references/`, `agents/openai.yaml`, and `eval_queries.json`.

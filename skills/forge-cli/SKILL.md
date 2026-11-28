@@ -26,7 +26,7 @@ metadata:
 | `forge auth` | Scaffold `app/auth` and wire auth routes in `cmd/server/main.go` | — |
 | `forge generate` | AST-parse models and emit `gen.go` (and `api_gen.go` with `--api`) | `--models`, `--output`, `--api`, `--strict` |
 | `forge makemigrations <name>` | Diff models vs migration SQL history and write `.up.sql`/`.down.sql` | `--auto`, `--models`, `--migrations` |
-| `forge migrate up` | Apply all pending migrations (and framework stores when `server.stores: database`) | `--migrations` |
+| `forge migrate up` | Apply all pending migrations and framework store tables | `--migrations` |
 | `forge migrate rollback` | Roll back the last applied migration | `--migrations` |
 | `forge migrate status` | Show applied, pending, and dirty migrations | `--migrations` |
 | `forge migrate show` | Preview planned migration SQL from current models | `--sql`, `--verbose` |

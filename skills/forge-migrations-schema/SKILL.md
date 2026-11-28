@@ -27,7 +27,7 @@ forge migrate status
 | Command | Purpose |
 |---|---|
 | `forge makemigrations <name> --auto` | Diff models vs migration history and write `.up.sql` / `.down.sql` |
-| `forge migrate up` | Apply all pending migrations (and framework stores when `server.stores: database`) |
+| `forge migrate up` | Apply all pending migrations and framework store tables |
 | `forge migrate rollback` | Roll back the last applied migration |
 | `forge migrate status` | Print applied, pending, and dirty (`DIRTY`) versions |
 | `forge migrate show` | Preview planned changes (`--sql`, `--verbose`) |
@@ -42,7 +42,7 @@ forge migrate status
 - **Always pass `<name>` to `makemigrations`** and **`up` to `forge migrate up`** (`forge migrate` alone does not apply migrations; there is no `migrate down` or target version).
 - **`forge migrate squash` returns `NotImplemented`**.
 - **PostgreSQL 15 is Supported; SQLite migration apply is Experimental**: `TestMigrationApplyPostgres` and `TestPostgresSchemaLifecycle` gate PostgreSQL; SQLite migration apply is experimental (`docs-site/docs/status.md`).
-- **Framework store tables**: With `server.stores: database`, `forge migrate up` applies embedded framework migrations (`forge_framework_migrations`) before application migrations.
+- **Framework store tables**: `forge migrate up` applies embedded framework migrations (`forge_framework_migrations`) before application migrations.
 - **Checksums**: Editing an already-applied `.up.sql` fails verification (`forge migrate recover --verify`).
 
 ## References

@@ -41,7 +41,7 @@ forge migrate lint --verbose
 forge migrate recover --verify
 ```
 
-If `server.stores` is `database`, `forge migrate up` automatically applies any new framework store migrations (`forge_framework_migrations`) before your application migrations.
+`forge migrate up` automatically applies any new framework store migrations (`forge_framework_migrations`) before your application migrations.
 
 ## Version-Specific Notes
 

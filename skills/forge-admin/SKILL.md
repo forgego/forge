@@ -43,7 +43,7 @@ uiCfg.Prefix = settings.Admin.Path // e.g. "/admin"
 adminSite.WithUIConfig(uiCfg)
 adminSite.SetDB(database)
 
-// Optional: when server.stores is "database", persist tokens, lockout, saved views & history
+// Persist tokens, lockout, saved views & history in the database
 if err := adminSite.UseDatabaseStores(ctx); err != nil {
 	return err
 }

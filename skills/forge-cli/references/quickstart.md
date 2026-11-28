@@ -68,7 +68,7 @@ articles, err := qs.OrderBy(f.Id.Desc()).Limit(10).All(ctx)
 
 ## 5. Wire Server & Database Stores (`cmd/server/main.go`)
 
-When `server.stores: database` is configured (the `forge new` default), pass `server.WithDatabase(database)` to `server.NewServer` and call `adminSite.UseDatabaseStores(ctx)`:
+Pass `server.WithDatabase(database)` to `server.NewServer` and call `adminSite.UseDatabaseStores(ctx)` so sessions, throttling counters, tokens, saved views, and change history live in the database:
 
 ```go
 blog.ArticleObjects.SetDB(database)

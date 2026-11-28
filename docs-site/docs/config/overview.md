@@ -19,7 +19,7 @@ Forge loads configuration via Viper (`config.NewConfig()`, `config.LoadSettings(
 | Section | Guide | Covers |
 |---|---|---|
 | `app` | [App Settings](/docs/config/app/) | Name, environment, version, debug flag |
-| `server` | [Server Settings](/docs/config/server/) | Host, port, timeouts, health/metrics, trusted proxies, `server.stores` |
+| `server` | [Server Settings](/docs/config/server/) | Host, port, timeouts, health/metrics, trusted proxies, framework stores |
 | `database` | [Database Settings](/docs/config/database/) | Driver, connection details, SSL mode, pool limits |
 | `security` | [Security Settings](/docs/config/security/) | Secret key, CSRF secret, session secret, CSRF exemptions |
 | `logging` | [Logging Settings](/docs/config/logging/) | Level, format, console/file outputs |
@@ -37,7 +37,6 @@ app:
 server:
   host: localhost
   port: "8000"
-  stores: database
 
 database:
   driver: postgres

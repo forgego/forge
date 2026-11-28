@@ -46,7 +46,7 @@ See [Code Generation](/docs/codegen/) for full details and caveats.
 | Command | Description |
 |---|---|
 | `forge makemigrations <name> --auto --models <dir>` | Diff models vs migration SQL history and write `.up.sql` / `.down.sql` |
-| `forge migrate up` | Apply all pending migrations (and framework store tables when `server.stores: database`) |
+| `forge migrate up` | Apply all pending migrations and framework store tables |
 | `forge migrate rollback` | Roll back the last applied migration |
 | `forge migrate status` | Show applied, pending, and `DIRTY` versions |
 | `forge migrate show [--sql] [--verbose]` | Preview planned migration changes from current models |
