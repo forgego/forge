@@ -166,6 +166,7 @@ func (c *AddIndex) Reversible() bool  { return true }
 type DropIndex struct {
 	Table     string
 	IndexName string
+	Index     *generator.IndexDefinition // Optional original definition for reversible down migrations
 }
 
 func (c *DropIndex) Type() ChangeType  { return ChangeTypeDropIndex }

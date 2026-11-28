@@ -161,12 +161,14 @@ func (b *PostgreSQLBuilder) buildChangeDownSQL(change core.Change) (string, erro
 		}
 		return fmt.Sprintf("DROP INDEX IF EXISTS %s;", indexName), nil
 	case *core.DropIndex:
-		// Cannot generate down SQL for DropIndex without original index definition
-		return "", core.NewMigrationError(
-			core.ErrInvalidChange,
-			"cannot generate down SQL for DropIndex without index definition",
-			nil,
-		)
+		if c.Index == nil {
+			return "", core.NewMigrationError(
+				core.ErrInvalidChange,
+				"cannot generate down SQL for DropIndex without index definition",
+				nil,
+			)
+		}
+		return b.BuildAddIndex(&core.AddIndex{Table: c.Table, Index: *c.Index})
 	case *core.ModifyIndex:
 		// Reverse the modification
 		reversed := &core.ModifyIndex{

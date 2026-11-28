@@ -10,6 +10,7 @@ import (
 	"github.com/forgego/forge/codegen"
 	"github.com/forgego/forge/db/migrate/core"
 	"github.com/forgego/forge/db/migrate/sql"
+	"github.com/forgego/forge/utils"
 )
 
 // ChangeDetector detects changes between current and previous model states
@@ -52,6 +53,8 @@ func isForeignKeyRelation(relationType string) bool {
 func (d *Detector) DetectChanges(current, previous []*generator.ModelDefinition) ([]core.Change, error) {
 	var changes []core.Change
 
+	current = expandManyToManyTables(current)
+
 	// Build maps for easier lookup
 	currentMap := make(map[string]*generator.ModelDefinition)
 	previousMap := make(map[string]*generator.ModelDefinition)
@@ -75,7 +78,7 @@ func (d *Detector) DetectChanges(current, previous []*generator.ModelDefinition)
 			changes = append(changes, &core.CreateTable{Table: currentDef})
 
 			// Add indexes for new table
-			for _, idx := range currentDef.Meta.Indexes {
+			for _, idx := range effectiveIndexes(tableName, currentDef) {
 				changes = append(changes, &core.AddIndex{
 					Table: tableName,
 					Index: idx,
@@ -151,7 +154,11 @@ func (d *Detector) detectTableChanges(current, previous *generator.ModelDefiniti
 	changes = append(changes, columnChanges...)
 
 	// Detect index changes
-	indexChanges, err := d.detectIndexChanges(tableName, current.Meta.Indexes, previous.Meta.Indexes)
+	indexChanges, err := d.detectIndexChanges(
+		tableName,
+		effectiveIndexes(tableName, current),
+		effectiveIndexes(tableName, previous),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -345,9 +352,14 @@ func (d *Detector) detectIndexChanges(tableName string, current, previous []gene
 	// Detect dropped indexes
 	for _, name := range sortedKeys(previousMap) {
 		if _, exists := currentMap[name]; !exists {
+			prevIdx := previousMap[name]
+			if prevIdx.Name == "" {
+				prevIdx.Name = name
+			}
 			changes = append(changes, &core.DropIndex{
 				Table:     tableName,
 				IndexName: name,
+				Index:     &prevIdx,
 			})
 		}
 	}
@@ -660,4 +672,168 @@ func toSnakeCase(s string) string {
 		result = append(result, r)
 	}
 	return string(result)
+}
+
+func indexSignature(fields []string, unique bool) string {
+	return fmt.Sprintf("%t:%s", unique, strings.Join(fields, ","))
+}
+
+// effectiveIndexes returns Meta.Indexes plus indexes derived from field-level
+// db_index and Meta.UniqueTogether, deduplicated by name and (unique, fields).
+func effectiveIndexes(tableName string, def *generator.ModelDefinition) []generator.IndexDefinition {
+	if def == nil {
+		return nil
+	}
+	indexes := make([]generator.IndexDefinition, 0, len(def.Meta.Indexes))
+	seenNames := make(map[string]bool)
+	seenSigs := make(map[string]bool)
+
+	for _, idx := range def.Meta.Indexes {
+		name := idx.Name
+		if name == "" {
+			name = fmt.Sprintf("idx_%s_%s", tableName, strings.Join(idx.Fields, "_"))
+		}
+		seenNames[name] = true
+		seenSigs[indexSignature(idx.Fields, idx.Unique)] = true
+		indexes = append(indexes, idx)
+	}
+
+	for _, field := range def.Fields {
+		dbIdx, _ := field.Options["db_index"].(bool)
+		if !dbIdx {
+			continue
+		}
+		name := fmt.Sprintf("idx_%s_%s", tableName, field.Name)
+		sig := indexSignature([]string{field.Name}, false)
+		if seenNames[name] || seenSigs[sig] {
+			continue
+		}
+		seenNames[name] = true
+		seenSigs[sig] = true
+		indexes = append(indexes, generator.IndexDefinition{
+			Name:   name,
+			Fields: []string{field.Name},
+			Unique: false,
+		})
+	}
+
+	for _, fields := range def.Meta.UniqueTogether {
+		if len(fields) == 0 {
+			continue
+		}
+		name := fmt.Sprintf("uniq_%s_%s", tableName, strings.Join(fields, "_"))
+		sig := indexSignature(fields, true)
+		if seenNames[name] || seenSigs[sig] {
+			continue
+		}
+		seenNames[name] = true
+		seenSigs[sig] = true
+		indexes = append(indexes, generator.IndexDefinition{
+			Name:   name,
+			Fields: append([]string(nil), fields...),
+			Unique: true,
+		})
+	}
+
+	return indexes
+}
+
+// expandManyToManyTables synthesizes join-table ModelDefinitions for ManyToMany
+// relations unless an explicit Through model already exists in defs.
+func expandManyToManyTables(defs []*generator.ModelDefinition) []*generator.ModelDefinition {
+	existingTables := make(map[string]bool, len(defs))
+	modelsByName := make(map[string]*generator.ModelDefinition, len(defs))
+	for _, def := range defs {
+		existingTables[getTableName(def)] = true
+		modelsByName[strings.ToLower(def.Name)] = def
+	}
+
+	out := make([]*generator.ModelDefinition, 0, len(defs))
+	out = append(out, defs...)
+	addedTables := make(map[string]bool)
+
+	for _, def := range defs {
+		sourceTable := getTableName(def)
+		for _, rel := range def.Relations {
+			if rel.Type != "ManyToMany" && rel.Type != "ManyToManyField" {
+				continue
+			}
+			targetDef := modelsByName[strings.ToLower(rel.To)]
+			if targetDef == nil {
+				continue
+			}
+			joinTable, _ := rel.Options["through"].(string)
+			if joinTable == "" {
+				joinTable = sourceTable + "_" + utils.ToSnake(rel.Name)
+			}
+			if existingTables[joinTable] || addedTables[joinTable] {
+				continue
+			}
+			addedTables[joinTable] = true
+
+			sourceCol := utils.ToSnake(def.Name) + "_id"
+			targetCol := utils.ToSnake(targetDef.Name) + "_id"
+			if sourceCol == targetCol {
+				sourceCol = "from_" + sourceCol
+				targetCol = "to_" + targetCol
+			}
+
+			out = append(out, &generator.ModelDefinition{
+				Name: joinTable,
+				Meta: generator.MetaDefinition{
+					TableName: joinTable,
+					Indexes: []generator.IndexDefinition{
+						{
+							Name:   fmt.Sprintf("uniq_%s_%s_%s", joinTable, sourceCol, targetCol),
+							Fields: []string{sourceCol, targetCol},
+							Unique: true,
+						},
+						{
+							Name:   fmt.Sprintf("idx_%s_%s", joinTable, targetCol),
+							Fields: []string{targetCol},
+							Unique: false,
+						},
+					},
+				},
+				Fields: []generator.FieldDefinition{
+					{
+						Name:          "id",
+						Type:          "Int64Field",
+						GoType:        "int64",
+						PrimaryKey:    true,
+						AutoIncrement: true,
+						Required:      true,
+					},
+					{
+						Name:     sourceCol,
+						Type:     "Int64Field",
+						GoType:   "int64",
+						Required: true,
+					},
+					{
+						Name:     targetCol,
+						Type:     "Int64Field",
+						GoType:   "int64",
+						Required: true,
+					},
+				},
+				Relations: []generator.RelationDefinition{
+					{
+						Name:    sourceCol,
+						Type:    "ForeignKeyField",
+						To:      def.Name,
+						Options: map[string]interface{}{"on_delete": "CASCADE"},
+					},
+					{
+						Name:    targetCol,
+						Type:    "ForeignKeyField",
+						To:      targetDef.Name,
+						Options: map[string]interface{}{"on_delete": "CASCADE"},
+					},
+				},
+			})
+		}
+	}
+
+	return out
 }
