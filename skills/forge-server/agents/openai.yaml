@@ -1,0 +1,4 @@
+interface:
+  display_name: "Forge Server & Config"
+  short_description: "HTTP server, middleware, Viper config, logging, and shared DB stores."
+  default_prompt: "Help me configure Forge's server, middleware, security secrets, logging, or shared database stores."

@@ -6,11 +6,11 @@ We release patches for security vulnerabilities. Currently supported versions:
 
 | Version | Supported |
 | ------- | --------- |
-| `0.1.x (latest)` | :white_check_mark: |
-| `< 0.1` | :x: |
+| `0.2.x (latest)` | :white_check_mark: |
+| `< 0.2` | :x: |
 | `1.0.0, 1.0.1 (retracted)` | :x: |
 
-Once a stable 1.x is released, the latest minor of the current major is supported (see docs-site/docs/contributing/versioning-and-support.md).
+Once a stable 1.x is released, the latest minor of the current major is supported (see `docs-site/docs/contributing/versioning-and-support.md`).
 
 ## Reporting a Vulnerability
 
@@ -76,8 +76,7 @@ Please include the following information in your report:
 - JWT-based authentication
 - API key authentication
 - Basic authentication
-- Role-based access control (RBAC)
-- Permission system
+- Users, groups, and permission checks (`IsStaff`, `IsSuperuser`, `PermissionService`)
 
 ### Data Protection
 
@@ -89,15 +88,16 @@ Please include the following information in your report:
 
 ### Security Headers
 
-The framework sets secure HTTP headers by default:
+`server.SecureHeaders(...)` is opt-in middleware added via `Router.Use`. With `server.DefaultSecureHeadersOptions()`, it sets:
 
 ```
 X-Frame-Options: DENY
 X-Content-Type-Options: nosniff
 X-XSS-Protection: 1; mode=block
-Strict-Transport-Security: max-age=31536000; includeSubDomains
-Content-Security-Policy: default-src 'self'
+Strict-Transport-Security: max-age=31536000
 ```
+
+(`HSTSIncludeSubdomains` and `Content-Security-Policy` can be configured explicitly in `SecureHeadersOptions`.)
 
 ### Database Security
 
@@ -121,14 +121,7 @@ Content-Security-Policy: default-src 'self'
 
 ### Middleware Order
 
-Canonical order: RequestID → IP → Recoverer → Logger → Session →
-CSRF → Auth. Do not reorder without updating this section.
-
-### Agent Tooling Credentials
-
-- User credentials and private MCP configurations live in
-  `~/.codex/config.toml` (or the equivalent user config), never in
-  repo-local files.
+`server.NewServer` installs: `RequestID` → `ErrorHandler` (if logger) → `log.Middleware` (if logger) → `RequestSizeLimit` (if configured) → `Session` (if `session_secret` set) → `CSRF` (if `csrf_secret_key` set). Opt-in middleware (`CORS`, `SecureHeaders`, `RateLimit`, auth) is added via `Router.Use`.
 
 ## Security Best Practices
 
@@ -192,12 +185,11 @@ _No vulnerabilities have been reported yet._
 
 ## Additional Resources
 
-- [OWASP Go Security Cheatsheet](https://cheatsheetseries.owasp.org/cheatsheets/Go_SG_Cheat_Sheet.html)
 - [CWE Top 25](https://cwe.mitre.org/top25/)
 - [GitHub Security Best Practices](https://docs.github.com/en/code-security)
 - [OpenSSF Best Practices](https://bestpractices.coreinfrastructure.org/)
 
 ---
 
-**Last Updated**: 2026-02-05
-**Version**: 1.0
+**Last Updated**: 2026-11-28
+**Version**: 0.2.x

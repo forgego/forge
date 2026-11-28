@@ -1,33 +1,50 @@
 ---
 name: forge-migrations-schema
-description: Work with Forge schema primitives and database migrations. Use when defining schema behavior, generating migrations, applying or rolling back migrations, or validating migration files.
+description: Generate, apply, inspect, lint, roll back, and recover SQL migrations in Forge (`forge makemigrations`, `forge migrate up/status/show/lint/rollback/fake/force/recover/baseline`). Use when evolving database schemas, debugging dirty migration state, or running `db.NewMigrationRunner`. Do NOT use for writing model structs/fields (use `forge-models`) or ORM queries (use `forge-orm`).
+license: MIT
+compatibility: Go 1.26.10+, PostgreSQL 15 (SQLite migration apply is experimental)
+metadata:
+  author: forgego
+  version: "0.2"
 ---
 
 # Forge Migrations & Schema
 
-## Overview
-Use schema primitives to define models and manage database changes with the migration system.
+Forge generates SQL migrations by diffing your Go model ASTs against schema state reconstructed from existing `migrations/*_*.up.sql` files — no running database is required for `makemigrations`.
 
-## When to Use
-- The task mentions schema primitives or migration files.
-- You need to generate, apply, roll back, or validate migrations.
-- The user asks about migration status, linting, or fake migrations.
+## Golden-Path Workflow
 
-## Quick Start
-1. Update models and schema definitions.
-2. Generate migrations with `forge makemigrations <name> --auto`.
-3. Apply with `forge migrate` and check status with `forge migrate status`.
+```bash
+forge makemigrations initial --auto --models ./app/blog
+forge migrate show --sql --models ./app/blog
+forge migrate lint --verbose
+forge migrate up
+forge migrate status
+```
 
-## Common Tasks
-- Preview migration plans with `forge migrate show`.
-- Lint migrations with `forge migrate lint` and `--verbose` when debugging.
-- Roll back the last applied migration with `forge migrate rollback`. `forge migrate up` always applies every pending migration; there is no `migrate down` or target version.
-- Use `forge migrate fake` or `--fake-initial` for existing databases.
+## Commands Reference
 
-## Gotchas
-- Migration files must live under `migrations/` and follow `*_*.up.sql` and `*_*.down.sql` naming.
-- Dependency auto-detection relies on relations and references in model definitions.
-- Always verify pending migrations before applying in production.
+| Command | Purpose |
+|---|---|
+| `forge makemigrations <name> --auto` | Diff models vs migration history and write `.up.sql` / `.down.sql` |
+| `forge migrate up` | Apply all pending migrations (and framework stores when `server.stores: database`) |
+| `forge migrate rollback` | Roll back the last applied migration |
+| `forge migrate status` | Print applied, pending, and dirty (`DIRTY`) versions |
+| `forge migrate show` | Preview planned changes (`--sql`, `--verbose`) |
+| `forge migrate lint` | Lint migration files (`--verbose` prints state-loader parse errors) |
+| `forge migrate fake [ver]` | Mark pending migrations (or `--fake-initial` existing tables) as applied |
+| `forge migrate force <ver>` | Force schema version in DB |
+| `forge migrate recover` | Recover dirty state and verify checksums (`--clean`, `--verify`) |
+| `forge migrate baseline` | Record a baseline version |
+
+## Hard Guardrails
+
+- **Always pass `<name>` to `makemigrations`** and **`up` to `forge migrate up`** (`forge migrate` alone does not apply migrations; there is no `migrate down` or target version).
+- **`forge migrate squash` returns `NotImplemented`**.
+- **PostgreSQL 15 is Supported; SQLite migration apply is Experimental**: `TestMigrationApplyPostgres` and `TestPostgresSchemaLifecycle` gate PostgreSQL; SQLite migration apply is experimental (`docs-site/docs/status.md`).
+- **Framework store tables**: With `server.stores: database`, `forge migrate up` applies embedded framework migrations (`forge_framework_migrations`) before application migrations.
+- **Checksums**: Editing an already-applied `.up.sql` fails verification (`forge migrate recover --verify`).
 
 ## References
-- [Migration guide](references/migrations.md)
+
+- [Detailed migration & recovery guide](references/migrations.md)

@@ -1,3 +1,4 @@
-display_name: Forge Contributor
-short_description: Contributor workflow for framework changes, tests, docs, and CI validations.
-default_prompt: Help me contribute to the Forge framework: tests, docs site, admin UI, CI/security checks, and required validations.
+interface:
+  display_name: "Forge Contributor"
+  short_description: "Contributor workflow for Forge internals, tests, docs, and CI checks."
+  default_prompt: "Help me contribute to the Forge framework: tests, docs site, admin UI, CI/security checks, and required validations."

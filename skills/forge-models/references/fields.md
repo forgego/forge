@@ -1,373 +1,76 @@
----
-sidebar_position: 4
----
+# Field Constructors and Options
 
-# Fields
+All field definitions in `github.com/forgego/forge/schema` use functional constructors (`schema.<Type>Field(name, opts...)`) defined in `schema/fields_functional.go`.
 
-Field expressions provide type-safe access to model fields. Use them in queries to ensure compile-time type checking.
+## Field Constructors
 
-Complete reference for all field types and options.
+### Numeric
+- `schema.Int64Field(name, opts...)` -> Go `int64`
+- `schema.Int32Field(name, opts...)` -> Go `int32`
+- `schema.Float64Field(name, opts...)` -> Go `float64`
+- `schema.Float32Field(name, opts...)` -> Go `float32`
+- `schema.DecimalField(name, opts...)` -> Go `float64` (codegen emits `float64`)
 
-## Field Types
+### String & Text
+- `schema.StringField(name, opts...)` -> Go `string`
+- `schema.TextField(name, opts...)` -> Go `string`
+- `schema.EmailField(name, opts...)` -> Go `string`
+- `schema.URLField(name, opts...)` -> Go `string`
 
-### Numeric Fields
-
-#### Int64
-
-64-bit integer:
-
-```go
-schema.Int64("id").Primary().AutoIncrement().Build()
-schema.Int64("age").Build()
-```
-
-#### Int32
-
-32-bit integer:
-
-```go
-schema.Int32("count").Build()
-```
-
-#### Float64
-
-64-bit floating point:
-
-```go
-schema.Float64("price").Build()
-```
-
-#### Decimal
-
-Decimal with precision:
-
-```go
-schema.Decimal("amount").
-    MaxDigits(10).
-    DecimalPlaces(2).
-    Build()
-```
-
-### String Fields
-
-#### String
-
-Variable-length string:
-
-```go
-schema.String("username").
-    MaxLength(150).
-    Required().
-    Build()
-```
-
-#### Text
-
-Unlimited text:
-
-```go
-schema.Text("content").Build()
-```
-
-#### Email
-
-Email field with validation:
-
-```go
-schema.Email("email").
-    Unique().
-    Required().
-    Build()
-```
-
-#### URL
-
-URL field with validation:
-
-```go
-schema.URL("website").Build()
-```
-
-#### Slug
-
-URL-friendly string:
-
-```go
-schema.Slug("slug").
-    MaxLength(200).
-    Unique().
-    Build()
-```
-
-### Boolean Fields
-
-#### Bool
-
-Boolean field:
-
-```go
-schema.Bool("is_active").
-    Default(true).
-    Build()
-```
-
-### Date and Time Fields
-
-#### Time
-
-Timestamp:
-
-```go
-schema.Time("created_at").
-    AutoNowAdd().
-    Build()
-```
-
-#### Date
-
-Date only:
-
-```go
-schema.Date("birth_date").Build()
-```
-
-#### DateTime
-
-Date and time:
-
-```go
-schema.DateTime("last_login").Build()
-```
-
-### Special Fields
-
-#### UUID
-
-UUID field:
-
-```go
-schema.UUID("id").Primary().Build()
-```
-
-#### JSON
-
-JSON field:
-
-```go
-schema.JSON("metadata").Build()
-```
-
-#### Bytes
-
-Binary data:
-
-```go
-schema.Bytes("avatar").Build()
-```
+### Boolean, Time & Special
+- `schema.BoolField(name, opts...)` -> Go `bool`
+- `schema.TimeField(name, opts...)` -> Go `time.Time`
+- `schema.DateField(name, opts...)` -> Go `time.Time`
+- `schema.DateTimeField(name, opts...)` -> Go `time.Time`
+- `schema.UUIDField(name, opts...)` -> Go `string`
+- `schema.JSONField(name, opts...)` -> Go `[]byte` / JSON
+- `schema.BytesField(name, opts...)` -> Go `[]byte`
 
 ## Field Options
 
-All field types support these options:
-
-### Required
-
-Make field required (NOT NULL):
-
 ```go
-schema.String("username").Required().Build()
+schema.StringField(
+	"username",
+	schema.Required(),
+	schema.Unique(),
+	schema.DBIndex(),
+	schema.DBColumn("user_name"),
+	schema.Default("guest"),
+	schema.MinLength(3),
+	schema.MaxLength(150),
+	schema.VerboseName("Username"),
+	schema.HelpText("Public handle"),
+	schema.ChoicesFromPairsOpts("admin", "Admin", "user", "User"),
+	schema.Editable(true),
+	schema.Serialize(true),
+)
 ```
 
-### Unique
+Common options:
+- **Keys & Constraints**: `schema.Primary()`, `schema.AutoIncrement()`, `schema.Required()`, `schema.Unique()`, `schema.Blank()`
+- **Database**: `schema.DBIndex()`, `schema.DBColumn(col)`, `schema.DBType(sqlType)`, `schema.DBDefault(expr)`, `schema.Default(val)`, `schema.GeneratedColumn(expr, stored)`
+- **Validation**: `schema.MinLength(n)`, `schema.MaxLength(n)`, `schema.MinValue(v)`, `schema.MaxValue(v)`, `schema.MaxDigits(d)`, `schema.DecimalPlaces(p)`, `schema.ChoicesOpts(choices...)`, `schema.ChoicesFromPairsOpts(pairs...)`
+- **Temporal**: `schema.AutoNowAdd()`, `schema.AutoNow()`
+- **Admin / API Visibility**: `schema.VerboseName(s)`, `schema.HelpText(s)`, `schema.Editable(bool)`, `schema.Serialize(bool)`
 
-Add unique constraint:
+## Go & SQL Type Mapping (`codegen/ast_fields.go`, `db/migrate/sql/common.go`)
 
-```go
-schema.String("email").Unique().Build()
-```
+| Constructor | Go Type | PostgreSQL | SQLite |
+|---|---|---|---|
+| `Int64Field` | `int64` | `BIGINT` (`BIGSERIAL` if AutoIncrement) | `INTEGER` |
+| `Int32Field` | `int32` | `INTEGER` (`SERIAL` if AutoIncrement) | `INTEGER` |
+| `Float64Field` | `float64` | `DOUBLE PRECISION` | `REAL` |
+| `Float32Field` | `float32` | `REAL` | `REAL` |
+| `DecimalField` | `float64` | `DECIMAL(p, s)` | `REAL` / `NUMERIC` |
+| `StringField` | `string` | `VARCHAR(n)` or `TEXT` | `TEXT` |
+| `TextField` | `string` | `TEXT` | `TEXT` |
+| `EmailField` / `URLField` | `string` | `TEXT` (or `VARCHAR(n)` with `MaxLength`) | `TEXT` |
+| `BoolField` | `bool` | `BOOLEAN` | `INTEGER` |
+| `TimeField` | `time.Time` | `TIME` | `TEXT` |
+| `DateField` | `time.Time` | `DATE` | `TEXT` |
+| `DateTimeField` | `time.Time` | `TIMESTAMP` / `TIMESTAMP WITH TIME ZONE` | `TEXT` |
+| `UUIDField` | `string` | `UUID` | `CHAR(36)` |
+| `JSONField` | `json.RawMessage` / `[]byte` | `JSONB` | `TEXT` |
+| `BytesField` | `[]byte` | `BYTEA` | `BLOB` |
 
-### Primary
-
-Set as primary key:
-
-```go
-schema.Int64("id").Primary().Build()
-```
-
-### Index
-
-Create database index:
-
-```go
-schema.String("username").Index().Build()
-```
-
-### DBColumn
-
-Custom column name:
-
-```go
-schema.String("firstName").DBColumn("first_name").Build()
-```
-
-### Default
-
-Default value:
-
-```go
-schema.Bool("is_active").Default(true).Build()
-schema.String("status").Default("pending").Build()
-```
-
-`Default` applies when an instance is constructed (`manager.New()`, or the
-API for keys a request omits), not at INSERT: `Create` writes the struct's
-`false`, `0` or `""` as is on a field with a `Default` (an optional field
-without one stays NULL). Use `DBDefault` for a database-owned default.
-
-### MaxLength
-
-Maximum length (strings):
-
-```go
-schema.String("username").MaxLength(150).Build()
-```
-
-### MinLength
-
-Minimum length (strings):
-
-```go
-schema.String("password").MinLength(8).Build()
-```
-
-### MaxDigits
-
-Maximum digits (decimal):
-
-```go
-schema.Decimal("amount").
-    MaxDigits(10).
-    DecimalPlaces(2).
-    Build()
-```
-
-### DecimalPlaces
-
-Decimal places (decimal):
-
-```go
-schema.Decimal("price").
-    MaxDigits(10).
-    DecimalPlaces(2).
-    Build()
-```
-
-### Choices
-
-Predefined choices:
-
-```go
-schema.String("status").
-    Choices("active", "pending", "deleted").
-    Build()
-```
-
-### Null
-
-Allow NULL:
-
-```go
-schema.String("middle_name").Null().Build()
-```
-
-### Blank
-
-Allow blank (strings):
-
-```go
-schema.String("description").Blank().Build()
-```
-
-### HelpText
-
-Help text for admin:
-
-```go
-schema.String("username").
-    HelpText("Required. 150 characters or fewer.").
-    Build()
-```
-
-### VerboseName
-
-Human-readable name:
-
-```go
-schema.String("firstName").
-    VerboseName("First Name").
-    Build()
-```
-
-### Editable
-
-Make read-only in admin:
-
-```go
-schema.Time("created_at").
-    Editable(false).
-    Build()
-```
-
-### AutoNow
-
-Set on save: `Update`, `Save` and `UpdateFields` write the current time and
-set it on the struct. `QuerySet.Update` does not touch it. Supported Go types:
-`time.Time`, `*time.Time`, `string`.
-
-```go
-schema.Time("updated_at").AutoNow().Build()
-```
-
-### AutoNowAdd
-
-Set on create only:
-
-```go
-schema.Time("created_at").AutoNowAdd().Build()
-```
-
-### AutoIncrement
-
-Auto-incrementing (primary keys):
-
-```go
-schema.Int64("id").
-    Primary().
-    AutoIncrement().
-    Build()
-```
-
-## Field Type Reference Table
-
-| Field Type | Go Type | SQL Type | Builder |
-|------------|---------|----------|---------|
-| Int64 | `int64` | `BIGINT` | `schema.Int64()` |
-| Int32 | `int32` | `INTEGER` | `schema.Int32()` |
-| String | `string` | `VARCHAR(n)` | `schema.String()` |
-| Text | `string` | `TEXT` | `schema.Text()` |
-| Bool | `bool` | `BOOLEAN` | `schema.Bool()` |
-| Float64 | `float64` | `DOUBLE PRECISION` | `schema.Float64()` |
-| Decimal | `decimal.Decimal` | `NUMERIC` | `schema.Decimal()` |
-| Time | `time.Time` | `TIMESTAMP` | `schema.Time()` |
-| Date | `time.Time` | `DATE` | `schema.Date()` |
-| DateTime | `time.Time` | `TIMESTAMP` | `schema.DateTime()` |
-| Email | `string` | `VARCHAR(255)` | `schema.Email()` |
-| URL | `string` | `VARCHAR(255)` | `schema.URL()` |
-| UUID | `string` | `UUID` | `schema.UUID()` |
-| JSON | `[]byte` | `JSONB` | `schema.JSON()` |
-| Bytes | `[]byte` | `BYTEA` | `schema.Bytes()` |
-
-## See Also
-
-- [Schema Reference](/docs/api-reference/schema) - Model definition
-- [Models Guide](/docs/guides/models) - Model usage guide
-
+Note: `orm.Manager` and `forge generate --api` only support `int64` auto-increment primary keys named `id`.

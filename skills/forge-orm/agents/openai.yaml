@@ -1,0 +1,4 @@
+interface:
+  display_name: "Forge ORM"
+  short_description: "Type-safe ORM queries, Managers, relations, transactions, and filters."
+  default_prompt: "Help me write type-safe Forge ORM queries, transactions, relation loading, or filters."

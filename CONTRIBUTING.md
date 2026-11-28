@@ -36,9 +36,9 @@ We are committed to providing a welcoming and inspiring community for all. Pleas
 
 ### Prerequisites
 
-- **Go 1.26+** - [Install Go](https://go.dev/dl/)
+- **Go 1.26.10+** - [Install Go](https://go.dev/dl/)
 - **PostgreSQL 15+** - [Install PostgreSQL](https://www.postgresql.org/download/)
-- **Node.js 22+** - [Install Node](https://nodejs.org/) (for admin UI)
+- **Node.js 26.8.1+** (Node 20+ minimum for docs site) - [Install Node](https://nodejs.org/) (for admin UI and docs)
 - **Git** - [Install Git](https://git-scm.com/)
 
 ### Fork and Clone
@@ -326,7 +326,7 @@ describe('UserCard', () => {
 ### Testing Patterns
 
 - **Setup/teardown**: `t.Cleanup()` for resources, timestamped
-  database names, 60s context timeouts, shared `helpers.Assert*`.
+  database names, 60s context timeouts, shared `testhelpers.Assert*`.
 - **Table-driven tests** for multiple inputs/outputs with descriptive
   case structs.
 - **Test helpers**: pure assertions in `tests/testhelpers/`, infra setup
@@ -390,14 +390,25 @@ func CreateUser(ctx context.Context, email string) (*User, error) {
 ## Project Structure
 
 ```
-admin/              # Admin interface
+admin/              # Admin interface and React UI
 api/                # REST API framework
 cli/                # CLI implementation
 cmd/forge/          # CLI entry point (go install target)
+codegen/            # AST-based code generator
+config/             # Viper configuration and settings
 db/                 # Database layer and migrations
+errors/             # Structured error types
+filter/             # Shared filter AST and security whitelist
+identity/           # Users, groups, permissions, sessions, tokens
+log/                # Structured logging
+netutil/            # Trusted proxy and client IP helpers
 orm/                # ORM system
-schema/             # Schema definition
-server/             # HTTP server
+registry/           # Extension registries
+schema/             # Schema definition DSL
+server/             # HTTP server and middleware
+stores/             # Shared database-backed stores
+utils/              # Shared utilities
+validate/           # Struct and schema validation
 
 examples/
 └── ecommerce/      # E-commerce example
@@ -424,7 +435,7 @@ These are load-bearing conventions. Do not break them without updating
   (a CI check enforces freshness).
 - **Test helper contract.** DB-backed tests use timestamped database
   names, `t.Cleanup()` for teardown, 60s context timeouts, and the
-  shared `helpers.Assert*` assertions.
+  shared `testhelpers.Assert*` assertions.
 
 ## Reporting Bugs
 
@@ -451,8 +462,8 @@ What you expected to happen.
 
 **Environment:**
 - OS: [e.g., Ubuntu 22.04]
-- Go version: [e.g., 1.25.0]
-- Forge version: [e.g., 1.0.0]
+- Go version: [e.g., 1.26.10]
+- Forge version: [e.g., v0.2.0]
 
 **Additional context**
 Any other relevant information.

@@ -1,0 +1,22 @@
+[
+  {
+    "query": "How do I set up identity.SetupIdentitySystem and hash passwords in Forge?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How does RequirePermission handle IsSuperuser and groups?",
+    "expected_trigger": true
+  },
+  {
+    "query": "Does Forge identity support OAuth or custom user models?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I configure CSRF secrets and graceful shutdown on server.NewServer?",
+    "expected_trigger": false
+  },
+  {
+    "query": "How do I run forge makemigrations --auto?",
+    "expected_trigger": false
+  }
+]

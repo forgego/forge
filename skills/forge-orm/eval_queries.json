@@ -1,0 +1,22 @@
+[
+  {
+    "query": "How do I filter, order, and paginate records with ProductObjects and ProductFieldsInstance?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I use SelectRelated, PrefetchRelated, or AggregateValues in Forge ORM?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I run a database transaction with savepoints using db.WithTx and Manager.WithTx?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I define a model's Fields() and Meta() in schema?",
+    "expected_trigger": false
+  },
+  {
+    "query": "How do I generate and apply SQL migrations?",
+    "expected_trigger": false
+  }
+]

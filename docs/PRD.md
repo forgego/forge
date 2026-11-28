@@ -43,7 +43,7 @@ The product is validated by a multi-module test suite (unit tests + integration 
 
 ### 2.2 Secondary goals
 
-1. Support both server-rendered and SPA admin experiences.
+1. Deliver a React SPA admin experience out of the box (server-rendered admin templates are not implemented).
 2. Allow plugin systems for admin widgets and API enhancements.
 3. Keep code generation deterministic and safe.
 
@@ -499,9 +499,13 @@ This appendix is a practical snapshot of the command surface. It intentionally m
 
 ### A.1 Project scaffolding
 
+- `forge version`
 - `forge new <project>`
 - `forge add app <name>`
 - `forge add model <name>`
+- `forge add api <name>`
+- `forge add handler <name>`
+- `forge add service <name>`
 - `forge auth` (scaffold identity integration)
 
 ### A.2 Generation

@@ -1,62 +1,81 @@
 # Forge Contributor CI Checklist
 
-Use this as the authoritative "everything must happen" list. Run the checks that match your changes.
+Run the checks that match your changes.
 
 ## Versions and Tooling
-- Go versions in CI: 1.26.10 and 1.27.3 for unit tests; other Go jobs use 1.27.3.
-- The framework and generated projects require Go 1.26.10 or newer for standard-library security fixes.
-- Node version in CI: 26.8.1 for docs site and admin UI.
-- Docs site requires Node >= 20 (see `docs-site/package.json`).
 
-## Core Go (Forge framework)
-- Run from the repository root.
-- `go mod download`
-- `go test -v -race -coverprofile=coverage.out ./...`
-- `go build ./...`
-- `golangci-lint run --timeout=5m --config=.golangci.yml`
-- `go install golang.org/x/vuln/cmd/govulncheck@latest`
-- `govulncheck ./...`
+- Go versions in CI: `1.26.10` and `1.27.3` (`unit-tests`); other Go jobs use `1.27.3`. Minimum supported: `1.26.10` (see `go.mod`).
+- PostgreSQL in CI: `postgres:15` (integration, CLI E2E, release-gate, ecommerce-sample); `postgres:16` (admin browser E2E).
+- Node version in CI: `26.8.1` (`docs-site` requires Node >= 20).
 
-## Integration Tests (Tests module)
-- Requires PostgreSQL on localhost.
-- Env vars: `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`.
-- `cd tests`
-- `go mod download`
-- `go test -v -timeout 15m ./integration/...`
+## Core Go (Repository Root)
 
-## CLI E2E Tests
-- From the repository root: `go build -o <bin>/forge ./cmd/forge`
-- Add `<bin>` to PATH for the test run.
-- `cd tests`
-- Set `RUN_POSTGRES_TESTS=1` (Bash: `export RUN_POSTGRES_TESTS=1`).
-- `go test -v ./e2e/cli/...`
+```bash
+gofmt -l .
+go build ./...
+go test -v -race -coverprofile=coverage.out ./...
+golangci-lint run --timeout=5m --config=.golangci.yml
+staticcheck ./...
+govulncheck ./...
+```
 
-## Admin UI (admin/ui/web)
-- `cd admin/ui/web`
-- `npm ci`
-- `npm run build`
-- `npm run lint`
-- `npm run test -- --run`
+## Documentation Links & Samples
 
-## Docs Site (docs-site)
-- `cd docs-site`
-- `npm ci`
-- `npm run build`
-- Optional fast check: `npm run build:fast`
+```bash
+go run ./internal/tools/doclinks -root .
+cd tests && go test -v ./docsamples/...
+```
 
-## Examples: Ecommerce (examples/ecommerce)
-- `cd examples/ecommerce`
-- `go mod download`
-- `go build -o ecommerce .`
-- `go test -v ./...`
-- Docker build: `docker build -t ecommerce-sample:<sha> -f Dockerfile .`
-- CI runs a full stack integration check (admin page reachable + health endpoint).
+## Integration, Release Gate & CLI E2E (`tests/`)
 
-## Security and CI-only Checks
-- PR security review: govulncheck, Semgrep, TruffleHog, dependency review, npm audit.
-- Scheduled security scan: Trivy (repo and docker), OSV scanner, Snyk, gosec, CodeQL.
-- If you change workflows or security-sensitive code, ensure these pass in CI or run locally where practical.
+Requires PostgreSQL 15 (`POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`):
 
-## Docs and Test Updates
-- Update `docs-site/docs/contributing/development.md` when workflow changes.
-- Update `tests/README.md` when test strategy changes.
+```bash
+cd tests
+go mod download
+go test -v -timeout 15m ./integration/...
+```
+
+For `release-gate` parity (root module against PostgreSQL with no DB skips allowed):
+
+```bash
+FORGE_REQUIRE_DB=1 go test -json ./... | go run ./internal/tools/testreport
+```
+
+For CLI E2E:
+
+```bash
+go build -o /tmp/forge-bin/forge ./cmd/forge
+export PATH="/tmp/forge-bin:$PATH"
+export RUN_POSTGRES_TESTS=1
+cd tests && go test -v ./e2e/cli/...
+```
+
+## Admin UI (`admin/ui/web`) & Browser E2E
+
+```bash
+cd admin/ui/web
+npm ci
+npm run build
+npm run lint
+npm run test -- --run
+```
+
+Playwright browser journeys live in `tests/e2e/admin` (run by `.github/workflows/admin-e2e.yml`).
+
+## Docs Site (`docs-site`)
+
+```bash
+cd docs-site
+npm ci
+npm run build
+```
+
+## Example App (`examples/ecommerce`)
+
+```bash
+cd examples/ecommerce
+go mod download
+go build -o ecommerce .
+go test -v ./...
+```

@@ -1,0 +1,22 @@
+[
+  {
+    "query": "How do I generate and apply SQL migrations after updating a Forge model?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I recover from a DIRTY migration state or verify migration checksums?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I run migrations programmatically using db.NewMigrationRunner?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I define a ForeignKeyField and Meta indexes on a Forge model?",
+    "expected_trigger": false
+  },
+  {
+    "query": "How do I write an Admin action or ViewSet permission?",
+    "expected_trigger": false
+  }
+]

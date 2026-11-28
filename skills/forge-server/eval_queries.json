@@ -1,0 +1,22 @@
+[
+  {
+    "query": "How do I configure server.NewServer with CORS, SecureHeaders, and graceful shutdown?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I configure server.stores: database for multi-instance Forge deployments?",
+    "expected_trigger": true
+  },
+  {
+    "query": "What FORGE_* environment variables override config.yaml and how does production secret validation work?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I register a ViewSet on api.Router?",
+    "expected_trigger": false
+  },
+  {
+    "query": "How do I run forge makemigrations and migrate up?",
+    "expected_trigger": false
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "query": "How do I register a model with admin.Register and configure ListDisplay, SearchFields, and Fieldsets?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I add a bulk action and per-object HasChangePermission hook in Forge admin?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I mount adminSite.Handler() and enable UseDatabaseStores?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I create a REST API ViewSet and Serializer for external clients?",
+    "expected_trigger": false
+  },
+  {
+    "query": "How do I define schema.StringField and Meta() on a model?",
+    "expected_trigger": false
+  }
+]

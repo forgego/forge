@@ -1,35 +1,75 @@
 ---
 name: forge-api
-description: Build REST APIs with Forge's ViewSet framework. Use when creating serializers, viewsets, registering API routes, or configuring auth, permissions, pagination, and filtering.
+description: Build REST APIs in Forge using `github.com/forgego/forge/api` ViewSets, serializers, routers, authentication, permissions, throttling, pagination, and `forge generate --api`. Use when creating REST endpoints, serializers, viewsets, or OpenAPI metadata. Do NOT use for the `/admin` UI (use `forge-admin`) or ORM queries outside HTTP handlers (use `forge-orm`).
+license: MIT
+compatibility: Go 1.26.10+, github.com/forgego/forge v0.2.x
+metadata:
+  author: forgego
+  version: "0.2"
 ---
 
-# Forge API
+# Forge REST API
 
-## Overview
-Use Forge's REST API framework to build CRUD endpoints with ViewSets and serializers.
+Forge's REST layer (`api/`) is modelled on Django REST Framework: serializer factories, `ViewSet` / `ViewSetConfig`, `api.Router`, content negotiation, authentication, permissions, throttling, and RFC 7807 problem-detail errors.
 
-## When to Use
-- The task mentions serializers, viewsets, API routers, or REST endpoints.
-- You need CRUD APIs for Forge models.
-- The user asks about auth, permissions, filtering, ordering, or pagination for APIs.
+## Golden Path
 
-## Quick Start
-1. Create a serializer defining exposed fields.
-2. Create a ViewSet bound to a QuerySet and model.
-3. Register the ViewSet on an API router and mount it on the server router.
+### Option A: Auto-generate from Models
 
-## Common Tasks
-- Add filtering, ordering, and pagination defaults.
-- Customize read-only fields and validation in serializers.
-- Organize routes with versioned API base paths.
+```bash
+forge generate --models ./app/catalog --output ./app/catalog --api
+```
 
-## Gotchas
-- Keep serializer fields aligned with model fields after changes.
-- Router base path affects all endpoint URLs.
-- Re-run `forge generate` when model changes affect QuerySets or types.
-- `Router.Register` panics when a viewset's queryset lacks an operation it routes; set `ReadOnly` for list/retrieve-only resources (docs-site/docs/api/data-access.md).
-- Generated viewsets reject unknown request keys with 400; declare serializer-only inputs in `WriteOnlyFields()` (docs-site/docs/api/field-contract.md).
+Requires each model in the package to have a single auto-increment `int64` primary key named `id`. Generated viewsets enable `RejectUnknownRequestFields: true`.
+
+### Option B: Manual Serializer + ViewSet
+
+```go
+type ProductSerializer struct {
+	*api.BaseSerializer
+}
+
+func NewProductSerializer() api.Serializer {
+	return &ProductSerializer{BaseSerializer: api.NewBaseSerializer(nil)}
+}
+
+func (s *ProductSerializer) New() api.Serializer       { return NewProductSerializer() }
+func (s *ProductSerializer) Fields() []string        { return []string{"id", "name", "price", "is_active"} }
+func (s *ProductSerializer) ReadOnlyFields() []string { return []string{"id"} }
+```
+
+Register on `api.Router` and mount on `*server.Server`:
+
+```go
+apiRouter := api.NewRouter("/api/v1")
+vs := api.NewBaseViewSet(NewProductSerializer, catalog.ProductObjects, &catalog.Product{})
+vs.Authentication = []authentication.Authentication{authentication.NewTokenAuthentication(tokenStore)}
+vs.Permissions = []permissions.Permission{permissions.IsAuthenticated{}}
+apiRouter.Register("products", vs)
+
+srv.RegisterRoutes(func(r *server.Router) {
+	apiRouter.RegisterRoutes(r)
+})
+```
+
+## Endpoints Registered by `apiRouter.Register("products", vs)`
+
+- `GET /api/v1/products/` (`List`)
+- `POST /api/v1/products/` (`Create`)
+- `GET /api/v1/products/{id}` (`Retrieve` — no trailing slash)
+- `PUT /api/v1/products/{id}` (`Update`)
+- `PATCH /api/v1/products/{id}` (`PartialUpdate`)
+- `DELETE /api/v1/products/{id}` (`Destroy`)
+
+## Hard Guardrails
+
+- **Always override `New() api.Serializer`** on custom serializer structs and pass `nil` (or initial data map) to `api.NewBaseSerializer(nil)`.
+- **`Router.Register` validates at startup**: It checks that the viewset's queryset/manager implements the operations it routes and **panics on mismatch**; set `ReadOnly: true` for read-only resources (`docs-site/docs/api/data-access.md`).
+- **Field contract & unknown keys**: Generated viewsets set `RejectUnknownRequestFields: true` (400 on unknown keys). Declare write-only inputs in `WriteOnlyFields()`, read-only fields in `ReadOnlyFields()`, and hidden fields in `ExcludeResponseFields()` (`docs-site/docs/api/field-contract.md`).
+- **Mount via `srv.RegisterRoutes(...)`**: It is a method on `*server.Server`, not a package function. `api.Router` does not have a `.Use()` middleware method.
+- **No automatic `?search=` on `BaseViewSet`**: `BaseViewSet.List` ignores `?search=`; wire `api/filters.SearchFilter` explicitly when needed.
+- **OpenAPI**: `api/docs/openapi.go` serves OpenAPI document metadata/info; route paths and schemas are not auto-populated from ViewSets.
 
 ## References
-- [REST API concepts](references/rest-api.md)
-- [REST API reference](references/rest-api.md)
+
+- [REST API, serializers, auth, permissions & errors](references/rest-api.md)

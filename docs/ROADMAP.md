@@ -52,7 +52,8 @@ commit, and pass/fail/skip counts):
 ### Next
 
 - [x] REST auto-generation: ViewSets + Serializers + routes
-      generated from models via `forge generate --api` (`docs/PRD.md` FR-API/OpenAPI).
+      generated from models via `forge generate --api`.
+- [ ] OpenAPI path/schema auto-generation from ViewSets (`api/docs/openapi.go` currently serves info/metadata only).
 - [x] CLI commands aligned with PRD Appendix A (`forge shell`, `forge test`,
       `forge check`, `forge createsuperuser`, and `forge add app/model/api`).
 - [x] Migration recovery/checksum verification (`forge migrate recover`
@@ -89,8 +90,9 @@ commit, and pass/fail/skip counts):
       placeholder keys in `ensureSecrets()`, cleared static secrets in `config.yaml`.
 - [x] `Mark Delivered` sets `delivered_at`; required-field
       and validation saves return 400 `validation_error`, not 500s.
+- [x] Dashboard widgets (`examples/ecommerce/dashboard.go`, verified in `examples/ecommerce/main_test.go`).
 - [ ] Auth middleware, caching layer, structured logging,
-      dashboard widgets, email templates, file uploads.
+      email templates, file uploads.
 - [ ] Stripe/PayPal + shipping-carrier APIs.
 - [ ] WebSocket notifications, customer storefront,
       analytics dashboards, Elasticsearch.
@@ -107,5 +109,3 @@ commit, and pass/fail/skip counts):
       (`.github/workflows/docs-links.yml`, `internal/tools/doclinks`).
 - [x] Release process, upgrade-guide template and install smoke test
       ([RELEASING.md](RELEASING.md), `.github/workflows/install-smoke.yml`).
-- [ ] Analyzer corpus fixtures/goldens/benchmarks; RAG/evaluator ranking
-      fixtures; harness-compatibility evidence (Claude/Codex/OpenCode/Zed/dmux).

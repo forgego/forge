@@ -1,0 +1,22 @@
+[
+  {
+    "query": "What CI checks and linters must pass when I modify core Go packages in the Forge repo?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I run the PostgreSQL integration tests and Playwright admin E2E tests in tests/?",
+    "expected_trigger": true
+  },
+  {
+    "query": "Where are the review standards and documentation ownership rules for Forge contributors?",
+    "expected_trigger": true
+  },
+  {
+    "query": "How do I scaffold a new Forge web app with forge new?",
+    "expected_trigger": false
+  },
+  {
+    "query": "How do I write a ViewSet and Serializer for my Product model?",
+    "expected_trigger": false
+  }
+]
