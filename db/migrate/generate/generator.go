@@ -262,6 +262,7 @@ func (g *MigrationGenerator) GenerateMigrations(name string) error {
 
 // validateChanges validates that all changes are valid before SQL generation
 func validateChanges(changes []core.Change, defs []*codegen.ModelDefinition) error {
+	defs = expandManyToManyTables(defs)
 	// Build a map of table names to their definitions for quick lookup
 	tableDefs := make(map[string]*codegen.ModelDefinition)
 	for _, def := range defs {

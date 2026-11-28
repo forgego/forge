@@ -406,10 +406,17 @@ func TestSupportedDSLMigrationSQLMatchesSchema(t *testing.T) {
 			t.Errorf("migration lacks %s", statement)
 		}
 	}
-	// Field-level DBIndex and ManyToMany metadata are accepted by generation,
-	// but migrations currently need Meta.Indexes and an explicit through table.
-	if strings.Count(up, "CREATE INDEX") != 1 || strings.Contains(up, "blog_post_editors") {
-		t.Errorf("migration unexpectedly emits field DBIndex or ManyToMany through table:\n%s", up)
+	for _, statement := range []string{
+		`CREATE TABLE IF NOT EXISTS blog_post_editors`,
+		`ALTER TABLE blog_post_editors ADD CONSTRAINT fk_blog_post_editors_post_id FOREIGN KEY ("post_id") REFERENCES blog_posts (id) ON DELETE CASCADE ON UPDATE NO ACTION;`,
+		`ALTER TABLE blog_post_editors ADD CONSTRAINT fk_blog_post_editors_author_id FOREIGN KEY ("author_id") REFERENCES blog_authors (id) ON DELETE CASCADE ON UPDATE NO ACTION;`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS uniq_blog_post_editors_post_id_author_id ON blog_post_editors ("post_id", "author_id");`,
+		`CREATE INDEX IF NOT EXISTS idx_blog_post_editors_author_id ON blog_post_editors ("author_id");`,
+		`CREATE INDEX IF NOT EXISTS idx_blog_posts_title ON blog_posts ("title");`,
+	} {
+		if !strings.Contains(up, statement) {
+			t.Errorf("migration lacks %s", statement)
+		}
 	}
 
 	for i := 0; i < 5; i++ {
