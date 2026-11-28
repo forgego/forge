@@ -23,6 +23,9 @@ a REST API and an admin panel for it.
 
 </div>
 
+> [!WARNING]
+> **Early development / beta (`v0.1.x`):** Forge is under active development. APIs can still change between releases and bugs or rough edges are expected — review the [support contract](docs-site/docs/status.md) before relying on it in production.
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/assets/admin-products-dark.png">
   <img src=".github/assets/admin-products.png" alt="The Forge admin listing products from the ecommerce example">
