@@ -59,13 +59,10 @@ export default function SEOHead({
       {keywordsString && <meta name="keywords" content={keywordsString} />}
 
       {/* Open Graph / Facebook */}
-      <meta property="og:type" content={type} />
       <meta property="og:url" content={fullUrl} />
       <meta property="og:image" content={imageUrl} />
-      <meta property="og:site_name" content="Forge" />
 
       {/* Twitter */}
-      <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:url" content={fullUrl} />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:image" content={imageUrl} />

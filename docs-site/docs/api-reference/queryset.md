@@ -15,14 +15,16 @@ A `QuerySet[T]` represents a collection of database queries targeting model `T`.
 Adds one expression to the SQL `WHERE` clause. Combine multiple expressions with `orm.And`.
 
 ```go
-qs = qs.Filter(orm.And(ProductExpr.Price.Lte(100.00), ProductExpr.InStock.Eq(true)))
+p := catalog.ProductFieldsInstance
+qs = qs.Filter(orm.And(p.Price.Lte(100.00), p.InStock.Eq(true)))
 ```
 
 ### `Exclude(expr orm.Expression) orm.QuerySet[T]`
 Negates the expression (`NOT (...)`) and appends it to the `WHERE` clause.
 
 ```go
-qs = qs.Exclude(ProductExpr.Status.Eq("archived"))
+p := catalog.ProductFieldsInstance
+qs = qs.Exclude(p.Status.Eq("archived"))
 ```
 
 ### `OrderBy(fields ...any) QuerySet[T]`
@@ -112,7 +114,8 @@ Terminal methods execute the SQL statement against the active database connectio
 Executes an SQL `UPDATE` across all rows matching the QuerySet filters. Returns the number of affected rows.
 
 ```go
-affected, err := qs.Filter(ProductExpr.Stock.Eq(0)).
+p := catalog.ProductFieldsInstance
+affected, err := qs.Filter(p.Stock.Eq(0)).
     Update(ctx, orm.UpdateMap{"in_stock": false})
 ```
 
@@ -120,7 +123,8 @@ affected, err := qs.Filter(ProductExpr.Stock.Eq(0)).
 Executes an SQL `DELETE` for all rows matching the QuerySet filters. Returns the number of deleted rows.
 
 ```go
-deleted, err := qs.Filter(ProductExpr.DeletedAt.IsNotNull()).
+p := catalog.ProductFieldsInstance
+deleted, err := qs.Filter(p.DeletedAt.IsNotNull()).
     Delete(ctx)
 ```
 

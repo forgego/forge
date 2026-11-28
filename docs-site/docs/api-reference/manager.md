@@ -12,36 +12,38 @@ A `Manager[T]` provides the primary database table interface for a given model `
 ## CRUD Operations
 
 ### `Create(ctx context.Context, instance *T) error`
-Inserts a new model instance into the database. Executes registered `BeforeCreate` and `AfterCreate` lifecycle hooks and populates the auto-generated primary key on `instance`.
+Inserts a new model instance into the database. Executes `BeforeCreate`, `BeforeSave`, `Clean`, `AfterCreate`, and `AfterSave` hooks and populates the auto-generated primary key on `instance`.
 
 ```go
-product := &Product{
-    Name:  "Mechanical Keyboard",
-    Price: 129.99,
+product := &catalog.Product{
+    ProductGenerated: catalog.ProductGenerated{
+        Name:  "Mechanical Keyboard",
+        Price: 129.99,
+    },
 }
-err := ProductManager.Create(ctx, product)
+err := catalog.ProductObjects.Create(ctx, product)
 ```
 
 ### `Get(ctx context.Context, id int64) (*T, error)`
 Retrieves a single record by integer primary key. Returns an error if no record exists.
 
 ```go
-product, err := ProductManager.Get(ctx, 42)
+product, err := catalog.ProductObjects.Get(ctx, 42)
 ```
 
 ### `Update(ctx context.Context, instance *T) error`
-Persists modifications made to an existing model instance. Executes `BeforeUpdate`, `BeforeSave`, and `AfterUpdate` hooks.
+Persists modifications made to an existing model instance. Executes `BeforeUpdate`, `BeforeSave`, `Clean`, `AfterUpdate`, and `AfterSave` hooks.
 
 ```go
 product.Price = 119.99
-err := ProductManager.Update(ctx, product)
+err := catalog.ProductObjects.Update(ctx, product)
 ```
 
 ### `Delete(ctx context.Context, instance *T) error`
 Removes the given record from the database. Executes `BeforeDelete` and `AfterDelete` lifecycle hooks.
 
 ```go
-err := ProductManager.Delete(ctx, product)
+err := catalog.ProductObjects.Delete(ctx, product)
 ```
 
 ---
@@ -65,7 +67,7 @@ A Manager provides query shortcuts. `All` evaluates immediately; the others belo
 Performs a multi-row insert. The API has no batch-size argument.
 
 ```go
-err := ProductManager.BulkCreate(ctx, batchProducts)
+err := catalog.ProductObjects.BulkCreate(ctx, batchProducts)
 ```
 
 ---

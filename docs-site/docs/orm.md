@@ -43,7 +43,7 @@ premiumItems, err := activeProducts.
 
 ## Type-Safe Expressions & Lookups
 
-Forge generates expression helpers for each model during `forge generate`. For example, `ProductExpr` provides typed methods for all fields:
+Forge generates expression helpers for each model during `forge generate`. For example, `ProductFieldsInstance` provides typed `orm.Field[T]` fields with lookup methods:
 
 | Lookup Method | SQL Operator | Description |
 | :--- | :--- | :--- |
@@ -62,37 +62,46 @@ Forge generates expression helpers for each model during `forge generate`. For e
 | `Field.IsNull()` / `Field.IsNotNull()` | `IS NULL` / `IS NOT NULL` | Nullability check |
 
 ```go
-// Example of expressive lookups
-products, err := ProductManager.QuerySet().
-    Filter(ProductExpr.Title.IContains("mechanical keyboard")).
-    Filter(ProductExpr.Price.Lte(150.00)).
-    Filter(ProductExpr.DeletedAt.IsNull()).
-    All(ctx)
+p := catalog.ProductFieldsInstance
+qs, err := catalog.ProductObjects.Filter(orm.And(
+    p.Name.IContains("mechanical keyboard"),
+    p.Price.Lte(150.00),
+    p.DeletedAt.IsNull(),
+))
+if err != nil {
+    return err
+}
+products, err := qs.All(ctx)
 ```
 
 ---
 
-## Complex Boolean Logic with `orm.Q` / `QueryExpr`
+## Complex Boolean Logic with `orm.And` / `orm.Or` / `orm.Not`
 
-Compose complex boolean expressions using `And()`, `Or()`, and negation:
+Compose complex boolean expressions using `orm.And()`, `orm.Or()`, and `orm.Not()`:
 
 ```go
-// WHERE (price < 50 OR in_stock = true) AND NOT (status = 'discontinued')
+// WHERE (price < 50 OR in_stock = true) AND status != 'discontinued'
+p := catalog.ProductFieldsInstance
 condition := orm.And(
     orm.Or(
-        ProductExpr.Price.Lt(50.00),
-        ProductExpr.InStock.Eq(true),
+        p.Price.Lt(50.00),
+        p.InStock.Eq(true),
     ),
-    ProductExpr.Status.Ne("discontinued"),
+    p.Status.Ne("discontinued"),
 )
 
-items, err := ProductManager.QuerySet().Filter(condition).All(ctx)
+qs, err := catalog.ProductObjects.Filter(condition)
+if err != nil {
+    return err
+}
+items, err := qs.All(ctx)
 ```
 
 You can also use SQL-like explicit `orm.Where(field, operator, value)` when building dynamic search queries from user input:
 
 ```go
-qs := ProductManager.QuerySet()
+qs := catalog.ProductObjects.QuerySet()
 if minPrice > 0 {
     qs = qs.Filter(orm.Where("price", orm.OpGreaterOrEqual, minPrice))
 }
@@ -106,47 +115,53 @@ results, err := qs.All(ctx)
 
 ## Eager Loading: Solving the N+1 Problem
 
-Forge provides two eager-loading mechanisms optimized for relational databases:
+Forge provides two eager-loading mechanisms optimized for relational databases (note: no runtime guardrail reports accessing a relation that was not loaded):
 
 ### 1. `SelectRelated` (SQL JOIN)
 Use `SelectRelated` for single-valued relationships (`ForeignKey` and `OneToOne`). It performs an SQL `INNER JOIN` or `LEFT JOIN`, populating the parent and related structs in a single round-trip:
 
 ```go
 // Fetches order and joins customer + shipping address in 1 SQL query
-order, err := OrderManager.QuerySet().
-    SelectRelated("Customer", "ShippingAddress").
-    Filter(OrderExpr.Id.Eq(orderID)).Get(ctx)
-
-fmt.Println(order.Customer.Email) // Instant access, no extra DB query
+o := orders.OrderFieldsInstance
+qs, err := orders.OrderObjects.SelectRelated("Customer", "ShippingAddress").Filter(o.Id.Eq(orderID))
+if err != nil {
+    return err
+}
+order, err := qs.Get(ctx)
 ```
 
 ### 2. `PrefetchRelated` (Batched Queries)
-Use `PrefetchRelated` for multi-valued relationships (`ManyToMany` or reverse foreign keys). Forge executes a secondary batched query using `WHERE in_id IN (...)` and stitches the records in Go memory:
+Use `PrefetchRelated` for multi-valued relationships (`ManyToMany` or reverse foreign keys). Forge executes a secondary batched query using `WHERE ... IN (...)` and stitches the records in Go memory:
 
 ```go
-// Fetches 20 products, then fetches all associated tags and reviews in 2 batch queries
-products, err := ProductManager.QuerySet().
-    Filter(ProductExpr.InStock.Eq(true)).
-    PrefetchRelated("Tags", "Reviews").
-    Limit(20).
-    All(ctx)
+// Fetches 20 products, then fetches all associated tags and reviews in batch queries
+p := catalog.ProductFieldsInstance
+qs, err := catalog.ProductObjects.Filter(p.InStock.Eq(true))
+if err != nil {
+    return err
+}
+products, err := qs.PrefetchRelated("Tags", "Reviews").Limit(20).All(ctx)
 ```
 
 ---
 
-## Aggregations & Grouping
+## Aggregations
 
-Execute database-level aggregates with `AggregateValues(ctx, queryset, ...)`:
+Execute ungrouped database-level aggregates with `orm.AggregateValues(ctx, queryset, ...)`:
 
 ```go
-stats, err := orm.AggregateValues(ctx,
-    ProductManager.QuerySet().Filter(ProductExpr.InStock.Eq(true)),
-        orm.Count("id"),
-        orm.Avg("price"),
-        orm.Max("price"),
-        orm.Min("price"),
-        orm.Sum("inventory_count"),
-    )
+p := catalog.ProductFieldsInstance
+qs, err := catalog.ProductObjects.Filter(p.InStock.Eq(true))
+if err != nil {
+    return err
+}
+stats, err := orm.AggregateValues(ctx, qs,
+    orm.Count("id"),
+    orm.Avg("price"),
+    orm.Max("price"),
+    orm.Min("price"),
+    orm.Sum("inventory_count"),
+)
 
 fmt.Printf("Total: %v, Avg Price: %v\n", stats["count"], stats["avg"])
 ```
@@ -157,8 +172,8 @@ Supported aggregate functions:
 - `orm.Avg(field)`
 - `orm.Min(field)`
 - `orm.Max(field)`
-- `orm.StdDev(field)`
-- `orm.Variance(field)`
+
+Grouped aggregates, `StdDev`, `Variance`, `orm.RegisterAggregate`, aggregates over many-to-many paths, and `Union`/`Intersection`/`Difference` return `NotImplemented`. For window functions, recursive CTEs, or full-text search, use the `*sql.DB` embedded in `*db.DB`.
 
 ---
 
@@ -167,24 +182,26 @@ Supported aggregate functions:
 ### Single Record Operations
 
 ```go
-// Create
-product := &Product{
-    Name:  "Wireless Mouse",
-    Price: 29.99,
+// Create (initialize embedded <Model>Generated fields explicitly)
+product := &catalog.Product{
+    ProductGenerated: catalog.ProductGenerated{
+        Name:  "Wireless Mouse",
+        Price: 29.99,
+    },
 }
-err := ProductManager.Create(ctx, product)
+err := catalog.ProductObjects.Create(ctx, product)
 
 // Update
 product.Price = 24.99
-err = ProductManager.Update(ctx, product)
+err = catalog.ProductObjects.Update(ctx, product)
 
 // Delete
-err = ProductManager.Delete(ctx, product)
+err = catalog.ProductObjects.Delete(ctx, product)
 ```
 
 `Create` writes `false`, `0` and `""` on required fields and fields with a
 schema `Default` (an optional field without one stays `NULL`); a schema
-`Default` is applied by `ProductManager.New()`, not at insert. `Update` and `Save` refresh `AutoNow` fields. See
+`Default` is applied by `ProductObjects.New()`, not at insert. `Update` and `Save` refresh `AutoNow` fields. See
 [defaults, zero values and timestamps](/docs/models/#defaults-zero-values-and-timestamps).
 
 ### High-Performance Bulk Operations
@@ -193,23 +210,24 @@ Avoid thousands of individual round-trips with bulk operations:
 
 ```go
 // Bulk Create (Single multi-row INSERT statement)
-newItems := []*Product{
-    {Name: "Item A", Price: 10.0},
-    {Name: "Item B", Price: 20.0},
+newItems := []*catalog.Product{
+    {ProductGenerated: catalog.ProductGenerated{Name: "Item A", Price: 10.0}},
+    {ProductGenerated: catalog.ProductGenerated{Name: "Item B", Price: 20.0}},
 }
-err := ProductManager.BulkCreate(ctx, newItems)
+err := catalog.ProductObjects.BulkCreate(ctx, newItems)
 
 // QuerySet-level Update (Single SQL UPDATE statement)
-rowsAffected, err := ProductManager.QuerySet().
-    Filter(ProductExpr.Status.Eq("pending")).
+p := catalog.ProductFieldsInstance
+rowsAffected, err := catalog.ProductObjects.QuerySet().
+    Filter(p.Status.Eq("pending")).
     Update(ctx, orm.UpdateMap{
-        "status": "archived",
+        "status":      "archived",
         "archived_at": time.Now(),
     })
 
 // QuerySet-level Delete (Single SQL DELETE statement)
-deletedCount, err := ProductManager.QuerySet().
-    Filter(ProductExpr.DeletedAt.IsNotNull()).
+deletedCount, err := catalog.ProductObjects.QuerySet().
+    Filter(p.DeletedAt.IsNotNull()).
     Delete(ctx)
 ```
 
@@ -266,8 +284,7 @@ err := database.WithTx(ctx, func(tx *db.Tx) error {
 })
 ```
 
-For partial rollback inside a transaction, use `tx.CreateSavepoint(name)` and
-`RollbackToSavepoint()`.
+For partial rollback inside a transaction, `sp, err := tx.CreateSavepoint(name)` returns a `*db.Savepoint`; call `sp.RollbackToSavepoint()` on that savepoint.
 
 ---
 

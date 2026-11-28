@@ -1,10 +1,28 @@
 import React, { useState } from 'react';
 import Layout from '@theme/Layout';
 import Link from '@docusaurus/Link';
+import CodeBlock from '@theme/CodeBlock';
 import ThemedImage from '@theme/ThemedImage';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import SEOHead from '@site/src/components/SEOHead';
 import styles from './index.module.css';
+
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false);
+  const onCopy = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1800);
+      });
+    }
+  };
+  return (
+    <button type="button" className={styles.copyBtn} onClick={onCopy}>
+      {copied ? 'Copied' : 'Copy'}
+    </button>
+  );
+}
 
 // Samples follow the code in examples/ecommerce so they stay honest.
 const CODE_TABS = [
@@ -17,7 +35,7 @@ const CODE_TABS = [
 import "github.com/forgego/forge/schema"
 
 type Product struct {
-    schema.BaseSchema
+    ProductGenerated
 }
 
 func (Product) Fields() []schema.Field {
@@ -101,7 +119,7 @@ const PILLARS = [
   {
     title: 'Built-in admin',
     description:
-      'A React admin with search, filters, bulk actions, inline relations, change history and per-object permission hooks.',
+      'A React admin with search, filters, saved views, bulk actions, change history and per-object permission hooks.',
     link: '/docs/admin/overview',
   },
   {
@@ -113,7 +131,7 @@ const PILLARS = [
   {
     title: 'Secure defaults',
     description:
-      'Password hashing, sessions and tokens, CSRF protection, secure cookies, CORS checks and rate limiting are on from the start.',
+      'Password hashing, sessions, CSRF protection and production secret checks are wired in; add CORS, secure headers and rate limiting via Router.Use.',
     link: '/docs/server/security',
   },
 ];
@@ -123,6 +141,7 @@ export default function Home() {
   const selectedCode = CODE_TABS.find((t) => t.id === activeTab) || CODE_TABS[0];
   const adminLight = useBaseUrl('/img/admin-products.png');
   const adminDark = useBaseUrl('/img/admin-products-dark.png');
+  const llmsTxtUrl = useBaseUrl('/llms.txt');
 
   return (
     <>
@@ -174,6 +193,7 @@ export default function Home() {
               <div className={styles.heroCommand}>
                 <span className={styles.commandPrompt}>$</span>
                 <code>go install github.com/forgego/forge/cmd/forge@latest</code>
+                <CopyButton text="go install github.com/forgego/forge/cmd/forge@latest" />
               </div>
             </div>
           </div>
@@ -216,9 +236,7 @@ export default function Home() {
                 </div>
 
                 <div className={styles.windowContent}>
-                  <pre className={styles.codePre}>
-                    <code>{selectedCode.code}</code>
-                  </pre>
+                  <CodeBlock language="go">{selectedCode.code}</CodeBlock>
                 </div>
               </div>
             </div>
@@ -299,6 +317,27 @@ export default function Home() {
                     <code>http://localhost:8020/admin/</code>
                   </div>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <section className={styles.aiSection}>
+            <div className={styles.aiCard}>
+              <div className={styles.aiCopy}>
+                <span className={styles.sectionSub}>AI-Ready Documentation</span>
+                <h2>Built for coding agents too</h2>
+                <p>
+                  Use Forge&apos;s modular Agent Skills (<code>skills/</code>) and machine-readable{' '}
+                  <code>llms.txt</code> index with Claude Code, Codex, Cursor, OpenCode, and Gemini CLI.
+                </p>
+              </div>
+              <div className={styles.aiActions}>
+                <Link className={styles.btnSecondary} to="/docs/ai-skills">
+                  Agent Skills guide
+                </Link>
+                <a className={styles.btnGhost} href={llmsTxtUrl}>
+                  llms.txt
+                </a>
               </div>
             </div>
           </section>

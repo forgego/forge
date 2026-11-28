@@ -24,8 +24,10 @@ Learn the fundamentals:
 
 ### Database & Models
 - **[Models](/docs/models)** - Define your data structure with schemas
+- **[Code Generation](/docs/codegen)** - AST parsing, `gen.go`, and `api_gen.go`
 - **[ORM](/docs/orm)** - Query data with type-safe expressions
 - **[Migrations](/docs/migrations)** - Manage schema changes
+- **[Testing](/docs/testing)** - Unit, API, and PostgreSQL integration tests
 
 ### Build Features
 - **[Admin Interface](/docs/admin/overview)** - Auto-generated admin panel
@@ -64,7 +66,10 @@ Go deeper:
 ## Resources
 
 - **[Support contract](./status.md)** - What is supported, tested and excluded
-- **[Deployment](/docs/deployment)** - Run one production instance
+- **[CLI Reference](/docs/cli)** - All `forge` commands and flags
+- **[AI Agent Skills & llms.txt](/docs/ai-skills)** - Skills for Claude Code, Codex, Cursor, OpenCode, and Gemini CLI
+- **[Deployment](/docs/deployment)** - Run one or more production instances
+- **[Upgrading](/docs/upgrading)** - Upgrade checklist and regeneration steps
 - **[Features](/docs/features)** - Feature list
 - **[Changelog](/docs/changelog)** - Version history
 - **[Security](/docs/security)** - Security policy
