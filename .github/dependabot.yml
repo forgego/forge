@@ -40,8 +40,6 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
-      - "npm"
-      - "frontend"
     versioning-strategy: increase
     reviewers:
       - "hamidrabedi"
@@ -76,7 +74,6 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
-      - "npm"
       - "documentation"
     versioning-strategy: increase
     commit-message:
